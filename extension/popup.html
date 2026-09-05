@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Darschyn Educationalyar</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="popup.css">
+    <style>
+        
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0; 
+            padding: 16px; 
+            width: 480px; 
+        }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="flex flex-col gap-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+        <div>
+            <h1 class="text-xl font-bold text-white tracking-tight">Darschyn</h1>
+            <p class="text-xs text-slate-400">CourseClass Collection Engine (v3.3.6)</p>
+        </div>
+        <div id="connCard" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700">
+            <span id="connDot" class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+            <span id="connStatus" class="text-[11px] font-medium text-slate-300">بررسی اتصال...</span>
+        </div>
+    </div>
+
+    <!-- Main Action -->
+    <div id="actionContainer" class="flex flex-col gap-2">
+        <button id="startBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            شروع جمع‌آوری جامع (Extraction)
+        </button>
+        <button id="stopBtn" class="hidden w-full py-2 bg-slate-700 hover:bg-slate-600 text-red-400 rounded-xl font-medium transition-colors text-sm">
+            توقف جمع‌آوری
+        </button>
+    </div>
+
+    <!-- Live Progress -->
+    <div id="progressCard" class="hidden card flex-col gap-4">
+        <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-300">وضعیت جمع‌آوری</span>
+            <span id="statusText" class="text-xs font-bold text-indigo-400">در حال پردازش...</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+            <div class="flex flex-col"><span class="text-slate-400 mb-1">مرحله جاری</span><span id="currentPhase" class="font-medium text-slate-200">INIT</span></div>
+            <div class="flex flex-col"><span class="text-slate-400 mb-1">مدت زمان</span><span id="elapsedTime" class="font-medium text-slate-200">00:00</span></div>
+            <div class="flex flex-col"><span class="text-slate-400 mb-1">درخواست‌های شبکه</span><span id="requestsCount" class="font-medium text-slate-200">0</span></div>
+            <div class="flex flex-col"><span class="text-slate-400 mb-1">صفحات پارس شده</span><span id="pagesCount" class="font-medium text-slate-200">0</span></div>
+        </div>
+
+        <div class="flex flex-col gap-1.5 bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <div class="flex justify-between text-xs">
+                <span class="text-slate-400">رکوردهای استخراجی (Raw)</span>
+                <span id="rawRecordsCount" class="font-bold text-white">0</span>
+            </div>
+            <div class="flex justify-between text-xs">
+                <span class="text-indigo-300 font-medium">کلاس‌های یکتا (CourseClass)</span>
+                <span id="uniqueClassesCount" class="font-bold text-indigo-400">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Result Status -->
+    <div id="resultCard" class="hidden card flex-col gap-3">
+        <div class="flex items-center gap-2 border-b pb-2" id="resultHeader">
+            <!-- Icon injected by JS -->
+            <span id="resultTitle" class="text-sm font-bold">---</span>
+        </div>
+        <p id="resultMessage" class="text-xs leading-relaxed"></p>
+        
+        <div class="grid grid-cols-2 gap-2 text-xs mt-1">
+            <div class="bg-slate-900 p-2 rounded-lg flex flex-col items-center justify-center border border-slate-700">
+                <span id="resCourses" class="text-lg font-bold text-white">0</span>
+                <span class="text-slate-400">درس یکتا</span>
+            </div>
+            <div class="bg-indigo-900/30 p-2 rounded-lg flex flex-col items-center justify-center border border-indigo-500/30">
+                <span id="resClasses" class="text-lg font-bold text-indigo-400">0</span>
+                <span class="text-indigo-300/80">کلاس یکتا</span>
+            </div>
+        </div>
+
+        <button id="exportBtn" class="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors text-sm">
+            دانلود Dataset (JSON)
+        </button>
+    </div>
+
+    <!-- Error Card -->
+    <div id="errorCard" class="hidden card bg-red-900/20 border-red-500/30 flex-col gap-3">
+        <div class="flex items-center gap-2 border-b border-red-500/20 pb-2">
+            <div class="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-sm">⚠</div>
+            <span class="text-sm font-bold text-red-400">خطای بحرانی</span>
+        </div>
+        <p id="errorMessage" class="text-xs text-red-200 leading-relaxed font-mono whitespace-pre-wrap break-words"></p>
+    </div>
+
+    <!-- Advanced Diagnostics -->
+    <div class="mt-2">
+        <button id="debugToggleBtn" class="flex items-center justify-between w-full p-3 bg-slate-800 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-700 transition-colors">
+            <span>جزئیات فنی و Diagnostic</span>
+            <span id="debugChevron" class="text-slate-500 transition-transform duration-200">▼</span>
+        </button>
+        
+        <div id="debugContent" class="hidden flex-col gap-2 mt-2">
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-[10px] text-slate-400 font-mono">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>Coverage: <span id="dbgCoverage" class="text-slate-200">---</span></div>
+                    <div>Anomalies: <span id="dbgAnomalies" class="text-slate-200">0</span></div>
+                    <div>Batches: <span id="dbgBatches" class="text-slate-200">0</span></div>
+                    <div>Empty Batches: <span id="dbgEmpty" class="text-slate-200">0</span></div>
+                    <div>Unresolved: <span id="dbgUnresolved" class="text-slate-200">0</span></div>
+                    <div>Dups Removed: <span id="dbgDups" class="text-slate-200">0</span></div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="saveDebugBtn" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors text-xs border border-slate-600">
+                    ذخیره Diagnostic
+                </button>
+                <button id="copyDebugBtn" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors text-xs border border-slate-600">
+                    کپی گزارش
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

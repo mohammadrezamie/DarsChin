@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سامانه آموزشی دانشگاه (محیط آزمایشی آموزشیار / گلستان) - درس‌چین</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Tahoma, Arial, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; padding: 20px; font-size: 13px; direction: rtl; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow: hidden; }
+    .top-bar { background: #1e3a8a; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .top-bar h2 { font-size: 16px; font-weight: normal; }
+    .sim-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-sim-dl { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .btn-sim-dl:hover { background: #1d4ed8; }
+    .btn-sim-copy { background: #059669; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .btn-sim-copy:hover { background: #047857; }
+    .btn-back { background: #475569; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-back:hover { background: #334155; }
+    .portal-info { background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 14px 20px; display: flex; gap: 24px; flex-wrap: wrap; }
+    .info-item { display: flex; gap: 6px; }
+    .info-label { font-weight: bold; color: #1e40af; }
+    .table-wrapper { padding: 20px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: right; font-size: 12px; }
+    th { background: #f8fafc; color: #334155; font-weight: bold; padding: 10px; border: 1px solid #e2e8f0; }
+    td { padding: 8px 10px; border: 1px solid #e2e8f0; }
+    tr:hover { background-color: #f8fafc; }
+    tr.malformed-row { background-color: #fff1f2; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .badge-open { background: #dcfce7; color: #15803d; }
+    .badge-warn { background: #fef3c7; color: #b45309; }
+    .badge-err { background: #fee2e2; color: #b91c1c; }
+    .toast-msg { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 12px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast-msg"></div>
+
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        <h2>سامانه جامع امور آموزشی - گزارش لیست دروس ارائه‌شده نیمسال</h2>
+        <div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">نیمسال اول تحصیلی ۱۴۰۵–۱۴۰۶ | محیط شبیه‌ساز آموزشیار</div>
+      </div>
+      <div class="sim-actions">
+        <button id="btnDownloadJson" class="btn-sim-dl">📥 دانلود فایل استخراج (JSON)</button>
+        <button id="btnCopyJson" class="btn-sim-copy">📋 کپی ساختار JSON</button>
+        <a href="/" class="btn-back">بازگشت به درس‌چین ↩</a>
+      </div>
+    </div>
+
+    <div class="portal-info">
+      <div class="info-item"><span class="info-label">دانشگاه:</span><span>دانشگاه آزاد اسلامی</span></div>
+      <div class="info-item"><span class="info-label">واحد:</span><span>علوم و تحقیقات</span></div>
+      <div class="info-item"><span class="info-label">دانشکده:</span><span>فنی و مهندسی</span></div>
+      <div class="info-item"><span class="info-label">گروه آموزشی:</span><span>مهندسی برق</span></div>
+      <div class="info-item"><span class="info-label">مقطع:</span><span>کارشناسی پیوسته</span></div>
+    </div>
+
+    <div class="table-wrapper">
+      <table id="offeredCoursesTable" data-courses="true">
+        <thead>
+          <tr>
+            <th>کد درس</th>
+            <th>عنوان درس</th>
+            <th>گروه</th>
+            <th>واحد</th>
+            <th>استاد درس</th>
+            <th>زمان برگزاری</th>
+            <th>ظرفیت</th>
+            <th>باقیمانده</th>
+            <th>تاریخ و ساعت امتحان</th>
+            <th>وضعیت</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 1. Math 2 (Eligible) -->
+          <tr data-code="2104102" data-name="ریاضی عمومی ۲" data-group="01" data-units="3" data-instructor="دکتر صابری" data-day="یکشنبه" data-start-time="08:00" data-end-time="10:00" data-capacity="40" data-available-capacity="8" data-exam-date="۱۴۰۵/۱۰/۱۸ - ۰۸:۰۰">
+            <td>2104102</td>
+            <td>ریاضی عمومی ۲</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر صابری</td>
+            <td>یکشنبه ۰۸:۰۰ - ۱۰:۰۰</td>
+            <td>۴۰</td>
+            <td>۸</td>
+            <td>۱۴۰۵/۱۰/۱۸ - ۰۸:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 2. Diff Eq (Eligible) -->
+          <tr data-code="2104103" data-name="معادلات دیفرانسیل" data-group="01" data-units="3" data-instructor="دکتر علوی" data-day="دوشنبه" data-start-time="10:00" data-end-time="12:00" data-capacity="35" data-available-capacity="15" data-exam-date="۱۴۰۵/۱۰/۲۲ - ۱۰:۰۰">
+            <td>2104103</td>
+            <td>معادلات دیفرانسیل</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر علوی</td>
+            <td>دوشنبه ۱۰:۰۰ - ۱۲:۰۰</td>
+            <td>۳۵</td>
+            <td>۱۵</td>
+            <td>۱۴۰۵/۱۰/۲۲ - ۱۰:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 3. Circuits 2 (Eligible) -->
+          <tr data-code="2104112" data-name="مدارهای الکتریکی ۲" data-group="01" data-units="3" data-instructor="دکتر خسروی" data-day="شنبه" data-start-time="08:00" data-end-time="10:00" data-capacity="30" data-available-capacity="5" data-exam-date="۱۴۰۵/۱۰/۲۵ - ۰۸:۰۰">
+            <td>2104112</td>
+            <td>مدارهای الکتریکی ۲</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر خسروی</td>
+            <td>شنبه ۰۸:۰۰ - ۱۰:۰۰</td>
+            <td>۳۰</td>
+            <td>۵</td>
+            <td>۱۴۰۵/۱۰/۲۵ - ۰۸:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 4. Circuits Lab (Eligible) -->
+          <tr data-code="2104113" data-name="آزمایشگاه مدارهای الکتریکی" data-group="02" data-units="1" data-instructor="مهندس رستمی" data-day="چهارشنبه" data-start-time="14:00" data-end-time="16:00" data-capacity="15" data-available-capacity="3" data-exam-date="ندارد">
+            <td>2104113</td>
+            <td>آزمایشگاه مدارهای الکتریکی</td>
+            <td>02</td>
+            <td>۱</td>
+            <td>مهندس رستمی</td>
+            <td>چهارشنبه ۱۴:۰۰ - ۱۶:۰۰</td>
+            <td>۱۵</td>
+            <td>۳</td>
+            <td>ندارد</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 5. Electronics 1 (Eligible) -->
+          <tr data-code="2104115" data-name="الکترونیک ۱" data-group="01" data-units="3" data-instructor="دکتر یزدانی" data-day="یکشنبه" data-start-time="10:00" data-end-time="12:00" data-capacity="35" data-available-capacity="7" data-exam-date="۱۴۰۵/۱۰/۲۷ - ۱۰:۰۰">
+            <td>2104115</td>
+            <td>الکترونیک ۱</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر یزدانی</td>
+            <td>یکشنبه ۱۰:۰۰ - ۱۲:۰۰</td>
+            <td>۳۵</td>
+            <td>۷</td>
+            <td>۱۴۰۵/۱۰/۲۷ - ۱۰:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 6. Computer Architecture (Track: Digital) -->
+          <tr data-code="2104131" data-name="معماری کامپیوتر" data-group="01" data-units="3" data-instructor="دکتر حسینی" data-day="سه‌شنبه" data-start-time="08:00" data-end-time="10:00" data-capacity="30" data-available-capacity="12" data-exam-date="۱۴۰۵/۱۰/۲۰ - ۰۸:۰۰">
+            <td>2104131</td>
+            <td>معماری کامپیوتر</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر حسینی</td>
+            <td>سه‌شنبه ۰۸:۰۰ - ۱۰:۰۰</td>
+            <td>۳۰</td>
+            <td>۱۲</td>
+            <td>۱۴۰۵/۱۰/۲۰ - ۰۸:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 7. Microcontrollers (Track: Digital) -->
+          <tr data-code="2104132" data-name="میکروکنترلرها و ریزپردازنده‌ها" data-group="01" data-units="3" data-instructor="دکتر تقوی" data-day="سه‌شنبه" data-start-time="13:30" data-end-time="15:30" data-capacity="25" data-available-capacity="5" data-exam-date="۱۴۰۵/۱۰/۲۴ - ۱۳:۳۰">
+            <td>2104132</td>
+            <td>میکروکنترلرها و ریزپردازنده‌ها</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر تقوی</td>
+            <td>سه‌شنبه ۱۳:۳۰ - ۱۵:۳۰</td>
+            <td>۲۵</td>
+            <td>۵</td>
+            <td>۱۴۰۵/۱۰/۲۴ - ۱۳:۳۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 8. FPGA Design (Track: Digital) -->
+          <tr data-code="2104133" data-name="طراحی سیستم‌های دیجیتال با FPGA" data-group="01" data-units="3" data-instructor="دکتر میرزایی" data-day="دوشنبه" data-start-time="13:30" data-end-time="15:30" data-capacity="20" data-available-capacity="6" data-exam-date="۱۴۰۵/۱۰/۲۸ - ۱۴:۰۰">
+            <td>2104133</td>
+            <td>طراحی سیستم‌های دیجیتال با FPGA</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر میرزایی</td>
+            <td>دوشنبه ۱۳:۳۰ - ۱۵:۳۰</td>
+            <td>۲۰</td>
+            <td>۶</td>
+            <td>۱۴۰۵/۱۰/۲۸ - ۱۴:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 9. Engineering Math (Blocked: missing DiffEq) -->
+          <tr data-code="2104104" data-name="ریاضیات مهندسی" data-group="01" data-units="3" data-instructor="دکتر صابری" data-day="شنبه" data-start-time="10:00" data-end-time="12:00" data-capacity="40" data-available-capacity="5" data-exam-date="۱۴۰۵/۱۰/۱۶ - ۱۰:۰۰">
+            <td>2104104</td>
+            <td>ریاضیات مهندسی</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر صابری</td>
+            <td>شنبه ۱۰:۰۰ - ۱۲:۰۰</td>
+            <td>۴۰</td>
+            <td>۵</td>
+            <td>۱۴۰۵/۱۰/۱۶ - ۱۰:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+
+          <!-- 10. Signals & Systems (Blocked: missing EngMath) -->
+          <tr data-code="2104114" data-name="سیگنال‌ها و سیستم‌ها" data-group="01" data-units="3" data-instructor="دکتر محمودی" data-day="چهارشنبه" data-start-time="08:00" data-end-time="10:00" data-capacity="35" data-available-capacity="13" data-exam-date="۱۴۰۵/۱۰/۳۰ - ۱۰:۰۰">
+            <td>2104114</td>
+            <td>سیگنال‌ها و سیستم‌ها</td>
+            <td>01</td>
+            <td>۳</td>
+            <td>دکتر محمودی</td>
+            <td>چهارشنبه ۰۸:۰۰ - ۱۰:۰۰</td>
+            <td>۳۵</td>
+            <td>۱۳</td>
+            <td>۱۴۰۵/۱۰/۳۰ - ۱۰:۰۰</td>
+            <td><span class="badge badge-open">عادی</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="../extension/content.js"></script>
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    function getExtractionPayload() {
+      if (window.DarschynExtractor && window.DarschynExtractor.extract) {
+        return window.DarschynExtractor.extract();
+      }
+      // Fallback
+      return {
+        schemaVersion: '1.0',
+        source: 'mock-educational-system',
+        extractedAt: new Date().toISOString(),
+        term: 'نیمسال اول ۱۴۰۵–۱۴۰۶',
+        university: 'دانشگاه آزاد اسلامی',
+        campus: 'واحد علوم و تحقیقات',
+        records: [
+          { courseCode: '2104102', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'دکتر صابری', units: 3, day: 'یکشنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
+          { courseCode: '2104103', courseName: 'معادلات دیفرانسیل', group: '01', instructor: 'دکتر علوی', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
+          { courseCode: '2104112', courseName: 'مدارهای الکتریکی ۲', group: '01', instructor: 'دکتر خسروی', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 5 },
+          { courseCode: '2104113', courseName: 'آزمایشگاه مدارهای الکتریکی', group: '02', instructor: 'مهندس رستمی', units: 1, day: 'چهارشنبه', startTime: '14:00', endTime: '16:00', capacity: 15, availableCapacity: 3 },
+          { courseCode: '2104115', courseName: 'الکترونیک ۱', group: '01', instructor: 'دکتر یزدانی', units: 3, day: 'یکشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 7 },
+          { courseCode: '2104131', courseName: 'معماری کامپیوتر', group: '01', instructor: 'دکتر حسینی', units: 3, day: 'سه‌شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 12 },
+          { courseCode: '2104132', courseName: 'میکروکنترلرها و ریزپردازنده‌ها', group: '01', instructor: 'دکتر تقوی', units: 3, day: 'سه‌شنبه', startTime: '13:30', endTime: '15:30', capacity: 25, availableCapacity: 5 },
+          { courseCode: '2104133', courseName: 'طراحی سیستم‌های دیجیتال با FPGA', group: '01', instructor: 'دکتر میرزایی', units: 3, day: 'دوشنبه', startTime: '13:30', endTime: '15:30', capacity: 20, availableCapacity: 6 },
+          { courseCode: '2104104', courseName: 'ریاضیات مهندسی', group: '01', instructor: 'دکتر صابری', units: 3, day: 'شنبه', startTime: '10:00', endTime: '12:00', capacity: 40, availableCapacity: 5 },
+          { courseCode: '2104114', courseName: 'سیگنال‌ها و سیستم‌ها', group: '01', instructor: 'دکتر محمودی', units: 3, day: 'چهارشنبه', startTime: '08:00', endTime: '10:00', capacity: 35, availableCapacity: 13 }
+        ]
+      };
+    }
+
+    document.getElementById('btnDownloadJson')?.addEventListener('click', () => {
+      const payload = getExtractionPayload();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'darschyn-extracted-offerings.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✓ فایل JSON با موفقیت دانلود شد.');
+    });
+
+    document.getElementById('btnCopyJson')?.addEventListener('click', () => {
+      const payload = getExtractionPayload();
+      navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
+        showToast('✓ داده‌های JSON به کلیپ‌بورد کپی شد.');
+      });
+    });
+  </script>
+</body>
+</html>
