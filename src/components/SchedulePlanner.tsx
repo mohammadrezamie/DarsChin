@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 // ============================================================================
 // DARSCHYN (درس‌چین) - Course Planning, Priority Engine & Conflict Timetable
 // ============================================================================
@@ -67,10 +68,12 @@ interface SchedulePlannerProps {
 
 const WEEK_DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه'];
 const TIME_SLOTS = [
-  { label: '۰۸:۰۰ - ۱۰:۰۰', start: '08:00', end: '10:00' },
-  { label: '۱۰:۰۰ - ۱۲:۰۰', start: '10:00', end: '12:00' },
+  { label: '۰۷:۳۰ - ۰۹:۳۰', start: '07:30', end: '09:30' },
+  { label: '۰۹:۳۰ - ۱۱:۳۰', start: '09:30', end: '11:30' },
+  { label: '۱۱:۳۰ - ۱۳:۳۰', start: '11:30', end: '13:30' },
   { label: '۱۳:۳۰ - ۱۵:۳۰', start: '13:30', end: '15:30' },
   { label: '۱۵:۳۰ - ۱۷:۳۰', start: '15:30', end: '17:30' },
+  { label: '۱۷:۳۰ - ۱۹:۳۰', start: '17:30', end: '19:30' },
 ];
 
 export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
@@ -89,6 +92,12 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   academicLimits,
 }) => {
   const [activePlannerTab, setActivePlannerTab] = useState<'priorities' | 'timetable' | 'exams'>('priorities');
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
   
   const [addingFallbackForCourseId, setAddingFallbackForCourseId] = useState<string | null>(null);
 
@@ -274,8 +283,9 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   const minUnits = academicLimits?.effectiveMinUnits ?? (isSummer ? 1 : 12);
   const maxUnits = academicLimits?.effectiveMaxUnits ?? (isSummer ? 8 : isFinalSemester || isGradeA ? 24 : 20);
 
+  const extraUnits = selectedOfferings.reduce((sum, item) => item.isExtraUnit ? sum + (item.units || 0) : sum, 0);
   const totalUnits = selectedOfferings.reduce((sum, item) => {
-    const isExtra = item.courseName.includes('وصایا') || item.courseName.includes('انس');
+    const isExtra = item.isExtraUnit;
     if (isExtra) return sum;
     return sum + (item.units || 0);
   }, 0);
@@ -419,6 +429,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
             <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-0.5">مجموع واحدهای انتخابی</span>
             <div className="flex items-baseline gap-1.5">
               <span className={`text-xl font-black ${unitsStatusColor}`}>{totalUnits}</span>
+                <div className="text-xs text-slate-500 mt-1">{extraUnits > 0 ? `+ ${extraUnits} مازاد` : ''}</div>
               <span className="text-xs text-slate-500">از سقف {maxUnits} واحد</span>
             </div>
           </div>
@@ -613,6 +624,23 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                             <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                               کد {pc.courseCode}
                             </span>
+                            <button
+                              onClick={() => handleCopyCode(primary?.courseCode || primary?.courseCode || pc.courseCode)}
+                              className="px-2.5 py-1 flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-[11px] font-bold"
+                              title="کپی کد ارائه جهت پیست در آموزشیار"
+                            >
+                              {copiedCode === (primary?.courseCode || primary?.courseCode || pc.courseCode) ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  کپی شد
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  کپی کد آموزشیار
+                                </>
+                              )}
+                            </button>
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                               {pc.units} واحد
                             </span>
@@ -858,9 +886,20 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
 
                       {/* Day cells */}
                       {WEEK_DAYS.map((day) => {
-                        const matchingOfferings = selectedOfferings.filter(
-                          (item) => item.dayOfWeek === day && item.startTime?.startsWith(slot.start.slice(0, 2))
-                        );
+                        const matchingOfferings = selectedOfferings.filter((item) => {
+                          if (item.dayOfWeek !== day || !item.startTime || !item.endTime) return false;
+                          const parseTime = (t) => {
+                            const [h, m] = t.split(':').map(Number);
+                            return h * 60 + (m || 0);
+                          };
+                          const itemStart = parseTime(item.startTime);
+                          const itemEnd = parseTime(item.endTime);
+                          const slotStart = parseTime(slot.start);
+                          const slotEnd = parseTime(slot.end);
+                          
+                          // overlap exists if item starts before slot ends AND item ends after slot starts
+                          return itemStart < slotEnd && itemEnd > slotStart;
+                        });
 
                         const hasCollision = matchingOfferings.length > 1;
 

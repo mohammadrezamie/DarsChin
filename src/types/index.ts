@@ -11,7 +11,33 @@ export interface User {
   password?: string;
   recoveryKey?: string;
   roles: UserRole[];
+  permissions?: string[];
+  createdBy?: string;
+  deactivatedAt?: string;
+  deactivatedBy?: string;
   createdAt: string;
+}
+
+export interface OtpChallenge {
+  id: string;
+  mobile: string;
+  purpose: 'login' | 'registration' | 'password_recovery' | 'admin_auth';
+  hashedOtp: string;
+  createdAt: number;
+  expiresAt: number;
+  attempts: number;
+  consumedAt?: number;
+  provider?: string;
+  providerMessageId?: string;
+}
+
+export interface CaptchaChallenge {
+  id: string;
+  value: string;
+  createdAt: number;
+  expiresAt: number;
+  attempts: number;
+  consumedAt?: number;
 }
 
 export interface University {
@@ -19,6 +45,7 @@ export interface University {
   name: string;
   code: string;
   active: boolean;
+  isExtraUnit?: boolean; // مازاد بر واحد
 }
 
 export interface Province {
@@ -104,7 +131,8 @@ export interface Course {
   alternateCodes?: string[]; // e.g. ["2104112-old", "54321"]
   courseCodes?: CourseCodeInfo[]; // structured multi-code model
   name: string; // e.g. "ریاضی عمومی ۱"
-  units: number; // e.g. 3
+  units: number;
+  isExtraUnit?: boolean; // Added for UI // e.g. 3
   practicalUnits?: number; // e.g. 0
   category: CourseCategory;
   description?: string;
@@ -140,25 +168,28 @@ export interface CurriculumCourse {
 
 export type RelationshipType = 'PREREQUISITE' | 'COREQUISITE' | 'CONTEXTUAL_RETAKE_RULE';
 
-export type RuleConditionType = 'AND' | 'OR' | 'MIN_UNITS' | 'CUSTOM';
+export type RuleLogicalOperator = 'AND' | 'OR';
+
+export interface AcademicRuleNode {
+  type: 'COURSE' | 'GROUP';
+  courseId?: string; // If type === 'COURSE'
+  operator?: RuleLogicalOperator; // If type === 'GROUP'
+  operands?: AcademicRuleNode[]; // If type === 'GROUP'
+}
 
 export interface AcademicRule {
   id: string;
   curriculumId: string;
+  targetCourseId: string;
+  relationshipType: RelationshipType;
+  
+  // Structured logical expression for the rule
+  expression: AcademicRuleNode;
+  
   entryYearId?: string | null;
   majorId?: string | null;
   trackId?: string | null;
   
-  targetCourseId: string; // The dependent course
-  sourceCourseId: string; // The required course
-  
-  relationshipType: RelationshipType;
-  conditionType: RuleConditionType;
-  ruleGroup?: string;
-  minUnitsRequired?: number;
-  
-  allowSameTerm?: boolean; // explicitly defined
-  effectiveVersion?: string;
   notes?: string;
 }
 

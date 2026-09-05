@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs';
 import { db } from '../db/database';
 import { generateToken, AuthenticatedRequest, authenticate } from '../middleware/auth';
 import { User, UserRole } from '../../src/types';
+import { validate } from '../middleware/validate';
+import { registerSchema, loginSchema, changePasswordSchema, recoverPasswordSchema } from '../schemas/auth';
 
 export const authRouter = Router();
 
@@ -41,51 +43,13 @@ function normalizeMobile(mobile: string): string {
   return cleaned;
 }
 
-// Ensure Super Admin root account is initialized with hashed password
-function ensureSuperAdmin() {
-  const superAdminMobile = '09911902465';
-  let sa = db.users.find((u) => u.mobile === superAdminMobile);
-  if (!sa) {
-    sa = {
-      id: 'usr-super',
-      mobile: superAdminMobile,
-      name: 'مدیر ارشد سامانه',
-      password: bcrypt.hashSync('1010', 10),
-      recoveryKey: 'darschyn-root-key',
-      roles: ['super-admin', 'admin', 'student'],
-      createdAt: new Date().toISOString(),
-    };
-    db.users.push(sa);
-    db.save();
-  } else {
-    let changed = false;
-    if (!sa.roles.includes('super-admin')) {
-      sa.roles.push('super-admin');
-      changed = true;
-    }
-    if (!sa.roles.includes('admin')) {
-      sa.roles.push('admin');
-      changed = true;
-    }
-    if (!sa.roles.includes('student')) {
-      sa.roles.push('student');
-      changed = true;
-    }
-    if (!sa.password || bcrypt.compareSync('admin123', sa.password)) {
-      sa.password = bcrypt.hashSync('1010', 10);
-      sa.recoveryKey = 'darschyn-root-key';
-      changed = true;
-    }
-    if (changed) db.save();
-  }
-}
+
 
 // ----------------------------------------------------------------------------
 // 1. REGISTER: Mobile + Password (+ Name & Optional Recovery Key)
 // ----------------------------------------------------------------------------
-authRouter.post('/register', (req, res) => {
-  ensureSuperAdmin();
-
+authRouter.post('/register', validate(registerSchema), (req, res) => {
+  
   let { mobile, password, name, recoveryKey } = req.body;
   mobile = normalizeMobile(mobile);
 
@@ -124,7 +88,7 @@ authRouter.post('/register', (req, res) => {
   const userRecoveryKey = recoveryKey?.trim() || `rec-${Math.random().toString(36).substring(2, 10)}`;
 
   // Determine roles: root mobile gets super-admin automatically; all others get student
-  const roles: UserRole[] = mobile === '09911902465' ? ['super-admin', 'admin', 'student'] : ['student'];
+  const roles: UserRole[] = mobile === process.env.ROOT_OWNER_MOBILE ? ['super-admin', 'admin', 'student'] : ['student'];
 
   const newUser: User = {
     id: `usr-${Date.now()}`,
@@ -191,9 +155,8 @@ authRouter.post('/register', (req, res) => {
 // ----------------------------------------------------------------------------
 // 2. LOGIN: Mobile + Password with Brute-Force Rate Limiting
 // ----------------------------------------------------------------------------
-authRouter.post('/login', (req, res) => {
-  ensureSuperAdmin();
-
+authRouter.post('/login', validate(loginSchema), (req, res) => {
+  
   let { mobile, password } = req.body;
   mobile = normalizeMobile(mobile);
 
@@ -220,6 +183,13 @@ authRouter.post('/login', (req, res) => {
   // Find user by mobile
   const user = db.users.find((u) => u.mobile === mobile);
   console.log('Login attempt mobile:', mobile, 'Found user:', user ? user.name : 'null');
+  if (user && user.deactivatedAt) {
+    return res.status(403).json({
+      success: false,
+      error: 'حساب کاربری شما غیرفعال شده است.',
+    });
+  }
+
   if (!user || !user.password) {
     // Record failed attempt
     const currentCount = (attempt ? attempt.count : 0) + 1;
@@ -256,7 +226,7 @@ authRouter.post('/login', (req, res) => {
   failedLogins.delete(mobile);
 
   // Ensure root super-admin has all roles
-  if (user.mobile === '09911902465') {
+  if (user.mobile === process.env.ROOT_OWNER_MOBILE) {
     if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
     if (!user.roles.includes('super-admin')) user.roles.push('super-admin');
     if (!user.roles.includes('admin')) user.roles.push('admin');
@@ -277,7 +247,7 @@ authRouter.post('/login', (req, res) => {
   db.save();
 
   // Generate JWT Token
-  const token = generateToken({ id: user.id, roles: user.roles });
+  const token = generateToken({ id: user.id, roles: user.roles, permissions: user.permissions });
 
   res.json({
     success: true,
@@ -289,6 +259,7 @@ authRouter.post('/login', (req, res) => {
         mobile: user.mobile,
         name: user.name,
         roles: user.roles,
+      permissions: user.permissions || [],
       },
     },
   });
@@ -297,7 +268,7 @@ authRouter.post('/login', (req, res) => {
 // ----------------------------------------------------------------------------
 // 3. CHANGE PASSWORD (Authenticated)
 // ----------------------------------------------------------------------------
-authRouter.post('/change-password', authenticate, (req: AuthenticatedRequest, res) => {
+authRouter.post('/change-password', authenticate, validate(changePasswordSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
   const { currentPassword, newPassword } = req.body;
 
@@ -347,46 +318,33 @@ authRouter.post('/change-password', authenticate, (req: AuthenticatedRequest, re
 // ----------------------------------------------------------------------------
 // 4. PASSWORD RECOVERY (Local MVP without SMS gateway)
 // ----------------------------------------------------------------------------
-authRouter.post('/recover-password', (req, res) => {
-  let { mobile, recoveryKey, newPassword } = req.body;
-  mobile = normalizeMobile(mobile);
 
-  if (!mobile || !newPassword) {
-    return res.status(400).json({
-      success: false,
-      error: 'شماره موبایل و رمز عبور جدید الزامی است.',
-    });
+
+authRouter.post('/recover-password', (req, res) => {
+  let { mobile, newPassword, otpChallengeId } = req.body;
+  mobile = normalizeMobile(mobile);
+  
+  if (!mobile || !newPassword || !otpChallengeId) {
+    return res.status(400).json({ success: false, error: 'شماره موبایل، رمز عبور جدید و شناسه تایید الزامی است.' });
+  }
+
+  // Check OTP challenge was verified
+  const challenge = db.otpChallenges.find(c => c.id === otpChallengeId && c.mobile === mobile);
+  if (!challenge || challenge.purpose !== 'password_recovery' || !challenge.consumedAt) {
+      return res.status(400).json({ success: false, error: 'فرآیند تایید هویت با کد یکبار مصرف کامل نشده است.' });
   }
 
   if (newPassword.trim().length < 6) {
-    return res.status(400).json({
-      success: false,
-      error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.',
-    });
+    return res.status(400).json({ success: false, error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' });
   }
 
   const user = db.users.find((u) => u.mobile === mobile);
-  console.log('Login attempt mobile:', mobile, 'Found user:', user ? user.name : 'null');
   if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'کاربری با این شماره موبایل یافت نشد.',
-    });
+    return res.status(404).json({ success: false, error: 'کاربری یافت نشد.' });
   }
 
-  // If recovery key provided, verify it (or allow reset if matching default recovery key)
-  if (user.recoveryKey && recoveryKey) {
-    if (user.recoveryKey.trim() !== recoveryKey.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'کلید بازیابی امنیتی واردشده نامعتبر است.',
-      });
-    }
-  }
-
-  // Set new password
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
-  failedLogins.delete(mobile); // Clear any brute-force lockouts
+  failedLogins.delete(mobile);
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
@@ -394,82 +352,12 @@ authRouter.post('/recover-password', (req, res) => {
     action: 'PASSWORD_RECOVERED',
     entityType: 'USER',
     entityId: user.id,
-    details: `رمز عبور کاربر ${user.mobile} بازیابی و بازنشانی شد.`,
+    details: `رمز عبور کاربر ${user.mobile} با OTP بازیابی شد.`,
     createdAt: new Date().toISOString(),
   });
-
   db.save();
 
-  res.json({
-    success: true,
-    message: 'رمز عبور شما با موفقیت بازنشانی شد. اکنون می‌توانید با رمز جدید وارد شوید.',
-  });
-});
-
-// ----------------------------------------------------------------------------
-// 5. DEMO ROLE SWITCH (Fast switcher for testing & review without relogin)
-// ----------------------------------------------------------------------------
-authRouter.post('/demo-switch', (req, res) => {
-  const { role } = req.body;
-  ensureSuperAdmin();
-
-  let targetUser: User | undefined;
-
-  if (role === 'super-admin') {
-    targetUser = db.users.find((u) => u.mobile === '09911902465');
-  } else if (role === 'admin') {
-    targetUser = db.users.find((u) => u.roles.includes('admin') && u.mobile !== '09911902465');
-    if (!targetUser) {
-      targetUser = {
-        id: 'usr-admin-demo',
-        mobile: '09121111111',
-        name: 'مدیر سیستم (دمو)',
-        password: bcrypt.hashSync('admin123', 10),
-        recoveryKey: 'admin-recovery-123',
-        roles: ['admin', 'student'],
-        createdAt: new Date().toISOString(),
-      };
-      db.users.push(targetUser);
-      db.save();
-    }
-  } else {
-    targetUser = db.users.find((u) => u.roles.length === 1 && u.roles[0] === 'student');
-    if (!targetUser) {
-      targetUser = db.users.find((u) => u.mobile === '09120000000');
-    }
-    if (!targetUser) {
-      targetUser = {
-        id: 'usr-student-demo',
-        mobile: '09120000000',
-        name: 'دانشجوی دمو',
-        password: bcrypt.hashSync('student123', 10),
-        recoveryKey: 'student-recovery-123',
-        roles: ['student'],
-        createdAt: new Date().toISOString(),
-      };
-      db.users.push(targetUser);
-      db.save();
-    }
-  }
-
-  if (!targetUser) {
-    return res.status(404).json({ success: false, error: 'کاربر دمو یافت نشد.' });
-  }
-
-  const token = generateToken({ id: targetUser.id, roles: targetUser.roles });
-
-  res.json({
-    success: true,
-    data: {
-      token,
-      user: {
-        id: targetUser.id,
-        mobile: targetUser.mobile,
-        name: targetUser.name,
-        roles: targetUser.roles,
-      },
-    },
-  });
+  res.json({ success: true, message: 'رمز عبور شما با موفقیت بازنشانی شد.' });
 });
 
 // ----------------------------------------------------------------------------
@@ -482,14 +370,14 @@ authRouter.get('/me', authenticate, (req: AuthenticatedRequest, res) => {
   }
 
   // Auto-upgrade permissions if super-admin hardcoded matches
-  if (user.mobile === '09911902465' && !user.roles.includes('super-admin')) {
+  if (user.mobile === process.env.ROOT_OWNER_MOBILE && !user.roles.includes('super-admin')) {
     if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
     user.roles.push('super-admin');
     if (!user.roles.includes('admin')) user.roles.push('admin');
     db.save();
   }
 
-  const refreshedToken = generateToken({ id: user.id, roles: user.roles, mobile: user.mobile, name: user.name });
+  const refreshedToken = generateToken({ id: user.id, roles: user.roles, permissions: user.permissions, mobile: user.mobile, name: user.name });
   res.json({
     success: true,
     data: {

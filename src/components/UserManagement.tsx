@@ -58,6 +58,7 @@ export const UserManagement: React.FC = () => {
               <th className="px-4 py-3 rounded-r-xl">نام کاربر</th>
               <th className="px-4 py-3">ایمیل / نام کاربری</th>
               <th className="px-4 py-3">نقش فعلی</th>
+              <th className="px-4 py-3">وضعیت تحصیلی (Major/Entry)</th>
               <th className="px-4 py-3 rounded-l-xl">عملیات</th>
             </tr>
           </thead>
@@ -76,6 +77,7 @@ export const UserManagement: React.FC = () => {
                     {getHighestRole(u.roles) === 'super-admin' ? 'مدیر ارشد' : getHighestRole(u.roles) === 'admin' ? 'مدیر سیستم' : 'دانشجو'}
                   </span>
                 </td>
+                <td className="px-4 py-4 text-xs text-slate-500 max-w-xs">{u.roles?.includes("student") ? `دانشجوی ${(u as any).profile?.majorId || "-"} ورود ${(u as any).profile?.entryYearId || "-"}` : "-"}</td>
                 <td className="px-4 py-4">
                   {u.mobile !== '09911902465' ? (
                     <select

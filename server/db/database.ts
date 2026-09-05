@@ -29,7 +29,7 @@ import {
   ImportRecord,
   AcademicPolicySettings,
   AcademicLimitInfo,
-  SupportTicket, SupportMessage, BugReport, AuditLog, ErrorLog
+  SupportTicket, SupportMessage, BugReport, AuditLog, ErrorLog, UserRole, OtpChallenge, CaptchaChallenge
 } from '../../src/types';
 
 export const DEFAULT_ACADEMIC_SETTINGS: AcademicPolicySettings = {
@@ -71,6 +71,8 @@ export interface DatabaseSchema {
   bugReports: BugReport[];
   auditLogs: AuditLog[];
   errorLogs: ErrorLog[];
+  otpChallenges: OtpChallenge[];
+  captchaChallenges: CaptchaChallenge[];
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -103,6 +105,8 @@ export class LocalDatabase {
     bugReports: [],
     auditLogs: [],
     errorLogs: [],
+    otpChallenges: [],
+    captchaChallenges: [],
   };
 
   private isInitialized = false;
@@ -142,30 +146,46 @@ export class LocalDatabase {
           }
         });
 
-        const superAdmin = this.data.users.find(u => u.mobile === '09911902465' || u.id === 'usr-super');
+        
+        
+        const rootMobile = process.env.ROOT_OWNER_MOBILE || '09911902465'; // Fallback for local testing so tests don't break
+        const rootPassword = process.env.ROOT_OWNER_PASSWORD || '1010'; 
+        const rootRecovery = process.env.ROOT_OWNER_RECOVERY_KEY || 'darschyn-root-key';
+
+        let superAdmin = this.data.users.find(u => u.mobile === rootMobile || u.id === 'usr-super');
+        
+        const allRoles = ['super-admin', 'admin', 'student'];
+        const allPerms = [
+            'student.access', 'student.profile.read', 'student.plan.manage', 'student.academic.read',
+            'admin.panel.access', 'course.read', 'course.create', 'course.update', 'course.delete',
+            'prerequisite.manage', 'corequisite.manage', 'curriculum.manage', 'offering.manage',
+            'academic-policy.manage', 'student-management.read', 'support.manage', 'import.manage',
+            'admin.create', 'admin.manage', 'admin.remove', 'admin.permission.manage',
+            'system.settings.manage', 'backup.manage'
+        ];
+
         if (!superAdmin) {
             this.data.users.push({
                 id: 'usr-super',
-                mobile: '09911902465',
-                password: bcrypt.hashSync('1010', 10),
-                recoveryKey: 'darschyn-root-key',
-                name: 'مدیر ارشد سامانه',
-                roles: ['super-admin', 'admin', 'student'],
+                mobile: rootMobile,
+                password: bcrypt.hashSync(rootPassword, 10),
+                recoveryKey: rootRecovery,
+                name: 'مدیر ارشد سامانه (Root)',
+                roles: allRoles as UserRole[],
+                permissions: allPerms,
                 createdAt: new Date().toISOString()
             });
-            console.log("SUPER ADMIN INJECTED IN LOCAL DATABASE");
+            console.log("ROOT OWNER INJECTED IN LOCAL DATABASE");
             this.save();
         } else {
-            superAdmin.id = 'usr-super';
-            superAdmin.mobile = '09911902465';
-            superAdmin.name = superAdmin.name || 'مدیر ارشد سامانه';
-            superAdmin.roles = ['super-admin', 'admin', 'student'];
-            if (!superAdmin.password || bcrypt.compareSync('admin123', superAdmin.password)) {
-              superAdmin.password = bcrypt.hashSync('1010', 10);
-              superAdmin.recoveryKey = 'darschyn-root-key';
-            }
+            // Do NOT silently overwrite an existing password
+            superAdmin.mobile = rootMobile;
+            superAdmin.roles = allRoles as UserRole[];
+            superAdmin.permissions = allPerms;
+            superAdmin.name = superAdmin.name || 'مدیر ارشد سامانه (Root)';
             this.save();
         }
+
 
         
         if (!this.data.supportTickets) this.data.supportTickets = [];
@@ -173,6 +193,10 @@ export class LocalDatabase {
         if (!this.data.bugReports) this.data.bugReports = [];
         if (!this.data.auditLogs) this.data.auditLogs = [];
         if (!this.data.errorLogs) this.data.errorLogs = [];
+        if (!this.data.otpChallenges) this.data.otpChallenges = [];
+        if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
+        if (!this.data.otpChallenges) this.data.otpChallenges = [];
+        if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
         this.isInitialized = true;
         return;
       } catch (err) {
@@ -258,8 +282,12 @@ export class LocalDatabase {
   get supportTickets() { return this.data.supportTickets || []; }
   get supportMessages() { return this.data.supportMessages || []; }
   get bugReports() { return this.data.bugReports || []; }
+
   get auditLogs() { return this.data.auditLogs || []; }
   get errorLogs() { return this.data.errorLogs || []; }
+  get otpChallenges() { return this.data.otpChallenges || []; }
+  get captchaChallenges() { return this.data.captchaChallenges || []; }
+
 
   /**
    * Deterministically calculates a student's graduation progress and academic limits,
@@ -402,7 +430,8 @@ export class LocalDatabase {
     }
 
     // Determine limits
-    const effectiveMinUnits = isSummer ? settings.summerMinUnits : settings.normalMinUnits;
+    let effectiveMinUnits = isSummer ? settings.summerMinUnits : settings.normalMinUnits;
+    if (isFinalSemester && !isSummer) effectiveMinUnits = 2;
     let effectiveMaxUnits = settings.normalMaxUnits;
 
     if (isSummer) {

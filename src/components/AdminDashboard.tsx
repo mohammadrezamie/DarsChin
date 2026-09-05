@@ -19,7 +19,7 @@ import {
   School,
   MapPin,
   GitFork,
-  FileSpreadsheet,
+  FileSpreadsheet, FileDown,
   AlertTriangle,
   RefreshCw,
   Calendar,
@@ -37,6 +37,7 @@ import { AdminSupportPanel } from './AdminSupportPanel';
 import { AdminDiagnostics } from './AdminDiagnostics';
 import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
+import { AdminImportCenter } from './AdminImportCenter';
 import { apiRequest } from '../utils/api';
 
 type AdminTab =
@@ -146,6 +147,7 @@ export const AdminDashboard: React.FC = () => {
         { id: 'academic-rules' as AdminTab, label: 'قوانین آموزشی', icon: Workflow },
         { id: 'terms' as AdminTab, label: 'نیمسال‌های تحصیلی', icon: Clock },
         { id: 'offerings' as AdminTab, label: 'ارائه‌های ترمی', icon: Layers },
+        { id: 'imports' as AdminTab, label: 'پایش داده‌های ورودی', icon: FileDown },
         ...(isSuperAdmin ? [{ id: 'academic-settings' as AdminTab, label: 'آیین‌نامه و سقف واحدها', icon: SlidersHorizontal }] : []),
       ],
     },
@@ -571,6 +573,8 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* 13. OFFERINGS */}
+        {activeTab === 'imports' && <AdminImportCenter />}
+
         {activeTab === 'offerings' && (
           <AdminCrudTable
             title="مدیریت ارائه‌های ترمی دروس (Course Offerings)"

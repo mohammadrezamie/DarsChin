@@ -7,11 +7,13 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { processImportPayload } from '../../src/domain/import-validator';
 import { ImportBatch, CourseOffering } from '../../src/types';
+import { validate } from '../middleware/validate';
+import { processImportSchema } from '../schemas/imports';
 
 export const importsRouter = Router();
 
 // Process uploaded JSON from Chrome Extension
-importsRouter.post('/process', authenticate, (req: AuthenticatedRequest, res) => {
+importsRouter.post('/process', authenticate, validate(processImportSchema), (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.id;
     const { payload, termId, campusId } = req.body;
@@ -97,9 +99,14 @@ importsRouter.get('/batches', authenticate, (req: AuthenticatedRequest, res) => 
 });
 
 // Get detailed records for a batch
-importsRouter.get('/batches/:id', authenticate, (req, res) => {
+importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res) => {
   const batch = db.importBatches.find((b) => b.id === req.params.id);
   if (!batch) return res.status(404).json({ success: false, error: 'شناسه بسته واردشده یافت نشد.' });
+
+  const isSuperAdmin = req.user!.roles?.includes('admin') || req.user!.roles?.includes('super-admin');
+  if (batch.userId !== req.user!.id && !isSuperAdmin) {
+    return res.status(403).json({ success: false, error: 'عدم دسترسی' });
+  }
 
   const records = db.importRecords.filter((r) => r.batchId === req.params.id);
 

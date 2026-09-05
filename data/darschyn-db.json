@@ -4,20 +4,45 @@
       "id": "usr-super",
       "mobile": "09911902465",
       "name": "مدیر ارشد سامانه",
-      "password": "$2b$10$D78IzR5RhhucbmsfjTEViOUz9krNMyIPlum/mjt0O7ncv5LZ1BfjC",
+      "password": "$2b$10$nc02u4a6/PjW.3Jpk0YI8usWwHCmTBofwDojMX9N9duv9vub8ZAJC",
       "recoveryKey": "darschyn-root-key",
       "roles": [
         "super-admin",
         "admin",
         "student"
       ],
-      "createdAt": "2026-01-01T00:00:00.000Z"
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "permissions": [
+        "student.access",
+        "student.profile.read",
+        "student.plan.manage",
+        "student.academic.read",
+        "admin.panel.access",
+        "course.read",
+        "course.create",
+        "course.update",
+        "course.delete",
+        "prerequisite.manage",
+        "corequisite.manage",
+        "curriculum.manage",
+        "offering.manage",
+        "academic-policy.manage",
+        "student-management.read",
+        "support.manage",
+        "import.manage",
+        "admin.create",
+        "admin.manage",
+        "admin.remove",
+        "admin.permission.manage",
+        "system.settings.manage",
+        "backup.manage"
+      ]
     },
     {
       "id": "usr-admin-1",
       "mobile": "09121111111",
       "name": "مدیر آموزش",
-      "password": "$2b$10$D78IzR5RhhucbmsfjTEViOUz9krNMyIPlum/mjt0O7ncv5LZ1BfjC",
+      "password": "$2b$10$nc02u4a6/PjW.3Jpk0YI8usWwHCmTBofwDojMX9N9duv9vub8ZAJC",
       "recoveryKey": "admin-recovery-123",
       "roles": [
         "admin",
@@ -29,12 +54,128 @@
       "id": "usr-student-1",
       "mobile": "09120000000",
       "name": "دانشجوی نمونه",
-      "password": "$2b$10$qJ8DBJEsb6LHfADz3wgb7OP4CC2yadmPuzfD1.9kwe2dhcCJuCC7K",
+      "password": "$2b$10$xXF75g5XtVE.DI3s0Jfc0.GJXTh3PHCsRZNgtcdH34R92dnghsKkK",
       "recoveryKey": "student-recovery-123",
       "roles": [
         "student"
       ],
       "createdAt": "2026-01-02T00:00:00.000Z"
+    },
+    {
+      "id": "usr-stud1",
+      "mobile": "09000000001",
+      "name": "Student",
+      "roles": [
+        "student"
+      ],
+      "permissions": [
+        "student.access"
+      ]
+    },
+    {
+      "id": "usr-adm1",
+      "mobile": "09000000002",
+      "name": "Admin",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [
+        "admin.panel.access"
+      ]
+    },
+    {
+      "id": "usr-1788612759430",
+      "name": "NewAdmin2",
+      "mobile": "09000000004",
+      "password": "$2b$10$Re8j7e33JBKk.2Vt3eH3gO8bk7GWG/10lV1.Xtt7d.SjYg6XReNea",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T12:52:39.528Z"
+    },
+    {
+      "id": "usr-1788612860777",
+      "name": "NewAdmin2",
+      "mobile": "09000000005",
+      "password": "$2b$10$Rl2YhXwbtfFWTitsw6H/mOZm3Y2OXAJUYV2GwmcmrJ9GJLabQS1pW",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T12:54:20.874Z"
+    },
+    {
+      "id": "usr-1788612935098",
+      "name": "NewAdmin2",
+      "mobile": "09000913129",
+      "password": "$2b$10$QVGilYhwVGFaWDmQnahyOuJHcevrxiqAo/f7ZhX7krRdSWUpXBaL.",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T12:55:35.206Z"
+    },
+    {
+      "id": "usr-1788613022548",
+      "name": "NewAdmin2",
+      "mobile": "09000914785",
+      "password": "$2b$10$Ge21RLXimWuOdPFPsmVkF.F6pxTuMCR.1WGLEY8r2lReFLrHWFUza",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T12:57:02.647Z"
+    },
+    {
+      "id": "usr-1788613053840",
+      "name": "NewAdmin2",
+      "mobile": "0900054500",
+      "password": "$2b$10$mS9KwVRoiEud8AcAfUyLKu81aZf1b3nSZNgprM9ECuFlxCOMvIgLa",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T12:57:33.943Z"
+    },
+    {
+      "id": "usr-stud1",
+      "mobile": "09000000002",
+      "name": "Student",
+      "roles": [
+        "student"
+      ],
+      "permissions": [
+        "student.access"
+      ]
+    },
+    {
+      "id": "usr-adm1",
+      "mobile": "09000000002",
+      "name": "Admin",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [
+        "admin.panel.access"
+      ]
+    },
+    {
+      "id": "usr-1788614003758",
+      "name": "NewAdmin2",
+      "mobile": "09000457413",
+      "password": "$2b$10$FxaGQdtm1GSv1xUkSVI.hOGjyMQ..S3KO1IJfnJlh2.4HyspwVr5K",
+      "roles": [
+        "admin"
+      ],
+      "permissions": [],
+      "createdBy": "usr-super",
+      "createdAt": "2026-09-05T13:13:23.861Z"
     }
   ],
   "universities": [],
@@ -712,186 +853,203 @@
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-math-2",
-      "sourceCourseId": "crs-math-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-math-1"
+      }
     },
     {
       "id": "pr-2",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-diffeq",
-      "sourceCourseId": "crs-math-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-math-1"
+      }
     },
     {
       "id": "pr-3",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-phys-2",
-      "sourceCourseId": "crs-phys-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-phys-1"
+      }
     },
     {
       "id": "pr-4",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-engmath",
-      "sourceCourseId": "crs-diffeq",
-      "conditionType": "AND"
-    },
-    {
-      "id": "pr-5",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-engmath",
-      "sourceCourseId": "crs-math-2",
-      "conditionType": "AND"
+      "expression": {
+        "type": "GROUP",
+        "operator": "AND",
+        "operands": [
+          {
+            "type": "COURSE",
+            "courseId": "crs-diffeq"
+          },
+          {
+            "type": "COURSE",
+            "courseId": "crs-math-2"
+          }
+        ]
+      }
     },
     {
       "id": "pr-6",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-circ-1",
-      "sourceCourseId": "crs-phys-2",
-      "conditionType": "AND"
-    },
-    {
-      "id": "pr-7",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-circ-1",
-      "sourceCourseId": "crs-math-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "GROUP",
+        "operator": "AND",
+        "operands": [
+          {
+            "type": "COURSE",
+            "courseId": "crs-phys-2"
+          },
+          {
+            "type": "COURSE",
+            "courseId": "crs-math-1"
+          }
+        ]
+      }
     },
     {
       "id": "pr-8",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-circ-2",
-      "sourceCourseId": "crs-circ-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-circ-1"
+      }
     },
     {
       "id": "pr-9",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-signals",
-      "sourceCourseId": "crs-engmath",
-      "conditionType": "AND"
-    },
-    {
-      "id": "pr-10",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-signals",
-      "sourceCourseId": "crs-circ-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "GROUP",
+        "operator": "AND",
+        "operands": [
+          {
+            "type": "COURSE",
+            "courseId": "crs-engmath"
+          },
+          {
+            "type": "COURSE",
+            "courseId": "crs-circ-1"
+          }
+        ]
+      }
     },
     {
       "id": "pr-11",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-elec-1",
-      "sourceCourseId": "crs-circ-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-circ-1"
+      }
     },
     {
       "id": "pr-12",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-elec-2",
-      "sourceCourseId": "crs-elec-1",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-elec-1"
+      }
     },
     {
       "id": "pr-13",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-comp-arch",
-      "sourceCourseId": "crs-logic",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-logic"
+      }
     },
     {
       "id": "pr-14",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "targetCourseId": "crs-micro",
-      "sourceCourseId": "crs-logic",
-      "conditionType": "AND"
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-logic"
+      }
     },
     {
-      "id": "pr-15-dig-1",
+      "id": "pr-15",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
       "trackId": "trk-digital",
       "targetCourseId": "crs-fpga",
-      "sourceCourseId": "crs-comp-arch",
-      "conditionType": "AND",
-      "notes": "پیش‌نیاز اختصاصی گرایش سیستم‌های دیجیتال"
-    },
-    {
-      "id": "pr-15-dig-2",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "trackId": "trk-digital",
-      "targetCourseId": "crs-fpga",
-      "sourceCourseId": "crs-micro",
-      "conditionType": "AND",
-      "notes": "پیش‌نیاز اختصاصی گرایش سیستم‌های دیجیتال"
-    },
-    {
-      "id": "pr-15-elc",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "trackId": "trk-electronics",
-      "targetCourseId": "crs-fpga",
-      "sourceCourseId": "crs-logic",
-      "conditionType": "AND",
-      "notes": "پیش‌نیاز اختصاصی گرایش الکترونیک"
+      "expression": {
+        "type": "GROUP",
+        "operator": "AND",
+        "operands": [
+          {
+            "type": "COURSE",
+            "courseId": "crs-comp-arch"
+          },
+          {
+            "type": "COURSE",
+            "courseId": "crs-micro"
+          }
+        ]
+      }
     },
     {
       "id": "pr-16",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-control",
-      "sourceCourseId": "crs-signals",
-      "conditionType": "AND"
+      "trackId": "trk-telecom",
+      "targetCourseId": "crs-fpga",
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-comp-arch"
+      }
     },
     {
       "id": "pr-17",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-telecom-1",
-      "sourceCourseId": "crs-signals",
-      "conditionType": "AND"
+      "targetCourseId": "crs-power-1",
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-circ-2"
+      }
     },
     {
       "id": "pr-18",
       "relationshipType": "PREREQUISITE",
       "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-power-1",
-      "sourceCourseId": "crs-circ-2",
-      "conditionType": "AND"
+      "trackId": "trk-power",
+      "targetCourseId": "crs-power-lab",
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-power-1"
+      }
     },
     {
-      "id": "pr-min-intern",
-      "relationshipType": "PREREQUISITE",
+      "id": "cr-1",
+      "relationshipType": "COREQUISITE",
       "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-internship",
-      "sourceCourseId": "crs-math-1",
-      "conditionType": "MIN_UNITS",
-      "minUnitsRequired": 80,
-      "notes": "گذراندن حداقل ۸۰ واحد درسی"
-    },
-    {
-      "id": "pr-min-proj",
-      "relationshipType": "PREREQUISITE",
-      "curriculumId": "curr-ee-1403",
-      "targetCourseId": "crs-project",
-      "sourceCourseId": "crs-math-1",
-      "conditionType": "MIN_UNITS",
-      "minUnitsRequired": 100,
-      "notes": "گذراندن حداقل ۱۰۰ واحد درسی"
+      "targetCourseId": "crs-circ-lab",
+      "expression": {
+        "type": "COURSE",
+        "courseId": "crs-circ-1"
+      }
     }
   ],
   "courseOfferings": [
@@ -1138,359 +1296,11 @@
       "examDate": "۱۴۰۵/۱۰/۲۱ - ۱۰:۰۰",
       "source": "extension",
       "active": true
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-math-2",
-      "rawCourseCode": "2104102",
-      "rawCourseName": "ریاضی عمومی ۲",
-      "groupCode": "01",
-      "instructor": "دکتر صابری",
-      "dayOfWeek": "یکشنبه",
-      "startTime": "08:00",
-      "endTime": "10:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 40,
-      "enrolledCount": 32,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-1"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-diffeq",
-      "rawCourseCode": "2104103",
-      "rawCourseName": "معادلات دیفرانسیل",
-      "groupCode": "01",
-      "instructor": "دکتر علوی",
-      "dayOfWeek": "دوشنبه",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 35,
-      "enrolledCount": 20,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-2"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-circ-2",
-      "rawCourseCode": "2104112",
-      "rawCourseName": "مدارهای الکتریکی ۲",
-      "groupCode": "01",
-      "instructor": "دکتر خسروی",
-      "dayOfWeek": "شنبه",
-      "startTime": "08:00",
-      "endTime": "10:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 30,
-      "enrolledCount": 25,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-3"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-circ-lab",
-      "rawCourseCode": "2104113",
-      "rawCourseName": "آزمایشگاه مدارهای الکتریکی",
-      "groupCode": "02",
-      "instructor": "مهندس رستمی",
-      "dayOfWeek": "چهارشنبه",
-      "startTime": "14:00",
-      "endTime": "16:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 15,
-      "enrolledCount": 12,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-4"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-elec-1",
-      "rawCourseCode": "2104115",
-      "rawCourseName": "الکترونیک ۱",
-      "groupCode": "01",
-      "instructor": "دکتر یزدانی",
-      "dayOfWeek": "یکشنبه",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 35,
-      "enrolledCount": 28,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-5"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-comp-arch",
-      "rawCourseCode": "2104131",
-      "rawCourseName": "معماری کامپیوتر",
-      "groupCode": "01",
-      "instructor": "دکتر حسینی",
-      "dayOfWeek": "سه‌شنبه",
-      "startTime": "08:00",
-      "endTime": "10:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 30,
-      "enrolledCount": 18,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-6"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-micro",
-      "rawCourseCode": "2104132",
-      "rawCourseName": "میکروکنترلرها و ریزپردازنده‌ها",
-      "groupCode": "01",
-      "instructor": "دکتر تقوی",
-      "dayOfWeek": "سه‌شنبه",
-      "startTime": "13:30",
-      "endTime": "15:30",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 25,
-      "enrolledCount": 20,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-7"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-fpga",
-      "rawCourseCode": "2104133",
-      "rawCourseName": "طراحی سیستم‌های دیجیتال با FPGA",
-      "groupCode": "01",
-      "instructor": "دکتر میرزایی",
-      "dayOfWeek": "دوشنبه",
-      "startTime": "13:30",
-      "endTime": "15:30",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 20,
-      "enrolledCount": 14,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-8"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-engmath",
-      "rawCourseCode": "2104104",
-      "rawCourseName": "ریاضیات مهندسی",
-      "groupCode": "01",
-      "instructor": "دکتر صابری",
-      "dayOfWeek": "شنبه",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 40,
-      "enrolledCount": 35,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-9"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-signals",
-      "rawCourseCode": "2104114",
-      "rawCourseName": "سیگنال‌ها و سیستم‌ها",
-      "groupCode": "01",
-      "instructor": "دکتر محمودی",
-      "dayOfWeek": "چهارشنبه",
-      "startTime": "08:00",
-      "endTime": "10:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 35,
-      "enrolledCount": 22,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-10"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-gen-islam-1",
-      "rawCourseCode": "1101003",
-      "rawCourseName": "اندیشه اسلامی ۱ (مبدأ و معاد)",
-      "groupCode": "03",
-      "instructor": "حجت‌الاسلام موسوی",
-      "dayOfWeek": "سه‌شنبه",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 50,
-      "enrolledCount": 41,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-11"
-    },
-    {
-      "termId": "term-1405-1",
-      "campusId": "camp-srbiau",
-      "courseId": "crs-gen-morals",
-      "rawCourseCode": "1101004",
-      "rawCourseName": "آیین زندگی (اخلاق کاربردی)",
-      "groupCode": "01",
-      "instructor": "استاد کریمی",
-      "dayOfWeek": "دوشنبه",
-      "startTime": "08:00",
-      "endTime": "10:00",
-      "location": "دانشکده فنی و مهندسی",
-      "capacity": 45,
-      "enrolledCount": 30,
-      "source": "extension",
-      "active": true,
-      "id": "off-imp-batch-1788553446597-12"
     }
   ],
-  "studentProfiles": [
-    {
-      "userId": "usr-student-1",
-      "universityId": "univ-azad",
-      "campusId": "camp-srbiau",
-      "degreeLevelId": "deg-bs",
-      "majorId": "maj-ee",
-      "entryYearId": "yr-1403",
-      "isTrackSelected": false,
-      "selectedTrackId": null,
-      "desiredTrackIds": [
-        "trk-digital",
-        "trk-electronics"
-      ],
-      "currentTermId": "term-1405-1",
-      "updatedAt": "2026-02-01T00:00:00.000Z"
-    },
-    {
-      "userId": "usr-admin-1",
-      "universityId": "",
-      "campusId": "camp-srbiau",
-      "degreeLevelId": "deg-bs",
-      "majorId": "maj-ee",
-      "entryYearId": "yr-1403",
-      "isTrackSelected": false,
-      "selectedTrackId": null,
-      "desiredTrackIds": [
-        "trk-digital",
-        "trk-electronics",
-        "trk-power",
-        "trk-telecom",
-        "trk-control"
-      ],
-      "currentTermId": "term-1405-1",
-      "updatedAt": "2026-08-20T21:51:30.157Z"
-    },
-    {
-      "userId": "usr-super",
-      "universityId": "",
-      "campusId": "camp-srbiau",
-      "degreeLevelId": "deg-bs",
-      "majorId": "maj-ee",
-      "entryYearId": "yr-1403",
-      "isTrackSelected": false,
-      "selectedTrackId": null,
-      "desiredTrackIds": [
-        "trk-digital",
-        "trk-electronics",
-        "trk-power",
-        "trk-telecom",
-        "trk-control"
-      ],
-      "currentTermId": "term-1405-1",
-      "updatedAt": "2026-08-20T22:05:10.007Z"
-    }
-  ],
-  "studentPassedCourses": [
-    {
-      "id": "spc-1",
-      "userId": "usr-student-1",
-      "courseId": "crs-math-1",
-      "grade": 18.5,
-      "passedAt": "2024-06-20"
-    },
-    {
-      "id": "spc-2",
-      "userId": "usr-student-1",
-      "courseId": "crs-phys-1",
-      "grade": 17,
-      "passedAt": "2024-06-20"
-    },
-    {
-      "id": "spc-3",
-      "userId": "usr-student-1",
-      "courseId": "crs-prog",
-      "grade": 19,
-      "passedAt": "2024-06-20"
-    },
-    {
-      "id": "spc-4",
-      "userId": "usr-student-1",
-      "courseId": "crs-gen-persian",
-      "grade": 20,
-      "passedAt": "2024-06-20"
-    },
-    {
-      "id": "spc-5",
-      "userId": "usr-student-1",
-      "courseId": "crs-gen-english",
-      "grade": 18,
-      "passedAt": "2024-06-20"
-    },
-    {
-      "id": "spc-6",
-      "userId": "usr-student-1",
-      "courseId": "crs-phys-2",
-      "grade": 16.5,
-      "passedAt": "2025-01-25"
-    },
-    {
-      "id": "spc-7",
-      "userId": "usr-student-1",
-      "courseId": "crs-circ-1",
-      "grade": 17.5,
-      "passedAt": "2025-01-25"
-    },
-    {
-      "id": "spc-8",
-      "userId": "usr-student-1",
-      "courseId": "crs-logic",
-      "grade": 19.5,
-      "passedAt": "2025-01-25"
-    },
-    {
-      "id": "spc-9",
-      "userId": "usr-student-1",
-      "courseId": "crs-math-2",
-      "grade": 16,
-      "passedAt": "2025-01-25"
-    }
-  ],
+  "studentProfiles": [],
+  "studentPassedCourses": [],
   "importBatches": [
-    {
-      "id": "batch-1788553446597",
-      "userId": "usr-student-1",
-      "termId": "term-1405-1",
-      "source": "extension",
-      "schemaVersion": "1.0",
-      "totalRecords": 13,
-      "matchedRecords": 12,
-      "reviewRecords": 1,
-      "invalidRecords": 0,
-      "rawJson": "{\"schemaVersion\":\"1.0\",\"source\":\"mock-educational-system\",\"extractedAt\":\"2026-09-04T20:24:13.608Z\",\"term\":\"نیمسال اول ۱۴۰۵–۱۴۰۶\",\"university\":\"دانشگاه آزاد اسلامی\",\"campus\":\"واحد علوم و تحقیقات\",\"records\":[{\"courseCode\":\"2104102\",\"courseName\":\"ریاضی عمومی ۲\",\"group\":\"01\",\"instructor\":\"دکتر صابری\",\"units\":3,\"day\":\"یکشنبه\",\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"capacity\":40,\"availableCapacity\":8},{\"courseCode\":\"2104103\",\"courseName\":\"معادلات دیفرانسیل\",\"group\":\"01\",\"instructor\":\"دکتر علوی\",\"units\":3,\"day\":\"دوشنبه\",\"startTime\":\"10:00\",\"endTime\":\"12:00\",\"capacity\":35,\"availableCapacity\":15},{\"courseCode\":\"2104112\",\"courseName\":\"مدارهای الکتریکی ۲\",\"group\":\"01\",\"instructor\":\"دکتر خسروی\",\"units\":3,\"day\":\"شنبه\",\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"capacity\":30,\"availableCapacity\":5},{\"courseCode\":\"2104113\",\"courseName\":\"آزمایشگاه مدارهای الکتریکی\",\"group\":\"02\",\"instructor\":\"مهندس رستمی\",\"units\":1,\"day\":\"چهارشنبه\",\"startTime\":\"14:00\",\"endTime\":\"16:00\",\"capacity\":15,\"availableCapacity\":3},{\"courseCode\":\"2104115\",\"courseName\":\"الکترونیک ۱\",\"group\":\"01\",\"instructor\":\"دکتر یزدانی\",\"units\":3,\"day\":\"یکشنبه\",\"startTime\":\"10:00\",\"endTime\":\"12:00\",\"capacity\":35,\"availableCapacity\":7},{\"courseCode\":\"2104131\",\"courseName\":\"معماری کامپیوتر\",\"group\":\"01\",\"instructor\":\"دکتر حسینی\",\"units\":3,\"day\":\"سه‌شنبه\",\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"capacity\":30,\"availableCapacity\":12},{\"courseCode\":\"2104132\",\"courseName\":\"میکروکنترلرها و ریزپردازنده‌ها\",\"group\":\"01\",\"instructor\":\"دکتر تقوی\",\"units\":3,\"day\":\"سه‌شنبه\",\"startTime\":\"13:30\",\"endTime\":\"15:30\",\"capacity\":25,\"availableCapacity\":5},{\"courseCode\":\"2104133\",\"courseName\":\"طراحی سیستم‌های دیجیتال با FPGA\",\"group\":\"01\",\"instructor\":\"دکتر میرزایی\",\"units\":3,\"day\":\"دوشنبه\",\"startTime\":\"13:30\",\"endTime\":\"15:30\",\"capacity\":20,\"availableCapacity\":6},{\"courseCode\":\"2104104\",\"courseName\":\"ریاضیات مهندسی\",\"group\":\"01\",\"instructor\":\"دکتر صابری\",\"units\":3,\"day\":\"شنبه\",\"startTime\":\"10:00\",\"endTime\":\"12:00\",\"capacity\":40,\"availableCapacity\":5},{\"courseCode\":\"2104114\",\"courseName\":\"سیگنال‌ها و سیستم‌ها\",\"group\":\"01\",\"instructor\":\"دکتر محمودی\",\"units\":3,\"day\":\"چهارشنبه\",\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"capacity\":35,\"availableCapacity\":13},{\"courseCode\":\"1101003\",\"courseName\":\"اندیشه اسلامی ۱ (مبدأ و معاد)\",\"group\":\"03\",\"instructor\":\"حجت‌الاسلام موسوی\",\"units\":2,\"day\":\"سه‌شنبه\",\"startTime\":\"10:00\",\"endTime\":\"12:00\",\"capacity\":50,\"availableCapacity\":9},{\"courseCode\":\"1101004\",\"courseName\":\"آیین زندگی (اخلاق کاربردی)\",\"group\":\"01\",\"instructor\":\"استاد کریمی\",\"units\":2,\"day\":\"دوشنبه\",\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"capacity\":45,\"availableCapacity\":15},{\"courseCode\":\"9999999\",\"courseName\":\"درس فرضی خارج از چارت\",\"group\":\"99\",\"instructor\":\"نامشخص\",\"units\":3,\"day\":\"نامشخص\",\"startTime\":\"00:00\",\"endTime\":\"00:00\",\"capacity\":10,\"availableCapacity\":0}]}",
-      "createdAt": "2026-09-04T20:24:06.599Z"
-    },
     {
       "id": "batch-demo-1",
       "userId": "usr-student-1",
@@ -1523,266 +1333,6 @@
       "matchedCourseId": "crs-fpga",
       "status": "MATCHED",
       "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-1",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104102",
-        "courseName": "ریاضی عمومی ۲",
-        "group": "01",
-        "instructor": "دکتر صابری",
-        "units": 3,
-        "day": "یکشنبه",
-        "startTime": "08:00",
-        "endTime": "10:00",
-        "capacity": 40,
-        "availableCapacity": 8,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-math-2",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-2",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104103",
-        "courseName": "معادلات دیفرانسیل",
-        "group": "01",
-        "instructor": "دکتر علوی",
-        "units": 3,
-        "day": "دوشنبه",
-        "startTime": "10:00",
-        "endTime": "12:00",
-        "capacity": 35,
-        "availableCapacity": 15,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-diffeq",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-3",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104112",
-        "courseName": "مدارهای الکتریکی ۲",
-        "group": "01",
-        "instructor": "دکتر خسروی",
-        "units": 3,
-        "day": "شنبه",
-        "startTime": "08:00",
-        "endTime": "10:00",
-        "capacity": 30,
-        "availableCapacity": 5,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-circ-2",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-4",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104113",
-        "courseName": "آزمایشگاه مدارهای الکتریکی",
-        "group": "02",
-        "instructor": "مهندس رستمی",
-        "units": 1,
-        "day": "چهارشنبه",
-        "startTime": "14:00",
-        "endTime": "16:00",
-        "capacity": 15,
-        "availableCapacity": 3,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-circ-lab",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-5",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104115",
-        "courseName": "الکترونیک ۱",
-        "group": "01",
-        "instructor": "دکتر یزدانی",
-        "units": 3,
-        "day": "یکشنبه",
-        "startTime": "10:00",
-        "endTime": "12:00",
-        "capacity": 35,
-        "availableCapacity": 7,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-elec-1",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-6",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104131",
-        "courseName": "معماری کامپیوتر",
-        "group": "01",
-        "instructor": "دکتر حسینی",
-        "units": 3,
-        "day": "سه‌شنبه",
-        "startTime": "08:00",
-        "endTime": "10:00",
-        "capacity": 30,
-        "availableCapacity": 12,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-comp-arch",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-7",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104132",
-        "courseName": "میکروکنترلرها و ریزپردازنده‌ها",
-        "group": "01",
-        "instructor": "دکتر تقوی",
-        "units": 3,
-        "day": "سه‌شنبه",
-        "startTime": "13:30",
-        "endTime": "15:30",
-        "capacity": 25,
-        "availableCapacity": 5,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-micro",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-8",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104133",
-        "courseName": "طراحی سیستم‌های دیجیتال با FPGA",
-        "group": "01",
-        "instructor": "دکتر میرزایی",
-        "units": 3,
-        "day": "دوشنبه",
-        "startTime": "13:30",
-        "endTime": "15:30",
-        "capacity": 20,
-        "availableCapacity": 6,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-fpga",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-9",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104104",
-        "courseName": "ریاضیات مهندسی",
-        "group": "01",
-        "instructor": "دکتر صابری",
-        "units": 3,
-        "day": "شنبه",
-        "startTime": "10:00",
-        "endTime": "12:00",
-        "capacity": 40,
-        "availableCapacity": 5,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-engmath",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-10",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "2104114",
-        "courseName": "سیگنال‌ها و سیستم‌ها",
-        "group": "01",
-        "instructor": "دکتر محمودی",
-        "units": 3,
-        "day": "چهارشنبه",
-        "startTime": "08:00",
-        "endTime": "10:00",
-        "capacity": 35,
-        "availableCapacity": 13,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-signals",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-11",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "1101003",
-        "courseName": "اندیشه اسلامی ۱ (مبدأ و معاد)",
-        "group": "03",
-        "instructor": "حجت‌الاسلام موسوی",
-        "units": 2,
-        "day": "سه‌شنبه",
-        "startTime": "10:00",
-        "endTime": "12:00",
-        "capacity": 50,
-        "availableCapacity": 9,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-gen-islam-1",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-12",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "1101004",
-        "courseName": "آیین زندگی (اخلاق کاربردی)",
-        "group": "01",
-        "instructor": "استاد کریمی",
-        "units": 2,
-        "day": "دوشنبه",
-        "startTime": "08:00",
-        "endTime": "10:00",
-        "capacity": 45,
-        "availableCapacity": 15,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": "crs-gen-morals",
-      "status": "MATCHED",
-      "reviewReason": "تطبیق دقیق بر اساس کد درس"
-    },
-    {
-      "id": "rec-batch-1788553446597-13",
-      "batchId": "batch-1788553446597",
-      "rawData": {
-        "courseCode": "9999999",
-        "courseName": "درس فرضی خارج از چارت",
-        "group": "99",
-        "instructor": "نامشخص",
-        "units": 3,
-        "day": "نامشخص",
-        "startTime": "00:00",
-        "endTime": "00:00",
-        "capacity": 10,
-        "availableCapacity": 10,
-        "location": "دانشکده فنی و مهندسی"
-      },
-      "matchedCourseId": null,
-      "status": "NEEDS_REVIEW",
-      "reviewReason": "درسی با کد «9999999» و نام «درس فرضی خارج از چارت» در چارت دروس سامانه یافت نشد."
     }
   ],
   "academicSettings": {
@@ -1799,26 +1349,157 @@
   "supportTickets": [],
   "supportMessages": [],
   "bugReports": [],
-  "auditLogs": [],
-  "errorLogs": [],
-  "studentPlans": [
+  "auditLogs": [
     {
-      "id": "plan-usr-admin-1-term-1405-1",
-      "userId": "usr-admin-1",
-      "termId": "term-1405-1",
-      "selectedOfferingIds": [],
-      "coursePriorities": {},
-      "offeringPriorities": {},
-      "updatedAt": "2026-08-20T21:51:30.194Z"
+      "id": "log-1788612759528",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788612759430",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T12:52:39.528Z"
     },
     {
-      "id": "plan-usr-student-1-term-1405-1",
-      "userId": "usr-student-1",
-      "termId": "term-1405-1",
-      "selectedOfferingIds": [],
-      "coursePriorities": {},
-      "offeringPriorities": {},
-      "updatedAt": "2026-08-21T13:00:24.378Z"
+      "id": "log-1788612837521",
+      "adminId": "usr-stud1",
+      "action": "USER_LOGIN_OTP",
+      "entityType": "USER",
+      "entityId": "usr-stud1",
+      "details": "ورود با رمز یکبار مصرف: 09000000001",
+      "createdAt": "2026-09-05T12:53:57.521Z"
+    },
+    {
+      "id": "log-1788612860874",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788612860777",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T12:54:20.874Z"
+    },
+    {
+      "id": "log-1788612896290",
+      "adminId": "usr-adm1",
+      "action": "USER_LOGIN_OTP",
+      "entityType": "USER",
+      "entityId": "usr-adm1",
+      "details": "ورود با رمز یکبار مصرف: 09000000002",
+      "createdAt": "2026-09-05T12:54:56.290Z"
+    },
+    {
+      "id": "log-1788612935206",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788612935098",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T12:55:35.206Z"
+    },
+    {
+      "id": "log-1788613022647",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788613022548",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T12:57:02.647Z"
+    },
+    {
+      "id": "log-1788613053943",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788613053840",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T12:57:33.943Z"
+    },
+    {
+      "id": "log-1788613054158",
+      "adminId": "usr-stud1",
+      "action": "USER_LOGIN_OTP",
+      "entityType": "USER",
+      "entityId": "usr-stud1",
+      "details": "ورود با رمز یکبار مصرف: 09000000001",
+      "createdAt": "2026-09-05T12:57:34.158Z"
+    },
+    {
+      "id": "log-1788614003861",
+      "adminId": "usr-super",
+      "action": "ADMIN_CREATED",
+      "entityType": "USER",
+      "entityId": "usr-1788614003758",
+      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
+      "createdAt": "2026-09-05T13:13:23.861Z"
+    },
+    {
+      "id": "log-1788614004059",
+      "adminId": "usr-stud1",
+      "action": "USER_LOGIN_OTP",
+      "entityType": "USER",
+      "entityId": "usr-stud1",
+      "details": "ورود با رمز یکبار مصرف: 09000000001",
+      "createdAt": "2026-09-05T13:13:24.059Z"
+    }
+  ],
+  "errorLogs": [],
+  "otpChallenges": [
+    {
+      "id": "a018f797-88a2-402e-914c-1d897e7ac154",
+      "mobile": "09000000001",
+      "purpose": "login",
+      "hashedOtp": "$2b$10$bPz9ABqTVjsXgLtIlnRZpu6..uzN6Aj.ygR2XmpyXkDqJB3s5hlva",
+      "createdAt": 1788614003957,
+      "expiresAt": 1788614123957,
+      "attempts": 0,
+      "consumedAt": 1788614004058
+    }
+  ],
+  "captchaChallenges": [
+    {
+      "id": "d1fa9531-c432-42d9-a08d-30aae19590d0",
+      "value": "3957",
+      "createdAt": 1788612837315,
+      "expiresAt": 1788613137315,
+      "attempts": 0,
+      "consumedAt": 1788612837319
+    },
+    {
+      "id": "2abe3bb1-1afe-4a96-9a47-ebc474df14b6",
+      "value": "5173",
+      "createdAt": 1788612860880,
+      "expiresAt": 1788613160880,
+      "attempts": 0
+    },
+    {
+      "id": "73cfac22-4e6e-4489-80af-d5751b79eca3",
+      "value": "5064",
+      "createdAt": 1788612896092,
+      "expiresAt": 1788613196092,
+      "attempts": 0,
+      "consumedAt": 1788612896097
+    },
+    {
+      "id": "25d79dde-bd74-4f12-ac6b-82955fb31a78",
+      "value": "4552",
+      "createdAt": 1788612935219,
+      "expiresAt": 1788613235219,
+      "attempts": 0
+    },
+    {
+      "id": "747a8e64-9264-4767-928f-c2a11fd19a30",
+      "value": "4412",
+      "createdAt": 1788613053949,
+      "expiresAt": 1788613353949,
+      "attempts": 0,
+      "consumedAt": 1788613053953
+    },
+    {
+      "id": "d58976e7-61be-4a5c-8b1b-751c19645da1",
+      "value": "2300",
+      "createdAt": 1788614003866,
+      "expiresAt": 1788614303866,
+      "attempts": 0,
+      "consumedAt": 1788614003870
     }
   ]
 }

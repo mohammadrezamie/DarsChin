@@ -229,7 +229,7 @@ export const StudentDashboard: React.FC = () => {
         body: JSON.stringify({ plannedCourseIds: newSelected }),
       });
       if (evalRes.success && evalRes.data) {
-        setEvaluations(evalRes.data.results || []);
+        setEvaluations(evalRes.data.report?.results || []);
       }
     } catch (err) {
       console.error('Plan sync error:', err);
@@ -304,11 +304,11 @@ export const StudentDashboard: React.FC = () => {
     const isGradeA = academicLimits?.isGradeA ?? (profile?.previousTermGpa ? profile.previousTermGpa >= 17 : false);
     const maxUnits = academicLimits?.effectiveMaxUnits ?? (isSummer ? 8 : isFinalSemester || isGradeA ? 24 : 20);
 
-    const isExtra = newEval.courseName.includes('وصایا') || newEval.courseName.includes('انس');
+    const isExtra = newEval.isExtraUnit;
 
     if (!isExtra) {
       const currentUnits = currentSelected.reduce((sum, item) => {
-        if (item.courseName.includes('وصایا') || item.courseName.includes('انس')) return sum;
+        if (item.isExtraUnit) return sum;
         return sum + (item.units || 0);
       }, 0);
 
@@ -332,6 +332,7 @@ export const StudentDashboard: React.FC = () => {
   const handleClearSchedule = () => {
     if (confirm('آیا از پاکسازی کل برنامه انتخابی مطمئن هستید؟')) {
       setSelectedOfferingIds([]);
+      syncPlanToServer([], coursePriorities, offeringPriorities);
     }
   };
 

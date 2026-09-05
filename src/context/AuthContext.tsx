@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           mobile: claims.mobile,
           name: claims.name,
           roles: claims.roles || ['student'],
+          permissions: claims.permissions || [],
         } as User;
       }
     }

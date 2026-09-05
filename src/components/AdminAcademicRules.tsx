@@ -1,44 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
-import { Trash2, Edit2, Plus, Search, Check, X, BookOpen, Layers, Users } from 'lucide-react';
-import { RelationshipType, RuleConditionType } from '../types';
+import { Trash2, Plus, Server, Network } from 'lucide-react';
+import { RelationshipType, AcademicRuleNode, Course } from '../types';
 
 export const AdminAcademicRules: React.FC = () => {
   const [rules, setRules] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<any[]>([]);
-  const [majors, setMajors] = useState<any[]>([]);
-  const [entryYears, setEntryYears] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState<any>({
+
+  const [formData, setFormData] = useState<{
+    curriculumId: string;
+    targetCourseId: string;
+    relationshipType: RelationshipType;
+    expression: AcademicRuleNode;
+    notes: string;
+  }>({
     curriculumId: '',
-    entryYearId: '',
-    majorId: '',
     targetCourseId: '',
-    sourceCourseId: '',
     relationshipType: 'PREREQUISITE',
-    conditionType: 'AND',
-    minUnitsRequired: '',
+    expression: { type: 'COURSE', courseId: '' },
     notes: '',
   });
 
   const fetchData = async () => {
     setLoading(true);
-    const [rulesRes, coursesRes, curRes, majRes, eyRes] = await Promise.all([
+    const [rulesRes, coursesRes, curRes] = await Promise.all([
       apiRequest('/api/curriculum/rules'),
       apiRequest('/api/academic/courses'),
       apiRequest('/api/curriculum'),
-      apiRequest('/api/academic/majors'),
-      apiRequest('/api/academic/entry-years'),
     ]);
-
     if (rulesRes.success) setRules(rulesRes.data);
     if (coursesRes.success) setCourses(coursesRes.data);
     if (curRes.success) setCurricula(curRes.data);
-    if (majRes.success) setMajors(majRes.data);
-    if (eyRes.success) setEntryYears(eyRes.data);
     setLoading(false);
   };
 
@@ -46,246 +41,215 @@ export const AdminAcademicRules: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleSave = async () => {
-    if (!formData.targetCourseId) return alert('درس هدف الزامی است');
-    if (formData.conditionType !== 'MIN_UNITS' && !formData.sourceCourseId) return alert('درس پیش‌نیاز/هم‌نیاز الزامی است');
-    
-    await apiRequest('/api/curriculum/rules', {
-      method: 'POST',
-      body: JSON.stringify(formData),
-    });
-    setIsAdding(false);
-    fetchData();
-  };
-
   const handleDelete = async (id: string) => {
-    if (confirm('آیا از حذف این قانون اطمینان دارید؟')) {
-      await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
+    if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
+    const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
+    if (res.success) {
       fetchData();
+    } else {
+      alert(res.error || 'خطا در حذف');
     }
   };
 
-  return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200 dark:border-slate-800 p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-indigo-500" />
-            مدیریت قوانین آموزشی (پیش‌نیاز / هم‌نیاز / تکرار)
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            پیکربندی قوانین به تفکیک چارت، رشته و سال ورود
-          </p>
+  const handleSave = async () => {
+    if (!formData.curriculumId || !formData.targetCourseId) {
+      alert('چارت درسی و درس هدف الزامی است.');
+      return;
+    }
+    const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
+    if (res.success) {
+      setIsAdding(false);
+      fetchData();
+    } else {
+      alert(res.error || 'خطا در ثبت قانون');
+    }
+  };
+
+  // --- Node Builder Component ---
+  const NodeEditor = ({ node, onChange, coursesList }: { node: AcademicRuleNode, onChange: (n: AcademicRuleNode) => void, coursesList: Course[] }) => {
+    return (
+      <div className="p-4 border rounded-xl bg-white shadow-sm mb-4 space-y-4">
+        <div className="flex items-center gap-4">
+          <select 
+            className="p-2 border rounded-lg bg-gray-50 text-sm"
+            value={node.type}
+            onChange={(e) => {
+              const val = e.target.value as 'COURSE'|'GROUP';
+              if (val === 'COURSE') onChange({ type: 'COURSE', courseId: '' });
+              else onChange({ type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: '' }] });
+            }}
+          >
+            <option value="COURSE">یک درس (Course)</option>
+            <option value="GROUP">گروه (Group)</option>
+          </select>
+          
+          {node.type === 'GROUP' && (
+            <select 
+              className="p-2 border rounded-lg bg-blue-50 text-blue-800 text-sm font-bold"
+              value={node.operator}
+              onChange={(e) => onChange({ ...node, operator: e.target.value as 'AND'|'OR' })}
+            >
+              <option value="AND">همه موارد بالا (AND)</option>
+              <option value="OR">حداقل یکی (OR)</option>
+            </select>
+          )}
         </div>
+
+        {node.type === 'COURSE' ? (
+          <div>
+            <select
+              className="w-full p-2 border rounded-lg text-sm"
+              value={node.courseId || ''}
+              onChange={(e) => onChange({ ...node, courseId: e.target.value })}
+            >
+              <option value="">-- انتخاب درس پیش‌نیاز/هم‌نیاز --</option>
+              {coursesList.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+            </select>
+          </div>
+        ) : (
+          <div className="pr-6 border-r-2 border-blue-200 space-y-2">
+            {node.operands?.map((child, idx) => (
+              <div key={idx} className="relative">
+                <NodeEditor 
+                  node={child} 
+                  coursesList={coursesList}
+                  onChange={(newChild) => {
+                    const newOps = [...(node.operands || [])];
+                    newOps[idx] = newChild;
+                    onChange({ ...node, operands: newOps });
+                  }} 
+                />
+                <button 
+                  onClick={() => {
+                    const newOps = [...(node.operands || [])];
+                    newOps.splice(idx, 1);
+                    onChange({ ...node, operands: newOps });
+                  }}
+                  className="absolute top-2 left-2 text-red-500 p-1 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                onChange({ ...node, operands: [...(node.operands || []), { type: 'COURSE', courseId: '' }] });
+              }}
+              className="flex items-center gap-2 text-sm text-blue-600 font-medium p-2 hover:bg-blue-50 rounded"
+            >
+              <Plus size={16} /> افزودن شرط جدید به این گروه
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Network className="text-blue-600" />
+          مدیریت قوانین آکادمیک (پیش‌نیازها)
+        </h2>
         <button
-          onClick={() => setIsAdding(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-xs"
+          onClick={() => setIsAdding(!isAdding)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition"
         >
-          <Plus className="w-4 h-4" />
-          افزودن قانون جدید
+          {isAdding ? 'انصراف' : 'ثبت قانون جدید'}
         </button>
       </div>
 
       {isAdding && (
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6">
-          <h3 className="font-bold text-sm mb-4">تعریف قانون جدید</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">محدوده چارت تحصیلی</label>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">چارت تحصیلی</label>
               <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                 value={formData.curriculumId}
-                onChange={e => setFormData({...formData, curriculumId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, curriculumId: e.target.value })}
               >
-                <option value="">تمامی چارت‌ها (مستقل از چارت)</option>
-                {curricula.map(c => <option key={c.id} value={c.id}>{c.name} - نسخه {c.version}</option>)}
+                <option value="">-- انتخاب --</option>
+                {curricula.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">محدوده سال ورود</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">درس هدف</label>
               <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                value={formData.entryYearId}
-                onChange={e => setFormData({...formData, entryYearId: e.target.value})}
-              >
-                <option value="">همه ورودی‌ها</option>
-                {entryYears.map(ey => <option key={ey.id} value={ey.id}>{ey.year}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">محدوده رشته</label>
-              <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                value={formData.majorId}
-                onChange={e => setFormData({...formData, majorId: e.target.value})}
-              >
-                <option value="">همه رشته‌ها</option>
-                {majors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500 font-bold">نوع رابطه *</label>
-              <select 
-                className="w-full bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2 text-sm text-indigo-700 dark:text-indigo-400 font-bold"
-                value={formData.relationshipType}
-                onChange={e => setFormData({...formData, relationshipType: e.target.value})}
-              >
-                <option value="PREREQUISITE">پیش‌نیاز (باید قبلاً گذرانده شود)</option>
-                <option value="COREQUISITE">هم‌نیاز (همزمان یا قبل)</option>
-                <option value="CONTEXTUAL_RETAKE_RULE">قانون تکرار (تبدیل به هم‌نیاز در صورت مردودی)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500 font-bold">درس هدف (تخصیص گیرنده) *</label>
-              <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                 value={formData.targetCourseId}
-                onChange={e => setFormData({...formData, targetCourseId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, targetCourseId: e.target.value })}
               >
-                <option value="">-- انتخاب درس --</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                <option value="">-- انتخاب --</option>
+                {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500 font-bold">درس مبدا (نیازمندی) *</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">نوع رابطه</label>
               <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                value={formData.sourceCourseId}
-                onChange={e => setFormData({...formData, sourceCourseId: e.target.value})}
-                disabled={formData.conditionType === 'MIN_UNITS'}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                value={formData.relationshipType}
+                onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value as any })}
               >
-                <option value="">-- انتخاب درس --</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                <option value="PREREQUISITE">پیش‌نیاز</option>
+                <option value="COREQUISITE">هم‌نیاز</option>
+                <option value="CONTEXTUAL_RETAKE_RULE">هم‌نیاز در صورت افتادن</option>
               </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">شروط گذراندن</label>
-              <select 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                value={formData.conditionType}
-                onChange={e => setFormData({...formData, conditionType: e.target.value})}
-              >
-                <option value="AND">اجباری (AND)</option>
-                <option value="OR">اختیاری (OR)</option>
-                <option value="MIN_UNITS">شرط حداقل تعداد واحد گذرانده کل</option>
-              </select>
-            </div>
-
-            {formData.conditionType === 'MIN_UNITS' && (
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500">حداقل واحد</label>
-                <input 
-                  type="number"
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                  value={formData.minUnitsRequired}
-                  onChange={e => setFormData({...formData, minUnitsRequired: e.target.value})}
-                  placeholder="مثال: 50"
-                />
-              </div>
-            )}
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs text-slate-500">توضیحات تکمیلی</label>
-              <input 
-                type="text"
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm"
-                value={formData.notes}
-                onChange={e => setFormData({...formData, notes: e.target.value})}
-                placeholder="توضیحات و مصوبات برای این قانون"
-              />
             </div>
           </div>
-          <div className="mt-4 flex justify-end gap-2">
+
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <h3 className="font-bold text-gray-700 mb-4">ساختار شرط (Prerequisite Tree)</h3>
+            <NodeEditor 
+              node={formData.expression} 
+              coursesList={courses} 
+              onChange={(exp) => setFormData({ ...formData, expression: exp })}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
             <button
               onClick={() => setIsAdding(false)}
-              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
             >
-              انصراف
+              لغو
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-xs"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
             >
-              ذخیره قانون
+              ذخیره و اعتبارسنجی
             </button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-10 text-slate-500">در حال دریافت قوانین...</div>
+        <div className="text-center py-12 text-gray-500">در حال دریافت قوانین...</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-right">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                <th className="py-3 px-4">درس هدف</th>
-                <th className="py-3 px-4">رابطه</th>
-                <th className="py-3 px-4">درس نیازمندی</th>
-                <th className="py-3 px-4">محدوده</th>
-                <th className="py-3 px-4">توضیحات</th>
-                <th className="py-3 px-4 text-center">عملیات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {rules.map((rule) => (
-                <tr key={rule.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
-                    {rule.targetCourseName}
-                  </td>
-                  <td className="py-3 px-4">
-                    {rule.relationshipType === 'PREREQUISITE' && (
-                      <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 px-2 py-1 rounded-md text-xs font-bold">پیش‌نیاز</span>
-                    )}
-                    {rule.relationshipType === 'COREQUISITE' && (
-                      <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-md text-xs font-bold">هم‌نیاز</span>
-                    )}
-                    {rule.relationshipType === 'CONTEXTUAL_RETAKE_RULE' && (
-                      <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-1 rounded-md text-xs font-bold">تکرار / هم‌نیاز مشروط</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    {rule.conditionType === 'MIN_UNITS' ? (
-                      <span className="text-slate-500">حداقل {rule.minUnitsRequired} واحد</span>
-                    ) : (
-                      <span className="text-slate-700 dark:text-slate-300">{rule.sourceCourseName}</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-500">
-                    <div>چارت: {rule.curriculumName}</div>
-                    {rule.majorName !== 'تمامی رشته‌ها' && <div>رشته: {rule.majorName}</div>}
-                    {rule.entryYearName !== 'تمامی ورودی‌ها' && <div>ورودی: {rule.entryYearName}</div>}
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-500">
-                    {rule.notes || '-'}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => handleDelete(rule.id)}
-                      className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-colors"
-                      title="حذف"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {rules.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-500">
-                    هیچ قانونی یافت نشد.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {rules.map((rule) => (
+            <div key={rule.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-lg text-gray-800">{rule.targetCourseName}</h3>
+                  <span className={`text-xs px-2 py-1 rounded-full ${rule.relationshipType === 'PREREQUISITE' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {rule.relationshipType === 'PREREQUISITE' ? 'پیش‌نیاز' : rule.relationshipType === 'COREQUISITE' ? 'هم‌نیاز' : 'افتاده'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">چارت: {rule.curriculumName}</p>
+                <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 font-mono text-left" dir="ltr">
+                  {JSON.stringify(rule.expression, null, 2)}
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button onClick={() => handleDelete(rule.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

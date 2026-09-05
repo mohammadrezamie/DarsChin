@@ -31,7 +31,7 @@ const AppContent: React.FC = () => {
   // When 'extension' tab is clicked, open modal instead of routing, then stay on current view
   React.useEffect(() => {
     if (!isLoading && activeTab === 'admin') {
-      if (!user || (!user.roles?.includes('admin') && !user.roles?.includes('super-admin'))) {
+      if (!user || (!user.roles?.includes('super-admin') && !user.permissions?.includes('admin.panel.access'))) {
         setActiveTab('student');
       }
     }

@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Navigation Tabs */}
             <nav className="hidden md:flex items-center gap-1.5 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/10">
               <button onClick={() => setActiveTab('student')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'student' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>میز کار دانشجو</button>
-              {(user?.roles?.includes('admin') || user?.roles?.includes('super-admin')) && (
+              {(user?.roles?.includes('super-admin') || user?.permissions?.includes('admin.panel.access')) && (
                 <button onClick={() => setActiveTab('admin')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'admin' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>پنل مدیریت</button>
               )}
               <button onClick={() => setActiveTab('extension')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'extension' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700'}`}>افزونه کروم</button>
@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             میز کار
           </button>
-          {(user?.roles?.includes('admin') || user?.roles?.includes('super-admin')) && (
+          {(user?.roles?.includes('super-admin') || user?.permissions?.includes('admin.panel.access')) && (
             <button
               onClick={() => setActiveTab('admin')}
               className={`px-3 py-1 rounded-xl transition-colors font-medium ${activeTab === 'admin' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}

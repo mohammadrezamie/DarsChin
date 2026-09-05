@@ -2,6 +2,7 @@
 // DARSCHYN (درس‌چین) - Rule-Based Transparent Course Recommendation Engine
 // ============================================================================
 
+import { extractSourceCourseIds } from '../utils/academic';
 import {
   Course,
   Curriculum,
@@ -47,11 +48,14 @@ export function generateCourseRecommendations(
   const dependencyGraph = new Map<string, string[]>();
   for (const rule of academicRules) {
     if (rule.curriculumId === curriculum.id) {
-      const dependents = dependencyGraph.get(rule.sourceCourseId) || [];
-      if (!dependents.includes(rule.targetCourseId)) {
-        dependents.push(rule.targetCourseId);
+      const sourceCourseIds = extractSourceCourseIds(rule.expression);
+      for (const sourceId of sourceCourseIds) {
+        const dependents = dependencyGraph.get(sourceId) || [];
+        if (!dependents.includes(rule.targetCourseId)) {
+          dependents.push(rule.targetCourseId);
+        }
+        dependencyGraph.set(sourceId, dependents);
       }
-      dependencyGraph.set(rule.sourceCourseId, dependents);
     }
   }
 

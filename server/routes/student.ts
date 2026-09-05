@@ -6,6 +6,9 @@ import { Router } from 'express';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
+import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
+import { validate } from '../middleware/validate';
+import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
 
 export const studentRouter = Router();
 
@@ -58,7 +61,7 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
 });
 
 // Update student academic profile
-studentRouter.put('/profile', authenticate, (req: AuthenticatedRequest, res) => {
+studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const {
     universityId,
@@ -130,7 +133,7 @@ studentRouter.get('/passed-courses', authenticate, (req: AuthenticatedRequest, r
   });
 });
 
-studentRouter.post('/passed-courses', authenticate, (req: AuthenticatedRequest, res) => {
+studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const { courseId, grade, termId } = req.body;
 
@@ -150,6 +153,7 @@ studentRouter.post('/passed-courses', authenticate, (req: AuthenticatedRequest, 
     userId,
     courseId,
     grade: grade !== undefined && grade !== '' ? Number(grade) : undefined,
+    status: (grade !== undefined && grade !== '' && Number(grade) < 10) ? 'FAILED' : 'PASSED',
     termId: termId || undefined,
     passedAt: new Date().toISOString(),
   };
@@ -162,7 +166,7 @@ studentRouter.post('/passed-courses', authenticate, (req: AuthenticatedRequest, 
 });
 
 // Batch update passed courses
-studentRouter.post('/passed-courses/batch', authenticate, (req: AuthenticatedRequest, res) => {
+studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCoursesSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const { courseIds, replaceAll } = req.body;
 
@@ -244,11 +248,50 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
 });
 
 // Update whole plan (e.g. sync priorities or offerings)
-studentRouter.put('/plan', authenticate, (req: AuthenticatedRequest, res) => {
+studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const { selectedOfferingIds, coursePriorities, offeringPriorities } = req.body;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
+
+  if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
+    if (!profile) {
+      return res.status(400).json({ success: false, error: 'پروفایل تحصیلی یافت نشد.' });
+    }
+    const curriculum = db.curricula.find(
+      (c) =>
+        c.universityId === profile.universityId &&
+        c.majorId === profile.majorId &&
+        c.entryYearId === profile.entryYearId
+    ) || db.curricula[0];
+    const relevantOfferings = db.courseOfferings.filter((o) => o.termId === currentTermId && o.active);
+    const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
+
+    const report = evaluateStudentEligibility({
+      studentProfile: profile,
+      curriculum,
+      curriculumCourses: db.curriculumCourses,
+      allCourses: db.courses,
+      tracks: db.tracks,
+      academicRules: db.academicRules,
+      passedCourses,
+      currentOfferings: relevantOfferings,
+      plannedOfferingIdsInSameTerm: [], // Evaluate independently
+    });
+
+    const invalidOfferings = selectedOfferingIds.filter(id => {
+      const evalItem = report.results.find((r: any) => r.offeringId === id);
+      return !evalItem || !evalItem.canSelect || !evalItem.isEligible || evalItem.overallStatus !== 'AVAILABLE';
+    });
+    
+    if (invalidOfferings.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'برخی از دروس انتخابی دارای منع آیین‌نامه‌ای هستند و قابل ثبت نیستند.',
+        invalidIds: invalidOfferings
+      });
+    }
+  }
 
   let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
   if (!plan) {
@@ -274,7 +317,7 @@ studentRouter.put('/plan', authenticate, (req: AuthenticatedRequest, res) => {
 });
 
 // Authoritative Add/Remove offering validation endpoint
-studentRouter.post('/plan/select', authenticate, (req: AuthenticatedRequest, res) => {
+studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const { offeringId, action } = req.body; // action: 'add' | 'remove'
 
@@ -331,8 +374,6 @@ studentRouter.post('/plan/select', authenticate, (req: AuthenticatedRequest, res
   );
   const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
-  // Import dynamic evaluation
-  const { evaluateStudentEligibility } = require('../../src/domain/eligibility-engine');
   const report = evaluateStudentEligibility({
     studentProfile: profile,
     curriculum,

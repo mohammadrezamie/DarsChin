@@ -1,3 +1,4 @@
+import { calculateAcademicLimits } from './academic-policy';
 // ============================================================================
 // DARSCHYN (درس‌چین) - Core Eligibility Engine (Deterministic Rule-Based)
 // ============================================================================
@@ -86,11 +87,15 @@ export function evaluateStudentEligibility(
 
   // Determine active track context
   const isTrackOfficiallySelected = studentProfile.isTrackSelected && !!studentProfile.selectedTrackId;
-  const targetTrackIds: string[] = isTrackOfficiallySelected
+  let targetTrackIds: string[] = isTrackOfficiallySelected
     ? [studentProfile.selectedTrackId!]
     : studentProfile.desiredTrackIds && studentProfile.desiredTrackIds.length > 0
     ? studentProfile.desiredTrackIds
     : tracks.filter((t) => t.majorId === studentProfile.majorId).map((t) => t.id);
+  
+  if (targetTrackIds.length === 0) {
+    targetTrackIds = ['generic'];
+  }
 
   const results: CourseEligibilityResult[] = [];
   let eligibleCount = 0;
@@ -136,6 +141,7 @@ export function evaluateStudentEligibility(
         courseCode: course.code,
         courseName: course.name,
         units: course.units,
+      
         category: course.category,
         groupCode: offering.groupCode,
         instructor: offering.instructor,
@@ -221,89 +227,105 @@ export function evaluateStudentEligibility(
           (r.trackId === null || r.trackId === undefined || r.trackId === trackId)
       );
 
-      const prereqRules = applicableRules.filter((r) => r.relationshipType === 'PREREQUISITE');
-      const coreqRules = applicableRules.filter((r) => r.relationshipType === 'COREQUISITE');
-      const retakeRules = applicableRules.filter((r) => r.relationshipType === 'CONTEXTUAL_RETAKE_RULE');
-
+      
       const missingPrereqs: Array<{ id: string; name: string; code: string }> = [];
       const prereqReasons: string[] = [];
       const missingCoreqs: Array<{ id: string; name: string; code: string }> = [];
       const coreqReasons: string[] = [];
 
-      // 1. Evaluate PREREQUISITES
-      const andRules = prereqRules.filter((r) => r.conditionType === 'AND');
-      const orGroups = new Map<string, typeof prereqRules>();
-      for (const r of prereqRules) {
-        if (r.conditionType === 'OR') {
-          const grp = r.ruleGroup || 'default_or';
-          const list = orGroups.get(grp) || [];
-          list.push(r);
-          orGroups.set(grp, list);
-        }
-      }
+      // Helper to evaluate an AcademicRuleNode
+      const evaluateRuleNode = (
+        node: any,
+        isCorequisite: boolean,
+        isContextualRetake: boolean
+      ): { passed: boolean; missing: Array<{ id: string; name: string; code: string }>; reasons: string[] } => {
+        if (!node) return { passed: true, missing: [], reasons: [] };
+        if (node.type === 'COURSE') {
+          const reqCourse = coursesMap.get(node.courseId);
+          if (!reqCourse) return { passed: true, missing: [], reasons: [] };
 
-      for (const ar of andRules) {
-        const reqCourse = coursesMap.get(ar.sourceCourseId);
-        if (!reqCourse) continue;
-        const isPassed = passedCourses.some((p) => p.courseId === reqCourse.id && p.status === 'PASSED');
-        if (!isPassed) {
-          missingPrereqs.push({ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code });
-          prereqReasons.push(`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`);
-        }
-      }
-
-      for (const [groupName, rules] of orGroups.entries()) {
-        const anyPassed = rules.some((r) => passedCourses.some((p) => p.courseId === r.sourceCourseId && p.status === 'PASSED'));
-        if (!anyPassed && rules.length > 0) {
-          const requiredNames = rules
-            .map((r) => coursesMap.get(r.sourceCourseId)?.name || 'نامشخص')
-            .join(' یا ');
-          prereqReasons.push(`برای اخذ این درس باید حداقل یکی از دروس ( ${requiredNames} ) قبلاً پاس شده باشد.`);
-          for (const r of rules) {
-            const c = coursesMap.get(r.sourceCourseId);
-            if (c) missingPrereqs.push({ id: c.id, name: c.name, code: c.code });
-          }
-        }
-      }
-
-      // 2. Evaluate FAILED/ABSENT CONTEXTUAL RETAKE RULES
-      for (const rr of retakeRules) {
-        const reqCourse = coursesMap.get(rr.sourceCourseId);
-        if (!reqCourse) continue;
-
-        const isPassed = passedCourses.some((p) => p.courseId === reqCourse.id && p.status === 'PASSED');
-        if (isPassed) continue; // It is passed, condition satisfied
-
-        const failedOrAbsent = passedCourses.some(
-          (p) => p.courseId === reqCourse.id && (p.status === 'FAILED' || p.status === 'ABSENT')
-        );
-
-        if (failedOrAbsent) {
+          const isPassed = passedCourseIdsSet.has(reqCourse.id);
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
-          if (!isPlannedInSameTerm) {
-            missingCoreqs.push({ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code });
-            coreqReasons.push(
-              `«${reqCourse.name}» در سابقه شما مردود/غیبت ثبت شده است و طبق قانون این چارت، برای اخذ این درس باید آن را در همین ترم مجدداً اخذ کنید.`
-            );
+          const wasFailed = passedCourses.some(p => p.courseId === reqCourse.id && (p.status === 'FAILED' || (p.grade !== undefined && p.grade < 10)));
+
+          // Final Semester Rule Bypass
+          const { isFinalSemester } = calculateAcademicLimits(
+            studentProfile,
+            allCourses,
+            curriculumCourses,
+            passedCourses,
+            { finalSemesterRuleEnabled: true, finalSemesterThresholdUnits: 24, normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24, summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24 } as any
+          );
+          if (isFinalSemester) {
+             return { passed: true, missing: [], reasons: [] };
           }
-        } else {
-          // Hasn't taken it at all -> blocked like a normal prerequisite
-          missingPrereqs.push({ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code });
-          prereqReasons.push(`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`);
+
+          if (isCorequisite) {
+            // Corequisite logic
+            if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
+            return { passed: false, missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }], reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید در همین ترم اخذ شود یا قبلاً پاس شده باشد.`] };
+          }
+          
+          if (isContextualRetake || wasFailed) {
+            // IAU Failed Prerequisite Exception (acts as corequisite)
+            if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
+            return {
+              passed: false,
+              missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }],
+              reasons: [`برای درس ${course.name}، چون پیش‌نیاز (${reqCourse.name}) قبلاً مردود شده، مجاز به اخذ همزمان می‌باشید اما در برنامه شما انتخاب نشده است.`],
+            };
+          }
+
+          console.log('Eval:', {courseId: reqCourse.id, isPassed, isFinalSemester, wasFailed, isContextualRetake, isCorequisite}); // Normal Prerequisite
+          if (isPassed) return { passed: true, missing: [], reasons: [] };
+          return {
+            passed: false,
+            missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }],
+            reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`],
+          };
+        } else if (node.type === 'GROUP') {
+          if (!node.operands || node.operands.length === 0) return { passed: true, missing: [], reasons: [] };
+          
+          if (node.operator === 'OR') {
+            const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
+            if (results.some((r: any) => r.passed)) return { passed: true, missing: [], reasons: [] };
+            
+            // If failed OR, combine all missing
+            const allMissing = results.flatMap((r: any) => r.missing);
+            return {
+              passed: false,
+              missing: allMissing,
+              reasons: [`حداقل یکی از شروط زیر باید برآورده شود: (${results.map((r: any) => r.reasons.join(' و ')).join(' یا ')})`],
+            };
+          } else {
+            // AND
+            const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
+            const failedResults = results.filter((r: any) => !r.passed);
+            if (failedResults.length === 0) return { passed: true, missing: [], reasons: [] };
+            
+            return {
+              passed: false,
+              missing: failedResults.flatMap((r: any) => r.missing),
+              reasons: failedResults.flatMap((r: any) => r.reasons),
+            };
+          }
         }
-      }
+        return { passed: true, missing: [], reasons: [] };
+      };
 
-      // 3. Evaluate COREQUISITES
-      for (const cr of coreqRules) {
-        const reqCourse = coursesMap.get(cr.sourceCourseId);
-        if (!reqCourse) continue;
-
-        const isPassed = passedCourses.some((p) => p.courseId === reqCourse.id && p.status === 'PASSED');
-        const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
-
-        if (!isPassed && !isPlannedInSameTerm) {
-          missingCoreqs.push({ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code });
-          coreqReasons.push(`درس «${reqCourse.name}» باید در همین ترم همراه این درس اخذ شود (یا قبلاً پاس شده باشد).`);
+      for (const rule of applicableRules) {
+        const isCoreq = rule.relationshipType === 'COREQUISITE';
+        const isRetake = rule.relationshipType === 'CONTEXTUAL_RETAKE_RULE';
+        const res = evaluateRuleNode(rule.expression, isCoreq, isRetake);
+        
+        if (!res.passed) {
+          if (isCoreq || (isRetake && res.reasons[0]?.includes('همین ترم'))) {
+            missingCoreqs.push(...res.missing);
+            coreqReasons.push(...res.reasons);
+          } else {
+            missingPrereqs.push(...res.missing);
+            prereqReasons.push(...res.reasons);
+          }
         }
       }
 

@@ -4,7 +4,10 @@
 
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
+import { extractSourceCourseIds } from '../../src/utils/academic';
+import { validate } from '../middleware/validate';
+import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
   Curriculum,
   CurriculumCourse,
@@ -51,7 +54,7 @@ curriculumRouter.get('/:id/full', (req, res) => {
 });
 
 // Admin: Create Curriculum
-curriculumRouter.post('/', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const {
     universityId,
     campusId,
@@ -88,7 +91,7 @@ curriculumRouter.post('/', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin: Update Curriculum
-curriculumRouter.put('/:id', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
@@ -104,7 +107,7 @@ curriculumRouter.put('/:id', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin: Delete Curriculum
-curriculumRouter.delete('/:id', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
@@ -121,7 +124,7 @@ curriculumRouter.delete('/:id', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin: Assign Course to Curriculum
-curriculumRouter.post('/:id/courses', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const curriculumId = req.params.id;
   const { courseId, trackId, suggestedSemester = 1, classification = 'MAJOR_REQUIRED', categoryOverride } = req.body;
 
@@ -150,7 +153,7 @@ curriculumRouter.post('/:id/courses', authenticate, requireAdmin, (req, res) => 
 });
 
 // Admin: Remove Course from Curriculum
-curriculumRouter.delete('/:id/courses/:courseId', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const idx = db.curriculumCourses.findIndex(
     (cc) => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
@@ -159,7 +162,7 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requireAdmin, (r
   db.curriculumCourses.splice(idx, 1);
   // Also clean up rules pointing to or from this course in this curriculum
   db.data.academicRules = db.data.academicRules.filter(
-    (r) => !(r.curriculumId === req.params.id && (r.targetCourseId === req.params.courseId || r.sourceCourseId === req.params.courseId))
+    (r) => !(r.curriculumId === req.params.id && (r.targetCourseId === req.params.courseId || r.expression.courseId === req.params.courseId))
   );
   db.save();
   res.json({ success: true, message: 'درس و قوانین مرتبط از چارت حذف شدند.' });
@@ -167,68 +170,85 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requireAdmin, (r
 
 
 // Admin: List all Academic Rules
-curriculumRouter.get('/rules', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const enriched = db.data.academicRules.map(r => {
-    const course = db.data.courses.find(c => c.id === r.targetCourseId);
-    const sourceCourse = db.data.courses.find(c => c.id === r.sourceCourseId);
+    const targetCourse = db.data.courses.find(c => c.id === r.targetCourseId);
     const curr = db.data.curricula.find(c => c.id === r.curriculumId);
     const major = db.data.majors.find(m => m.id === r.majorId);
+    const track = db.data.tracks.find(t => t.id === r.trackId);
     const entryYear = db.data.entryYears.find(ey => ey.id === r.entryYearId);
     return {
       ...r,
-      targetCourseName: course?.name || r.targetCourseId,
-      sourceCourseName: sourceCourse?.name || r.sourceCourseId,
+      targetCourseName: targetCourse?.name || r.targetCourseId,
       curriculumName: curr?.name || r.curriculumId,
       majorName: major?.name || r.majorId,
+      trackName: track?.name || r.trackId,
       entryYearName: entryYear?.year || r.entryYearId,
     };
   });
   res.json({ success: true, data: enriched });
 });
 
+// Helper for cycle detection
+function hasCycle(targetCourseId, expression, allRules, visited = new Set()) {
+  if (visited.has(targetCourseId)) return true;
+  visited.add(targetCourseId);
+  
+  const sourceCourseIds = extractSourceCourseIds(expression);
+  for (const sourceId of sourceCourseIds) {
+    if (sourceId === targetCourseId) return true; // Direct self-reference
+    
+    // Check downstream
+    const sourceRules = allRules.filter(r => r.targetCourseId === sourceId);
+    for (const sr of sourceRules) {
+      if (hasCycle(targetCourseId, sr.expression, allRules, new Set(visited))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Admin: Add Academic Rule
-curriculumRouter.post('/rules', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
   const {
     curriculumId,
     entryYearId,
     majorId,
+    trackId,
     targetCourseId,
-    sourceCourseId,
     relationshipType,
-    conditionType,
-    minUnitsRequired,
+    expression,
     notes,
   } = req.body;
-  
-  if (!targetCourseId) {
-    return res.status(400).json({ success: false, error: 'درس هدف مشخص نشده است.' });
+
+  // Cycle Detection
+  if (hasCycle(targetCourseId, expression, db.data.academicRules)) {
+    return res.status(400).json({ success: false, error: 'تعریف این قانون باعث ایجاد حلقه (Circular Dependency) می‌شود و مجاز نیست.' });
   }
 
   const newRule = {
     id: `rule-${Date.now()}`,
-    curriculumId: curriculumId || 'all',
+    curriculumId,
     entryYearId: entryYearId || null,
     majorId: majorId || null,
+    trackId: trackId || null,
     targetCourseId,
-    sourceCourseId: sourceCourseId || '',
-    relationshipType: relationshipType || 'PREREQUISITE',
-    conditionType: conditionType || 'AND',
-    minUnitsRequired: minUnitsRequired ? Number(minUnitsRequired) : undefined,
+    relationshipType,
+    expression,
     notes: notes?.trim() || undefined,
   };
-  
+
   db.data.academicRules.push(newRule as any);
   db.save();
   res.json({ success: true, data: newRule });
 });
 
 // Admin: Delete Academic Rule
-curriculumRouter.delete('/rules/:ruleId', authenticate, requireAdmin, (req, res) => {
+curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
   db.data.academicRules.splice(idx, 1);
   db.save();
   res.json({ success: true, message: 'قانون حذف شد.' });
 });
-
-

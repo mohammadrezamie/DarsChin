@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
 
 export const academicRouter = Router();
@@ -32,7 +32,7 @@ academicRouter.get('/all-meta', (req, res) => {
 academicRouter.get('/provinces', (req, res) => {
   res.json({ success: true, data: db.provinces });
 });
-academicRouter.post('/provinces', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/provinces', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, active = true } = req.body;
   if (!name) return res.status(400).json({ success: false, error: 'نام استان الزامی است.' });
   const newProv: Province = { id: `prov-${Date.now()}`, name: name.trim(), active };
@@ -46,7 +46,7 @@ academicRouter.get('/universities', (req, res) => {
   res.json({ success: true, data: db.universities });
 });
 
-academicRouter.post('/universities', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/universities', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, code, active = true } = req.body;
   if (!name || !code) return res.status(400).json({ success: false, error: 'نام و کد دانشگاه الزامی است.' });
 
@@ -61,7 +61,7 @@ academicRouter.post('/universities', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newUniv });
 });
 
-academicRouter.put('/universities/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.put('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
   const { name, code, active } = req.body;
@@ -72,7 +72,7 @@ academicRouter.put('/universities/:id', authenticate, requireAdmin, (req, res) =
   res.json({ success: true, data: db.universities[idx] });
 });
 
-academicRouter.delete('/universities/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.delete('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
   // Check if any campus references it
@@ -96,7 +96,7 @@ academicRouter.get('/campuses', (req, res) => {
   res.json({ success: true, data: list });
 });
 
-academicRouter.post('/campuses', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body;
   if (!name || !code) {
     return res.status(400).json({ success: false, error: 'انتخاب دانشگاه و درج نام و کد واحد الزامی است.' });
@@ -113,7 +113,7 @@ academicRouter.post('/campuses', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newCampus });
 });
 
-academicRouter.put('/campuses/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.put('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
   const { universityId, provinceId, type, name, code, active } = req.body;
@@ -127,7 +127,7 @@ academicRouter.put('/campuses/:id', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: db.campuses[idx] });
 });
 
-academicRouter.delete('/campuses/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.delete('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
   db.campuses.splice(idx, 1);
@@ -140,7 +140,7 @@ academicRouter.get('/degrees', (req, res) => res.json({ success: true, data: db.
 academicRouter.get('/majors', (req, res) => res.json({ success: true, data: db.majors }));
 academicRouter.get('/tracks', (req, res) => res.json({ success: true, data: db.tracks }));
 
-academicRouter.post('/degrees', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, code, active = true } = req.body;
   const newDeg: DegreeLevel = { id: `deg-${Date.now()}`, name: name.trim(), code: code.trim().toUpperCase(), active };
   db.degreeLevels.push(newDeg);
@@ -148,7 +148,7 @@ academicRouter.post('/degrees', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newDeg });
 });
 
-academicRouter.post('/majors', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { degreeLevelId, name, code, active = true } = req.body;
   const newMajor: Major = { id: `maj-${Date.now()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
   db.majors.push(newMajor);
@@ -156,7 +156,7 @@ academicRouter.post('/majors', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newMajor });
 });
 
-academicRouter.post('/tracks', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { majorId, name, code, active = true } = req.body;
   const newTrack: Track = { id: `trk-${Date.now()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
   db.tracks.push(newTrack);
@@ -164,7 +164,7 @@ academicRouter.post('/tracks', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newTrack });
 });
 
-academicRouter.delete('/tracks/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.tracks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
   db.tracks.splice(idx, 1);
@@ -174,7 +174,7 @@ academicRouter.delete('/tracks/:id', authenticate, requireAdmin, (req, res) => {
 
 // --- Entry Years & Academic Terms ---
 academicRouter.get('/entry-years', (req, res) => res.json({ success: true, data: db.entryYears }));
-academicRouter.post('/entry-years', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/entry-years', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { year, active = true } = req.body;
   const newYear: EntryYear = { id: `yr-${year}`, year: Number(year), active };
   db.entryYears.push(newYear);
@@ -183,7 +183,7 @@ academicRouter.post('/entry-years', authenticate, requireAdmin, (req, res) => {
 });
 
 academicRouter.get('/terms', (req, res) => res.json({ success: true, data: db.academicTerms }));
-academicRouter.post('/terms', authenticate, requireAdmin, (req, res) => {
+academicRouter.post('/terms', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, year, termNumber, isCurrent = false } = req.body;
   if (isCurrent) {
     db.academicTerms.forEach((t) => (t.isCurrent = false));
@@ -204,8 +204,8 @@ academicRouter.post('/terms', authenticate, requireAdmin, (req, res) => {
 // --- Courses CRUD ---
 academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.courses }));
 
-academicRouter.post('/courses', authenticate, requireAdmin, (req, res) => {
-  const { code, name, units, practicalUnits = 0, category, description, active = true } = req.body;
+academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
+  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body;
   if (!code || !name || units === undefined || !category) {
     return res.status(400).json({ success: false, error: 'کد، نام، تعداد واحد و دسته‌بندی درس الزامی است.' });
   }
@@ -230,10 +230,10 @@ academicRouter.post('/courses', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true, data: newCourse });
 });
 
-academicRouter.put('/courses/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.put('/courses/:id', authenticate, requirePermission('course.update'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
-  const { code, name, units, practicalUnits, category, description, active } = req.body;
+  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body;
   if (code) db.courses[idx].code = code.trim();
   if (name) db.courses[idx].name = name.trim();
   if (units !== undefined) db.courses[idx].units = Number(units);
@@ -241,11 +241,12 @@ academicRouter.put('/courses/:id', authenticate, requireAdmin, (req, res) => {
   if (category) db.courses[idx].category = category;
   if (description !== undefined) db.courses[idx].description = description;
   if (typeof active === 'boolean') db.courses[idx].active = active;
+  if (typeof isExtraUnit === 'boolean') db.courses[idx].isExtraUnit = isExtraUnit;
   db.save();
   res.json({ success: true, data: db.courses[idx] });
 });
 
-academicRouter.delete('/courses/:id', authenticate, requireAdmin, (req, res) => {
+academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
   db.courses.splice(idx, 1);

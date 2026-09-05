@@ -4,12 +4,15 @@
 
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requireSuperAdmin } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission, requireSuperAdmin } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { updateRoleSchema, updateAcademicSettingsSchema, overrideFinalSemesterSchema } from '../schemas/admin';
 
 export const adminRouter = Router();
 
 // Get Admin Overview Metrics
-adminRouter.get('/stats', authenticate, requireAdmin, (req, res) => {
+
+adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'), (req, res) => {
   res.json({
     success: true,
     data: {
@@ -31,7 +34,7 @@ adminRouter.get('/stats', authenticate, requireAdmin, (req, res) => {
 });
 
 // Export Database Backup (without sensitive passwords)
-adminRouter.get('/backup', authenticate, requireAdmin, (req, res) => {
+adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (req, res) => {
   const backup = db.exportBackup();
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
@@ -39,7 +42,7 @@ adminRouter.get('/backup', authenticate, requireAdmin, (req, res) => {
 });
 
 // Restore Database Backup
-adminRouter.post('/restore', authenticate, requireAdmin, (req, res) => {
+adminRouter.post('/restore', authenticate, requirePermission('backup.manage'), (req, res) => {
   try {
     const backupData = req.body;
     if (!backupData || !Array.isArray(backupData.courses)) {
@@ -53,7 +56,7 @@ adminRouter.post('/restore', authenticate, requireAdmin, (req, res) => {
 });
 
 // Reset Database to Original Seed Data
-adminRouter.post('/reset-seed', authenticate, requireAdmin, (req, res) => {
+adminRouter.post('/reset-seed', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   try {
     db.resetToSeed();
     res.json({ success: true, message: 'پایگاه داده به داده‌های آزمایشی اولیه بازنشانی شد.' });
@@ -68,9 +71,11 @@ adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
   try {
     const safeUsers = db.users.map((u) => {
       const { password, ...safe } = u;
+      const profile = db.studentProfiles.find(p => p.userId === u.id);
       return {
         ...safe,
         roles: Array.isArray(safe.roles) ? safe.roles : [(safe as any).roles || 'student'],
+        profile
       };
     });
     res.json({ success: true, data: safeUsers });
@@ -80,7 +85,7 @@ adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
 });
 
 // Super Admin: Update Role
-adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, (req, res) => {
+adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(updateRoleSchema), (req, res) => {
   try {
     const { role } = req.body;
     if (!['student', 'admin', 'super-admin'].includes(role)) {
@@ -104,9 +109,7 @@ adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, (req, res) =
   }
 });
 
-adminRouter.get('/dbg-users', (req, res) => {
-  res.json({ users: db.users.map(u => ({ mobile: u.mobile, roles: u.roles })) });
-});
+
 
 adminRouter.get('/audit-logs', authenticate, requireSuperAdmin, (req, res) => {
   res.json({ success: true, data: db.auditLogs || [] });
@@ -116,11 +119,11 @@ adminRouter.get('/error-logs', authenticate, requireSuperAdmin, (req, res) => {
   res.json({ success: true, data: db.errorLogs || [] });
 });
 
-adminRouter.get('/academic-settings', authenticate, requireSuperAdmin, (req, res) => {
+adminRouter.get('/academic-settings', authenticate, requirePermission('academic-policy.manage'), (req, res) => {
   res.json({ success: true, data: db.academicSettings });
 });
 
-adminRouter.put('/academic-settings', authenticate, requireSuperAdmin, (req, res) => {
+adminRouter.put('/academic-settings', authenticate, requirePermission('academic-policy.manage'), validate(updateAcademicSettingsSchema), (req, res) => {
   try {
     const {
       normalMinUnits,
@@ -169,7 +172,7 @@ adminRouter.put('/academic-settings', authenticate, requireSuperAdmin, (req, res
 });
 
 // Get detailed list of students and their final-semester eligibility
-adminRouter.get('/students-overview', authenticate, requireAdmin, (req, res) => {
+adminRouter.get('/students-overview', authenticate, requirePermission('student-management.read'), (req, res) => {
   try {
     const studentUsers = db.users.filter((u) => u.roles.includes('student'));
     const list = studentUsers.map((u) => {
@@ -192,7 +195,7 @@ adminRouter.get('/students-overview', authenticate, requireAdmin, (req, res) => 
 });
 
 // Admin override for student final-semester status
-adminRouter.put('/students/:userId/final-semester-override', authenticate, requireAdmin, (req, res) => {
+adminRouter.put('/students/:userId/final-semester-override', authenticate, requirePermission('academic-policy.manage'), validate(overrideFinalSemesterSchema), (req, res) => {
   try {
     const { userId } = req.params;
     const { isFinalSemesterOverride, finalSemesterNotes } = req.body;

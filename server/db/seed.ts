@@ -289,136 +289,27 @@ export function getInitialSeedData(): DatabaseSchema {
     { id: 'cc-30', curriculumId: 'curr-ee-1403', courseId: 'crs-project', suggestedSemester: 8, classification: 'MAJOR_REQUIRED' as any, active: true },
   ];
 
-  const academicRules: AcademicRule[] = [
-    // Math 2 -> Math 1
-    { id: 'pr-1', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-math-2', sourceCourseId: 'crs-math-1', conditionType: 'AND' as const },
-    // DiffEq -> Math 1
-    { id: 'pr-2', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-diffeq', sourceCourseId: 'crs-math-1', conditionType: 'AND' as const },
-    // Physics 2 -> Physics 1
-    { id: 'pr-3', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-phys-2', sourceCourseId: 'crs-phys-1', conditionType: 'AND' as const },
-
-    // Engineering Math -> DiffEq AND Math 2
-    { id: 'pr-4', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-engmath', sourceCourseId: 'crs-diffeq', conditionType: 'AND' as const },
-    { id: 'pr-5', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-engmath', sourceCourseId: 'crs-math-2', conditionType: 'AND' as const },
-
-    // Circuits 1 -> Physics 2 AND Math 1
-    { id: 'pr-6', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-1', sourceCourseId: 'crs-phys-2', conditionType: 'AND' as const },
-    { id: 'pr-7', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-1', sourceCourseId: 'crs-math-1', conditionType: 'AND' as const },
-
-    // Circuits 2 -> Circuits 1
-    { id: 'pr-8', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-2', sourceCourseId: 'crs-circ-1', conditionType: 'AND' as const },
-
-    // Signals & Systems -> Engineering Math AND Circuits 1
-    { id: 'pr-9', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-signals', sourceCourseId: 'crs-engmath', conditionType: 'AND' as const },
-    { id: 'pr-10', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-signals', sourceCourseId: 'crs-circ-1', conditionType: 'AND' as const },
-
-    // Electronics 1 -> Circuits 1
-    { id: 'pr-11', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-1', sourceCourseId: 'crs-circ-1', conditionType: 'AND' as const },
-    // Electronics 2 -> Electronics 1
-    { id: 'pr-12', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-2', sourceCourseId: 'crs-elec-1', conditionType: 'AND' as const },
-
-    // Computer Architecture -> Logic Circuits
-    { id: 'pr-13', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-comp-arch', sourceCourseId: 'crs-logic', conditionType: 'AND' as const },
-    // Microcontrollers -> Logic Circuits
-    { id: 'pr-14', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-micro', sourceCourseId: 'crs-logic', conditionType: 'AND' as const },
-
-    // CRITICAL MULTI-TRACK EXAMPLE: FPGA
-    // In Digital Systems Track (trk-digital): needs Computer Architecture AND Microcontrollers
-    {
-      id: 'pr-15-dig-1', relationshipType: 'PREREQUISITE',
-      curriculumId: 'curr-ee-1403',
-      trackId: 'trk-digital',
-      targetCourseId: 'crs-fpga',
-      sourceCourseId: 'crs-comp-arch',
-      conditionType: 'AND' as const,
-      notes: 'پیش‌نیاز اختصاصی گرایش سیستم‌های دیجیتال',
-    },
-    {
-      id: 'pr-15-dig-2', relationshipType: 'PREREQUISITE',
-      curriculumId: 'curr-ee-1403',
-      trackId: 'trk-digital',
-      targetCourseId: 'crs-fpga',
-      sourceCourseId: 'crs-micro',
-      conditionType: 'AND' as const,
-      notes: 'پیش‌نیاز اختصاصی گرایش سیستم‌های دیجیتال',
-    },
-    // In Electronics Track (trk-electronics): only needs Logic Circuits
-    {
-      id: 'pr-15-elc', relationshipType: 'PREREQUISITE',
-      curriculumId: 'curr-ee-1403',
-      trackId: 'trk-electronics',
-      targetCourseId: 'crs-fpga',
-      sourceCourseId: 'crs-logic',
-      conditionType: 'AND' as const,
-      notes: 'پیش‌نیاز اختصاصی گرایش الکترونیک',
-    },
-
-    // Control Systems -> Signals & Systems
-    { id: 'pr-16', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-control', sourceCourseId: 'crs-signals', conditionType: 'AND' as const },
-    // Telecom 1 -> Signals & Systems
-    { id: 'pr-17', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-telecom-1', sourceCourseId: 'crs-signals', conditionType: 'AND' as const },
-    // Power 1 -> Circuits 2
-    { id: 'pr-18', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-power-1', sourceCourseId: 'crs-circ-2', conditionType: 'AND' as const },
-
-    // Minimum Units Rules
-    {
-      id: 'pr-min-intern', relationshipType: 'PREREQUISITE',
-      curriculumId: 'curr-ee-1403',
-      targetCourseId: 'crs-internship',
-      sourceCourseId: 'crs-math-1', // dummy ref
-      conditionType: 'MIN_UNITS' as const,
-      minUnitsRequired: 80,
-      notes: 'گذراندن حداقل ۸۰ واحد درسی',
-    },
-    {
-      id: 'pr-min-proj', relationshipType: 'PREREQUISITE',
-      curriculumId: 'curr-ee-1403',
-      targetCourseId: 'crs-project',
-      sourceCourseId: 'crs-math-1', // dummy ref
-      conditionType: 'MIN_UNITS' as const,
-      minUnitsRequired: 100,
-      notes: 'گذراندن حداقل ۱۰۰ واحد درسی',
-    },
-  ];
-
-  const corequisiteRules = [
-    // Circuit Lab is corequisite of Circuits 2
-    {
-      id: 'cr-1',
-      curriculumId: 'curr-ee-1403',
-      courseId: 'crs-circ-lab',
-      corequisiteCourseId: 'crs-circ-2',
-      notes: 'آزمایشگاه مدار هم‌نیاز درس مدارهای الکتریکی ۲ است',
-    },
-  ];
-
-  const studentProfiles = [
-    {
-      userId: 'usr-student-1',
-      universityId: 'univ-azad',
-      campusId: 'camp-srbiau',
-      degreeLevelId: 'deg-bs',
-      majorId: 'maj-ee',
-      entryYearId: 'yr-1403',
-      isTrackSelected: false, // Undeclared student demonstrating multi-track features!
-      selectedTrackId: null,
-      desiredTrackIds: ['trk-digital', 'trk-electronics'], // Considering Digital and Electronics
-      currentTermId: 'term-1405-1',
-      updatedAt: '2026-02-01T00:00:00.000Z',
-    },
-  ];
-
-  const studentPassedCourses = [
-    { id: 'spc-1', userId: 'usr-student-1', courseId: 'crs-math-1', grade: 18.5, passedAt: '2024-06-20' },
-    { id: 'spc-2', userId: 'usr-student-1', courseId: 'crs-phys-1', grade: 17.0, passedAt: '2024-06-20' },
-    { id: 'spc-3', userId: 'usr-student-1', courseId: 'crs-prog', grade: 19.0, passedAt: '2024-06-20' },
-    { id: 'spc-4', userId: 'usr-student-1', courseId: 'crs-gen-persian', grade: 20.0, passedAt: '2024-06-20' },
-    { id: 'spc-5', userId: 'usr-student-1', courseId: 'crs-gen-english', grade: 18.0, passedAt: '2024-06-20' },
-    { id: 'spc-6', userId: 'usr-student-1', courseId: 'crs-phys-2', grade: 16.5, passedAt: '2025-01-25' },
-    { id: 'spc-7', userId: 'usr-student-1', courseId: 'crs-circ-1', grade: 17.5, passedAt: '2025-01-25' },
-    { id: 'spc-8', userId: 'usr-student-1', courseId: 'crs-logic', grade: 19.5, passedAt: '2025-01-25' },
-    { id: 'spc-9', userId: 'usr-student-1', courseId: 'crs-math-2', grade: 16.0, passedAt: '2025-01-25' },
-    // Total passed units: ~25 units
+    const academicRules: AcademicRule[] = [
+    { id: 'pr-1', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-math-2', expression: { type: 'COURSE', courseId: 'crs-math-1' } },
+    { id: 'pr-2', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-diffeq', expression: { type: 'COURSE', courseId: 'crs-math-1' } },
+    { id: 'pr-3', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-phys-2', expression: { type: 'COURSE', courseId: 'crs-phys-1' } },
+    
+    { id: 'pr-4', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-engmath', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-diffeq' }, { type: 'COURSE', courseId: 'crs-math-2' }] } },
+    { id: 'pr-6', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-1', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-phys-2' }, { type: 'COURSE', courseId: 'crs-math-1' }] } },
+    { id: 'pr-8', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-2', expression: { type: 'COURSE', courseId: 'crs-circ-1' } },
+    { id: 'pr-9', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-signals', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-engmath' }, { type: 'COURSE', courseId: 'crs-circ-1' }] } },
+    { id: 'pr-11', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-1', expression: { type: 'COURSE', courseId: 'crs-circ-1' } },
+    { id: 'pr-12', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-2', expression: { type: 'COURSE', courseId: 'crs-elec-1' } },
+    { id: 'pr-13', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-comp-arch', expression: { type: 'COURSE', courseId: 'crs-logic' } },
+    { id: 'pr-14', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-micro', expression: { type: 'COURSE', courseId: 'crs-logic' } },
+    
+    { id: 'pr-15', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-digital', targetCourseId: 'crs-fpga', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-comp-arch' }, { type: 'COURSE', courseId: 'crs-micro' }] } },
+    { id: 'pr-16', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-telecom', targetCourseId: 'crs-fpga', expression: { type: 'COURSE', courseId: 'crs-comp-arch' } },
+    
+    { id: 'pr-17', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-power-1', expression: { type: 'COURSE', courseId: 'crs-circ-2' } },
+    { id: 'pr-18', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-power', targetCourseId: 'crs-power-lab', expression: { type: 'COURSE', courseId: 'crs-power-1' } },
+    
+    { id: 'cr-1', relationshipType: 'COREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-lab', expression: { type: 'COURSE', courseId: 'crs-circ-1' } }
   ];
 
   const courseOfferings = [
@@ -747,8 +638,8 @@ export function getInitialSeedData(): DatabaseSchema {
     curriculumCourses,
     academicRules,
         courseOfferings,
-    studentProfiles,
-    studentPassedCourses,
+    studentProfiles: [],
+    studentPassedCourses: [],
     importBatches,
     importRecords,
     academicSettings,
@@ -757,5 +648,7 @@ export function getInitialSeedData(): DatabaseSchema {
     bugReports: [],
     auditLogs: [],
     errorLogs: [],
+    otpChallenges: [],
+    captchaChallenges: [],
   };
 }

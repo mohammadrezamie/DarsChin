@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { CourseOffering } from '../../src/types';
 
 export const offeringsRouter = Router();
@@ -29,7 +29,7 @@ offeringsRouter.get('/', (req, res) => {
 });
 
 // Admin: Create Manual Offering
-offeringsRouter.post('/', authenticate, requireAdmin, (req, res) => {
+offeringsRouter.post('/', authenticate, requirePermission('offering.manage'), (req, res) => {
   const {
     termId,
     campusId,
@@ -79,7 +79,7 @@ offeringsRouter.post('/', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin: Update Offering
-offeringsRouter.put('/:id', authenticate, requireAdmin, (req, res) => {
+offeringsRouter.put('/:id', authenticate, requirePermission('offering.manage'), (req, res) => {
   const idx = db.courseOfferings.findIndex((o) => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
 
@@ -116,7 +116,7 @@ offeringsRouter.put('/:id', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin: Delete Offering
-offeringsRouter.delete('/:id', authenticate, requireAdmin, (req, res) => {
+offeringsRouter.delete('/:id', authenticate, requirePermission('offering.manage'), (req, res) => {
   const idx = db.courseOfferings.findIndex((o) => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
   db.courseOfferings.splice(idx, 1);
