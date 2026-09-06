@@ -95,8 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       fetchCurrentUser();
     } else {
-      // Auto-login with demo student for seamless local testing
-      switchDemoRole('student');
+      setIsLoading(false);
     }
   }, []);
 

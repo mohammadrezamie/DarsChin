@@ -1,17 +1,39 @@
 {
   "users": [
     {
+      "id": "usr-admin-1",
+      "mobile": "09121111111",
+      "name": "مدیر آموزش",
+      "password": "$2b$10$B2ca72IfyHGnUFU6XqX0cO81zQzOHON0vXLBjW3p99jgpTA73zTve",
+      "recoveryKey": "admin-recovery-123",
+      "roles": [
+        "admin",
+        "student"
+      ],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "usr-student-1",
+      "mobile": "09120000000",
+      "name": "دانشجوی نمونه",
+      "password": "$2b$10$e6d.XYGmia.yulvMiGySEusszTkwWYDPIapoVzzhsl4QgumjrtsRG",
+      "recoveryKey": "student-recovery-123",
+      "roles": [
+        "student"
+      ],
+      "createdAt": "2026-01-02T00:00:00.000Z"
+    },
+    {
       "id": "usr-super",
       "mobile": "09911902465",
-      "name": "مدیر ارشد سامانه",
-      "password": "$2b$10$nc02u4a6/PjW.3Jpk0YI8usWwHCmTBofwDojMX9N9duv9vub8ZAJC",
-      "recoveryKey": "darschyn-root-key",
+      "password": "$2b$10$N0esza6Xir9Z1MFMZXrLheuMIgVOqiKNq1FJZJ6fr9kqCJ1qVccYi",
+      "recoveryKey": "13505885",
+      "name": "مدیر ارشد سامانه (Root)",
       "roles": [
         "super-admin",
         "admin",
         "student"
       ],
-      "createdAt": "2026-01-01T00:00:00.000Z",
       "permissions": [
         "student.access",
         "student.profile.read",
@@ -36,146 +58,8 @@
         "admin.permission.manage",
         "system.settings.manage",
         "backup.manage"
-      ]
-    },
-    {
-      "id": "usr-admin-1",
-      "mobile": "09121111111",
-      "name": "مدیر آموزش",
-      "password": "$2b$10$nc02u4a6/PjW.3Jpk0YI8usWwHCmTBofwDojMX9N9duv9vub8ZAJC",
-      "recoveryKey": "admin-recovery-123",
-      "roles": [
-        "admin",
-        "student"
       ],
-      "createdAt": "2026-01-01T00:00:00.000Z"
-    },
-    {
-      "id": "usr-student-1",
-      "mobile": "09120000000",
-      "name": "دانشجوی نمونه",
-      "password": "$2b$10$xXF75g5XtVE.DI3s0Jfc0.GJXTh3PHCsRZNgtcdH34R92dnghsKkK",
-      "recoveryKey": "student-recovery-123",
-      "roles": [
-        "student"
-      ],
-      "createdAt": "2026-01-02T00:00:00.000Z"
-    },
-    {
-      "id": "usr-stud1",
-      "mobile": "09000000001",
-      "name": "Student",
-      "roles": [
-        "student"
-      ],
-      "permissions": [
-        "student.access"
-      ]
-    },
-    {
-      "id": "usr-adm1",
-      "mobile": "09000000002",
-      "name": "Admin",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [
-        "admin.panel.access"
-      ]
-    },
-    {
-      "id": "usr-1788612759430",
-      "name": "NewAdmin2",
-      "mobile": "09000000004",
-      "password": "$2b$10$Re8j7e33JBKk.2Vt3eH3gO8bk7GWG/10lV1.Xtt7d.SjYg6XReNea",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T12:52:39.528Z"
-    },
-    {
-      "id": "usr-1788612860777",
-      "name": "NewAdmin2",
-      "mobile": "09000000005",
-      "password": "$2b$10$Rl2YhXwbtfFWTitsw6H/mOZm3Y2OXAJUYV2GwmcmrJ9GJLabQS1pW",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T12:54:20.874Z"
-    },
-    {
-      "id": "usr-1788612935098",
-      "name": "NewAdmin2",
-      "mobile": "09000913129",
-      "password": "$2b$10$QVGilYhwVGFaWDmQnahyOuJHcevrxiqAo/f7ZhX7krRdSWUpXBaL.",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T12:55:35.206Z"
-    },
-    {
-      "id": "usr-1788613022548",
-      "name": "NewAdmin2",
-      "mobile": "09000914785",
-      "password": "$2b$10$Ge21RLXimWuOdPFPsmVkF.F6pxTuMCR.1WGLEY8r2lReFLrHWFUza",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T12:57:02.647Z"
-    },
-    {
-      "id": "usr-1788613053840",
-      "name": "NewAdmin2",
-      "mobile": "0900054500",
-      "password": "$2b$10$mS9KwVRoiEud8AcAfUyLKu81aZf1b3nSZNgprM9ECuFlxCOMvIgLa",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T12:57:33.943Z"
-    },
-    {
-      "id": "usr-stud1",
-      "mobile": "09000000002",
-      "name": "Student",
-      "roles": [
-        "student"
-      ],
-      "permissions": [
-        "student.access"
-      ]
-    },
-    {
-      "id": "usr-adm1",
-      "mobile": "09000000002",
-      "name": "Admin",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [
-        "admin.panel.access"
-      ]
-    },
-    {
-      "id": "usr-1788614003758",
-      "name": "NewAdmin2",
-      "mobile": "09000457413",
-      "password": "$2b$10$FxaGQdtm1GSv1xUkSVI.hOGjyMQ..S3KO1IJfnJlh2.4HyspwVr5K",
-      "roles": [
-        "admin"
-      ],
-      "permissions": [],
-      "createdBy": "usr-super",
-      "createdAt": "2026-09-05T13:13:23.861Z"
+      "createdAt": "2026-09-06T19:32:41.044Z"
     }
   ],
   "universities": [],
@@ -1351,155 +1235,72 @@
   "bugReports": [],
   "auditLogs": [
     {
-      "id": "log-1788612759528",
+      "id": "log-1788723177277",
       "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
+      "action": "USER_LOGIN",
       "entityType": "USER",
-      "entityId": "usr-1788612759430",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T12:52:39.528Z"
+      "entityId": "usr-super",
+      "details": "ورود موفق کاربر با شماره موبایل 09911902465",
+      "createdAt": "2026-09-06T19:32:57.277Z"
     },
     {
-      "id": "log-1788612837521",
-      "adminId": "usr-stud1",
-      "action": "USER_LOGIN_OTP",
-      "entityType": "USER",
-      "entityId": "usr-stud1",
-      "details": "ورود با رمز یکبار مصرف: 09000000001",
-      "createdAt": "2026-09-05T12:53:57.521Z"
-    },
-    {
-      "id": "log-1788612860874",
+      "id": "log-1788723504891",
       "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
+      "action": "USER_LOGIN",
       "entityType": "USER",
-      "entityId": "usr-1788612860777",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T12:54:20.874Z"
+      "entityId": "usr-super",
+      "details": "ورود موفق کاربر با شماره موبایل 09911902465",
+      "createdAt": "2026-09-06T19:38:24.891Z"
     },
     {
-      "id": "log-1788612896290",
-      "adminId": "usr-adm1",
-      "action": "USER_LOGIN_OTP",
+      "id": "log-1788723504984",
+      "adminId": "usr-admin-1",
+      "action": "USER_LOGIN",
       "entityType": "USER",
-      "entityId": "usr-adm1",
-      "details": "ورود با رمز یکبار مصرف: 09000000002",
-      "createdAt": "2026-09-05T12:54:56.290Z"
+      "entityId": "usr-admin-1",
+      "details": "ورود موفق کاربر با شماره موبایل 09121111111",
+      "createdAt": "2026-09-06T19:38:24.984Z"
     },
     {
-      "id": "log-1788612935206",
+      "id": "log-1788723519917",
+      "adminId": "usr-student-1",
+      "action": "USER_LOGIN",
+      "entityType": "USER",
+      "entityId": "usr-student-1",
+      "details": "ورود موفق کاربر با شماره موبایل 09120000000",
+      "createdAt": "2026-09-06T19:38:39.917Z"
+    },
+    {
+      "id": "log-1788723520010",
+      "adminId": "usr-admin-1",
+      "action": "USER_LOGIN",
+      "entityType": "USER",
+      "entityId": "usr-admin-1",
+      "details": "ورود موفق کاربر با شماره موبایل 09121111111",
+      "createdAt": "2026-09-06T19:38:40.010Z"
+    },
+    {
+      "id": "log-1788723520101",
       "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
+      "action": "USER_LOGIN",
       "entityType": "USER",
-      "entityId": "usr-1788612935098",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T12:55:35.206Z"
+      "entityId": "usr-super",
+      "details": "ورود موفق کاربر با شماره موبایل 09911902465",
+      "createdAt": "2026-09-06T19:38:40.101Z"
     },
     {
-      "id": "log-1788613022647",
-      "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
+      "id": "log-1788723527789",
+      "adminId": "usr-admin-1",
+      "action": "USER_LOGIN",
       "entityType": "USER",
-      "entityId": "usr-1788613022548",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T12:57:02.647Z"
-    },
-    {
-      "id": "log-1788613053943",
-      "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
-      "entityType": "USER",
-      "entityId": "usr-1788613053840",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T12:57:33.943Z"
-    },
-    {
-      "id": "log-1788613054158",
-      "adminId": "usr-stud1",
-      "action": "USER_LOGIN_OTP",
-      "entityType": "USER",
-      "entityId": "usr-stud1",
-      "details": "ورود با رمز یکبار مصرف: 09000000001",
-      "createdAt": "2026-09-05T12:57:34.158Z"
-    },
-    {
-      "id": "log-1788614003861",
-      "adminId": "usr-super",
-      "action": "ADMIN_CREATED",
-      "entityType": "USER",
-      "entityId": "usr-1788614003758",
-      "details": "مدیر جدید NewAdmin2 توسط مدیر ارشد سامانه ایجاد شد.",
-      "createdAt": "2026-09-05T13:13:23.861Z"
-    },
-    {
-      "id": "log-1788614004059",
-      "adminId": "usr-stud1",
-      "action": "USER_LOGIN_OTP",
-      "entityType": "USER",
-      "entityId": "usr-stud1",
-      "details": "ورود با رمز یکبار مصرف: 09000000001",
-      "createdAt": "2026-09-05T13:13:24.059Z"
+      "entityId": "usr-admin-1",
+      "details": "ورود موفق کاربر با شماره موبایل 09121111111",
+      "createdAt": "2026-09-06T19:38:47.789Z"
     }
   ],
   "errorLogs": [],
-  "otpChallenges": [
-    {
-      "id": "a018f797-88a2-402e-914c-1d897e7ac154",
-      "mobile": "09000000001",
-      "purpose": "login",
-      "hashedOtp": "$2b$10$bPz9ABqTVjsXgLtIlnRZpu6..uzN6Aj.ygR2XmpyXkDqJB3s5hlva",
-      "createdAt": 1788614003957,
-      "expiresAt": 1788614123957,
-      "attempts": 0,
-      "consumedAt": 1788614004058
-    }
-  ],
-  "captchaChallenges": [
-    {
-      "id": "d1fa9531-c432-42d9-a08d-30aae19590d0",
-      "value": "3957",
-      "createdAt": 1788612837315,
-      "expiresAt": 1788613137315,
-      "attempts": 0,
-      "consumedAt": 1788612837319
-    },
-    {
-      "id": "2abe3bb1-1afe-4a96-9a47-ebc474df14b6",
-      "value": "5173",
-      "createdAt": 1788612860880,
-      "expiresAt": 1788613160880,
-      "attempts": 0
-    },
-    {
-      "id": "73cfac22-4e6e-4489-80af-d5751b79eca3",
-      "value": "5064",
-      "createdAt": 1788612896092,
-      "expiresAt": 1788613196092,
-      "attempts": 0,
-      "consumedAt": 1788612896097
-    },
-    {
-      "id": "25d79dde-bd74-4f12-ac6b-82955fb31a78",
-      "value": "4552",
-      "createdAt": 1788612935219,
-      "expiresAt": 1788613235219,
-      "attempts": 0
-    },
-    {
-      "id": "747a8e64-9264-4767-928f-c2a11fd19a30",
-      "value": "4412",
-      "createdAt": 1788613053949,
-      "expiresAt": 1788613353949,
-      "attempts": 0,
-      "consumedAt": 1788613053953
-    },
-    {
-      "id": "d58976e7-61be-4a5c-8b1b-751c19645da1",
-      "value": "2300",
-      "createdAt": 1788614003866,
-      "expiresAt": 1788614303866,
-      "attempts": 0,
-      "consumedAt": 1788614003870
-    }
-  ]
+  "otpChallenges": [],
+  "captchaChallenges": [],
+  "syncJobs": [],
+  "syncSnapshots": []
 }

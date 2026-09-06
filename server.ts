@@ -1,3 +1,4 @@
+import "dotenv/config";
 // ============================================================================
 // DARSCHYN (درس‌چین) - Backend Server Entry Point (Express + Vite)
 // ============================================================================
@@ -13,6 +14,7 @@ import { curriculumRouter } from './server/routes/curriculum';
 import { studentRouter } from './server/routes/student';
 import { offeringsRouter } from './server/routes/offerings';
 import { importsRouter } from './server/routes/imports';
+import { syncRouter } from './server/routes/sync';
 import { eligibilityRouter } from './server/routes/eligibility';
 import { adminRouter } from './server/routes/admin';
 import { adminManagementRouter } from './server/routes/admin-management';
@@ -53,6 +55,7 @@ app.use('/api/auth/otp', otpRouter);
   app.use('/api/student', studentRouter);
   app.use('/api/offerings', offeringsRouter);
   app.use('/api/imports', importsRouter);
+  app.use('/api/sync', syncRouter);
   app.use('/api/eligibility', eligibilityRouter);
   app.use('/api/admin', adminRouter);
 app.use('/api/admin-management', adminManagementRouter);

@@ -13,15 +13,6 @@ export function getInitialSeedData(): DatabaseSchema {
 
   const users = [
     {
-      id: 'usr-super',
-      mobile: '09911902465',
-      name: 'مدیر ارشد سامانه',
-      password: superAdminPasswordHash,
-      recoveryKey: 'darschyn-root-key',
-      roles: ['super-admin', 'admin', 'student'] as any,
-      createdAt: new Date('2026-01-01').toISOString(),
-    },
-    {
       id: 'usr-admin-1',
       mobile: '09121111111',
       name: 'مدیر آموزش',
@@ -650,5 +641,7 @@ export function getInitialSeedData(): DatabaseSchema {
     errorLogs: [],
     otpChallenges: [],
     captchaChallenges: [],
+    syncJobs: [],
+    syncSnapshots: [],
   };
 }

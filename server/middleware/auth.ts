@@ -38,6 +38,12 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
     if (!user) {
       return res.status(401).json({ success: false, error: 'کاربر یافت نشد.' });
     }
+    if (user.deactivatedAt) {
+      return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال شده است.' });
+    }
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'کاربر یافت نشد.' });
+    }
 
     if (!Array.isArray(user.roles)) {
       user.roles = user.roles ? [(user.roles as any)] : ['student'];

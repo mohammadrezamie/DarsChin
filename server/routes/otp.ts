@@ -4,48 +4,98 @@ import { generateToken } from '../middleware/auth';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NiazpardazSmsClient } from 'niazpardazsms';
+import svgCaptcha from 'svg-captcha';
 
 export const otpRouter = Router();
-
-// In-memory rate limiting and storage for simplicity (should use DB/Redis in prod, but DB is JSON here)
 
 const OTP_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 otpRouter.get('/captcha/generate', (req, res) => {
-    const value = Math.floor(1000 + Math.random() * 9000).toString();
+    const captcha = svgCaptcha.create({
+        size: 5,
+        ignoreChars: '0o1i',
+        noise: 2,
+        color: true,
+        background: '#f4f4f4'
+    });
     const id = crypto.randomUUID();
     
     db.captchaChallenges.push({
         id,
-        value,
+        value: captcha.text, // Kept server-side
         createdAt: Date.now(),
         expiresAt: Date.now() + CAPTCHA_EXPIRY_MS,
         attempts: 0
     });
     db.save();
     
-    // We would render the CAPTCHA to SVG/Base64 here in a real app, but for now we just return the value for simplicity of testing
-    // In production, NEVER return the value.
-    res.json({ success: true, data: { id, text: value } }); // Mock returning text for testing
+    // Only return the challenge ID and the SVG representation
+    res.json({ success: true, data: { id, svg: captcha.data } }); 
 });
 
+// For testing purposes ONLY: expose CAPTCHA answer if in test environment
+if (process.env.NODE_ENV === 'test') {
+    otpRouter.get('/captcha/debug/:id', (req, res) => {
+        const captcha = db.captchaChallenges.find(c => c.id === req.params.id);
+        res.json({ text: captcha?.value });
+    });
+    otpRouter.get('/debug/:challengeId', (req, res) => {
+        const otp = db.otpChallenges.find(o => o.id === req.params.challengeId);
+        // Can't return raw OTP easily because it's hashed, but we can intercept it earlier or just use a fixed OTP in test.
+        // We'll handle this in tests differently.
+        res.json({ hashed: otp?.hashedOtp });
+    });
+}
+
+// Function to normalize mobile number
+const normalizeMobile = (mobile) => {
+    let normalized = mobile.trim();
+    if (normalized.startsWith('+98')) normalized = '0' + normalized.substring(3);
+    if (normalized.startsWith('0098')) normalized = '0' + normalized.substring(4);
+    if (normalized.startsWith('9') && normalized.length === 10) normalized = '0' + normalized;
+    return normalized;
+};
+
 otpRouter.post('/send', async (req, res) => {
-    const { mobile, purpose, captchaId, captchaValue } = req.body;
+    let { mobile, purpose, captchaId, captchaValue } = req.body;
     
-    if (!mobile || !purpose) return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
+    if (!mobile || !purpose || !captchaId || !captchaValue) {
+        return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
+    }
+    
+    mobile = normalizeMobile(mobile);
     
     // Verify CAPTCHA
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
     if (!captcha || captcha.expiresAt < Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
     }
-    if (captcha.value !== captchaValue) {
+    
+    if (captcha.attempts >= 5) {
+         return res.status(429).json({ success: false, error: 'تعداد مجاز تلاش برای این کپچا به پایان رسیده است.' });
+    }
+    
+    if (captcha.value.toLowerCase() !== captchaValue.toLowerCase()) {
         captcha.attempts++;
         db.save();
         return res.status(400).json({ success: false, error: 'کد امنیتی اشتباه است.' });
     }
+    
+    // Consume CAPTCHA
     captcha.consumedAt = Date.now();
+    db.save();
+    
+    // Verify user state before sending SMS
+    if (purpose === 'login' || purpose === 'password_recovery') {
+        const user = db.users.find(u => normalizeMobile(u.mobile) === mobile);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'کاربری با این شماره یافت نشد.' });
+        }
+        if (user.deactivatedAt) {
+            return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال است.' });
+        }
+    }
     
     // Throttle checks
     const recentOtps = db.otpChallenges.filter(o => o.mobile === mobile && o.createdAt > Date.now() - 60000);
@@ -57,47 +107,66 @@ otpRouter.post('/send', async (req, res) => {
     const hashedOtp = bcrypt.hashSync(otpCode, 10);
     const id = crypto.randomUUID();
     
-    db.otpChallenges.push({
-        id,
-        mobile,
-        purpose,
-        hashedOtp,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + OTP_EXPIRY_MS,
-        attempts: 0
-    });
+    // Test mode fixed OTP override
+    let finalOtp = otpCode;
+    if (process.env.NODE_ENV === 'test' && process.env.MOCK_OTP_CODE) {
+         finalOtp = process.env.MOCK_OTP_CODE;
+         // Override hash to match the mock
+         db.otpChallenges.push({
+            id, mobile, purpose,
+            hashedOtp: bcrypt.hashSync(finalOtp, 10),
+            createdAt: Date.now(), expiresAt: Date.now() + OTP_EXPIRY_MS, attempts: 0
+         });
+    } else {
+         db.otpChallenges.push({
+            id, mobile, purpose, hashedOtp,
+            createdAt: Date.now(), expiresAt: Date.now() + OTP_EXPIRY_MS, attempts: 0
+         });
+    }
     db.save();
     
-    // Attempt to send via Niazpardaz if API Key is set
     const apiKey = process.env.NIAZPARDAZ_API_KEY;
     if (apiKey) {
         try {
             const client = new NiazpardazSmsClient(apiKey);
-            const sender = process.env.NIAZPARDAZ_SENDER_NUMBER || '10001234';
-            const messageText = `کد ورود به درسچین:\n${otpCode}\n\nاین کد 2 دقیقه اعتبار دارد.`;
+            const sender = process.env.NIAZPARDAZ_SENDER_NUMBER || '5000249';
+            const messageText = `کد ورود به درس‌چین:\n${finalOtp}\n\nاین کد 2 دقیقه اعتبار دارد.`;
             const result = await client.send(sender, mobile, messageText);
+            
             if (result.resultCode !== 0) {
                 console.error('[NIAZPARDAZ] Failed to send SMS:', result);
-                // We still proceed, but you might want to return an error in production
+                return res.status(500).json({ success: false, error: 'خطا در ارسال پیامک' });
             }
         } catch (err) {
             console.error('[NIAZPARDAZ] Error:', err);
+            return res.status(500).json({ success: false, error: 'خطا در ارتباط با سرویس پیامک' });
         }
     } else {
-        console.log(`[LOCAL OTP] Code for ${mobile}: ${otpCode}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[LOCAL OTP] Code for ${mobile}: ${finalOtp}`);
+        } else {
+            return res.status(500).json({ success: false, error: 'سرویس پیامک تنظیم نشده است' });
+        }
     }
     
-    res.json({ success: true, message: 'کد تایید ارسال شد.', data: { challengeId: id, code: otpCode /* for testing */ } });
+    // Do NOT return the OTP code
+    res.json({ success: true, message: 'کد تایید ارسال شد.', data: { challengeId: id } });
 });
 
 otpRouter.post('/verify', (req, res) => {
-    const { challengeId, mobile, code } = req.body;
+    let { challengeId, mobile, code, purpose } = req.body;
     
-    if (!challengeId || !mobile || !code) return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
+    if (!challengeId || !mobile || !code || !purpose) return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
+    
+    mobile = normalizeMobile(mobile);
     
     const challenge = db.otpChallenges.find(c => c.id === challengeId && c.mobile === mobile);
     if (!challenge || challenge.expiresAt < Date.now() || challenge.consumedAt) {
         return res.status(400).json({ success: false, error: 'کد تایید نامعتبر یا منقضی شده است.' });
+    }
+    
+    if (challenge.purpose !== purpose) {
+         return res.status(400).json({ success: false, error: 'هدف کد تایید با درخواست همخوانی ندارد.' });
     }
     
     if (challenge.attempts >= 5) {
@@ -114,7 +183,7 @@ otpRouter.post('/verify', (req, res) => {
     db.save();
     
     if (challenge.purpose === 'login') {
-        let user = db.users.find(u => u.mobile === mobile);
+        let user = db.users.find(u => normalizeMobile(u.mobile) === mobile);
         if (!user) {
             return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
         }
@@ -129,7 +198,7 @@ otpRouter.post('/verify', (req, res) => {
             action: 'USER_LOGIN_OTP',
             entityType: 'USER',
             entityId: user.id,
-            details: `ورود با رمز یکبار مصرف: ${mobile}`,
+            details: `ورود با رمز یکبار مصرف`,
             createdAt: new Date().toISOString()
         });
         db.save();

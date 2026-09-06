@@ -43,6 +43,16 @@ adminManagementRouter.post('/', authenticate, requirePermission('admin.create'),
     return res.status(400).json({ success: false, error: 'کاربری با این شماره موبایل وجود دارد.' });
   }
 
+  
+  // Ensure delegated admins can only grant permissions they themselves possess
+  if (permissions && !req.user.roles.includes('super-admin')) {
+      const myPerms = req.user.permissions || [];
+      const hasUnallowed = permissions.some((p: string) => !myPerms.includes(p));
+      if (hasUnallowed) {
+          return res.status(403).json({ success: false, error: 'شما نمی‌توانید دسترسی‌هایی بیشتر از دسترسی‌های خودتان اختصاص دهید.' });
+      }
+  }
+
   const allowedRoles: UserRole[] = ['admin', 'student'];
   const userRoles: UserRole[] = roles ? roles.filter((r: any) => allowedRoles.includes(r)) : ['admin'];
 
@@ -104,6 +114,15 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
   const { name, mobile, permissions, roles, password } = req.body;
   if (name) target.name = name;
   if (mobile) target.mobile = mobile;
+  
+  if (permissions && !isSuper) {
+      const myPerms = req.user.permissions || [];
+      const hasUnallowed = permissions.some((p: string) => !myPerms.includes(p));
+      if (hasUnallowed) {
+          return res.status(403).json({ success: false, error: 'شما نمی‌توانید دسترسی‌هایی بیشتر از دسترسی‌های خودتان اختصاص دهید.' });
+      }
+  }
+
   if (permissions) target.permissions = permissions;
   
   if (roles) {

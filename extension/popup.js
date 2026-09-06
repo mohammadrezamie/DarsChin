@@ -44,6 +44,15 @@ const EXTENSION_VERSION = "3.3.6";
 
 document.addEventListener('DOMContentLoaded', () => {
     checkConnection();
+
+    const syncTokenInput = document.getElementById('syncTokenInput');
+    chrome.storage.local.get(['darschyn_sync_token'], (res) => {
+        if (res.darschyn_sync_token) syncTokenInput.value = res.darschyn_sync_token;
+    });
+    syncTokenInput.addEventListener('input', (e) => {
+        chrome.storage.local.set({ darschyn_sync_token: e.target.value });
+    });
+
 });
 
 async function checkConnection() {
@@ -285,6 +294,54 @@ els.copyDebugBtn.addEventListener('click', async () => {
         setTimeout(() => els.copyDebugBtn.textContent = originalText, 2000);
     } catch (err) { console.error('Failed to copy', err); els.copyDebugBtn.textContent = 'خطا در کپی'; setTimeout(() => els.copyDebugBtn.textContent = 'کپی گزارش', 2000); }
 });
+
+
+els.syncApiBtn = document.getElementById('syncApiBtn');
+if (els.syncApiBtn) {
+    els.syncApiBtn.addEventListener('click', async () => {
+        if (!lastState || !lastState.exportData) return;
+        const token = document.getElementById('syncTokenInput').value.trim();
+        if (!token) {
+            alert('لطفاً توکن همگام‌سازی را وارد کنید');
+            return;
+        }
+
+        els.syncApiBtn.disabled = true;
+        els.syncApiBtn.innerText = 'در حال ارسال...';
+
+        try {
+            // Start Job
+            const jobRes = await fetch('http://localhost:3000/api/sync/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ termId: lastState.term })
+            });
+            const jobData = await jobRes.json();
+            if (!jobData.success) throw new Error(jobData.error);
+            const jobId = jobData.data.id;
+
+            // Send Snapshot
+            const snapRes = await fetch('http://localhost:3000/api/sync/jobs/' + jobId + '/snapshots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({
+                    chunkIndex: 0,
+                    isFinal: true,
+                    data: lastState.exportData.records
+                })
+            });
+            const snapData = await snapRes.json();
+            if (!snapData.success) throw new Error(snapData.error);
+            
+            els.syncApiBtn.innerText = 'همگام‌سازی با موفقیت انجام شد ✓';
+            els.syncApiBtn.classList.replace('bg-green-600', 'bg-blue-600');
+        } catch (err) {
+            alert('خطا در همگام‌سازی: ' + err.message);
+            els.syncApiBtn.disabled = false;
+            els.syncApiBtn.innerText = 'تلاش مجدد';
+        }
+    });
+}
 
 els.exportBtn.addEventListener('click', () => {
     if (!lastState || !lastState.exportData) return;

@@ -32,6 +32,7 @@ import {
 import { AdminCrudTable, Column } from './AdminCrudTable';
 import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
 import { UserManagement } from './UserManagement';
+import { AdminSyncStatus } from './AdminSyncStatus';
 import { AdminLogs } from './AdminLogs';
 import { AdminSupportPanel } from './AdminSupportPanel';
 import { AdminDiagnostics } from './AdminDiagnostics';

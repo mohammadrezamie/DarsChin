@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../utils/api';
 import { User } from '../types';
 import { Shield, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const getHighestRole = (roles?: string[]) => {
   if (roles?.includes('super-admin')) return 'super-admin';
@@ -9,18 +10,31 @@ const getHighestRole = (roles?: string[]) => {
   return 'student';
 };
 
+const AVAILABLE_PERMISSIONS = [
+  { id: 'admin.panel.access', label: 'دسترسی پنل' },
+  { id: 'admin.manage', label: 'مدیریت مدیران' },
+  { id: 'admin.create', label: 'ایجاد مدیر' },
+  { id: 'system.settings.manage', label: 'تنظیمات سیستم' },
+  { id: 'student.access', label: 'دسترسی دانشجویی' },
+];
+
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { user: currentUser } = useAuth();
 
   const fetchUsers = async () => {
     setLoading(true);
-    const res = await apiRequest<{ data: User[] }>('/api/admin/users');
+    // Use the admin-management API to list admins
+    const res = await apiRequest<{ data: User[] }>('/api/admin-management');
     if (res.success && res.data) {
       setUsers(res.data);
     } else {
-      setError(res.error || 'خطا در دریافت لیست کاربران');
+      // Fallback if not admin.manage
+      const resFallback = await apiRequest<{ data: User[] }>('/api/admin/users');
+      if (resFallback.success && resFallback.data) setUsers(resFallback.data);
+      else setError(resFallback.error || 'خطا در دریافت لیست کاربران');
     }
     setLoading(false);
   };
@@ -35,11 +49,25 @@ export const UserManagement: React.FC = () => {
       method: 'PUT',
       body: JSON.stringify({ role: newRole })
     });
-    if (res.success) {
-      fetchUsers();
-    } else {
-      alert(res.error || 'خطا در تغییر نقش');
-    }
+    if (res.success) fetchUsers();
+    else alert(res.error || 'خطا در تغییر نقش');
+  };
+
+  const handlePermissionChange = async (userId: string, permission: string, grant: boolean) => {
+    const userToEdit = users.find(u => u.id === userId);
+    if (!userToEdit) return;
+    const currentPerms = userToEdit.permissions || [];
+    const newPerms = grant 
+      ? [...currentPerms, permission] 
+      : currentPerms.filter(p => p !== permission);
+
+    const res = await apiRequest(`/api/admin-management/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions: newPerms })
+    });
+    
+    if (res.success) fetchUsers();
+    else alert(res.error || 'شما مجاز به تخصیص این دسترسی نیستید.');
   };
 
   if (loading) return <div className="p-8 text-center">در حال بارگذاری...</div>;
@@ -48,7 +76,7 @@ export const UserManagement: React.FC = () => {
   return (
     <div className="bg-liquid-glass rounded-3xl p-6">
       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-        <ShieldAlert className="w-5 h-5 text-red-500" /> مدیریت کاربران (سطح مدیر ارشد)
+        <ShieldAlert className="w-5 h-5 text-red-500" /> مدیریت مدیران (دسترسی‌ها)
       </h3>
       
       <div className="overflow-x-auto">
@@ -56,10 +84,10 @@ export const UserManagement: React.FC = () => {
           <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <tr>
               <th className="px-4 py-3 rounded-r-xl">نام کاربر</th>
-              <th className="px-4 py-3">ایمیل / نام کاربری</th>
+              <th className="px-4 py-3">شماره موبایل</th>
               <th className="px-4 py-3">نقش فعلی</th>
-              <th className="px-4 py-3">وضعیت تحصیلی (Major/Entry)</th>
-              <th className="px-4 py-3 rounded-l-xl">عملیات</th>
+              <th className="px-4 py-3">دسترسی‌ها (Delegation)</th>
+              <th className="px-4 py-3 rounded-l-xl">عملیات نقش</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
@@ -77,20 +105,44 @@ export const UserManagement: React.FC = () => {
                     {getHighestRole(u.roles) === 'super-admin' ? 'مدیر ارشد' : getHighestRole(u.roles) === 'admin' ? 'مدیر سیستم' : 'دانشجو'}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-xs text-slate-500 max-w-xs">{u.roles?.includes("student") ? `دانشجوی ${(u as any).profile?.majorId || "-"} ورود ${(u as any).profile?.entryYearId || "-"}` : "-"}</td>
                 <td className="px-4 py-4">
-                  {u.mobile !== '09911902465' ? (
+                  {getHighestRole(u.roles) === 'admin' && (
+                    <div className="flex flex-wrap gap-2">
+                      {AVAILABLE_PERMISSIONS.map(perm => {
+                        const hasPerm = u.permissions?.includes(perm.id);
+                        const canGrant = currentUser?.roles?.includes('super-admin') || currentUser?.permissions?.includes(perm.id);
+                        return (
+                          <label key={perm.id} className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md border ${hasPerm ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300' : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700'} ${canGrant ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700' : 'opacity-50 cursor-not-allowed'}`}>
+                            <input 
+                              type="checkbox" 
+                              checked={hasPerm} 
+                              disabled={!canGrant}
+                              onChange={(e) => handlePermissionChange(u.id, perm.id, e.target.checked)}
+                              className="hidden" 
+                            />
+                            {perm.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {getHighestRole(u.roles) === 'super-admin' && (
+                    <span className="text-xs text-slate-400">دارای تمامی دسترسی‌ها (Root)</span>
+                  )}
+                </td>
+                <td className="px-4 py-4">
+                  {u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
+                    <span className="text-xs text-slate-400 italic">شما مالک (Root) هستید</span>
+                  ) : (
                     <select
                       className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500 text-slate-900 dark:text-white"
                       value={getHighestRole(u.roles)}
                       onChange={(e) => handleRoleChange(u.id, e.target.value)}
                     >
-                      <option value="student">ارتقا/تنزل به دانشجو</option>
+                      <option value="student">تنزل به دانشجو</option>
                       <option value="admin">ارتقا به مدیر سیستم</option>
-                      <option value="super-admin">ارتقا به مدیر ارشد</option>
+                      {currentUser?.roles?.includes('super-admin') && <option value="super-admin">ارتقا به مدیر ارشد</option>}
                     </select>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">غیرقابل تغییر (Root)</span>
                   )}
                 </td>
               </tr>

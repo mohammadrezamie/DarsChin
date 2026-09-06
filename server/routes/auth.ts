@@ -88,7 +88,7 @@ authRouter.post('/register', validate(registerSchema), (req, res) => {
   const userRecoveryKey = recoveryKey?.trim() || `rec-${Math.random().toString(36).substring(2, 10)}`;
 
   // Determine roles: root mobile gets super-admin automatically; all others get student
-  const roles: UserRole[] = mobile === process.env.ROOT_OWNER_MOBILE ? ['super-admin', 'admin', 'student'] : ['student'];
+  const roles: UserRole[] = ['student'];
 
   const newUser: User = {
     id: `usr-${Date.now()}`,
@@ -146,7 +146,6 @@ authRouter.post('/register', validate(registerSchema), (req, res) => {
         mobile: newUser.mobile,
         name: newUser.name,
         roles: newUser.roles,
-        recoveryKey: userRecoveryKey,
       },
     },
   });
@@ -182,7 +181,7 @@ authRouter.post('/login', validate(loginSchema), (req, res) => {
 
   // Find user by mobile
   const user = db.users.find((u) => u.mobile === mobile);
-  console.log('Login attempt mobile:', mobile, 'Found user:', user ? user.name : 'null');
+  const maskedMobile = mobile.substring(0, 4) + '***' + mobile.substring(mobile.length - 4); console.log('Login attempt mobile:', maskedMobile, 'User Exists:', !!user);
   if (user && user.deactivatedAt) {
     return res.status(403).json({
       success: false,
