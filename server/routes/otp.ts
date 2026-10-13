@@ -20,12 +20,14 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
     const captchaCount = db.captchaChallenges.length;
     const otpCount = db.otpChallenges.length;
 
-    db.captchaChallenges = db.captchaChallenges.filter(
-        (challenge) => challenge.expiresAt > now && !challenge.consumedAt,
-    );
-    db.otpChallenges = db.otpChallenges.filter(
-        (challenge) => challenge.expiresAt > now && !challenge.consumedAt,
-    );
+    for (let index = db.captchaChallenges.length - 1; index >= 0; index -= 1) {
+        const challenge = db.captchaChallenges[index];
+        if (challenge.expiresAt <= now || challenge.consumedAt) db.captchaChallenges.splice(index, 1);
+    }
+    for (let index = db.otpChallenges.length - 1; index >= 0; index -= 1) {
+        const challenge = db.otpChallenges[index];
+        if (challenge.expiresAt <= now || challenge.consumedAt) db.otpChallenges.splice(index, 1);
+    }
 
     return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
 }
