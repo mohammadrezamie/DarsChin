@@ -85,6 +85,24 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         });
         expect(malformedMobile.status).toBe(400);
 
+        const malformedMobileFormat = await request(app).post('/api/auth/otp/send').send({
+            mobile: '0912345678x',
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(malformedMobileFormat.status).toBe(400);
+        expect(malformedMobileFormat.body.error).toContain('شماره موبایل نامعتبر');
+
+        const validMobileReachesCaptchaCheck = await request(app).post('/api/auth/otp/send').send({
+            mobile: '09123456789',
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(validMobileReachesCaptchaCheck.status).toBe(400);
+        expect(validMobileReachesCaptchaCheck.body.error).toContain('کپچای نامعتبر');
+
         const malformedVerify = await request(app).post('/api/auth/otp/verify').send({
             mobile: '09123456789',
             challengeId: 'unused',
@@ -92,6 +110,15 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             purpose: 'login',
         });
         expect(malformedVerify.status).toBe(400);
+
+        const validVerifyShapeReachesChallengeCheck = await request(app).post('/api/auth/otp/verify').send({
+            mobile: '09123456789',
+            challengeId: 'unused',
+            code: '123456',
+            purpose: 'login',
+        });
+        expect(validVerifyShapeReachesChallengeCheck.status).toBe(400);
+        expect(validVerifyShapeReachesChallengeCheck.body.error).toContain('کد تایید نامعتبر');
     });
 
     it("4. OTP Send endpoint DOES NOT expose OTP", async () => {
