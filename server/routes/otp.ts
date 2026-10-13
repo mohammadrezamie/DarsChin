@@ -68,7 +68,7 @@ otpRouter.post('/send', async (req, res) => {
     }
 
     mobile = normalizeIranianMobile(mobile);
-    if (!/^09\\d{9}$/.test(mobile)) {
+    if (!/^09\d{9}$/.test(mobile)) {
         return res.status(400).json({ success: false, error: 'شماره موبایل نامعتبر است.' });
     }
     
@@ -175,7 +175,7 @@ otpRouter.post('/verify', (req, res) => {
     }
 
     mobile = normalizeIranianMobile(mobile);
-    if (!/^09\\d{9}$/.test(mobile) || !/^\\d{6}$/.test(String(code))) {
+    if (!/^09\d{9}$/.test(mobile) || !/^\d{6}$/.test(String(code))) {
         return res.status(400).json({ success: false, error: 'شماره موبایل یا کد تایید نامعتبر است.' });
     }
     
