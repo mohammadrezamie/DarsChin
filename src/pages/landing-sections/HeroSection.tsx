@@ -22,7 +22,7 @@ export const HeroSection: React.FC = () => {
   );
 
   return (
-    <section dir="rtl" className="relative isolate overflow-hidden px-4 pb-20 pt-28 sm:px-6 sm:pb-28 sm:pt-36 lg:px-8">
+    <section id="hero" dir="rtl" className="scroll-mt-24 relative isolate overflow-hidden px-4 pb-20 pt-28 sm:px-6 sm:pb-28 sm:pt-36 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-28 top-12 h-80 w-80 rounded-full bg-blue-400/15 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
         <div className="absolute -left-24 top-40 h-72 w-72 rounded-full bg-violet-400/10 blur-3xl" />
