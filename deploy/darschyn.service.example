@@ -10,6 +10,8 @@ Group=darschyn
 WorkingDirectory=/opt/darschyn/current
 EnvironmentFile=/etc/darschyn/darschyn.env
 Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
 ExecStart=/usr/bin/node /opt/darschyn/current/dist/server.cjs
 Restart=on-failure
 RestartSec=5
