@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from '../utils/api';
 import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 
@@ -49,7 +49,7 @@ export const AdminSyncStatus: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchSyncs = async () => {
+  const fetchSyncs = useCallback(async () => {
     setLoading(true);
     setError('');
     const res = await apiRequest<SyncJobView[]>('/api/sync/jobs');
@@ -59,11 +59,11 @@ export const AdminSyncStatus: React.FC = () => {
       setError(res.error || 'دریافت وضعیت همگام‌سازی ناموفق بود.');
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchSyncs();
-  }, []);
+    void fetchSyncs();
+  }, [fetchSyncs]);
 
   return (
     <section className="bg-liquid-glass rounded-3xl border border-slate-200/70 p-5 shadow-xs dark:border-slate-800 sm:p-6">
@@ -97,6 +97,7 @@ export const AdminSyncStatus: React.FC = () => {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-right text-sm">
+            <caption className="sr-only">فهرست عملیات همگام‌سازی و نتیجه تطبیق داده‌ها</caption>
             <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <tr>
                 <th className="rounded-r-xl px-3 py-3">عملیات</th>
