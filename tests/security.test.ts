@@ -95,10 +95,18 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             expiresAt: expiredAt,
             attempts: 0,
         });
+        db.captchaChallenges.push({
+            id: 'malformed-expiry-captcha-regression',
+            value: 'invalid',
+            createdAt: expiredAt - 1000,
+            expiresAt: Number.NaN,
+            attempts: 0,
+        });
 
         const res = await request(app).get('/api/auth/otp/captcha/generate');
         expect(res.status).toBe(200);
         expect(db.captchaChallenges.some((item) => item.id === 'expired-captcha-regression')).toBe(false);
+        expect(db.captchaChallenges.some((item) => item.id === 'malformed-expiry-captcha-regression')).toBe(false);
         expect(db.otpChallenges.some((item) => item.id === 'expired-otp-regression')).toBe(false);
     });
 
