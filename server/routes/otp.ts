@@ -26,7 +26,12 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
     }
     for (let index = db.otpChallenges.length - 1; index >= 0; index -= 1) {
         const challenge = db.otpChallenges[index];
-        if (challenge.expiresAt <= now || challenge.consumedAt) db.otpChallenges.splice(index, 1);
+        // A verified password-recovery OTP must remain available until the password reset
+        // consumes it via recoveredAt; pruning it here would make recovery impossible.
+        if (
+            challenge.expiresAt <= now ||
+            (challenge.consumedAt && challenge.purpose !== 'password_recovery')
+        ) db.otpChallenges.splice(index, 1);
     }
 
     return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
