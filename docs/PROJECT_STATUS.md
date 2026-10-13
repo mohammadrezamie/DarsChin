@@ -37,3 +37,16 @@ Use these labels in reports:
 - **Live-verified:** tested against the actual external service or deployed environment.
 
 Never describe code review or fixture verification as live verification.
+
+
+## Development branch update
+
+The following work has been committed to `fix/ci-regression-tests` after the baseline review above:
+
+- Added `docs/MASTER_PROMPT.md` as the canonical operating brief for coding agents, including the explicit academic-policy approval boundary.
+- Recorded the owner-confirmed course-demand dependency behavior in `docs/FEATURE_COURSE_DEMAND.md`.
+- Added transport-level sync chunk validation in `server/sync/validation.ts`: index bounds, object-record shape, record-count and byte-size limits, boolean final-marker validation, and complete chunk-sequence checking.
+- Updated `server/routes/sync.ts` to validate chunk payloads, reject conflicting reuse of an index, acknowledge identical retries without duplicate snapshots, and reject incomplete final chunk sequences.
+- Added `tests/sync-validation.test.ts` for validation and chunk sequence cases.
+
+**Verification:** these latest changes are code-reviewed only. The tests, typecheck, and production build have not been executed in this environment. The sync endpoint still does not reconcile snapshots into canonical `courseOfferings`; a job marked `COMPLETED` currently means its chunks were received, not that offerings were reconciled. Do not treat sync as production-complete. No GitHub Actions workflow has been added.
