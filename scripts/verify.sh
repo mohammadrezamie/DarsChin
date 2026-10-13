@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+VERIFY_DATA_DIR="$(mktemp -d)"
+trap 'rm -rf "$VERIFY_DATA_DIR"' EXIT
 
 CURRENT_STEP="environment preflight"
 step() {
@@ -36,6 +38,7 @@ step "$CURRENT_STEP"
 export NODE_ENV=test
 export JWT_SECRET="${JWT_SECRET:-darschyn-ci-only-secret-not-for-production}"
 export MOCK_OTP_CODE="${MOCK_OTP_CODE:-123456}"
+export DARSCHYN_DATA_DIR="$VERIFY_DATA_DIR/data"
 # Disposable credentials used only by the isolated test database; never use production secrets here.
 export ROOT_OWNER_MOBILE="${ROOT_OWNER_MOBILE:-09999999999}"
 export ROOT_OWNER_PASSWORD="${ROOT_OWNER_PASSWORD:-test-only-root-password}"
