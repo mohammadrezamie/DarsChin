@@ -118,3 +118,4 @@ Student sync requests can no longer choose a different campus from the campus as
 - Public registration always assigns the student role; root privileges must come from trusted database bootstrap, not possession of a reserved phone number.
 - This closes a privilege-escalation path if an existing JSON database lacks the configured root user and someone registers that mobile number. Existing-database root provisioning still needs a separate migration/bootstrap review; no credentials or production data were changed.
 - Runtime tests and typecheck remain unexecuted here. Do not merge until verification is genuinely green.
+- Added a regression case in `tests/security.test.ts` that simulates a non-bootstrap student's mobile matching `ROOT_OWNER_MOBILE` and verifies `/api/auth/me` does not grant super-admin. The case is committed but not executed; test status remains unverified.
