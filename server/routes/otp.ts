@@ -14,7 +14,7 @@ const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Keep short-lived verification state bounded in the JSON database.
- * Expired/consumed challenges cannot be used again, so retaining them has no security benefit.
+ * Expired challenges and consumed challenges outside the password-reset handoff are removable.
  */
 function pruneExpiredChallenges(now = Date.now()): boolean {
     const captchaCount = db.captchaChallenges.length;
@@ -33,7 +33,7 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
         if (
             !Number.isFinite(challenge.expiresAt) ||
             challenge.expiresAt <= now ||
-            (challenge.consumedAt && challenge.purpose !== 'password_recovery')
+            (challenge.consumedAt && (challenge.purpose !== 'password_recovery' || challenge.recoveredAt))
         ) db.otpChallenges.splice(index, 1);
     }
 
