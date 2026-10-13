@@ -1,22 +1,24 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Activity, BookOpen, CalendarDays, CheckCircle2, Database, FileSpreadsheet, GraduationCap, Layers3, ListChecks, MessageSquare, ShieldCheck, SlidersHorizontal, Users, Workflow } from 'lucide-react';
+import { Activity, BookOpen, CalendarDays, CheckCircle2, Database, FileSpreadsheet, GraduationCap, Layers3, ListChecks, MessageSquare, ShieldCheck, SlidersHorizontal, Sparkles, Users, Workflow } from 'lucide-react';
 
-const studentFeatures = [
+type Feature = { icon: React.ComponentType<{ className?: string }>; title: string; description: string };
+
+const studentFeatures: Feature[] = [
   { icon: ListChecks, title: 'بررسی دروس ارائه‌شده', description: 'دیدن وضعیت درس‌ها و دلایل قابل اخذ یا مسدود بودن آن‌ها.' },
-  { icon: SparklesIcon, title: 'پیشنهاد و اولویت‌بندی', description: 'مرتب‌سازی گزینه‌ها برای تصمیم‌گیری آگاهانه‌تر.' },
+  { icon: Sparkles, title: 'پیشنهاد و اولویت‌بندی', description: 'مرتب‌سازی گزینه‌ها برای تصمیم‌گیری آگاهانه‌تر.' },
   { icon: CalendarDays, title: 'برنامه‌ریز هفتگی', description: 'چیدن ارائه‌های انتخابی و بررسی تداخل زمانی.' },
   { icon: BookOpen, title: 'کارنامه دروس', description: 'مدیریت سوابق درسی و درس‌های پاس‌شده.' },
 ];
 
-const adminFeatures = [
+const adminFeatures: Feature[] = [
   { icon: FileSpreadsheet, title: 'چارت‌های مصوب', description: 'مدیریت ساختار چارت و ارتباط درس‌ها با برنامه تحصیلی.' },
   { icon: Workflow, title: 'قوانین آموزشی', description: 'تعریف و مدیریت روابط پیش‌نیازی و هم‌نیازی.' },
   { icon: Layers3, title: 'ارائه‌های ترمی', description: 'مدیریت اطلاعات ارائه‌ها و داده‌های واردشده.' },
   { icon: Users, title: 'کاربران و دسترسی‌ها', description: 'مدیریت حساب‌ها و سطح دسترسی‌های سامانه.' },
 ];
 
-const FeatureList: React.FC<{ items: typeof studentFeatures; variant: 'student' | 'admin' }> = ({ items, variant }) => (
+const FeatureList: React.FC<{ items: Feature[]; variant: 'student' | 'admin' }> = ({ items, variant }) => (
   <div className="grid gap-3 sm:grid-cols-2">
     {items.map(({ icon: Icon, title, description }, index) => (
       <motion.div key={title} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
@@ -65,4 +67,4 @@ export const DashboardShowcaseSection: React.FC = () => {
   );
 };
 
-const SparklesIcon = () => <span aria-hidden="true" className="text-base leading-none">✦</span>;
+
