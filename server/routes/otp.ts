@@ -12,7 +12,26 @@ export const otpRouter = Router();
 const OTP_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
+/**
+ * Keep short-lived verification state bounded in the JSON database.
+ * Expired/consumed challenges cannot be used again, so retaining them has no security benefit.
+ */
+function pruneExpiredChallenges(now = Date.now()): boolean {
+    const captchaCount = db.captchaChallenges.length;
+    const otpCount = db.otpChallenges.length;
+
+    db.captchaChallenges = db.captchaChallenges.filter(
+        (challenge) => challenge.expiresAt > now && !challenge.consumedAt,
+    );
+    db.otpChallenges = db.otpChallenges.filter(
+        (challenge) => challenge.expiresAt > now && !challenge.consumedAt,
+    );
+
+    return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
+}
+
 otpRouter.get('/captcha/generate', (req, res) => {
+    pruneExpiredChallenges();
     const captcha = svgCaptcha.create({
         size: 5,
         ignoreChars: '0o1i',
@@ -52,6 +71,7 @@ if (process.env.NODE_ENV === 'test') {
 const ALLOWED_OTP_PURPOSES = new Set(['login', 'password_recovery']);
 
 otpRouter.post('/send', async (req, res) => {
+    pruneExpiredChallenges();
     const body = req.body ?? {};
     let { mobile, purpose, captchaId, captchaValue } = body;
 
@@ -160,6 +180,7 @@ otpRouter.post('/send', async (req, res) => {
 });
 
 otpRouter.post('/verify', (req, res) => {
+    pruneExpiredChallenges();
     const body = req.body ?? {};
     let { challengeId, mobile, code, purpose } = body;
 
