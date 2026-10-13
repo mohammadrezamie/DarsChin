@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database';
-import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, AuthenticatedRequest, requirePermission } from '../middleware/auth';
 import { hasCompleteChunkSequence, validateSyncChunk } from '../sync/validation';
 import { reconcileSyncRecords } from '../sync/reconciliation';
 
@@ -235,6 +235,32 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
     },
     ...(!result.ok ? { error: job.error } : {}),
   });
+});
+
+// Admin-only sync history. Never return raw snapshots or extracted student-facing data.
+syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (req, res) => {
+  const jobs = [...(db.syncJobs as SyncJob[])]
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+    .slice(0, 100)
+    .map((job) => ({
+      id: job.id,
+      userId: job.userId,
+      termId: job.termId,
+      campusId: job.campusId,
+      status: job.status,
+      startedAt: job.startedAt,
+      receivedAt: job.receivedAt,
+      completedAt: job.completedAt,
+      reconciledAt: job.reconciledAt,
+      totalSnapshots: job.totalSnapshots,
+      processedSnapshots: job.processedSnapshots,
+      reconciledOfferings: job.reconciledOfferings ?? 0,
+      duplicateRecords: job.duplicateRecords ?? 0,
+      reconciliationErrors: job.reconciliationErrors ?? [],
+      error: job.error,
+    }));
+
+  return res.json({ success: true, data: jobs });
 });
 
 // 3. Get the authenticated student's most recent sync state.
