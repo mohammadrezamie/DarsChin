@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OtpChallenge } from '../src/types';
 import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../server/auth/password-recovery';
+import { recoverPasswordSchema } from '../server/schemas/auth';
 
 function challenge(overrides: Partial<OtpChallenge> = {}): OtpChallenge {
   return {
@@ -45,5 +46,29 @@ describe('password recovery challenge', () => {
     completePasswordRecovery(otp, 175);
     expect(otp.recoveredAt).toBe(175);
     expect(canRecoverPasswordWithChallenge(otp, '09123456789')).toBe(false);
+  });
+});
+
+describe('password recovery request validation', () => {
+  const validRequest = {
+    mobile: '09123456789',
+    recoveryKey: 'recovery-key',
+    newPassword: 'secure-password',
+  };
+
+  it('accepts a valid Iranian mobile number', () => {
+    expect(recoverPasswordSchema.safeParse(validRequest).success).toBe(true);
+  });
+
+  it.each(['', '09123', 'abcdefghijk', '+989123456789', '۰۹۱۲۳۴۵۶۷۸۹'])(
+    'rejects malformed mobile number %s',
+    (mobile) => {
+      expect(recoverPasswordSchema.safeParse({ ...validRequest, mobile }).success).toBe(false);
+    },
+  );
+
+  it('rejects a missing recovery key and a short new password', () => {
+    expect(recoverPasswordSchema.safeParse({ ...validRequest, recoveryKey: '' }).success).toBe(false);
+    expect(recoverPasswordSchema.safeParse({ ...validRequest, newPassword: '123' }).success).toBe(false);
   });
 });
