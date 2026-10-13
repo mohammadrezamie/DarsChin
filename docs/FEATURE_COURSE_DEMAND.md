@@ -9,7 +9,7 @@ This is a demand signal, not course registration and not a promise that a course
 ## Proposed workflow
 
 1. An authorized manager selects the academic term and the target academic cohort/context (campus, major, entry-year curriculum, and track when applicable).
-2. The manager creates a survey, chooses eligible courses from the approved curriculum, sets opening/closing times, and publishes it.
+2. The manager creates a survey, chooses courses from the approved curriculum, sets opening/closing times, and publishes it.
 3. A student sees only surveys applicable to their academic profile.
 4. The server evaluates each candidate course against the student's current academic profile and the canonical eligibility engine. The UI must not be trusted to enforce eligibility.
 5. The student selects one or more courses they are interested in. The system revalidates eligibility on submission and rejects ineligible course IDs.
@@ -27,24 +27,26 @@ This is a demand signal, not course registration and not a promise that a course
 - Reports should show response counts and demand per course; disclose the number of eligible students in the target cohort only if that population can be computed reliably.
 - Do not use stale client-side eligibility results as authority. Re-evaluate on submission and return clear explanations when a choice is no longer eligible.
 
-## Academic policy gate — approval required
+## Approved academic-policy requirements
 
 The implementation must call the existing eligibility/domain policy rather than create a second, divergent set of prerequisite rules.
 
-**Open question requiring academic-owner approval:** For a co-requisite course that the student has not already passed, should it be selectable in a demand survey only when the student also selects its co-requisite course in the same survey response, or should the demand survey use strict standalone eligibility and hide it until the co-requisite has been passed?
+- **Prerequisite example:** Mathematics 2 has Mathematics 1 as its prerequisite. The course relationship must be represented as a prerequisite, not mislabeled as a co-requisite.
+- **General dependency rule:** For a course that requires another course, whether as a true co-requisite or under an applicable approved exception after the student failed a prerequisite, the student must either have already passed the required course or select it in the same target-term demand response alongside the dependent course.
+- **Block incomplete selections:** If the required course has not been passed and has not been selected in the same response, the dependent course cannot be selected/submitted in the demand survey. The interface should explain which required course must be added. The server must enforce this too; client-side checks alone are insufficient.
+- **Failed prerequisite exception:** Allow the prerequisite and dependent course to be taken together only when the approved IAU rule applies. Do not generalize this exception to unrelated prerequisite relationships or invent additional academic exceptions.
+- **Dynamic validation:** When a student adds or removes a course from the response, recalculate dependent-course eligibility. On submission, validate the final set of selected courses as a whole, so valid course pairs can be submitted together and incomplete dependency sets are rejected.
 
-This is a product-policy decision, not a technical default. Do not ship either interpretation until it is approved.
-
-The existing IAU exception for a previously failed prerequisite must also be applied only as currently approved in the academic policy engine; do not broaden it during demand-survey work.
+The demand survey is still not course registration. The eligibility engine should explain why a dependent course is blocked and what course must be added, while respecting the student's curriculum, academic history, and applicable approved rule.
 
 ## Suggested implementation boundary
 
-- Domain service: resolve the applicable curriculum and calculate eligible course IDs by reusing the canonical engine.
+- Domain service: resolve the applicable curriculum and calculate eligible course IDs by reusing the canonical engine; support evaluating a proposed selection set together, not only each course in isolation.
 - API: create/list/publish/close surveys, read eligible courses, submit/update a response, and return aggregate results.
 - Persistence: surveys, response records, and audit events using the repository's existing data conventions initially; introduce schema migrations if persistence is moved to a relational database later.
 - UI: manager survey builder/results view and student demand-selection view.
-- Tests: authorization, survey scope, duplicate prevention, closed survey rejection, curriculum membership, tampered course IDs, eligibility revalidation, aggregate counts, and privacy boundaries.
+- Tests: authorization, survey scope, duplicate prevention, closed survey rejection, curriculum membership, tampered course IDs, prerequisite/co-requisite pair selection, failed-prerequisite exception boundaries, eligibility revalidation, aggregate counts, and privacy boundaries.
 
 ## Status
 
-Proposed; not implemented. Academic-policy behavior remains blocked on explicit approval of the co-requisite interpretation above.
+Policy requirements above are confirmed by the academic owner. Feature remains proposed and is not implemented yet. Before implementation, inspect the current eligibility engine and verify it can enforce the confirmed rules; if its behavior conflicts with these requirements, do not silently change academic policy—surface the exact conflict for approval.
