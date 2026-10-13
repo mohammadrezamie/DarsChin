@@ -22,13 +22,16 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
 
     for (let index = db.captchaChallenges.length - 1; index >= 0; index -= 1) {
         const challenge = db.captchaChallenges[index];
-        if (challenge.expiresAt <= now || challenge.consumedAt) db.captchaChallenges.splice(index, 1);
+        if (!Number.isFinite(challenge.expiresAt) || challenge.expiresAt <= now || challenge.consumedAt) {
+            db.captchaChallenges.splice(index, 1);
+        }
     }
     for (let index = db.otpChallenges.length - 1; index >= 0; index -= 1) {
         const challenge = db.otpChallenges[index];
         // A verified password-recovery OTP must remain available until the password reset
         // consumes it via recoveredAt; pruning it here would make recovery impossible.
         if (
+            !Number.isFinite(challenge.expiresAt) ||
             challenge.expiresAt <= now ||
             (challenge.consumedAt && challenge.purpose !== 'password_recovery')
         ) db.otpChallenges.splice(index, 1);
