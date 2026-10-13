@@ -111,3 +111,10 @@ Expired and consumed CAPTCHA/OTP challenge records are pruned during OTP/CAPTCHA
 ## Sync scope hardening (2026-10-13)
 
 Student sync requests can no longer choose a different campus from the campus assigned to their own student profile. A student without a campus assignment cannot submit an arbitrary campus override. Explicit campus overrides remain available to accounts with administrative access, while the existing extension flow (which omits `campusId`) continues to resolve the campus from the profile. Regression coverage was added to the security test suite. Runtime tests and TypeScript checks remain unexecuted in this environment.
+
+## Root privilege escalation guard (2026-10-13)
+
+- Removed automatic super-admin promotion based solely on a successful login or `/api/auth/me` request whose mobile number matches `ROOT_OWNER_MOBILE`. Those paths now require the trusted bootstrap identity `usr-super` as well as the configured mobile.
+- Public registration always assigns the student role; root privileges must come from trusted database bootstrap, not possession of a reserved phone number.
+- This closes a privilege-escalation path if an existing JSON database lacks the configured root user and someone registers that mobile number. Existing-database root provisioning still needs a separate migration/bootstrap review; no credentials or production data were changed.
+- Runtime tests and typecheck remain unexecuted here. Do not merge until verification is genuinely green.
