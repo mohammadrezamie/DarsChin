@@ -10,7 +10,8 @@ export const SyncSection: React.FC = () => {
 
   const steps = [
     { icon: ShieldCheck, title: 'اعتبارسنجی', description: 'ساختار و کامل‌بودن داده پیش از پذیرش بررسی می‌شود.' },
-    { icon: Database, title: 'تطبیق و آماده‌سازی', description: 'داده ورودی باید با فهرست دروس و ارائه‌های معتبر تطبیق داده شود.' },
+    { icon: Database, title: 'تطبیق و آماده‌سازی', description: 'کد درس، گروه، زمان و ظرفیت باید با داده‌های معتبر تطبیق داده شوند.' },
+    { icon: CheckCircle2, title: 'ثبت نتیجه', description: 'وضعیت دریافت، تطبیق موفق یا خطای پردازش جداگانه ثبت می‌شود؛ دریافت داده به معنی تأیید آن نیست.' },
   ];
 
   return (
@@ -52,7 +53,7 @@ export const SyncSection: React.FC = () => {
 
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
-        <p className="text-sm leading-6">درس‌چین باید تنها پس از تکمیل پردازش و تطبیق، داده را مبنای برنامه‌ریزی قرار دهد. وضعیت واقعی همگام‌سازی از داخل سامانه قابل بررسی خواهد بود؛ این تصویر صرفاً توضیح مسیر داده است.</p>
+        <p className="text-sm leading-6">در این مسیر، «دریافت شد» با «با موفقیت تطبیق داده شد» یکسان نیست. رکورد ناقص یا مبهم باید خطا بگیرد و تا زمان تأیید کامل، نباید جایگزین داده‌های معتبر قبلی شود. این بخش توضیح فرایند است و وضعیت زنده‌ای از آموزشیار نمایش نمی‌دهد.</p>
       </div>
     </section>
   );
