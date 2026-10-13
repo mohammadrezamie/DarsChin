@@ -19,7 +19,7 @@ Run these before making server changes:
 ```bash
 free -h
 df -h /
-sudo ss -ltnp | grep -E ':(80|443|3000)\\b' || true
+sudo ss -ltnp | grep -E ':(80|443|3000)\b' || true
 systemctl --no-pager --type=service --state=running | grep -E 'nginx|mariadb|mysql|php.*fpm|darschyn' || true
 node --version
 npm --version
