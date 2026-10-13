@@ -288,6 +288,8 @@ export interface CourseOffering {
   enrolledCount: number;
   examDate?: string;
   notes?: string;
+  /** Stable identity supplied by the source adapter for idempotent reconciliation. */
+  sourceIdentity?: string;
   source: OfferingSource;
   active: boolean;
 }
