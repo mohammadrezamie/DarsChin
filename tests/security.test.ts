@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { db } from '../server/db/database';
 import request from 'supertest';
 import express from 'express';
@@ -92,7 +94,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
 
         const challengeId = crypto.randomUUID();
         const code = '111222';
-        const hashedOtp = require('bcryptjs').hashSync(code, 10);
+        const hashedOtp = bcrypt.hashSync(code, 10);
         db.otpChallenges.push({
             id: challengeId,
             mobile: testMobile,
