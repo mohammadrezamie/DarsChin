@@ -14,14 +14,16 @@ DARSCHYN is a web application for IAU course planning. The Chrome extension is o
 | Academic policy engine | Implemented, partially tested | Expand tests for prerequisite exceptions, co-requisites, term limits, and final-semester rules. |
 | Local JSON persistence | Present; operational risks remain | Test persistence across restart and isolate test data from development data. |
 | Educationalyar extension | Present | Verify against current real portal DOM; fixture tests alone are not end-to-end verification. |
-| Sync/reconciliation | Incomplete until proven otherwise | The current `server/routes/sync.ts` stores snapshots but does not process them into course offerings. Implement and test an idempotent processor before claiming completion. |
+| Sync/reconciliation | Implemented in source; not executed | A strict adapter now understands the checked-in nested extension record shape, resolves course codes/names only when unique, validates explicit schedule and capacity fields, deduplicates by stable source identity, and atomically upserts only after every record validates. Test/typecheck/build execution and live-source verification remain outstanding. |
 | CI | Being established | GitHub Actions workflow checks install, typecheck, tests, and build. Execution depends on available Actions quota. |
 | Production readiness | Not verified | No production-readiness claim until security, persistence, backup, deployment, and real-source sync tests pass. |
 
 ## Known risks identified during review
 
 - Login code previously treated the object returned by `login()` as a boolean and always navigated on a truthy object.
-- Sync route currently contains a placeholder comment where snapshot processing should occur.
+- The extension currently exports nested `schemaVersion: 2.0` records (`course`, `courseClass`, `_meta`) while older import types describe a flat `1.0` shape. The sync adapter handles the checked-in nested shape, but the collector's current live output still needs a verified fixture.
+- The extension schedule parser appears to contain a malformed time-range regex. The collector was intentionally left untouched; the server adapter accepts only explicit parseable schedule strings and rejects unresolved records.
+- The current extension payload does not provide a trustworthy enrolled count. The sync adapter documents that limitation in the offering notes rather than claiming the count came from Educationalyar.
 - Database sync history and test isolation need dedicated persistence regression tests.
 - `.env.example` currently documents only Root-owner values; the complete runtime configuration must be documented when the environment configuration is centralized.
 - Repository contains old helper scripts and a checked-in extension ZIP; do not delete or regenerate artifacts without verifying the canonical build path.
@@ -47,9 +49,11 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Recorded the owner-confirmed course-demand dependency behavior in `docs/FEATURE_COURSE_DEMAND.md`.
 - Added transport-level sync chunk validation in `server/sync/validation.ts`: index bounds, object-record shape, record-count and byte-size limits, boolean final-marker validation, and complete chunk-sequence checking.
 - Updated `server/routes/sync.ts` to validate chunk payloads, reject conflicting reuse of an index, acknowledge identical retries without duplicate snapshots, and reject incomplete final chunk sequences.
-- Added `tests/sync-validation.test.ts` for validation and chunk sequence cases.
+- Added `server/sync/reconciliation.ts` to normalize the checked-in nested extension record shape, reject ambiguous/malformed records, derive stable source identities, and avoid guessed schedule defaults.
+- Updated sync job states to distinguish `RUNNING`, `RECEIVED`, `RECONCILED`, and `FAILED`; a failed reconciliation leaves existing offerings untouched.
+- Added `tests/sync-validation.test.ts` and `tests/sync-reconciliation.test.ts` for transport validation, idempotency, duplicate identity, and incomplete/ambiguous data cases.
 
-**Verification:** these latest changes are code-reviewed only. The tests, typecheck, and production build have not been executed in this environment. The sync endpoint still does not reconcile snapshots into canonical `courseOfferings`; a job marked `COMPLETED` currently means its chunks were received, not that offerings were reconciled. Do not treat sync as production-complete. No GitHub Actions workflow has been added.
+**Verification:** source has been reviewed through GitHub, but the tests, typecheck, and production build have not been executed in this environment. This is not yet unit-tested, build-verified, or live-verified. No GitHub Actions workflow has been added.
 
 
 ## Visible website improvements on the current development branch
