@@ -94,3 +94,8 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - The newest Vercel preview for commit `055db1a9231e8f415f5e7ab9f03406110fd0a02f` is `READY`. Its build log confirms the extension packaging verification, Vite production build, and server bundle completed. This is **build verification only**, not a test-suite or typecheck result.
 - A small local Node smoke check passed for the corrected mobile/OTP digit patterns. Full Vitest and TypeScript execution remain unverified in this assistant environment because the repository checkout and project dependencies are not available here; the verification script also requires Bun, which is not installed in this environment.
 - GitHub Actions is intentionally excluded from verification because the user's Actions quota is exhausted. Do not trigger or inspect Actions runs. Do not claim the suite passed, and do not merge PR #1 until a real internal test/typecheck run is available and green.
+
+
+## Latest OTP maintenance note (2026-10-13)
+
+Expired and consumed CAPTCHA/OTP challenge records are pruned during OTP/CAPTCHA requests to keep transient verification state bounded. A regression test was added for expired-record cleanup. The source and build are reviewed, but the Vitest suite and TypeScript check have not yet been executed in this environment. GitHub Actions is excluded because its quota is exhausted.
