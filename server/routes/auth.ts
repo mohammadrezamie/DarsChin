@@ -329,7 +329,7 @@ authRouter.post('/recover-password', (req, res) => {
 
   // Check OTP challenge was verified
   const challenge = db.otpChallenges.find(c => c.id === otpChallengeId && c.mobile === mobile);
-  if (!challenge || challenge.purpose !== 'password_recovery' || !challenge.consumedAt) {
+  if (!challenge || challenge.purpose !== 'password_recovery' || !challenge.consumedAt || challenge.recoveredAt) {
       return res.status(400).json({ success: false, error: 'فرآیند تایید هویت با کد یکبار مصرف کامل نشده است.' });
   }
 
@@ -349,8 +349,7 @@ authRouter.post('/recover-password', (req, res) => {
   failedLogins.delete(mobile);
 
   // A verified recovery challenge may reset a password only once.
-  // Mark it consumed for this purpose so replaying the same challenge cannot reset it again.
-  challenge.purpose = 'password_recovery_completed';
+  challenge.recoveredAt = Date.now();
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
