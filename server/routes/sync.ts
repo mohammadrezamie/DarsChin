@@ -108,7 +108,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   };
 
   db.syncSnapshots.push(snapshot);
-  job.processedSnapshots = existingForJob.length + 1;
+  job.processedSnapshots = new Set([...existingForJob.map((s) => s.chunkIndex), chunkIndex as number]).size;
   job.totalSnapshots = Math.max(job.totalSnapshots, (chunkIndex as number) + 1);
 
   if (isFinal) {
