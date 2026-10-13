@@ -106,3 +106,8 @@ Expired and consumed CAPTCHA/OTP challenge records are pruned during OTP/CAPTCHA
 - Fixed a password-recovery lifecycle regression in challenge pruning: a successfully verified `password_recovery` OTP must remain available until the reset endpoint marks the challenge as recovered. Consumed login OTPs and expired challenges can still be pruned. Added a regression test for preserving the verified recovery challenge.
 - Updated the request-validation middleware to use Zod 4's `ZodError.issues` API instead of the legacy `errors` alias, and added a route-level regression test for malformed registration payloads returning structured HTTP 400 validation details.
 - These are source changes and regression tests only. Vitest and TypeScript have **not** been executed in this environment. Do not merge until an actual test/typecheck/build run is green; GitHub Actions remains intentionally excluded because its quota is exhausted.
+
+
+## Sync scope hardening (2026-10-13)
+
+Student sync requests can no longer choose a different campus from the campus assigned to their own student profile. A student without a campus assignment cannot submit an arbitrary campus override. Explicit campus overrides remain available to accounts with administrative access, while the existing extension flow (which omits `campusId`) continues to resolve the campus from the profile. Regression coverage was added to the security test suite. Runtime tests and TypeScript checks remain unexecuted in this environment.
