@@ -54,7 +54,7 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Updated sync job states to distinguish `RUNNING`, `RECEIVED`, `RECONCILED`, and `FAILED`; a failed reconciliation leaves existing offerings untouched.
 - Added `tests/sync-validation.test.ts` and `tests/sync-reconciliation.test.ts` for transport validation, idempotency, duplicate identity, and incomplete/ambiguous data cases.
 
-**Verification:** source has been reviewed through GitHub, but the tests, typecheck, and production build have not been executed in this environment. This is not yet unit-tested, build-verified, or live-verified. No GitHub Actions workflow has been added.
+**Verification at the time of this branch update:** tests and typecheck had not been executed in the working environment. A later Vercel preview build succeeded for the frontend and bundled server entry point, but Vercel does not execute the test or typecheck scripts. Therefore, tests/typecheck remain unverified, and no live Educationalyar verification has been performed. No GitHub Actions workflow has been verified.
 
 
 ## Visible website improvements on the current development branch
