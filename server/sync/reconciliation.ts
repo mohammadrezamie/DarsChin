@@ -142,13 +142,13 @@ function normalizedRecord(
     return { error: `تطبیق یکتایی برای درس «${courseName || courseCode}» پیدا نشد.` };
   }
 
-  const normalizedCode = normalizeCode(courseCode || matchedCourse.code);
+  const normalizedCode = normalizeCode(courseCode || matchedCourse.code) || normalizeCode(matchedCourse.id);
   const identityPart = sourceRef && sourceRef !== 'UNKNOWN' && sourceRef.length > 3
-    ? `ref:${sourceRef}`
+    ? `ref:${matchedCourse.id}:${sourceRef}`
     : offeringCode
-      ? `offering:${normalizedCode}:${offeringCode}`
+      ? `offering:${matchedCourse.id}:${normalizedCode}:${offeringCode}`
       : groupCode && instructor && schedule.day && schedule.startTime && schedule.endTime
-        ? `composite:${normalizedCode}:${groupCode}:${normalizePersianText(instructor)}:${schedule.day}:${schedule.startTime}:${schedule.endTime}`
+        ? `composite:${matchedCourse.id}:${normalizedCode}:${groupCode}:${normalizePersianText(instructor)}:${schedule.day}:${schedule.startTime}:${schedule.endTime}`
         : '';
 
   if (!identityPart) return { error: `شناسهٔ پایدار برای ارائهٔ درس «${courseName || courseCode}» قابل ساخت نیست.` };
