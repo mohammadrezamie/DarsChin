@@ -1,6 +1,6 @@
 # DARSCHYN Project Status
 
-> Last reviewed against repository branch `main` at commit `61837f949d015e899c46a5be55e9070eafaf4667`. This is a repository-level assessment, not a claim that production has been tested.
+> Baseline: `main` at `61837f949d015e899c46a5be55e9070eafaf4667`. Latest reviewed development head: `fix/ci-regression-tests` at `d0895c5ebfc307f02fe68dbb14af410295be6780` (2026-10-13). This is a repository-level assessment, not a claim that production has been tested.
 
 ## Current state
 
@@ -8,14 +8,14 @@ DARSCHYN is a web application for IAU course planning. The Chrome extension is o
 
 | Area | State | Evidence / next step |
 | --- | --- | --- |
-| React/Vite frontend | Present | Run lint, tests, and production build in CI. |
-| Express API | Present | Add route-level regression tests and health-check coverage. |
-| Authentication and roles | Implemented, needs regression coverage | Verify login failure, role redirects, token expiry, and authorization boundaries. |
+| React/Vite frontend | Build-verified on preview commit | Vercel preview returns HTTP 200; route-level lazy loading reduced the initial JS chunk from 699.41 kB to 271.06 kB (gzip 188.64 kB to 85.17 kB). This does not verify API behavior. |
+| Express API | Source-reviewed; runtime not deployed on Vercel | Vercel is serving the frontend only; `/api/health` is not a valid backend check on that preview. Run API tests and a production-like Node staging instance separately. |
+| Authentication and roles | Partially regression-covered; execution pending | Login role routing and recovery-challenge replay protection are in source. Password recovery still needs challenge-expiry enforcement and route-level malformed-input tests; run the full suite before calling it verified. |
 | Academic policy engine | Implemented, partially tested | Expand tests for prerequisite exceptions, co-requisites, term limits, and final-semester rules. |
 | Local JSON persistence | Present; operational risks remain | Test persistence across restart and isolate test data from development data. |
 | Educationalyar extension | Present | Verify against current real portal DOM; fixture tests alone are not end-to-end verification. |
 | Sync/reconciliation | Implemented in source; not executed | A strict adapter now understands the checked-in nested extension record shape, resolves course codes/names only when unique, validates explicit schedule and capacity fields, deduplicates by stable source identity, and atomically upserts only after every record validates. Test/typecheck/build execution and live-source verification remain outstanding. |
-| CI | Being established | GitHub Actions workflow checks install, typecheck, tests, and build. Execution depends on available Actions quota. |
+| CI | Not verified | No successful GitHub Actions run is available for the current head. Vercel's successful deployment runs the production build but does not run `npm test` or `npm run lint`. |
 | Production readiness | Not verified | No production-readiness claim until security, persistence, backup, deployment, and real-source sync tests pass. |
 
 ## Known risks identified during review
@@ -25,7 +25,8 @@ DARSCHYN is a web application for IAU course planning. The Chrome extension is o
 - The extension schedule parser appears to contain a malformed time-range regex. The collector was intentionally left untouched; the server adapter accepts only explicit parseable schedule strings and rejects unresolved records.
 - The current extension payload does not provide a trustworthy enrolled count. The sync adapter documents that limitation in the offering notes rather than claiming the count came from Educationalyar.
 - Database sync history and test isolation need dedicated persistence regression tests.
-- `.env.example` currently documents only Root-owner values; the complete runtime configuration must be documented when the environment configuration is centralized.
+- `.env.example` may still omit `JWT_SECRET`; the deployment guide documents it, but the checked-in environment example should be reconciled before release.
+- The last Vercel build reported 11 npm audit findings (3 moderate, 7 high, 1 critical). The exact advisory-to-package mapping has not yet been captured, so no blanket or force dependency upgrade should be applied without a fresh `npm audit --json` report.
 - Repository contains old helper scripts and a checked-in extension ZIP; do not delete or regenerate artifacts without verifying the canonical build path.
 
 ## Verification language
@@ -64,4 +65,16 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Extended the ingestion section to explain the difference between received, reconciled, and failed sync outcomes without presenting mock states as live data.
 - Replaced the unused admin sync-history placeholder with a server-backed monitor showing real job states, chunk progress, reconciled offering counts, and error details; the endpoint is permission-protected and never returns raw snapshots.
 - Added Persian-first navigation and anchor links to the landing page sections, clearer branding, and distinct sign-in/sign-up actions.
-- These are source changes on the development branch. No deployment preview is configured/available from the connected Vercel project list, and local build/tests could not be run from this environment because the repository checkout and dependencies are not available here. Do not claim the deployed website has changed until the branch is deployed.
+- Split route-level page components into lazy-loaded chunks. On the latest successful Vercel build, the initial JS chunk decreased from 699.41 kB to 271.06 kB; gzip size decreased from 188.64 kB to 85.17 kB.
+- Latest preview: https://dars-chin-git-fix-ci-regression-tests-tna12.vercel.app/ (HTTP 200 for the frontend). This preview does not host the Express API; no API, authentication, persistence, or Educationalyar live behavior should be inferred from the page response.
+- Added isolated systemd/Nginx deployment templates and an operational guide. These are templates only: the VPS, DNS, HTTPS, backup process, and production service have not been changed or verified.
+
+## Current verification gate
+
+- Latest branch head: `d0895c5ebfc307f02fe68dbb14af410295be6780`; PR #1 remains Draft and unmerged.
+- Vercel build/deployment: successful for the latest head.
+- Unit tests and TypeScript typecheck: not yet executed; treat newly added tests as unverified until a test runner reports success.
+- Dependency audit: the build reported 11 findings (3 moderate, 7 high, 1 critical); a fresh JSON audit report is required before mapping them to specific packages and choosing compatible fixes.
+- Password recovery: successful challenge replay is blocked, but expiry validation remains a known gap in the helper and must be fixed and tested before production.
+- The Educationalyar collector remains frozen. Do not change its source, parser, dependencies, or version as part of these follow-ups.
+- Do not merge PR #1, deploy to production, or alter the VPS/TakinTech setup without explicit approval.
