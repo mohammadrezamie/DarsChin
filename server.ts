@@ -26,7 +26,14 @@ async function startServer() {
   await db.init(true);
 
   const app = express();
-  const PORT = 3000;
+  const configuredPort = process.env.PORT ?? '3000';
+  const PORT = Number.parseInt(configuredPort, 10);
+  if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+    throw new Error(`Invalid PORT value: ${configuredPort}`);
+  }
+  // In production, expose the Node process only to the local reverse proxy by default.
+  // Development remains reachable on the LAN/container interface unless HOST is set.
+  const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
   // JSON Body Parser with limit for batch imports (2MB is sufficient for text data and prevents OOM)
   app.use(express.json({ limit: '2mb' }));
@@ -120,8 +127,17 @@ app.use('/api/admin-management', adminManagementRouter);
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[درس‌چین] Server running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`[درس‌چین] Server running on http://${HOST}:${PORT}`);
+  });
+
+  server.on('error', (err) => {
+    logger.error('Server listener failed', {
+      error: err.message,
+      host: HOST,
+      port: PORT,
+    });
+    process.exitCode = 1;
   });
 }
 
