@@ -94,7 +94,27 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
   const studentProfile = db.studentProfiles.find((profile) => profile.userId === userId);
   const currentTerm = db.academicTerms.find((term) => term.isCurrent);
   const termId = body.termId ?? studentProfile?.currentTermId ?? currentTerm?.id;
-  const campusId = body.campusId ?? studentProfile?.campusId;
+  const requestedCampusId = body.campusId;
+  const campusOverrideAllowed =
+    Array.isArray(req.user?.roles) && req.user.roles.includes('super-admin') ||
+    Boolean(req.user?.permissions?.includes('admin.panel.access'));
+
+  // Student syncs must stay within the campus attached to their own profile.
+  // The browser extension normally omits campusId and relies on this profile value.
+  if (
+    requestedCampusId !== undefined &&
+    studentProfile?.campusId &&
+    requestedCampusId !== studentProfile.campusId &&
+    !campusOverrideAllowed
+  ) {
+    return res.status(403).json({ success: false, error: 'همگام‌سازی خارج از واحد دانشگاهی پروفایل مجاز نیست.' });
+  }
+  if (requestedCampusId !== undefined && !campusOverrideAllowed && !studentProfile?.campusId) {
+    return res.status(403).json({ success: false, error: 'برای همگام‌سازی، واحد دانشگاهی باید در پروفایل دانشجو مشخص شده باشد.' });
+  }
+  const campusId = campusOverrideAllowed
+    ? requestedCampusId ?? studentProfile?.campusId
+    : studentProfile?.campusId;
 
   if (termId !== undefined && (typeof termId !== 'string' || !termId.trim() || termId.length > 100)) {
     return res.status(400).json({ success: false, error: 'شناسه ترم نامعتبر است.' });
