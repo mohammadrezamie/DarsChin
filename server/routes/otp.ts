@@ -81,7 +81,7 @@ if (process.env.NODE_ENV === 'test') {
 const ALLOWED_OTP_PURPOSES = new Set(['login', 'password_recovery']);
 
 otpRouter.post('/send', async (req, res) => {
-    pruneExpiredChallenges();
+    if (pruneExpiredChallenges()) db.save();
     const body = req.body ?? {};
     let { mobile, purpose, captchaId, captchaValue } = body;
 
@@ -190,7 +190,7 @@ otpRouter.post('/send', async (req, res) => {
 });
 
 otpRouter.post('/verify', (req, res) => {
-    pruneExpiredChallenges();
+    if (pruneExpiredChallenges()) db.save();
     const body = req.body ?? {};
     let { challengeId, mobile, code, purpose } = body;
 
