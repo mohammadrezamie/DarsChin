@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Course } from '../../src/types';
-import { reconcileSyncRecords } from '../sync/reconciliation';
+import type { Course } from '../src/types';
+import { reconcileSyncRecords } from '../server/sync/reconciliation';
 
 const course = {
   id: 'course-1',
