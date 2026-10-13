@@ -225,6 +225,16 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         const testMobile = generateTestMobile();
         db.users.push({ id: `usr-${Date.now()}`, mobile: testMobile, name: 'T', roles: ['student'], permissions: [] } as any);
 
+        const sendRes = await request(app).post('/api/auth/otp/send').send({
+            mobile: testMobile,
+            purpose: 'login',
+            captchaId,
+            captchaValue: captchaText,
+        });
+        expect(sendRes.status).toBe(200);
+        expect(sendRes.body.data.challengeId).toBeDefined();
+        expect(JSON.stringify(sendRes.body)).not.toContain('123456');
+
         const challengeId = crypto.randomUUID();
         const code = '111222';
         const hashedOtp = bcrypt.hashSync(code, 10);
