@@ -86,3 +86,10 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Expanded `tests/password-recovery.test.ts` to cover canonicalization, malformed mobile values, missing credentials, and the OTP recovery payload shape.
 - Added `scripts/verify.sh` and `npm run verify`. The command performs a clean `npm ci`, TypeScript check, full Vitest suite, and production build/package verification in that order.
 - **Execution status:** these latest changes have not yet been run in a Node environment. The verification script is committed but not yet executed; do not treat the new tests as passing until actual output is captured. This environment could not resolve GitHub from a local shell, and the isolated remote test sandbox could not be created. No merge or production deployment has occurred.
+
+## OTP hardening and CI runner status (2026-10-13)
+
+- OTP send/verify endpoints now reject non-string/malformed payload fields, normalize Iranian mobile formats through the shared normalizer, validate the canonical mobile format, and accept only the supported `login` and `password_recovery` purposes.
+- Added regression cases for malformed OTP requests and unsupported purposes; updated the sync reconciliation test imports and made the existing security test use ESM-compatible crypto/bcrypt imports.
+- Added a GitHub Actions workflow that uses the checked-in `bun.lock`, configures test-only JWT/OTP values, and runs typecheck, tests, and production build. The local `npm run verify` entry point uses the same frozen Bun install and isolated test configuration.
+- **Execution status:** GitHub Actions attempts are failing before any job step starts (`runner_id: 0`, no steps/logs returned), so this is not evidence that a test failed or passed. The workflow has not yet produced test output. The latest Vercel preview build for the application-code changes is `READY`, but it does not run Vitest or TypeScript. Do not merge until an actual test/typecheck run is available and green.
