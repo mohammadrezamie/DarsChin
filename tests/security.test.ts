@@ -65,6 +65,31 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(res.body.data.answer).toBeUndefined();
     });
 
+    it("prunes expired CAPTCHA and OTP challenges", async () => {
+        const expiredAt = Date.now() - 1;
+        db.captchaChallenges.push({
+            id: 'expired-captcha-regression',
+            value: 'expired',
+            createdAt: expiredAt - 1000,
+            expiresAt: expiredAt,
+            attempts: 0,
+        });
+        db.otpChallenges.push({
+            id: 'expired-otp-regression',
+            mobile: '09123456789',
+            purpose: 'login',
+            hashedOtp: bcrypt.hashSync('123456', 4),
+            createdAt: expiredAt - 1000,
+            expiresAt: expiredAt,
+            attempts: 0,
+        });
+
+        const res = await request(app).get('/api/auth/otp/captcha/generate');
+        expect(res.status).toBe(200);
+        expect(db.captchaChallenges.some((item) => item.id === 'expired-captcha-regression')).toBe(false);
+        expect(db.otpChallenges.some((item) => item.id === 'expired-otp-regression')).toBe(false);
+    });
+
     it("rejects malformed OTP requests and unsupported purposes", async () => {
         const missingSendFields = await request(app).post('/api/auth/otp/send').send({});
         expect(missingSendFields.status).toBe(400);
