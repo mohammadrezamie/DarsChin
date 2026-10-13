@@ -10,7 +10,7 @@ DARSCHYN is a web application for IAU course planning. The Chrome extension is o
 | --- | --- | --- |
 | React/Vite frontend | Build-verified on preview commit | Vercel preview returns HTTP 200; route-level lazy loading reduced the initial JS chunk from 699.41 kB to 271.06 kB (gzip 188.64 kB to 85.17 kB). This does not verify API behavior. |
 | Express API | Source-reviewed; runtime not deployed on Vercel | Vercel is serving the frontend only; `/api/health` is not a valid backend check on that preview. Run API tests and a production-like Node staging instance separately. |
-| Authentication and roles | Partially regression-covered; execution pending | Login role routing and recovery-challenge replay protection are in source. Password recovery still needs challenge-expiry enforcement and route-level malformed-input tests; run the full suite before calling it verified. |
+| Authentication and roles | Partially regression-covered; execution pending | Login role routing and recovery-challenge replay protection are in source. Password recovery challenge expiry and replay prevention now have regression tests in source; the test suite has not yet been executed. The route still needs malformed-body handling and route-level tests before release. |
 | Academic policy engine | Implemented, partially tested | Expand tests for prerequisite exceptions, co-requisites, term limits, and final-semester rules. |
 | Local JSON persistence | Present; operational risks remain | Test persistence across restart and isolate test data from development data. |
 | Educationalyar extension | Present | Verify against current real portal DOM; fixture tests alone are not end-to-end verification. |
@@ -71,10 +71,10 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 
 ## Current verification gate
 
-- Latest application-code commit: `d0895c5ebfc307f02fe68dbb14af410295be6780`; the verification-status documentation was refreshed in a subsequent docs-only commit. PR #1 remains Draft and unmerged.
+- Latest application-code baseline: `d0895c5ebfc307f02fe68dbb14af410295be6780`; password-recovery expiry and request-schema tests were subsequently added in commits `66138da8832a2cb11c2a894ea7909d1877002747`, `508923ba63f6132df892aa151495ef0ce4cf2d24`, `8a8b8bc16189a72889f98e37e849734e3e5b3ded`, and `cd822bff89bc88fdd66b89946c36bd36c834450d`. Vercel status for the latest code commit is successful. PR #1 remains Draft and unmerged.
 - Vercel build/deployment: successful for the application-code commit above. A docs-only follow-up may trigger a separate preview build; it does not change runtime behavior.
 - Unit tests and TypeScript typecheck: not yet executed; treat newly added tests as unverified until a test runner reports success.
 - Dependency audit: the build reported 11 findings (3 moderate, 7 high, 1 critical); a fresh JSON audit report is required before mapping them to specific packages and choosing compatible fixes.
-- Password recovery: successful challenge replay is blocked, but expiry validation remains a known gap in the helper and must be fixed and tested before production.
+- Password recovery: helper now rejects expired/malformed-expiry challenges and prevents replay after a successful reset; regression cases were added. Tests have not been executed. The HTTP route still uses manual body checks, so malformed non-string fields may produce a server error and should be covered with route-level validation/tests.
 - The Educationalyar collector remains frozen. Do not change its source, parser, dependencies, or version as part of these follow-ups.
 - Do not merge PR #1, deploy to production, or alter the VPS/TakinTech setup without explicit approval.
