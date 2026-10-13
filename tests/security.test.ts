@@ -340,4 +340,39 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(db.syncJobs.some((job: any) => job.userId === userId)).toBe(false);
     });
 
+
+    it("a matching root mobile alone cannot promote a non-bootstrap user", async () => {
+        const originalRootMobile = process.env.ROOT_OWNER_MOBILE;
+        const mobile = '09000000002';
+        const userId = 'usr-root-guard-regression';
+        const user = {
+            id: userId,
+            mobile,
+            password: bcrypt.hashSync('secure-test-password', 4),
+            name: 'Root Guard Regression',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        };
+        db.users = db.users.filter((candidate) => candidate.id !== userId && candidate.mobile !== mobile);
+        db.users.push(user as any);
+        process.env.ROOT_OWNER_MOBILE = mobile;
+
+        try {
+            const token = generateToken(user as any);
+            const response = await request(app)
+                .get('/api/auth/me')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data.roles).toContain('student');
+            expect(response.body.data.roles).not.toContain('super-admin');
+            expect(db.users.find((candidate) => candidate.id === userId)?.roles).not.toContain('super-admin');
+        } finally {
+            if (originalRootMobile === undefined) delete process.env.ROOT_OWNER_MOBILE;
+            else process.env.ROOT_OWNER_MOBILE = originalRootMobile;
+            db.users = db.users.filter((candidate) => candidate.id !== userId);
+        }
+    });
+
 });
