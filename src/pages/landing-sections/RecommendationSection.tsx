@@ -14,7 +14,7 @@ export const RecommendationSection: React.FC = () => {
   const card3Y = useTransform(scrollYProgress, [0.4, 0.7], [100, 0]);
 
   return (
-    <section ref={containerRef} className="py-32 px-4 sm:px-6 lg:px-8 bg-blue-50/50 dark:bg-slate-900/30 overflow-hidden">
+    <section id="recommendations" ref={containerRef} className="scroll-mt-24 py-32 px-4 sm:px-6 lg:px-8 bg-blue-50/50 dark:bg-slate-900/30 overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
         <div className="flex-1 w-full space-y-6">
           <motion.div style={{ y: card1Y }} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-900/50 shadow-lg relative overflow-hidden">
