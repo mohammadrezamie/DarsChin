@@ -4,7 +4,6 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { hasCompleteChunkSequence, validateSyncChunk } from '../sync/validation';
 import { reconcileSyncRecords } from '../sync/reconciliation';
-import type { CourseOffering } from '../../src/types';
 
 export const syncRouter = Router();
 
