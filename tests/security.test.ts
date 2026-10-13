@@ -55,6 +55,18 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(res.body.data.user.recoveryKey).toBeUndefined(); // Recovery key must not leak
     });
 
+    it("returns structured validation errors for malformed auth bodies", async () => {
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({ mobile: { value: '09123456789' }, password: 'password123', name: 'Test User' });
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.details).toEqual(expect.arrayContaining([
+            expect.objectContaining({ path: 'mobile', message: expect.any(String) }),
+        ]));
+    });
+
     it("3. CAPTCHA endpoint DOES NOT expose answer", async () => {
         const res = await request(app).get('/api/auth/otp/captcha/generate');
         expect(res.status).toBe(200);
