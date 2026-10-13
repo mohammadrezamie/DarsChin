@@ -62,5 +62,6 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Rebuilt the dashboard showcase around existing student/admin workflows instead of fabricated numeric dashboard statistics.
 - Rewrote the ingestion explainer to avoid claims of live, real-time Educationalyar sync and removed fabricated ingestion counts.
 - Extended the ingestion section to explain the difference between received, reconciled, and failed sync outcomes without presenting mock states as live data.
+- Replaced the unused admin sync-history placeholder with a server-backed monitor showing real job states, chunk progress, reconciled offering counts, and error details; the endpoint is permission-protected and never returns raw snapshots.
 - Added Persian-first navigation and anchor links to the landing page sections, clearer branding, and distinct sign-in/sign-up actions.
 - These are source changes on the development branch. No deployment preview is configured/available from the connected Vercel project list, and local build/tests could not be run from this environment because the repository checkout and dependencies are not available here. Do not claim the deployed website has changed until the branch is deployed.
