@@ -65,6 +65,35 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(res.body.data.answer).toBeUndefined();
     });
 
+    it("rejects malformed OTP requests and unsupported purposes", async () => {
+        const missingSendFields = await request(app).post('/api/auth/otp/send').send({});
+        expect(missingSendFields.status).toBe(400);
+
+        const unsupportedPurpose = await request(app).post('/api/auth/otp/send').send({
+            mobile: '09123456789',
+            purpose: 'account_takeover',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(unsupportedPurpose.status).toBe(400);
+
+        const malformedMobile = await request(app).post('/api/auth/otp/send').send({
+            mobile: { value: '09123456789' },
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(malformedMobile.status).toBe(400);
+
+        const malformedVerify = await request(app).post('/api/auth/otp/verify').send({
+            mobile: '09123456789',
+            challengeId: 'unused',
+            code: { value: '123456' },
+            purpose: 'login',
+        });
+        expect(malformedVerify.status).toBe(400);
+    });
+
     it("4. OTP Send endpoint DOES NOT expose OTP", async () => {
         db.data.otpChallenges = [];
         db.save();
