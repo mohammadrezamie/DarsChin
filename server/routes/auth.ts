@@ -88,7 +88,7 @@ authRouter.post('/register', validate(registerSchema), (req, res) => {
   const passwordHash = bcrypt.hashSync(password.trim(), 10);
   const userRecoveryKey = recoveryKey?.trim() || `rec-${Math.random().toString(36).substring(2, 10)}`;
 
-  // Determine roles: root mobile gets super-admin automatically; all others get student
+  // Public registration always creates a student. Root privileges are assigned only by trusted bootstrap.
   const roles: UserRole[] = ['student'];
 
   const newUser: User = {
@@ -226,7 +226,7 @@ authRouter.post('/login', validate(loginSchema), (req, res) => {
   failedLogins.delete(mobile);
 
   // Ensure root super-admin has all roles
-  if (user.mobile === process.env.ROOT_OWNER_MOBILE) {
+  if (user.id === 'usr-super' && user.mobile === process.env.ROOT_OWNER_MOBILE) {
     if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
     if (!user.roles.includes('super-admin')) user.roles.push('super-admin');
     if (!user.roles.includes('admin')) user.roles.push('admin');
@@ -376,7 +376,7 @@ authRouter.get('/me', authenticate, (req: AuthenticatedRequest, res) => {
   }
 
   // Auto-upgrade permissions if super-admin hardcoded matches
-  if (user.mobile === process.env.ROOT_OWNER_MOBILE && !user.roles.includes('super-admin')) {
+  if (user.id === 'usr-super' && user.mobile === process.env.ROOT_OWNER_MOBILE && !user.roles.includes('super-admin')) {
     if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
     user.roles.push('super-admin');
     if (!user.roles.includes('admin')) user.roles.push('admin');
