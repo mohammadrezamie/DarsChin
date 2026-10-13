@@ -8,7 +8,7 @@ import { generateToken, AuthenticatedRequest, authenticate } from '../middleware
 import { User, UserRole } from '../../src/types';
 import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../auth/password-recovery';
 import { validate } from '../middleware/validate';
-import { registerSchema, loginSchema, changePasswordSchema, recoverPasswordSchema } from '../schemas/auth';
+import { registerSchema, loginSchema, changePasswordSchema, otpPasswordRecoverySchema } from '../schemas/auth';
 
 export const authRouter = Router();
 
@@ -320,7 +320,7 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
 // ----------------------------------------------------------------------------
 
 
-authRouter.post('/recover-password', (req, res) => {
+authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, res) => {
   let { mobile, newPassword, otpChallengeId } = req.body;
   mobile = normalizeMobile(mobile);
   
