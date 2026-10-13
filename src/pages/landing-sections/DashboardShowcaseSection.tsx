@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Activity, BookOpen, CalendarDays, CheckCircle2, Database, FileSpreadsheet, GraduationCap, Layers3, ListChecks, MessageSquare, ShieldCheck, SlidersHorizontal, Sparkles, Users, Workflow } from 'lucide-react';
+import { Activity, BookOpen, CalendarDays, CheckCircle2, Database, FileSpreadsheet, GraduationCap, Layers3, ListChecks, MessageSquare, ShieldCheck, SlidersHorizontal, Sparkles, Users, Workflow, type LucideIcon } from 'lucide-react';
 
-type Feature = { icon: React.ComponentType<{ className?: string }>; title: string; description: string };
+type Feature = { icon: LucideIcon; title: string; description: string };
 
 const studentFeatures: Feature[] = [
   { icon: ListChecks, title: 'بررسی دروس ارائه‌شده', description: 'دیدن وضعیت درس‌ها و دلایل قابل اخذ یا مسدود بودن آن‌ها.' },
