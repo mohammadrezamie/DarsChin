@@ -1,6 +1,6 @@
 # DARSCHYN Project Status
 
-> Baseline: `main` at `61837f949d015e899c46a5be55e9070eafaf4667`. Latest reviewed development head: `fix/ci-regression-tests` at `d0895c5ebfc307f02fe68dbb14af410295be6780` (2026-10-13). This is a repository-level assessment, not a claim that production has been tested.
+> Baseline: `main` at `61837f949d015e899c46a5be55e9070eafaf4667`. Latest reviewed development head: `fix/ci-regression-tests` at `055db1a9231e8f415f5e7ab9f03406110fd0a02f` (2026-10-13). This is a repository-level assessment, not a claim that production has been tested.
 
 ## Current state
 
@@ -84,12 +84,13 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Centralized Iranian mobile normalization in `server/auth/normalize-mobile.ts`; the auth schemas now normalize supported Persian/Arabic digits and Iranian international prefixes, then validate the canonical `09xxxxxxxxx` shape. This removes the previous permissive `.or(z.string())` fallback that made the mobile regex ineffective.
 - The OTP password-recovery payload now has an explicit Zod schema and is wired into `POST /api/auth/recover-password`, so malformed body fields are rejected before route logic calls string methods.
 - Expanded `tests/password-recovery.test.ts` to cover canonicalization, malformed mobile values, missing credentials, and the OTP recovery payload shape.
-- Added `scripts/verify.sh` and `npm run verify`. The command performs a clean `npm ci`, TypeScript check, full Vitest suite, and production build/package verification in that order.
+- Added `scripts/verify.sh` and `npm run verify`. The command requires Bun, performs `bun install --frozen-lockfile`, then runs TypeScript check, the full Vitest suite, and production build/package verification in that order.
 - **Execution status:** these latest changes have not yet been run in a Node environment. The verification script is committed but not yet executed; do not treat the new tests as passing until actual output is captured. This environment could not resolve GitHub from a local shell, and the isolated remote test sandbox could not be created. No merge or production deployment has occurred.
 
-## OTP hardening and CI runner status (2026-10-13)
+## OTP hardening and verification status (2026-10-13)
 
-- OTP send/verify endpoints now reject non-string/malformed payload fields, normalize Iranian mobile formats through the shared normalizer, validate the canonical mobile format, and accept only the supported `login` and `password_recovery` purposes.
-- Added regression cases for malformed OTP requests and unsupported purposes; updated the sync reconciliation test imports and made the existing security test use ESM-compatible crypto/bcrypt imports.
-- Added a GitHub Actions workflow that uses the checked-in `bun.lock`, configures test-only JWT/OTP values, and runs typecheck, tests, and production build. The local `npm run verify` entry point uses the same frozen Bun install and isolated test configuration.
-- **Execution status:** GitHub Actions attempts are failing before any job step starts (`runner_id: 0`, no steps/logs returned), so this is not evidence that a test failed or passed. The workflow has not yet produced test output. The latest Vercel preview build for the application-code changes is `READY`, but it does not run Vitest or TypeScript. Do not merge until an actual test/typecheck run is available and green.
+- OTP send/verify endpoints reject malformed payload fields, normalize Iranian mobile formats through the shared normalizer, validate the canonical mobile format, and allow only `login` and `password_recovery` purposes.
+- A source review found an incorrectly escaped digit matcher in the OTP route that would reject otherwise valid mobile numbers and OTP codes. The matcher is corrected, expiry checks now reject challenges at the exact expiry instant, and route-level regression cases cover valid versus malformed input paths.
+- The newest Vercel preview for commit `055db1a9231e8f415f5e7ab9f03406110fd0a02f` is `READY`. Its build log confirms the extension packaging verification, Vite production build, and server bundle completed. This is **build verification only**, not a test-suite or typecheck result.
+- A small local Node smoke check passed for the corrected mobile/OTP digit patterns. Full Vitest and TypeScript execution remain unverified in this assistant environment because the repository checkout and project dependencies are not available here; the verification script also requires Bun, which is not installed in this environment.
+- GitHub Actions is intentionally excluded from verification because the user's Actions quota is exhausted. Do not trigger or inspect Actions runs. Do not claim the suite passed, and do not merge PR #1 until a real internal test/typecheck run is available and green.
