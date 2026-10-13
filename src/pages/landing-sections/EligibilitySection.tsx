@@ -18,7 +18,7 @@ export const EligibilitySection: React.FC = () => {
   const lineProgress = useTransform(scrollYProgress, [0.4, 0.6], [0, 100]);
 
   return (
-    <section ref={containerRef} className="py-32 px-4 sm:px-6 lg:px-8 relative bg-slate-50 dark:bg-slate-950/50 overflow-hidden">
+    <section id="eligibility" ref={containerRef} className="scroll-mt-24 py-32 px-4 sm:px-6 lg:px-8 relative bg-slate-50 dark:bg-slate-950/50 overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
         <div className="flex-1 space-y-8">
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight">
