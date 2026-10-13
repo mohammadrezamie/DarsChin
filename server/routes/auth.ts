@@ -337,13 +337,20 @@ authRouter.post('/recover-password', (req, res) => {
     return res.status(400).json({ success: false, error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' });
   }
 
-  const user = db.users.find((u) => u.mobile === mobile);
+  const user = db.users.find((u) => normalizeMobile(u.mobile) === mobile);
   if (!user) {
     return res.status(404).json({ success: false, error: 'کاربری یافت نشد.' });
+  }
+  if (user.deactivatedAt) {
+    return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال شده است.' });
   }
 
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
   failedLogins.delete(mobile);
+
+  // A verified recovery challenge may reset a password only once.
+  // Mark it consumed for this purpose so replaying the same challenge cannot reset it again.
+  challenge.purpose = 'password_recovery_completed';
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
