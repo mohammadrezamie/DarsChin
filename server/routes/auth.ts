@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../db/database';
 import { generateToken, AuthenticatedRequest, authenticate } from '../middleware/auth';
 import { User, UserRole } from '../../src/types';
+import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../auth/password-recovery';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, changePasswordSchema, recoverPasswordSchema } from '../schemas/auth';
 
@@ -329,7 +330,7 @@ authRouter.post('/recover-password', (req, res) => {
 
   // Check OTP challenge was verified
   const challenge = db.otpChallenges.find(c => c.id === otpChallengeId && c.mobile === mobile);
-  if (!challenge || challenge.purpose !== 'password_recovery' || !challenge.consumedAt || challenge.recoveredAt) {
+  if (!canRecoverPasswordWithChallenge(challenge, mobile)) {
       return res.status(400).json({ success: false, error: 'فرآیند تایید هویت با کد یکبار مصرف کامل نشده است.' });
   }
 
@@ -349,7 +350,7 @@ authRouter.post('/recover-password', (req, res) => {
   failedLogins.delete(mobile);
 
   // A verified recovery challenge may reset a password only once.
-  challenge.recoveredAt = Date.now();
+  completePasswordRecovery(challenge);
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
