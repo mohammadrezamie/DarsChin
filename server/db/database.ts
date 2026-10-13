@@ -81,8 +81,6 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
 
 export class LocalDatabase {
-  public syncJobs: any[] = [];
-  public syncSnapshots: any[] = [];
   public data: DatabaseSchema = {
     users: [],
     universities: [],
@@ -114,6 +112,24 @@ export class LocalDatabase {
     syncJobs: [],
     syncSnapshots: [],
   };
+
+  // Keep legacy route accessors backed by the persisted schema. Separate arrays here
+  // silently lost sync history whenever the process restarted.
+  public get syncJobs(): any[] {
+    return this.data.syncJobs || (this.data.syncJobs = []);
+  }
+
+  public set syncJobs(value: any[]) {
+    this.data.syncJobs = Array.isArray(value) ? value : [];
+  }
+
+  public get syncSnapshots(): any[] {
+    return this.data.syncSnapshots || (this.data.syncSnapshots = []);
+  }
+
+  public set syncSnapshots(value: any[]) {
+    this.data.syncSnapshots = Array.isArray(value) ? value : [];
+  }
 
   private isInitialized = false;
 
@@ -158,8 +174,8 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         if (!this.data.supportMessages) this.data.supportMessages = [];
         if (!this.data.bugReports) this.data.bugReports = [];
         if (!this.data.auditLogs) this.data.auditLogs = [];
-      this.data.syncJobs = [];
-      this.data.syncSnapshots = [];
+        if (!Array.isArray(this.data.syncJobs)) this.data.syncJobs = [];
+        if (!Array.isArray(this.data.syncSnapshots)) this.data.syncSnapshots = [];
         if (!this.data.errorLogs) this.data.errorLogs = [];
         if (!this.data.otpChallenges) this.data.otpChallenges = [];
         if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
