@@ -27,6 +27,7 @@ export interface OtpChallenge {
   expiresAt: number;
   attempts: number;
   consumedAt?: number;
+  recoveredAt?: number;
   provider?: string;
   providerMessageId?: string;
 }
