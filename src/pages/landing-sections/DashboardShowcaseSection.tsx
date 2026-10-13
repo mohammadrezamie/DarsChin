@@ -33,7 +33,7 @@ const FeatureList: React.FC<{ items: Feature[]; variant: 'student' | 'admin' }> 
 
 export const DashboardShowcaseSection: React.FC = () => {
   return (
-    <section dir="rtl" className="relative overflow-hidden bg-slate-100/80 px-4 py-24 dark:bg-slate-900/50 sm:px-6 sm:py-32 lg:px-8">
+    <section id="workspaces" dir="rtl" className="scroll-mt-24 relative overflow-hidden bg-slate-100/80 px-4 py-24 dark:bg-slate-900/50 sm:px-6 sm:py-32 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-16 h-72 w-72 rounded-full bg-violet-400/10 blur-3xl" />
       <div className="relative z-10 mx-auto mb-14 max-w-3xl text-center">
         <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"><Activity className="h-3.5 w-3.5" /> فضای کار یکپارچه</span>
