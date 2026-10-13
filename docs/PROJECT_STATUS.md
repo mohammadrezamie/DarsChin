@@ -126,3 +126,11 @@ Student sync requests can no longer choose a different campus from the campus as
 - The verification script now supplies disposable root-owner credentials for the security suite and points tests at a temporary `DARSCHYN_DATA_DIR`; the temporary directory is removed on script exit. This avoids depending on developer credentials or mutating the normal local JSON database during verification.
 - `server/db/database.ts` honors `DARSCHYN_DATA_DIR` when configured and otherwise retains the existing `./data/darschyn-db.json` location, preserving default behavior.
 - This is harness hardening, not evidence that the suite has passed. Actual Vitest, TypeScript, and production build execution is still required before merge.
+
+
+## Security test reliability pass (2026-10-13)
+
+- Replaced variable-length random phone-number fixtures with a shared generator that always emits the canonical 11-digit Iranian mobile format, removing a probabilistic registration/admin-test failure.
+- The OTP disclosure regression now calls the actual OTP-send endpoint using a generated CAPTCHA and asserts the response includes a challenge identifier but never includes the mocked OTP. The same suite still exercises verification replay prevention.
+- Added a lifecycle assertion that completed password-recovery challenges are pruned while verified-but-not-yet-recovered challenges remain available.
+- The latest Vercel preview build has not yet reached a terminal state for the newest test-only commit. Vercel preview builds do not execute the Vitest suite or TypeScript check.
