@@ -90,6 +90,23 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(db.otpChallenges.some((item) => item.id === 'expired-otp-regression')).toBe(false);
     });
 
+    it("preserves verified password-recovery challenges until the reset completes", async () => {
+        db.otpChallenges.push({
+            id: 'verified-recovery-regression',
+            mobile: '09123456789',
+            purpose: 'password_recovery',
+            hashedOtp: bcrypt.hashSync('123456', 4),
+            createdAt: Date.now() - 1000,
+            expiresAt: Date.now() + 60_000,
+            attempts: 0,
+            consumedAt: Date.now() - 500,
+        });
+
+        const res = await request(app).get('/api/auth/otp/captcha/generate');
+        expect(res.status).toBe(200);
+        expect(db.otpChallenges.some((item) => item.id === 'verified-recovery-regression')).toBe(true);
+    });
+
     it("rejects malformed OTP requests and unsupported purposes", async () => {
         const missingSendFields = await request(app).post('/api/auth/otp/send').send({});
         expect(missingSendFields.status).toBe(400);
