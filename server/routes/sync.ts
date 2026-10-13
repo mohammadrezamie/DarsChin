@@ -128,6 +128,12 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
   if (!campusId) {
     return res.status(400).json({ success: false, error: 'برای همگام‌سازی، واحد دانشگاهی باید مشخص باشد.' });
   }
+  if (!db.academicTerms.some((term) => term.id === termId)) {
+    return res.status(400).json({ success: false, error: 'ترم تحصیلی انتخاب‌شده در سامانه تعریف نشده است.' });
+  }
+  if (!db.campuses.some((campus) => campus.id === campusId)) {
+    return res.status(400).json({ success: false, error: 'واحد دانشگاهی انتخاب‌شده در سامانه تعریف نشده است.' });
+  }
 
   const job: SyncJob = {
     id: `sync-job-${crypto.randomUUID()}`,
