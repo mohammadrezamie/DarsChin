@@ -92,7 +92,7 @@ Important: the current database initializer returns early when a database file a
 
 ## 5. Install the service
 
-Copy `deploy/darschyn.service.example` to `/etc/systemd/system/darschyn.service`, then verify the paths, account, environment file, and data link.
+Copy `deploy/darschyn.service.example` to `/etc/systemd/system/darschyn.service`, then verify the paths, account, environment file, and data link. Confirm the actual Node binary path with `command -v node`; if it is not `/usr/bin/node`, update `ExecStart` to the verified absolute path before enabling the service.
 
 ```bash
 sudo systemctl daemon-reload
