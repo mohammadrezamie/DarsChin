@@ -10,7 +10,8 @@
     "test": "vitest run",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "demo:reset": "tsx scripts/demo-reset.ts"
+    "demo:reset": "tsx scripts/demo-reset.ts",
+    "verify": "bash scripts/verify.sh"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
