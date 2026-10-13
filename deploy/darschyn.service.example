@@ -1,0 +1,26 @@
+[Unit]
+Description=DARSCHYN (DarsChin) web application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=darschyn
+Group=darschyn
+WorkingDirectory=/opt/darschyn/current
+EnvironmentFile=/etc/darschyn/darschyn.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/darschyn/current/dist/server.cjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/darschyn
+
+[Install]
+WantedBy=multi-user.target
