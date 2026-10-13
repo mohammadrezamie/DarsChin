@@ -40,9 +40,9 @@ export JWT_SECRET="${JWT_SECRET:-darschyn-ci-only-secret-not-for-production}"
 export MOCK_OTP_CODE="${MOCK_OTP_CODE:-123456}"
 export DARSCHYN_DATA_DIR="$VERIFY_DATA_DIR/data"
 # Disposable credentials used only by the isolated test database; never use production secrets here.
-export ROOT_OWNER_MOBILE="${ROOT_OWNER_MOBILE:-09999999999}"
-export ROOT_OWNER_PASSWORD="${ROOT_OWNER_PASSWORD:-test-only-root-password}"
-export ROOT_OWNER_RECOVERY_KEY="${ROOT_OWNER_RECOVERY_KEY:-test-only-recovery-key}"
+export ROOT_OWNER_MOBILE="09999999999"
+export ROOT_OWNER_PASSWORD="test-only-root-password"
+export ROOT_OWNER_RECOVERY_KEY="test-only-recovery-key"
 bun run test
 
 CURRENT_STEP="production build and extension packaging verification"
