@@ -28,6 +28,18 @@ describe('password recovery challenge', () => {
     expect(canRecoverPasswordWithChallenge(challenge({ purpose: 'login' }), '09123456789')).toBe(false);
   });
 
+  it('rejects an expired challenge and accepts one only before its expiry', () => {
+    const otp = challenge();
+    expect(canRecoverPasswordWithChallenge(otp, '09123456789', 199)).toBe(true);
+    expect(canRecoverPasswordWithChallenge(otp, '09123456789', 200)).toBe(false);
+    expect(canRecoverPasswordWithChallenge(otp, '09123456789', 201)).toBe(false);
+  });
+
+  it('rejects challenges with a missing or invalid expiry timestamp', () => {
+    expect(canRecoverPasswordWithChallenge(challenge({ expiresAt: undefined as unknown as number }), '09123456789', 150)).toBe(false);
+    expect(canRecoverPasswordWithChallenge(challenge({ expiresAt: Number.NaN }), '09123456789', 150)).toBe(false);
+  });
+
   it('marks a successful recovery as complete and rejects replay', () => {
     const otp = challenge();
     completePasswordRecovery(otp, 175);
