@@ -12,6 +12,7 @@ import { generateToken } from '../server/middleware/auth';
 import { syncRouter } from '../server/routes/sync';
 
 const app = express();
+const generateTestMobile = () => `09${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
 app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/auth/otp', otpRouter);
@@ -44,7 +45,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
     });
 
     it("2. Public registration does NOT create super-admin", async () => {
-        const randomMobile = `09000${Math.floor(Math.random() * 1000000)}`;
+        const randomMobile = generateTestMobile();
         // Even if trying to use root mobile (if it wasn't already in DB, but let's test a generic one)
         const res = await request(app)
             .post('/api/auth/register')
@@ -221,7 +222,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         }
 
         
-        const testMobile = `0900${Math.floor(Math.random() * 10000000)}`;
+        const testMobile = generateTestMobile();
         db.users.push({ id: `usr-${Date.now()}`, mobile: testMobile, name: 'T', roles: ['student'], permissions: [] } as any);
 
         const challengeId = crypto.randomUUID();
@@ -268,11 +269,11 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
     });
 
     it("6. Delegated Admin cannot grant permissions they don't possess", async () => {
-        const admin2 = { id: 'usr-adm2', mobile: `0900${Math.floor(Math.random() * 10000000)}`, name: 'Admin 2', roles: ['admin'] as any, permissions: ['admin.manage', 'admin.create'] };
+        const admin2 = { id: 'usr-adm2', mobile: generateTestMobile(), name: 'Admin 2', roles: ['admin'] as any, permissions: ['admin.manage', 'admin.create'] };
         db.users.push(admin2 as any);
         const admin2Token = generateToken(admin2);
         
-        const targetAdminMobile = `0900${Math.floor(Math.random() * 10000000)}`;
+        const targetAdminMobile = generateTestMobile();
         
         const res = await request(app)
             .post('/api/admin-management')
