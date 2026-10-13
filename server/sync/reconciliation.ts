@@ -13,13 +13,13 @@ export interface SyncReconciliationResult {
 type UnknownRecord = Record<string, unknown>;
 
 const WEEKDAYS = [
-  'شنبه',
+  'چهارشنبه',
+  'پنجشنبه',
   'یکشنبه',
   'دوشنبه',
   'سه شنبه',
-  'چهارشنبه',
-  'پنجشنبه',
   'جمعه',
+  'شنبه',
 ];
 
 function objectValue(value: unknown): UnknownRecord | undefined {
@@ -39,8 +39,8 @@ function latinDigits(value: string): string {
 }
 
 function normalizeDay(value: string): string {
-  const normalized = normalizePersianText(value).replace(/[‌\u200c]/g, ' ').replace(/\s+/g, ' ');
-  return WEEKDAYS.find((day) => normalized.includes(normalizePersianText(day).replace(/\s+/g, ' '))) ?? '';
+  const normalized = normalizePersianText(value).replace(/[‌\u200c]/g, '').replace(/\s+/g, '');
+  return WEEKDAYS.find((day) => normalized.includes(normalizePersianText(day).replace(/[‌\u200c]/g, '').replace(/\s+/g, ''))) ?? '';
 }
 
 function validTime(value: string): boolean {
