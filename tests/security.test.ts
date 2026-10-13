@@ -285,7 +285,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
     });
 
     it("7. Delegated Admin cannot manufacture super-admin", async () => {
-        const admin3 = { id: 'usr-adm3', mobile: `0900${Math.floor(Math.random() * 10000000)}`, name: 'Admin 3', roles: ['admin'] as any, permissions: ['admin.create'] };
+        const admin3 = { id: 'usr-adm3', mobile: generateTestMobile(), name: 'Admin 3', roles: ['admin'] as any, permissions: ['admin.create'] };
         db.users.push(admin3 as any);
         const admin3Token = generateToken(admin3);
         
