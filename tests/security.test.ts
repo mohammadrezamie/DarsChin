@@ -284,4 +284,60 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(res.status).toBe(403);
         expect(res.body.error).toContain('ایجاد مدیر ارشد');
     });
+    it("8. Student sync cannot target a campus outside the student's profile", async () => {
+        const userId = 'sync-campus-scope-regression-student';
+        db.users.push({
+            id: userId,
+            mobile: '09999999001',
+            password: 'unused-test-password-hash',
+            name: 'Sync Scope Test',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        } as any);
+        db.data.studentProfiles = db.data.studentProfiles || [];
+        db.data.studentProfiles.push({
+            userId,
+            campusId: 'campus-profile-scope',
+            currentTermId: 'term-profile-scope',
+        } as any);
+
+        const token = generateToken({ id: userId, roles: ['student'], permissions: [] });
+        const response = await request(app)
+            .post('/api/sync/jobs')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ termId: 'term-profile-scope', campusId: 'campus-other-scope' });
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+        expect(db.syncJobs.some((job: any) => job.userId === userId)).toBe(false);
+    });
+
+    it("9. Student sync requires a campus assigned to the student's profile", async () => {
+        const userId = 'sync-campus-missing-regression-student';
+        db.users.push({
+            id: userId,
+            mobile: '09999999002',
+            password: 'unused-test-password-hash',
+            name: 'Sync Missing Campus Test',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        } as any);
+        db.data.studentProfiles = db.data.studentProfiles || [];
+        db.data.studentProfiles.push({
+            userId,
+            currentTermId: 'term-profile-scope',
+        } as any);
+
+        const token = generateToken({ id: userId, roles: ['student'], permissions: [] });
+        const response = await request(app)
+            .post('/api/sync/jobs')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ termId: 'term-profile-scope', campusId: 'campus-other-scope' });
+
+        expect(response.status).toBe(403);
+        expect(db.syncJobs.some((job: any) => job.userId === userId)).toBe(false);
+    });
+
 });
