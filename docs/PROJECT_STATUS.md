@@ -71,8 +71,8 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 
 ## Current verification gate
 
-- Latest branch head: `d0895c5ebfc307f02fe68dbb14af410295be6780`; PR #1 remains Draft and unmerged.
-- Vercel build/deployment: successful for the latest head.
+- Latest application-code commit: `d0895c5ebfc307f02fe68dbb14af410295be6780`; the verification-status documentation was refreshed in a subsequent docs-only commit. PR #1 remains Draft and unmerged.
+- Vercel build/deployment: successful for the application-code commit above. A docs-only follow-up may trigger a separate preview build; it does not change runtime behavior.
 - Unit tests and TypeScript typecheck: not yet executed; treat newly added tests as unverified until a test runner reports success.
 - Dependency audit: the build reported 11 findings (3 moderate, 7 high, 1 critical); a fresh JSON audit report is required before mapping them to specific packages and choosing compatible fixes.
 - Password recovery: successful challenge replay is blocked, but expiry validation remains a known gap in the helper and must be fixed and tested before production.
