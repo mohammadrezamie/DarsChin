@@ -40,7 +40,7 @@ function latinDigits(value: string): string {
 
 function normalizeDay(value: string): string {
   const normalized = normalizePersianText(value).replace(/[‌\u200c]/g, ' ').replace(/\s+/g, ' ');
-  return WEEKDAYS.find((day) => normalizePersianText(day).replace(/\s+/g, ' ') === normalized) ?? '';
+  return WEEKDAYS.find((day) => normalized.includes(normalizePersianText(day).replace(/\s+/g, ' '))) ?? '';
 }
 
 function validTime(value: string): boolean {
@@ -195,6 +195,15 @@ export function reconcileSyncRecords(input: {
 }): SyncReconciliationResult {
   const { records, termId, campusId, courses } = input;
   const errors: string[] = [];
+  if (records.length === 0) {
+    return {
+      ok: false,
+      offerings: [],
+      acceptedRecords: 0,
+      duplicateRecords: 0,
+      errors: ['هیچ رکوردی برای تطبیق دریافت نشد.'],
+    };
+  }
   const byIdentity = new Map<string, CourseOffering>();
   let duplicateRecords = 0;
 
