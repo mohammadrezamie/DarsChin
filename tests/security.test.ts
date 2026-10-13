@@ -9,6 +9,7 @@ import { adminRouter } from '../server/routes/admin';
 import { adminManagementRouter } from '../server/routes/admin-management';
 import { otpRouter } from '../server/routes/otp';
 import { generateToken } from '../server/middleware/auth';
+import { syncRouter } from '../server/routes/sync';
 
 const app = express();
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/auth/otp', otpRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin-management', adminManagementRouter);
+app.use('/api/sync', syncRouter);
 
 describe("DARSCHYN Security Regression & Integrity Tests", () => {
     
