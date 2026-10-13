@@ -6,7 +6,7 @@ This deployment recipe is intentionally isolated from TakinTech. It uses one Nod
 
 - The app currently listens on port **3000** in `server.ts`. Do not start another service on that port. Before installing, check `sudo ss -ltnp | grep ':3000 '`; if occupied, stop and resolve the conflict deliberately rather than changing TakinTech.
 - The application persists its database to `data/darschyn-db.json` relative to its working directory. Keep that data outside release code at `/var/lib/darschyn` and link `/opt/darschyn/current/data` to it.
-- The current server code binds port 3000 to `0.0.0.0`, not only loopback. The host firewall/security group must therefore block inbound public access to port 3000 while allowing the intended HTTP/HTTPS ports. Verify this before starting the service; Nginx should be the only public entry point.
+- In production the server defaults to `127.0.0.1:3000`; the example systemd unit pins that setting. Keep Node private and let Nginx be the only public entry point. If you override `HOST`, ensure it remains loopback unless there is a deliberate, reviewed reason otherwise.
 - Do not point DARSCHYN at TakinTech's database, environment file, release directory, or storage.
 - This app's JSON database is suitable only while its write/concurrency and recovery limitations are acceptable. Take verified backups before accepting real student data; this guide does not claim JSON persistence is equivalent to MariaDB.
 - The systemd unit uses hardening options. `ReadWritePaths` deliberately grants writes only to the persistent data directory. If the app later needs other runtime write paths, review them individually instead of disabling hardening wholesale.
@@ -59,10 +59,9 @@ npm ci
 npm run lint
 npm test
 npm run build
-NODE_ENV=production ROOT_OWNER_MOBILE='REPLACE_WITH_OWNER_MOBILE' ROOT_OWNER_PASSWORD='USE_A_UNIQUE_LONG_PASSWORD' node dist/server.cjs
 ```
 
-The last command is a **controlled first-start check**, not a permanent launch command. Run it only after creating the production environment file and reviewing the database bootstrap behavior. Stop it after checking startup; then use systemd. The app currently requires root-owner mobile and password in production. Keep the recovery key private too. Do not paste secrets into shell history; prefer an editor for the environment file.
+Do not run a production start command with credentials embedded in shell arguments. First create `/etc/darschyn/darschyn.env` with an editor, then use systemd for the controlled startup. The app currently requires `JWT_SECRET`, `ROOT_OWNER_MOBILE`, and `ROOT_OWNER_PASSWORD`; keep the recovery key private too. Use a unique high-entropy JWT secret (for example, generate one locally with `openssl rand -hex 32`) and never commit it.
 
 Build verification creates an extension ZIP in the repository root; keep the artifact in the release if the app's download endpoint is expected to serve it.
 
@@ -74,7 +73,13 @@ Create `/etc/darschyn/darschyn.env` with an editor, not by committing it:
 ROOT_OWNER_MOBILE=REPLACE_WITH_OWNER_MOBILE
 ROOT_OWNER_PASSWORD=REPLACE_WITH_A_UNIQUE_LONG_PASSWORD
 ROOT_OWNER_RECOVERY_KEY=REPLACE_WITH_A_UNIQUE_RANDOM_SECRET
+JWT_SECRET=REPLACE_WITH_A_UNIQUE_HIGH_ENTROPY_SECRET
+# Configure these only when enabling production OTP/SMS:
+NIAZPARDAZ_API_KEY=
+NIAZPARDAZ_SENDER_NUMBER=5000249
 ```
+
+The server imports authentication middleware at startup, so `JWT_SECRET` must be present before the process starts. OTP/SMS endpoints will fail in production until `NIAZPARDAZ_API_KEY` is configured; don't advertise OTP login/recovery as available before that is verified.
 
 Then restrict access:
 
@@ -98,7 +103,7 @@ curl --fail --silent --show-error http://127.0.0.1:3000/api/health
 sudo ss -ltnp | grep ':3000 '
 ```
 
-Because the current app binds to all interfaces, confirm the provider firewall and host firewall do not allow public inbound traffic to port 3000. Do not assume binding the Nginx upstream to `127.0.0.1` makes the Node listener private.
+Confirm the listener is bound to `127.0.0.1:3000`, not `0.0.0.0:3000`. The Nginx upstream should use the loopback address.
 
 Do not proceed if the health check fails or logs show database/bootstrap errors.
 
