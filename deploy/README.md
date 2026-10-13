@@ -6,6 +6,7 @@ This deployment recipe is intentionally isolated from TakinTech. It uses one Nod
 
 - The app currently listens on port **3000** in `server.ts`. Do not start another service on that port. Before installing, check `sudo ss -ltnp | grep ':3000 '`; if occupied, stop and resolve the conflict deliberately rather than changing TakinTech.
 - The application persists its database to `data/darschyn-db.json` relative to its working directory. Keep that data outside release code at `/var/lib/darschyn` and link `/opt/darschyn/current/data` to it.
+- The current server code binds port 3000 to `0.0.0.0`, not only loopback. The host firewall/security group must therefore block inbound public access to port 3000 while allowing the intended HTTP/HTTPS ports. Verify this before starting the service; Nginx should be the only public entry point.
 - Do not point DARSCHYN at TakinTech's database, environment file, release directory, or storage.
 - This app's JSON database is suitable only while its write/concurrency and recovery limitations are acceptable. Take verified backups before accepting real student data; this guide does not claim JSON persistence is equivalent to MariaDB.
 - The systemd unit uses hardening options. `ReadWritePaths` deliberately grants writes only to the persistent data directory. If the app later needs other runtime write paths, review them individually instead of disabling hardening wholesale.
@@ -94,7 +95,10 @@ sudo systemctl enable --now darschyn
 sudo systemctl --no-pager --full status darschyn
 sudo journalctl -u darschyn -n 100 --no-pager
 curl --fail --silent --show-error http://127.0.0.1:3000/api/health
+sudo ss -ltnp | grep ':3000 '
 ```
+
+Because the current app binds to all interfaces, confirm the provider firewall and host firewall do not allow public inbound traffic to port 3000. Do not assume binding the Nginx upstream to `127.0.0.1` makes the Node listener private.
 
 Do not proceed if the health check fails or logs show database/bootstrap errors.
 
