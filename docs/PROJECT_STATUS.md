@@ -119,3 +119,10 @@ Student sync requests can no longer choose a different campus from the campus as
 - This closes a privilege-escalation path if an existing JSON database lacks the configured root user and someone registers that mobile number. Existing-database root provisioning still needs a separate migration/bootstrap review; no credentials or production data were changed.
 - Runtime tests and typecheck remain unexecuted here. Do not merge until verification is genuinely green.
 - Added a regression case in `tests/security.test.ts` that simulates a non-bootstrap student's mobile matching `ROOT_OWNER_MOBILE` and verifies `/api/auth/me` does not grant super-admin. The case is committed but not executed; test status remains unverified.
+
+
+## Verification harness isolation (2026-10-13)
+
+- The verification script now supplies disposable root-owner credentials for the security suite and points tests at a temporary `DARSCHYN_DATA_DIR`; the temporary directory is removed on script exit. This avoids depending on developer credentials or mutating the normal local JSON database during verification.
+- `server/db/database.ts` honors `DARSCHYN_DATA_DIR` when configured and otherwise retains the existing `./data/darschyn-db.json` location, preserving default behavior.
+- This is harness hardening, not evidence that the suite has passed. Actual Vitest, TypeScript, and production build execution is still required before merge.
