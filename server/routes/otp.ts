@@ -74,7 +74,7 @@ otpRouter.post('/send', async (req, res) => {
     
     // Verify CAPTCHA
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
-    if (!captcha || captcha.expiresAt < Date.now() || captcha.consumedAt) {
+    if (!captcha || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
     }
     
@@ -180,7 +180,7 @@ otpRouter.post('/verify', (req, res) => {
     }
     
     const challenge = db.otpChallenges.find(c => c.id === challengeId && c.mobile === mobile);
-    if (!challenge || challenge.expiresAt < Date.now() || challenge.consumedAt) {
+    if (!challenge || challenge.expiresAt <= Date.now() || challenge.consumedAt) {
         return res.status(400).json({ success: false, error: 'کد تایید نامعتبر یا منقضی شده است.' });
     }
     
