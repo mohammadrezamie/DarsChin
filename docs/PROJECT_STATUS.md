@@ -99,3 +99,10 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 ## Latest OTP maintenance note (2026-10-13)
 
 Expired and consumed CAPTCHA/OTP challenge records are pruned during OTP/CAPTCHA requests to keep transient verification state bounded. A regression test was added for expired-record cleanup. The source and build are reviewed, but the Vitest suite and TypeScript check have not yet been executed in this environment. GitHub Actions is excluded because its quota is exhausted.
+
+
+## Follow-up security review (2026-10-13)
+
+- Fixed a password-recovery lifecycle regression in challenge pruning: a successfully verified `password_recovery` OTP must remain available until the reset endpoint marks the challenge as recovered. Consumed login OTPs and expired challenges can still be pruned. Added a regression test for preserving the verified recovery challenge.
+- Updated the request-validation middleware to use Zod 4's `ZodError.issues` API instead of the legacy `errors` alias, and added a route-level regression test for malformed registration payloads returning structured HTTP 400 validation details.
+- These are source changes and regression tests only. Vitest and TypeScript have **not** been executed in this environment. Do not merge until an actual test/typecheck/build run is green; GitHub Actions remains intentionally excluded because its quota is exhausted.
