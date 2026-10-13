@@ -78,3 +78,11 @@ The following work has been committed to `fix/ci-regression-tests` after the bas
 - Password recovery: helper now rejects expired/malformed-expiry challenges and prevents replay after a successful reset; regression cases were added. Tests have not been executed. The HTTP route still uses manual body checks, so malformed non-string fields may produce a server error and should be covered with route-level validation/tests.
 - The Educationalyar collector remains frozen. Do not change its source, parser, dependencies, or version as part of these follow-ups.
 - Do not merge PR #1, deploy to production, or alter the VPS/TakinTech setup without explicit approval.
+
+## Authentication validation and reproducible verification (2026-10-13)
+
+- Centralized Iranian mobile normalization in `server/auth/normalize-mobile.ts`; the auth schemas now normalize supported Persian/Arabic digits and Iranian international prefixes, then validate the canonical `09xxxxxxxxx` shape. This removes the previous permissive `.or(z.string())` fallback that made the mobile regex ineffective.
+- The OTP password-recovery payload now has an explicit Zod schema and is wired into `POST /api/auth/recover-password`, so malformed body fields are rejected before route logic calls string methods.
+- Expanded `tests/password-recovery.test.ts` to cover canonicalization, malformed mobile values, missing credentials, and the OTP recovery payload shape.
+- Added `scripts/verify.sh` and `npm run verify`. The command performs a clean `npm ci`, TypeScript check, full Vitest suite, and production build/package verification in that order.
+- **Execution status:** these latest changes have not yet been run in a Node environment. The verification script is committed but not yet executed; do not treat the new tests as passing until actual output is captured. This environment could not resolve GitHub from a local shell, and the isolated remote test sandbox could not be created. No merge or production deployment has occurred.
