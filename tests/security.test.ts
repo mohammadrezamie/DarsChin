@@ -377,7 +377,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             permissions: [],
             createdAt: new Date().toISOString(),
         };
-        db.users = db.users.filter((candidate) => candidate.id !== userId && candidate.mobile !== mobile);
+        db.data.users = db.users.filter((candidate) => candidate.id !== userId && candidate.mobile !== mobile);
         db.users.push(user as any);
         process.env.ROOT_OWNER_MOBILE = mobile;
 
@@ -394,7 +394,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         } finally {
             if (originalRootMobile === undefined) delete process.env.ROOT_OWNER_MOBILE;
             else process.env.ROOT_OWNER_MOBILE = originalRootMobile;
-            db.users = db.users.filter((candidate) => candidate.id !== userId);
+            db.data.users = db.users.filter((candidate) => candidate.id !== userId);
         }
     });
 
