@@ -70,7 +70,7 @@ adminRouter.post('/reset-seed', authenticate, requirePermission('system.settings
 adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
   try {
     const safeUsers = db.users.map((u) => {
-      const { password, ...safe } = u;
+      const { password, recoveryKey, ...safe } = u;
       const profile = db.studentProfiles.find(p => p.userId === u.id);
       return {
         ...safe,
