@@ -185,3 +185,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+/**
+ * Isolated preview identity: no password, JWT, SMS or server-side authorization.
+ * Wrapped around demo screens only. Real /dashboard and /admin stay protected.
+ */
+export const DemoAuthProvider: React.FC<{ role: 'student' | 'admin'; children: React.ReactNode }> = ({ role, children }) => {
+  const realAuth = useAuth();
+  const user: User = {
+    id: 'demo-student',
+    name: role === 'admin' ? 'مدیر آزمایشی' : 'دانشجوی آزمایشی',
+    mobile: 'شمارهٔ ساختگی',
+    roles: role === 'admin' ? ['student', 'admin', 'super-admin'] : ['student'],
+    permissions: role === 'admin'
+      ? ['admin.panel.access', 'academic-policy.manage', 'system.settings.manage', 'student-management.read',
+        'support.manage', 'course.create', 'course.update', 'course.delete', 'backup.manage', 'import.manage']
+      : [],
+  };
+  return (
+    <AuthContext.Provider value={{
+      ...realAuth,
+      user,
+      isLoading: false,
+      refreshUser: async () => {},
+      logout: () => { window.location.assign('/demo'); },
+      switchDemoRole: async () => {},
+      login: async () => ({ success: false, error: 'این حساب ساختگی است.' }),
+      register: async () => ({ success: false, error: 'ثبت‌نام واقعی در دمو وجود ندارد.' }),
+      recoverPassword: async () => ({ success: false, error: 'بازیابی واقعی در دمو وجود ندارد.' }),
+      changePassword: async () => ({ success: false, error: 'رمز عبور واقعی در دمو وجود ندارد.' }),
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
