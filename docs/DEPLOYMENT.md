@@ -14,17 +14,14 @@ DarsChin's current stack includes a React/Vite frontend, Express API and JSON fi
 ## 2. Validate the selected release commit (offline checks)
 
 ```bash
-npm ci
-npm run lint
-npm test
-npm run build
+bun run verify
 ```
 
-Use a separate synthetic test database, not the deployment database. Capture the exact SHA and test results. Check the extension version/ZIP and ensure no unreviewed generated artifact will be committed.
+Install Bun on the verification machine; the command uses synthetic credentials and an isolated temporary database. Use a separate synthetic test database, not the deployment database. Capture the exact SHA and test results. Check the extension version/ZIP and ensure no unreviewed generated artifact will be committed.
 
 ## 3. Release and smoke test
 
-Build on an isolated machine. Install the release under a versioned directory; install only its runtime dependencies and required build outputs. Make the persistent data directory survive release swaps. Start the Node service through a process manager (systemd or equivalent), behind a TLS reverse proxy.
+Build on an isolated machine with `bun install --frozen-lockfile` and `bun run build`. Install the release under a versioned directory; install only its runtime dependencies and required build outputs. Make the persistent data directory survive release swaps. Start the Node service through a process manager (systemd or equivalent), behind a TLS reverse proxy.
 
 - `/api/health` must return JSON, not HTML. The current health endpoint has a legacy version field; do not use it alone as release evidence.
 - Test login, admin authorization, course planning, and read/write behavior on a controlled fixture.

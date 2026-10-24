@@ -77,7 +77,9 @@ export interface DatabaseSchema {
   captchaChallenges: CaptchaChallenge[];
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.DARSCHYN_DATA_DIR
+  ? path.resolve(process.env.DARSCHYN_DATA_DIR)
+  : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
 
 export class LocalDatabase {

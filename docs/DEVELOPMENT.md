@@ -4,20 +4,17 @@ This is currently a demo. Preserve a clean `main` and use short-lived branches a
 
 ## Local work
 
-Install Node.js 22 and npm. Run:
+Install Node.js 22+ and Bun. Run:
 
 ```bash
-npm ci
-npm run lint
-npm test
-npm run build
+bun run verify
 ```
 
 Run the suite against a **disposable** database, never a live or committed database. To isolate the application tests, set `DARSCHYN_DATA_DIR` to a writable temporary directory **before importing the database module**. Set a unique `JWT_SECRET` in a local `.env` file; use synthetic root account settings for test runs. Do not copy operational credentials into commands, logs or issues.
 
-Some historical tests seed demo data and mutate singleton state. Until independently verified, run tests with a clean workspace and review all test/database side effects. The `npm run build` command currently packages the extension ZIP in the repository root. Check the working tree and do not accidentally commit its output.
+The verification runner generates disposable test credentials and configures `DARSCHYN_DATA_DIR` so test persistence does not affect the checked-in JSON database. It checks the committed `bun.lock` without modifying dependency versions. The `bun run build` command packages the extension ZIP in the repository root; check the working tree and do not accidentally commit its output.
 
-The in-progress development branch `fix/ci-regression-tests` also supplies a Bun-based `npm run verify` shortcut. Verify the actual installed tooling and branch before using it.
+On Windows, use `bun run verify` rather than requiring Bash. `npm ci` is intentionally not supported because the npm lockfile was stale and Bun is the canonical package manager.
 
 ## PR checklist
 
