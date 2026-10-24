@@ -8,11 +8,10 @@ export function validate(schema: ZodSchema) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const zErr = error as any;
         return res.status(400).json({
           success: false,
           error: 'خطای اعتبارسنجی اطلاعات',
-          details: zErr.errors.map((e: any) => ({ path: e.path.join('.'), message: e.message }))
+          details: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message }))
         });
       }
       next(error);

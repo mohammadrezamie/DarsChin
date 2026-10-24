@@ -5,13 +5,43 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NiazpardazSmsClient } from 'niazpardazsms';
 import svgCaptcha from 'svg-captcha';
+import { normalizeIranianMobile } from '../auth/normalize-mobile';
 
 export const otpRouter = Router();
 
 const OTP_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
+/**
+ * Keep short-lived verification state bounded in the JSON database.
+ * Expired challenges and consumed challenges outside the password-reset handoff are removable.
+ */
+function pruneExpiredChallenges(now = Date.now()): boolean {
+    const captchaCount = db.captchaChallenges.length;
+    const otpCount = db.otpChallenges.length;
+
+    for (let index = db.captchaChallenges.length - 1; index >= 0; index -= 1) {
+        const challenge = db.captchaChallenges[index];
+        if (!Number.isFinite(challenge.expiresAt) || challenge.expiresAt <= now || challenge.consumedAt) {
+            db.captchaChallenges.splice(index, 1);
+        }
+    }
+    for (let index = db.otpChallenges.length - 1; index >= 0; index -= 1) {
+        const challenge = db.otpChallenges[index];
+        // A verified password-recovery OTP must remain available until the password reset
+        // consumes it via recoveredAt; pruning it here would make recovery impossible.
+        if (
+            !Number.isFinite(challenge.expiresAt) ||
+            challenge.expiresAt <= now ||
+            (challenge.consumedAt && (challenge.purpose !== 'password_recovery' || challenge.recoveredAt))
+        ) db.otpChallenges.splice(index, 1);
+    }
+
+    return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
+}
+
 otpRouter.get('/captcha/generate', (req, res) => {
+    pruneExpiredChallenges();
     const captcha = svgCaptcha.create({
         size: 5,
         ignoreChars: '0o1i',
@@ -48,27 +78,33 @@ if (process.env.NODE_ENV === 'test') {
     });
 }
 
-// Function to normalize mobile number
-const normalizeMobile = (mobile) => {
-    let normalized = mobile.trim();
-    if (normalized.startsWith('+98')) normalized = '0' + normalized.substring(3);
-    if (normalized.startsWith('0098')) normalized = '0' + normalized.substring(4);
-    if (normalized.startsWith('9') && normalized.length === 10) normalized = '0' + normalized;
-    return normalized;
-};
+const ALLOWED_OTP_PURPOSES = new Set(['login', 'password_recovery']);
 
 otpRouter.post('/send', async (req, res) => {
-    let { mobile, purpose, captchaId, captchaValue } = req.body;
-    
-    if (!mobile || !purpose || !captchaId || !captchaValue) {
+    if (pruneExpiredChallenges()) db.save();
+    const body = req.body ?? {};
+    let { mobile, purpose, captchaId, captchaValue } = body;
+
+    if (
+        typeof mobile !== 'string' ||
+        typeof purpose !== 'string' ||
+        !ALLOWED_OTP_PURPOSES.has(purpose) ||
+        typeof captchaId !== 'string' ||
+        !captchaId.trim() ||
+        typeof captchaValue !== 'string' ||
+        !captchaValue.trim()
+    ) {
         return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
     }
-    
-    mobile = normalizeMobile(mobile);
+
+    mobile = normalizeIranianMobile(mobile);
+    if (!/^09\d{9}$/.test(mobile)) {
+        return res.status(400).json({ success: false, error: 'شماره موبایل نامعتبر است.' });
+    }
     
     // Verify CAPTCHA
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
-    if (!captcha || captcha.expiresAt < Date.now() || captcha.consumedAt) {
+    if (!captcha || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
     }
     
@@ -154,14 +190,28 @@ otpRouter.post('/send', async (req, res) => {
 });
 
 otpRouter.post('/verify', (req, res) => {
-    let { challengeId, mobile, code, purpose } = req.body;
-    
-    if (!challengeId || !mobile || !code || !purpose) return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
-    
-    mobile = normalizeMobile(mobile);
+    if (pruneExpiredChallenges()) db.save();
+    const body = req.body ?? {};
+    let { challengeId, mobile, code, purpose } = body;
+
+    if (
+        typeof challengeId !== 'string' ||
+        !challengeId.trim() ||
+        typeof mobile !== 'string' ||
+        typeof purpose !== 'string' ||
+        !ALLOWED_OTP_PURPOSES.has(purpose) ||
+        (typeof code !== 'string' && typeof code !== 'number')
+    ) {
+        return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
+    }
+
+    mobile = normalizeIranianMobile(mobile);
+    if (!/^09\d{9}$/.test(mobile) || !/^\d{6}$/.test(String(code))) {
+        return res.status(400).json({ success: false, error: 'شماره موبایل یا کد تایید نامعتبر است.' });
+    }
     
     const challenge = db.otpChallenges.find(c => c.id === challengeId && c.mobile === mobile);
-    if (!challenge || challenge.expiresAt < Date.now() || challenge.consumedAt) {
+    if (!challenge || challenge.expiresAt <= Date.now() || challenge.consumedAt) {
         return res.status(400).json({ success: false, error: 'کد تایید نامعتبر یا منقضی شده است.' });
     }
     
