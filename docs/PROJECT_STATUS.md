@@ -1,5 +1,19 @@
 # DARSCHYN Project Status
 
+## 2026-10-24 — verified rebase and API smoke test
+
+The original PR #1 has been transplanted onto the cleaned, Bun-verified main branch as `feat/landing-sync-rebased-20261024`. This preserves the independent secret-redaction fix, portable `bun run verify` runner and the single canonical `bun.lock`. The old GitHub Actions verification workflow was deliberately not copied because Actions minutes are exhausted.
+
+**Actual checks executed in an isolated Node 24 + Bun 1.4.4 sandbox on the combined runtime source:**
+- `bun run verify`: **exit 0** after frozen install, TypeScript, full Vitest tests, extension packaging, Vite build and server bundle.
+- Production-like single-process smoke check with test-only credentials and an isolated JSON database: `GET /api/health` returned status `ok`; an invalid `/api/*` path returned JSON HTTP 404.
+- TypeScript issues in OTP normalization, validation result discrimination and test-only database updates were fixed; a password recovery regression was made deterministic by supplying its fixture clock.
+
+**Remaining launch blockers:** Real Educationalyar DOM/source data has not been verified; a Vercel frontend preview is not an Express API deployment. The tracked JSON demo database, static seed credentials, production auth bootstrap, backup restoration, HTTPS, SMS credentials, and live persistence require separate validation before a real launch. No production deployment was attempted.
+
+---
+
+
 > Baseline: `main` at `61837f949d015e899c46a5be55e9070eafaf4667`. Latest reviewed development head: `fix/ci-regression-tests` at `055db1a9231e8f415f5e7ab9f03406110fd0a02f` (2026-10-13). This is a repository-level assessment, not a claim that production has been tested.
 
 ## Current state
