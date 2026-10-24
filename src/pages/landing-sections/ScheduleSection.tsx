@@ -16,7 +16,7 @@ export const ScheduleSection: React.FC = () => {
   const resolveOpacity = useTransform(scrollYProgress, [0.8, 1], [0, 1]);
 
   return (
-    <section ref={containerRef} className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+    <section id="schedule" ref={containerRef} className="scroll-mt-24 py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
       <div className="text-center max-w-3xl mx-auto mb-16">
         <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">
           تشخیص هوشمند تداخل
