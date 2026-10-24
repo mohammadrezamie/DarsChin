@@ -19,7 +19,7 @@ function challenge(overrides: Partial<OtpChallenge> = {}): OtpChallenge {
 
 describe('password recovery challenge', () => {
   it('allows a verified, unconsumed recovery challenge for the matching mobile', () => {
-    expect(canRecoverPasswordWithChallenge(challenge(), '09123456789')).toBe(true);
+    expect(canRecoverPasswordWithChallenge(challenge(), '09123456789', 175)).toBe(true);
   });
 
   it('rejects challenges that are missing, unverified, for another mobile, or for another purpose', () => {
