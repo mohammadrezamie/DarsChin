@@ -196,6 +196,7 @@ export const DemoAuthProvider: React.FC<{ role: 'student' | 'admin'; children: R
     id: 'demo-student',
     name: role === 'admin' ? 'مدیر آزمایشی' : 'دانشجوی آزمایشی',
     mobile: 'شمارهٔ ساختگی',
+    createdAt: '2026-01-01T00:00:00.000Z',
     roles: role === 'admin' ? ['student', 'admin', 'super-admin'] : ['student'],
     permissions: role === 'admin'
       ? ['admin.panel.access', 'academic-policy.manage', 'system.settings.manage', 'student-management.read',
