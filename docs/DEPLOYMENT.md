@@ -15,9 +15,10 @@ DarsChin's current stack includes a React/Vite frontend, Express API and JSON fi
 
 ```bash
 bun run verify
+bun run smoke:api
 ```
 
-Install Bun on the verification machine; the command uses synthetic credentials and an isolated temporary database. Use a separate synthetic test database, not the deployment database. Capture the exact SHA and test results. Check the extension version/ZIP and ensure no unreviewed generated artifact will be committed.
+Install Bun on the verification machine; the command uses synthetic credentials and an isolated temporary database. The smoke command uses only a temporary local JSON database and loopback listener. Use a separate synthetic test database, not the deployment database. Capture the exact SHA and test results. Check the extension version/ZIP and ensure no unreviewed generated artifact will be committed.
 
 ## 3. Release and smoke test
 
