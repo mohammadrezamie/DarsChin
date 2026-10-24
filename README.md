@@ -31,6 +31,7 @@ bun run verify
 - `bun run verify` calls a portable Node verification runner: frozen install, TypeScript check, Vitest suite and full build.
 - Each verification run uses newly generated **test-only** secrets and an isolated temporary JSON database.
 - `bun run build` packages the extension, verifies it, builds the frontend and bundles the Express server.
+- After a successful build, `bun run smoke:api` can check an isolated production-mode Express listener, synthetic login and sync persistence across a service restart; no real account or university data is required.
 
 ## Repository layout
 
