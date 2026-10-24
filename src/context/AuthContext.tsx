@@ -91,6 +91,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Browser-only demo pages must not refresh any existing real session.
+    // DemoAuthProvider supplies an independent synthetic identity below.
+    if (window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/')) {
+      setIsLoading(false);
+      return;
+    }
     const token = getStoredToken();
     if (token) {
       fetchCurrentUser();
