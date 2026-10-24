@@ -11,7 +11,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "demo:reset": "tsx scripts/demo-reset.ts",
-    "verify": "node scripts/verify.cjs"
+    "verify": "node scripts/verify.cjs",
+    "smoke:api": "node scripts/smoke-api.cjs"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
