@@ -11,28 +11,26 @@ Project homepage: https://dars-chin.vercel.app
 - Node.js and Express for server routes
 - Vitest for automated tests
 
-Use a supported Node.js version and install dependencies from the committed lockfile.
+Use Node.js 22+ and Bun. **bun.lock is the canonical dependency lockfile**; npm's stale lockfile has been removed.
 
 ## Getting started
 
-1. Run `npm ci` to install dependencies using the committed npm lockfile.
+1. Install [Bun](https://bun.sh) and run `bun install --frozen-lockfile` to use the committed dependency versions.
 2. Copy `.env.example` to `.env` (on Windows, copy the file manually or use PowerShell).
 3. Generate a unique development JWT secret with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and set `JWT_SECRET` in the **untracked** `.env` file. Never use this development secret in production.
-4. Run `npm run dev`.
+4. Run `bun run dev`.
 
 The authentication middleware requires a nonempty `JWT_SECRET` at startup. The `ROOT_OWNER_*` settings are used for privileged account bootstrap; configure them privately when needed, and do not reuse development credentials in production. This repository is not a ready-to-deploy production configuration. Do not commit real passwords, recovery keys, OTP-provider credentials, or tokens.
 
 ## Validation and build
 
 ```bash
-npm run lint
-npm test
-npm run build
+bun run verify
 ```
 
-- `npm run lint` runs the TypeScript check.
-- `npm test` runs the Vitest suite.
-- `npm run build` packages the extension, runs build verification, builds the frontend, and bundles the server.
+- `bun run verify` calls a portable Node verification runner: frozen install, TypeScript check, Vitest suite and full build.
+- Each verification run uses newly generated **test-only** secrets and an isolated temporary JSON database.
+- `bun run build` packages the extension, verifies it, builds the frontend and bundles the Express server.
 
 ## Repository layout
 
