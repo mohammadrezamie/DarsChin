@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { PasswordChangeModal } from './components/PasswordChangeModal';
-import { StudentDashboard } from './components/StudentDashboard';
-import { AdminDashboard } from './components/AdminDashboard';
 import { ExtensionModal } from './components/ExtensionModal';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { Landing } from './pages/Landing';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import { ForgotPassword } from './pages/auth/ForgotPassword';
+const Landing = lazy(() => import('./pages/Landing').then((module) => ({ default: module.Landing })));
+const Login = lazy(() => import('./pages/auth/Login').then((module) => ({ default: module.Login })));
+const Register = lazy(() => import('./pages/auth/Register').then((module) => ({ default: module.Register })));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then((module) => ({ default: module.ForgotPassword })));
+const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((module) => ({ default: module.StudentDashboard })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 
 const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   const { user, isLoading } = useAuth();
@@ -68,23 +68,25 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            
-            <Route element={<DashboardLayout />}>
-              <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-                <Route path="/dashboard" element={<StudentDashboard />} />
-              </Route>
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/admin" element={<AdminDashboard />} />
-              </Route>
-            </Route>
+<Suspense fallback={<div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">درحال بارگذاری...</div>}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route element={<DashboardLayout />}>
+                <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+                  <Route path="/dashboard" element={<StudentDashboard />} />
+                </Route>
+                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                  <Route path="/admin" element={<AdminDashboard />} />
+                </Route>
+              </Route>
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

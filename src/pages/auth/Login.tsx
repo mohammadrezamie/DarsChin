@@ -35,12 +35,15 @@ export const Login: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const success = await login(mobile, password);
-      if (success) {
-        // Redirection is handled by a useEffect or App layout based on user role
-        navigate('/dashboard');
+      const result = await login(mobile, password);
+      if (result.success) {
+        // Route by the authenticated user's role; never treat a result object as a boolean.
+        const isAdmin = result.user?.roles?.includes('super-admin') ||
+          result.user?.roles?.includes('admin') ||
+          result.user?.permissions?.includes('admin.panel.access');
+        navigate(isAdmin ? '/admin' : '/dashboard', { replace: true });
       } else {
-        setError('شماره موبایل یا رمز عبور اشتباه است.');
+        setError(result.error || 'شماره موبایل یا رمز عبور اشتباه است.');
       }
     } catch (err: any) {
       setError(err.message || 'خطایی رخ داد.');

@@ -19,8 +19,8 @@ Use [deployment runbook](DEPLOYMENT.md). Freeze the release commit, validate the
 ## Backlog / retained risks
 
 - [Issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4): classify the tracked JSON database and migrate runtime storage safely; do not rewrite Git history based on guesses
-- [PR #1](https://github.com/mohammadrezamie/DarsChin/pull/1): large sync and UX feature; verify live-source assumptions separately from fixtures
-- [PR #5](https://github.com/mohammadrezamie/DarsChin/pull/5): administrative redaction, awaiting executed security regression checks
+- [Legacy PR #1](https://github.com/mohammadrezamie/DarsChin/pull/1): original large sync and UX feature; its contents were rebased onto the verified toolchain, but live-source assumptions must still be checked separately from fixtures
+- [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8): administrative response redaction, regression tested and merged
 - Resolve source duplication and packaging artifacts only after import/build provenance checks
 
 ## GitHub configuration guidance

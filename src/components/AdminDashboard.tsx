@@ -58,6 +58,7 @@ type AdminTab =
   | 'terms'
   | 'offerings'
   | 'academic-settings'
+  | 'imports'
   // Operations
   | 'users'
   | 'support'
@@ -574,7 +575,12 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* 13. OFFERINGS */}
-        {activeTab === 'imports' && <AdminImportCenter />}
+        {activeTab === 'imports' && (
+          <div className="space-y-6">
+            <AdminImportCenter />
+            <AdminSyncStatus />
+          </div>
+        )}
 
         {activeTab === 'offerings' && (
           <AdminCrudTable

@@ -1,71 +1,59 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Chrome, RefreshCw, Server } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Chrome, Database, RefreshCw, ShieldCheck } from 'lucide-react';
 
 export const SyncSection: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "center center"]
-  });
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start end', 'center center'] });
+  const arrowOpacity = useTransform(scrollYProgress, [0.25, 0.55], [0.25, 1]);
+  const arrowX = useTransform(scrollYProgress, [0.25, 0.55], [-24, 0]);
 
-  const arrowOpacity = useTransform(scrollYProgress, [0.3, 0.6], [0, 1]);
-  const arrowX = useTransform(scrollYProgress, [0.3, 0.6], [-50, 0]);
-  const statsOpacity = useTransform(scrollYProgress, [0.6, 0.8], [0, 1]);
+  const steps = [
+    { icon: ShieldCheck, title: 'اعتبارسنجی', description: 'ساختار و کامل‌بودن داده پیش از پذیرش بررسی می‌شود.' },
+    { icon: Database, title: 'تطبیق و آماده‌سازی', description: 'کد درس، گروه، زمان و ظرفیت باید با داده‌های معتبر تطبیق داده شوند.' },
+    { icon: CheckCircle2, title: 'ثبت نتیجه', description: 'وضعیت دریافت، تطبیق موفق یا خطای پردازش جداگانه ثبت می‌شود؛ دریافت داده به معنی تأیید آن نیست.' },
+  ];
 
   return (
-    <section ref={containerRef} className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">
-          انتقال داده‌ها با یک کلیک
-        </h2>
-        <p className="text-xl text-slate-600 dark:text-slate-400">
-          توسط افزونه کروم درس‌چین، تمامی اطلاعات دروس ارائه‌شده از آموزشیار مستقیماً و در لحظه به پلتفرم درس‌چین منتقل می‌شود. بدون نیاز به تایپ دستی.
+    <section id="data-flow" ref={containerRef} dir="rtl" className="scroll-mt-24 relative mx-auto max-w-7xl overflow-hidden px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <div className="mx-auto mb-14 max-w-3xl text-center">
+        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"><RefreshCw className="h-3.5 w-3.5" /> مسیر ورود داده</span>
+        <h2 className="mb-5 text-3xl font-black text-slate-900 dark:text-white sm:text-4xl md:text-5xl">از داده خام تا برنامه‌ریزی قابل اتکا</h2>
+        <p className="text-base leading-8 text-slate-600 dark:text-slate-400 sm:text-lg">
+          افزونه یکی از مسیرهای ورود داده به درس‌چین است. داده دریافتی باید اعتبارسنجی و با اطلاعات آموزشی تطبیق داده شود؛ صرف دریافت فایل به معنی تأیید نهایی یا به‌روز بودن اطلاعات نیست.
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 relative py-10">
-        
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex-1 max-w-sm w-full text-center z-20">
-          <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-             <Chrome className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+      <div className="grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-5">
+        <div className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/75 sm:p-7">
+          <div className="mb-5 flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"><Chrome className="h-7 w-7" /></div>
+            <div><h3 className="text-lg font-black text-slate-900 dark:text-white">منبع داده</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">افزونه یا منبع مجاز دیگر</p></div>
           </div>
-          <h3 className="text-xl font-bold mb-2">سامانه آموزشیار</h3>
-          <p className="text-sm text-slate-500 mb-6">دروس جستجو شده و نتایج پراکنده</p>
-          
-          <div className="space-y-2 opacity-50">
-             <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded px-2 text-xs flex items-center text-slate-400">ردیف ۱: ریاضی ۱ - کد ۵۴۳...</div>
-             <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded px-2 text-xs flex items-center text-slate-400">ردیف ۲: فیزیک ۲ - کد ۹۸۷...</div>
+          <div className="space-y-2.5">
+            {['شناسه و نام درس', 'گروه و اطلاعات ارائه', 'زمان دریافت و ترم'].map((label) => <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300"><span className="h-2 w-2 rounded-full bg-blue-500" />{label}</div>)}
           </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">این موارد، نمونه فیلدهای داده هستند؛ داده زنده آموزشیار در این پیش‌نمایش نمایش داده نمی‌شود.</p>
         </div>
 
-        <motion.div style={{ opacity: arrowOpacity, x: arrowX }} className="flex flex-col items-center justify-center relative z-20">
-          <div className="bg-blue-600 text-white p-4 rounded-full shadow-lg shadow-blue-500/30">
-            <RefreshCw className="w-8 h-8 animate-[spin_3s_linear_infinite]" />
-          </div>
-          <div className="hidden md:block w-32 h-1 bg-gradient-to-l from-blue-600 to-transparent absolute top-1/2 -translate-y-1/2 -z-10 -ml-16"></div>
-          <div className="md:hidden h-16 w-1 bg-gradient-to-t from-blue-600 to-transparent absolute top-1/2 left-1/2 -translate-x-1/2 -z-10"></div>
+        <motion.div style={{ opacity: arrowOpacity, x: arrowX }} className="flex items-center justify-center py-1 text-blue-600 dark:text-blue-400">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-200 bg-blue-50 shadow-sm dark:border-blue-400/20 dark:bg-blue-500/10"><ArrowLeft className="h-5 w-5" /></div>
         </motion.div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex-1 max-w-sm w-full text-center z-20">
-          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-             <Server className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+        <div className="rounded-3xl border border-blue-200/80 bg-gradient-to-br from-blue-50/80 to-white p-6 shadow-sm dark:border-blue-500/20 dark:from-blue-950/30 dark:to-slate-900 sm:p-7">
+          <div className="mb-5 flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><Database className="h-7 w-7" /></div>
+            <div><h3 className="text-lg font-black text-slate-900 dark:text-white">پردازش در درس‌چین</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">مراحل لازم برای داده معتبر</p></div>
           </div>
-          <h3 className="text-xl font-bold mb-2">موتور درس‌چین</h3>
-          <p className="text-sm text-slate-500 mb-6">داده‌های ساخت‌یافته و پردازش‌شده</p>
-
-          <motion.div style={{ opacity: statsOpacity }} className="grid grid-cols-2 gap-2 text-sm font-bold">
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-              <div className="text-2xl text-slate-900 dark:text-white mb-1">۱,۲۴۸</div>
-              <div className="text-slate-500 text-xs">رکورد دریافت شده</div>
-            </div>
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-              <div className="text-2xl text-emerald-600 dark:text-emerald-400 mb-1">۱,۱۹۸</div>
-              <div className="text-emerald-700 dark:text-emerald-500 text-xs">رکورد معتبر</div>
-            </div>
-          </motion.div>
+          <div className="space-y-3">
+            {steps.map(({ icon: Icon, title, description }, index) => <div key={title} className="flex gap-3 rounded-2xl border border-white/90 bg-white/80 p-3.5 dark:border-slate-700/70 dark:bg-slate-900/70"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><Icon className="h-4 w-4" /></div><div><div className="flex items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white"><span className="text-xs text-slate-400">۰{index + 1}</span>{title}</div><p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">{description}</p></div></div>)}
+          </div>
         </div>
+      </div>
 
+      <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
+        <p className="text-sm leading-6">در این مسیر، «دریافت شد» با «با موفقیت تطبیق داده شد» یکسان نیست. رکورد ناقص یا مبهم باید خطا بگیرد و تا زمان تأیید کامل، نباید جایگزین داده‌های معتبر قبلی شود. این بخش توضیح فرایند است و وضعیت زنده‌ای از آموزشیار نمایش نمی‌دهد.</p>
       </div>
     </section>
   );
