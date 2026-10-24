@@ -16,7 +16,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
             <div className="flex items-start gap-2 text-amber-950 dark:text-amber-100">
               <FlaskConical className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div>
-                <div className="font-black">محیط آزمایشیِ بدون حساب واقعی — {role === 'admin' ? 'پنل مدیر' : 'پنل دانشجو'}</div>
+                <div className="font-black">محیط آزمایشیِ بدون حساب واقعی — {role === 'admin' ? 'پنل مدیر / مدیر آزمایشی' : 'پنل دانشجو / دانشجوی آزمایشی'}</div>
                 <p className="text-xs leading-6">
                   داده و نقش‌ها ساختگی‌اند؛ تغییرات فقط در همین مرورگر ذخیره می‌شوند. نتیجهٔ قوانین دانشگاه، مجوز واقعی نیست.
                 </p>
