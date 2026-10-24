@@ -92,6 +92,17 @@ const Landing: React.FC = () => {
 
       <main>
         <HeroSection />
+        <section aria-label="محیط تست تعاملی" className="border-y border-blue-100 bg-blue-50/80 px-4 py-5 dark:border-blue-900 dark:bg-blue-950/50">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-base font-black text-blue-950 dark:text-blue-100">می‌خواهی قبل از ثبت‌نام برنامه‌ریز را امتحان کنی؟</h2>
+              <p className="mt-1 text-sm leading-6 text-blue-800 dark:text-blue-200">با درس‌های کاملاً نمونه، بدون حساب کاربری و بدون اتصال به آموزشیار.</p>
+            </div>
+            <Link to="/demo" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 px-5 text-sm font-extrabold text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+              ورود به نسخهٔ تعاملی دمو <ArrowLeft aria-hidden="true" className="mr-2 h-4 w-4" />
+            </Link>
+          </div>
+        </section>
         <EligibilitySection />
         <RecommendationSection />
         <ScheduleSection />
