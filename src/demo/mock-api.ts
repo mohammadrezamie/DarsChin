@@ -45,7 +45,9 @@ const defaults: AcademicPolicySettings = {
   finalSemesterThresholdUnits: 24, finalSemesterRuleEnabled: true,
 };
 function initialStore(): DemoStore {
-  return {
+  // Clone fixtures per reset; otherwise add/delete operations mutate the module-level
+  // sample arrays and corrupt all subsequent demo sessions.
+  return structuredClone({
     collections: {
       '/api/academic/universities': [university],
       '/api/academic/provinces': [province],
@@ -69,7 +71,7 @@ function initialStore(): DemoStore {
     },
     plan: { selectedOfferingIds: ['off-math2', 'off-physics'], coursePriorities: [], offeringPriorities: {} },
     passed: [], tickets: [], messages: [], bugs: [], academicSettings: { ...defaults },
-  };
+  }) as DemoStore;
 }
 let volatileStore: DemoStore | undefined;
 function readStore(): DemoStore {
