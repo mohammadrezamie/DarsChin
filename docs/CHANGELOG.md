@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-24 — integrated demo development branch
+
+- Ported landing and administrator sync-monitor UI, login routing fixes, persisted sync history and strict chunk reconciliation onto the verified main toolchain.
+- Kept the Chrome collector unchanged pending a real Educationalyar source fixture; the service distinguishes received, reconciled and failed outcomes.
+- Corrected OTP mobile normalization references and narrowed supported-purpose typing.
+- Fixed validation error narrowing and test-only database accessor errors found by TypeScript.
+- Made the password-recovery fixture clock deterministic.
+- Executed frozen Bun install, typecheck, full tests, frontend/extension/server build and a loopback Express health/404 smoke test in an isolated environment.
+- No production deployment or live source verification has been performed.
+
+
 Notable user-facing and operational changes. This file supplements commit history; it does not replace it.
 
 ## Unreleased — integrity and development workflow
