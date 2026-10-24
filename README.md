@@ -48,6 +48,8 @@ Use synthetic or explicitly approved test data during development. Do not commit
 
 **Existing tracked data requires review:** `data/darschyn-db.json` is already tracked and contains account/contact and credential-related fields. Adding an ignore rule does **not** remove a previously tracked file or erase Git history. Confirm whether it is synthetic or real before changing its storage and migration behavior. Do not use the checked-in data file as a production database.
 
+**راهنمای توسعه و وضعیت محصول (فارسی):** [معرفی درس‌چین](docs/PRODUCT_GUIDE_FA.md)، [قوانین آموزشی در انتظار جلسه و تأیید](docs/ACADEMIC_RULES_INTAKE_FA.md)، [نقشه Vercel فول‌استک](docs/VERCEL_FULLSTACK_PLAN_FA.md)، [همکاری تیمی](docs/TEAM_WORKFLOW_FA.md).
+
 Start with the [documentation index](docs/INDEX.md) for local development, security, deployment, rollback and the outstanding [repository audit](docs/REPOSITORY_AUDIT.md).
 
 ## Contribution workflow
