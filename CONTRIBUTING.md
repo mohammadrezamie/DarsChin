@@ -6,7 +6,7 @@ Thanks for contributing to the DarsChin demo platform. For full procedures, see 
 
 1. Create a short-lived branch from current `main` using `feat/`, `fix/`, `docs/`, or `chore/`.
 2. Keep each change focused and document its intended observable behavior.
-3. Run a clean dependency install, TypeScript check, relevant tests, and build **when possible**. If a check is unavailable, mark it as not run; never claim that GitHub Actions or static inspection passed it.
+3. Run `bun run verify` (Bun uses the committed `bun.lock` and a temporary test-only database) **when possible**. If a check is unavailable, mark it as not run; never claim that GitHub Actions or static inspection passed it.
 4. Do not commit `.env` files, real user or university exports, password/OTP/recovery materials, mutable database state, build archives, or debug logs.
 5. Open a PR using the repository template. Link the related issue and explain rollback and test boundaries.
 
