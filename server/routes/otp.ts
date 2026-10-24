@@ -78,7 +78,9 @@ if (process.env.NODE_ENV === 'test') {
     });
 }
 
-const ALLOWED_OTP_PURPOSES = new Set(['login', 'password_recovery']);
+function isSupportedOtpPurpose(value: unknown): value is 'login' | 'password_recovery' {
+    return value === 'login' || value === 'password_recovery';
+}
 
 otpRouter.post('/send', async (req, res) => {
     if (pruneExpiredChallenges()) db.save();
@@ -88,7 +90,7 @@ otpRouter.post('/send', async (req, res) => {
     if (
         typeof mobile !== 'string' ||
         typeof purpose !== 'string' ||
-        !ALLOWED_OTP_PURPOSES.has(purpose) ||
+        !isSupportedOtpPurpose(purpose) ||
         typeof captchaId !== 'string' ||
         !captchaId.trim() ||
         typeof captchaValue !== 'string' ||
@@ -124,7 +126,7 @@ otpRouter.post('/send', async (req, res) => {
     
     // Verify user state before sending SMS
     if (purpose === 'login' || purpose === 'password_recovery') {
-        const user = db.users.find(u => normalizeMobile(u.mobile) === mobile);
+        const user = db.users.find(u => normalizeIranianMobile(u.mobile) === mobile);
         if (!user) {
             return res.status(404).json({ success: false, error: 'کاربری با این شماره یافت نشد.' });
         }
@@ -199,7 +201,7 @@ otpRouter.post('/verify', (req, res) => {
         !challengeId.trim() ||
         typeof mobile !== 'string' ||
         typeof purpose !== 'string' ||
-        !ALLOWED_OTP_PURPOSES.has(purpose) ||
+        !isSupportedOtpPurpose(purpose) ||
         (typeof code !== 'string' && typeof code !== 'number')
     ) {
         return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
@@ -233,7 +235,7 @@ otpRouter.post('/verify', (req, res) => {
     db.save();
     
     if (challenge.purpose === 'login') {
-        let user = db.users.find(u => normalizeMobile(u.mobile) === mobile);
+        let user = db.users.find(u => normalizeIranianMobile(u.mobile) === mobile);
         if (!user) {
             return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
         }
