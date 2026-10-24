@@ -164,7 +164,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   }
 
   const validation = validateSyncChunk({ chunkIndex, data, isFinal });
-  if (!validation.valid) {
+  if ('error' in validation) {
     return res.status(400).json({ success: false, error: validation.error });
   }
 
