@@ -5,6 +5,8 @@
 | Topic | Reference |
 | --- | --- |
 | Local setup | [README](../README.md) |
+| Contribution | [CONTRIBUTING](../CONTRIBUTING.md) |
+| Maintenance checklist | [REPOSITORY_MAINTENANCE.md](REPOSITORY_MAINTENANCE.md) |
 | Contribution & verification | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Safe deployment & rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | Security and privacy | [SECURITY.md](SECURITY.md) |
