@@ -11,8 +11,8 @@
 | Safe deployment & rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | Security and privacy | [SECURITY.md](SECURITY.md) |
 | Architecture and risks | [Repository audit](REPOSITORY_AUDIT.md) |
-| Sync implementation (in-progress) | [PR #1](https://github.com/mohammadrezamie/DarsChin/pull/1) |
-| Sensitive export remediation | [PR #5](https://github.com/mohammadrezamie/DarsChin/pull/5) |
+| Sync ingestion and reconciliation | [Architecture](ARCHITECTURE.md) and [project status](PROJECT_STATUS.md) |
+| Sensitive export remediation | [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8) |
 
 For a release, validate one named commit: dependency installation, TypeScript, tests, build, API smoke check, persistence across restart, backup restore, and HTTPS. A successful Vercel preview of the frontend is **not** a verified backend deployment.
 
