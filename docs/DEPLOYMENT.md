@@ -5,11 +5,11 @@ DarsChin's current stack includes a React/Vite frontend, Express API and JSON fi
 ## 1. Prepare (one-time infrastructure)
 
 - Choose a domain, DNS, TLS certificates and a Node.js 22 host.
-- Reserve an unused local service port (`PORT` is supported in PR #1; on current `main`, the Express listener is hard-coded to 3000). Prevent port conflicts with other services.
+- Reserve an unused local service port (configure `PORT` and `HOST` in the service environment; production defaults to loopback). Prevent port conflicts with other services.
 - Create a dedicated service account, private secrets file and separate persistent database path with restricted permissions.
 - Restore **sanitized demo fixtures** or a separately verified backup; never ship hardcoded demo credentials as a live public service.
 - Verify that `ROOT_OWNER_MOBILE`, `ROOT_OWNER_PASSWORD` and `JWT_SECRET` have been safely configured **before initial bootstrap**; changing root env variables after a database exists may not trigger bootstrap.
-- Prefer the deployment templates in [PR #1](https://github.com/mohammadrezamie/DarsChin/pull/1) after they have passed checks. They are not merged on `main`.
+- Use the reviewed templates in `deploy/` and verify the actual host, domain, ports and writable data path before starting the service.
 
 ## 2. Validate the selected release commit (offline checks)
 
