@@ -55,4 +55,4 @@ Educationalyar / authorized source
 
 ## Current implementation caveat
 
-At the reviewed baseline, `server/routes/sync.ts` persists chunks and marks a job complete, but its finalization path explicitly leaves processing into `courseOfferings` unimplemented. The architecture above describes the target state; it must not be mistaken for shipped behavior until the processor and tests exist.
+The earlier baseline did not finalize imported offerings. The current source has a reconciliation implementation and regression tests in `server/sync/reconciliation.ts` and `tests/sync-*.test.ts`; those tests passed in an isolated runner. **This is not an end-to-end verification against live Educationalyar, and the Vercel frontend preview still has no connected production-grade API and durable database.** For current scope and rollout gates see [the fullstack Vercel plan](VERCEL_FULLSTACK_PLAN_FA.md).
