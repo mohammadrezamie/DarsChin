@@ -8,9 +8,12 @@ Install Node.js 22+ and Bun. Run:
 
 ```bash
 bun run verify
+bun run smoke:api
 ```
 
 Run the suite against a **disposable** database, never a live or committed database. To isolate the application tests, set `DARSCHYN_DATA_DIR` to a writable temporary directory **before importing the database module**. Set a unique `JWT_SECRET` in a local `.env` file; use synthetic root account settings for test runs. Do not copy operational credentials into commands, logs or issues.
+
+The standalone API smoke script requires the built `dist/server.cjs` and checks JSON health/404, synthetic root login and sync history after process restart. It must still be executed and observed before considering the check passing.
 
 The verification runner generates disposable test credentials and configures `DARSCHYN_DATA_DIR` so test persistence does not affect the checked-in JSON database. It checks the committed `bun.lock` without modifying dependency versions. The `bun run build` command packages the extension ZIP in the repository root; check the working tree and do not accidentally commit its output.
 
