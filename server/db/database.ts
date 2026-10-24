@@ -246,12 +246,12 @@ this.isInitialized = true;
   }
 
   public exportBackup(): DatabaseSchema {
-    // Return copy of data without sensitive password hashes for export
+    // Downloadable admin backups must not contain credentials or transient auth challenges.
+    // Restoring a backup preserves the current users, so this does not block account recovery.
     const safeData: DatabaseSchema = JSON.parse(JSON.stringify(this.data));
-    safeData.users = safeData.users.map((u) => ({
-      ...u,
-      password: undefined,
-    }));
+    safeData.users = safeData.users.map(({ password, recoveryKey, ...user }) => user);
+    safeData.otpChallenges = [];
+    safeData.captchaChallenges = [];
     return safeData;
   }
 
