@@ -1,13 +1,26 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { browserDemoRequest, resetBrowserDemo } from '../src/demo/mock-api';
 import { DemoWorkspace } from '../src/pages/DemoWorkspace';
+import { apiRequest } from '../src/utils/api';
 
 beforeEach(() => resetBrowserDemo());
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe('isolated browser demo API', () => {
+  it('intercepts the real API client on demo routes without a network request', async () => {
+    const network = vi.fn(() => { throw new Error('Any network call would leak demo traffic'); });
+    vi.stubGlobal('window', { location: { pathname: '/demo/student' } });
+    vi.stubGlobal('fetch', network);
+    const response = await apiRequest<any[]>('/api/academic/courses');
+    expect(response.success).toBe(true);
+    expect(response.data?.length).toBeGreaterThan(2);
+    expect(network).not.toHaveBeenCalled();
+  });
+
   it('provides synthetic offerings and a preview-only eligibility report', async () => {
     const offerings = await browserDemoRequest<any[]>('/api/offerings');
     expect(offerings.success).toBe(true);
