@@ -12,7 +12,7 @@
 
 ## Administrative responses
 
-Review all authenticated API responses for secrets, including backup downloads and the administrator users listing. [Draft PR #5](https://github.com/mohammadrezamie/DarsChin/pull/5) addresses existing recovery-field disclosure and transient OTP/CAPTCHA backup data. It has tests in source but has **not** passed executed validation.
+Review all authenticated API responses for secrets, including backup downloads and the administrator users listing. [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8) redacts recovery fields and transient OTP/CAPTCHA data in admin exports. The isolated Bun verification suite passed; production API authorization remains subject to deployment smoke tests.
 
 ## Live launch gate
 
