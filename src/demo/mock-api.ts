@@ -375,7 +375,8 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(operation==='export.csv' && method==='GET') {
       const csv=exportDemandCsv(survey,s.demandResponses,
         new Map(currentCourses(s).map(course=>[course.id,course.name])),
-        new Map([[entryYear.id,String(entryYear.year)]]),new Map());
+        new Map([[entryYear.id,String(entryYear.year)],[entryYear1402.id,String(entryYear1402.year)]]),
+        new Map(tracks.map(t=>[t.id,t.name])),new Map([[major.id,major.name]]));
       return good({csv}) as ApiResponse<T>;
     }
   }
