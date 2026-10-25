@@ -613,7 +613,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(data.termId && !s.collections['/api/academic/terms'].some(t=>t.id===data.termId))
       return fail('نیمسال سابقهٔ درسی در دمو معتبر نیست.');
     const raw=data.grade;
-    const noGrade=raw===undefined || raw===null || (typeof raw==='string' && !raw.trim());
+    const noGrade=raw===undefined || (typeof raw==='string' && !raw.trim());
     const acceptable=typeof raw==='number' || (typeof raw==='string' &&
       /^\d{1,2}(?:\.\d{1,2})?$/.test(raw.trim()));
     const score=noGrade?undefined:Number(raw);
