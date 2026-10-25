@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, ClipboardList, RefreshCw, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 
 interface BatchSummary {
@@ -63,8 +63,8 @@ export const AdminImportCenter: React.FC = () => {
 
   useEffect(() => { void fetchBatches(); return () => { detailsSequence.current++; }; }, []);
 
-  const handleExpand = async (batchId: string) => {
-    if (expandedBatchId === batchId) {
+  const handleExpand = async (batchId: string, forceReload = false) => {
+    if (expandedBatchId === batchId && !forceReload) {
       detailsSequence.current++;
       setExpandedBatchId(null);
       return;
@@ -155,7 +155,7 @@ export const AdminImportCenter: React.FC = () => {
                     {recordsError && (
                       <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-rose-700 dark:text-rose-300">
                         <AlertCircle aria-hidden="true" className="h-4 w-4" />{recordsError}
-                        <button type="button" onClick={() => void handleExpand(batch.id)} className="min-h-11 rounded-lg border px-3 font-bold">تلاش دوباره</button>
+                        <button type="button" onClick={() => void handleExpand(batch.id, true)} className="min-h-11 rounded-lg border px-3 font-bold">تلاش دوباره</button>
                       </div>
                     )}
                     {!recordsLoading && !recordsError && (
