@@ -32,7 +32,7 @@ describe('Persian-first responsive UI guardrails',()=>{
     expect(css).toContain('font-size: 16px;'); // avoid iOS input focus zoom
     const student=read('src/components/StudentDashboard.tsx');
     expect(student).toContain('darschin-scroll-x flex flex-nowrap');
-    expect(student).toContain('sticky top-2');
+    expect(student).toContain('sticky top-[68px]');
     expect(student).toContain('justify-start');
   });
   it('shows Persian attribute labels for admin rows and root permission controls',()=>{
