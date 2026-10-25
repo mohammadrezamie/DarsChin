@@ -3,7 +3,7 @@ import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
-import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
+import { summarizeDemand, summarizeDemandByCohort, listDemandStudents, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
 import type { DemandSurvey, DemandResponse } from '../types';
 import type { AcademicRule } from '../types';
 import type {
@@ -417,17 +417,24 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       )) : s.demandSurveys) as ApiResponse<T>;
   }
   if (path === '/api/demand/surveys' && method === 'POST') {
-    const chart=s.collections['/api/curriculum'].find(row=>row.id===data.curriculumId);
+    const chartIds:Array<string>=Array.isArray(data.curriculumIds)?data.curriculumIds:[data.curriculumId];
+    const charts=s.collections['/api/curriculum'].filter(row=>chartIds.includes(row.id));
+    const primary=charts.find(row=>row.id===data.curriculumId);
     const validCourseIds=new Set(s.collections['/api/curriculum-courses']
-      .filter(row=>row.curriculumId===data.curriculumId && row.active!==false &&
-        (!row.trackId || (data.trackIds||[]).includes(row.trackId))).map(row=>row.courseId));
-    if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
-      !chart || !Array.isArray(data.entryYearIds) || data.entryYearIds.length!==1 ||
-      data.entryYearIds[0]!==chart.entryYearId || (data.trackIds||[]).length>1 ||
-      (data.trackIds||[]).some((trackId:string)=>!tracks.some(track=>track.id===trackId&&track.majorId===chart.majorId)) ||
-      data.courseIds.some((courseId:string)=>!validCourseIds.has(courseId)||
+      .filter(row=>chartIds.includes(row.curriculumId) && row.active!==false).map(row=>row.courseId));
+    if (!primary || chartIds.length===0 || charts.length!==chartIds.length ||
+      new Set(chartIds).size!==chartIds.length || !Array.isArray(data.entryYearIds) ||
+      new Set(data.entryYearIds).size!==data.entryYearIds.length ||
+      charts.length!==data.entryYearIds.length ||
+      charts.some(chart=>chart.universityId!==primary.universityId ||
+        chart.campusId!==primary.campusId || chart.majorId!==primary.majorId ||
+        chart.degreeLevelId!==primary.degreeLevelId ||
+        !data.entryYearIds.includes(chart.entryYearId)) ||
+      !Array.isArray(data.courseIds) || data.courseIds.length===0 ||
+      new Set(data.courseIds).size!==data.courseIds.length ||
+      data.courseIds.some((courseId:string)=>!validCourseIds.has(courseId) ||
         !currentCourses(s).some(c=>c.id===courseId))) {
-      return fail('برای ساخت نیازسنجی، چارت و درس‌های معتبر نمونه لازم است.');
+      return fail('چارت و درس‌های هر ورودی باید معتبر و هم‌حوزه باشند.');
     }
     const record:DemandSurvey={...data,id:id(),status:'DRAFT',createdBy:'demo-manager',
       createdAt:now(),updatedAt:now()};
@@ -450,7 +457,12 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(operation==='response' && method==='PUT'){
       if(survey.status!=='OPEN'||!surveyAppliesToProfile(survey,s.profile))return fail('نیازسنجی بسته یا نامنطبق است.');
       if(!Array.isArray(data.courseIds)||new Set(data.courseIds).size!==data.courseIds.length||
-        data.courseIds.some((courseId:string)=>!survey.courseIds.includes(courseId))||
+        data.courseIds.some((courseId:string)=>!survey.courseIds.includes(courseId) ||
+          !s.collections['/api/curriculum-courses'].some(row=>row.courseId===courseId &&
+            row.active!==false && (survey.curriculumIds?.length
+              ? survey.curriculumIds.includes(row.curriculumId) : row.curriculumId===survey.curriculumId) &&
+            s.collections['/api/curriculum'].some(chart=>chart.id===row.curriculumId &&
+              chart.entryYearId===s.profile.entryYearId)))||
         !/^[0-9۰-۹٠-٩]{6,20}$/.test(data.studentNumber||'') ||
         !['YES','NO','UNKNOWN'].includes(data.anticipatedGraduation))return fail('انتخاب‌ها یا شماره دانشجویی نامعتبرند.');
       const old=s.demandResponses.find(x=>x.surveyId===survey.id&&x.userId==='demo-student');
@@ -467,7 +479,14 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       s.demandResponses.push(response);s.profile.studentNumber=response.studentNumber;saveStore(s);
       return good(response) as ApiResponse<T>;
     }
-    if(operation==='report' && method==='GET')return good(summarizeDemand(survey,s.demandResponses)) as ApiResponse<T>;
+    if(operation==='report' && method==='GET')return good({
+      ...summarizeDemand(survey,s.demandResponses),
+      byCohort:summarizeDemandByCohort(survey,s.demandResponses),
+    }) as ApiResponse<T>;
+    if(operation==='students' && method==='GET') {
+      // Demo route: synthetic responses only; production checks demand.export.
+      return good({surveyId:survey.id,students:listDemandStudents(survey,s.demandResponses)}) as ApiResponse<T>;
+    }
     if(operation==='export.csv' && method==='GET') {
       const csv=exportDemandCsv(survey,s.demandResponses,
         new Map(currentCourses(s).map(course=>[course.id,course.name])),
