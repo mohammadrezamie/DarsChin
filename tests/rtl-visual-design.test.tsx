@@ -11,14 +11,15 @@ describe('Persian-first responsive UI guardrails',()=>{
   it('bundles Vazirmatn locally, sets RTL at document and CSS level and retains manual theme classes',()=>{
     const html=read('index.html');
     const css=read('src/index.css');
-    const fonts=read('extension/fonts.css');
+    const fonts=read('src/fonts.css');
     expect(html).toContain('lang="fa" dir="rtl"');
     expect(css).toContain('html {');
     expect(css).toContain('direction: rtl;');
     expect(css).toContain("font-family: 'Vazirmatn'");
     expect(css).toContain('@custom-variant dark');
     expect(fonts).toContain('font-display: swap');
-    expect(fonts).toContain('url(./fonts/');
+    expect(fonts).toContain("url('../extension/fonts/");
+    expect(fonts).toContain('font-weight: 100 900;');
     expect(fonts).not.toContain('fonts.googleapis.com');
   });
   it('keeps 320px layouts usable without forcing global horizontal scroll',()=>{
