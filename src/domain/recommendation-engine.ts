@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { extractSourceCourseIds } from '../utils/academic';
+import { downstreamCourseIds } from './course-demand';
 import {
   Course,
   Curriculum,
@@ -47,7 +48,7 @@ export function generateCourseRecommendations(
   // Build dependency graph: courseId -> array of dependent target courseIds
   const dependencyGraph = new Map<string, string[]>();
   for (const rule of academicRules) {
-    if (rule.curriculumId === curriculum.id) {
+    if (rule.curriculumId === curriculum.id && rule.relationshipType === 'PREREQUISITE') {
       const sourceCourseIds = extractSourceCourseIds(rule.expression);
       for (const sourceId of sourceCourseIds) {
         const dependents = dependencyGraph.get(sourceId) || [];
@@ -84,7 +85,9 @@ export function generateCourseRecommendations(
     const isRequired = classification === 'MAJOR_REQUIRED' || classification === 'TRACK_REQUIRED';
 
     // Calculate future unlocked courses
-    const unlockedCourseIds = dependencyGraph.get(courseId) || [];
+    const directDependents = dependencyGraph.get(courseId) || [];
+    const unlockedCourseIds = downstreamCourseIds(courseId, curriculum.id, academicRules)
+      .filter(id => currCourseMap.has(id) && id !== courseId);
     const unlockedCourseNames = unlockedCourseIds
       .map((id) => coursesMap.get(id)?.name)
       .filter((name): name is string => !!name);
@@ -95,10 +98,10 @@ export function generateCourseRecommendations(
     // 1. Critical path / Unlocked future courses
     if (unlockedCourseIds.length >= 3) {
       score += 25;
-      reasons.push(`پیش‌نیاز کلیدی (${unlockedCourseIds.length} درس تخصصی بعدی را باز می‌کند)`);
+      reasons.push(`طبق نمودار پیش‌نیازهای ثبت‌شده، در مسیر ${unlockedCourseIds.length} درس آینده قرار دارد (${directDependents.length} وابستگی مستقیم)`);
     } else if (unlockedCourseIds.length > 0) {
       score += 15;
-      reasons.push(`پیش‌نیاز ${unlockedCourseIds.length} درس در ترم‌های آینده است`);
+      reasons.push(`در مسیر پیش‌نیازی ${unlockedCourseIds.length} درس آینده قرار دارد؛ اولویت‌بندی پیشنهادی است، نه مجوز`);
     }
 
     // 2. Required vs Elective
