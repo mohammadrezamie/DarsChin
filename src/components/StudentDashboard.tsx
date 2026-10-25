@@ -12,7 +12,6 @@ import {
   Calendar,
   Download,
   MessageCircle,
-  Bug,
   AlertCircle,
   CheckCircle2,
   RefreshCw,
@@ -24,7 +23,6 @@ import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, 
 
 import { AcademicProfileModal } from './AcademicProfileModal';
 import { PassedCoursesManager } from './PassedCoursesManager';
-import { SupportPanel } from './SupportPanel';
 import { StudentHelpCenter } from './StudentHelpCenter';
 import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
