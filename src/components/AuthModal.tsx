@@ -47,6 +47,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [createdRecoveryKey, setCreatedRecoveryKey] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -81,6 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     setLoading(true);
     const res = await login(m, password, captchaToken);
     setLoading(false);
+    setCaptchaToken('');
+    setCaptchaAttempt(value => value + 1);
 
     if (res.success) {
       if (onLoginSuccess && res.user && res.user.roles) {
@@ -123,6 +126,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     setLoading(true);
     const res = await register(m, password, name.trim(), recoveryKey.trim() || undefined, captchaToken);
     setLoading(false);
+    setCaptchaToken('');
+    setCaptchaAttempt(value => value + 1);
 
     if (res.success) {
       if (res.recoveryKey) {
@@ -296,7 +301,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                     </div>
                   </div>
 
-                  <GuestHumanCheck action="login" token={captchaToken} onToken={setCaptchaToken} />
+                  <GuestHumanCheck key={captchaAttempt} action="login" token={captchaToken} onToken={setCaptchaToken} />
                   {/* Submit Button */}
                   <button
                     type="submit"
@@ -428,7 +433,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                     </div>
                   </div>
 
-                  <GuestHumanCheck action="register" token={captchaToken} onToken={setCaptchaToken} />
+                  <GuestHumanCheck key={captchaAttempt} action="register" token={captchaToken} onToken={setCaptchaToken} />
                   {/* Submit Button */}
                   <button
                     type="submit"
