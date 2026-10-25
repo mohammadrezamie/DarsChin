@@ -13,6 +13,9 @@ DarsChin's current stack includes a React/Vite frontend, Express API and JSON fi
 
 ## 2. Validate the selected release commit (offline checks)
 
+Before launching a real staging host, run `node scripts/staging-preflight.cjs` with the service's private environment configured. This read-only check rejects a missing JWT secret, repository-local persistence and unsafe database permissions. It **does not** start a server, migrate a database, validate actual secret entropy or replace a restore test. Details: [student workspace / staging readiness](STUDENT_WORKSPACE_STAGING_FA.md).
+
+
 ```bash
 bun run verify
 bun run smoke:api
