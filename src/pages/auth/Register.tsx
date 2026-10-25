@@ -46,13 +46,13 @@ export const Register: React.FC = () => {
   return (
     <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="flex justify-center mb-6 text-blue-600 dark:text-blue-400">
+        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
-        <h2 className="text-center text-3xl font-black text-slate-900 dark:text-white mb-2">
+        <h2 className="mb-2 text-right text-2xl font-black leading-snug text-slate-900 dark:text-white sm:text-3xl">
           ایجاد حساب کاربری
         </h2>
-        <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-right text-sm leading-7 text-slate-600 dark:text-slate-400">
           قبلاً ثبت‌نام کرده‌اید؟{' '}
           <Link to="/login" className="font-bold text-blue-600 hover:text-blue-500">
             وارد شوید
@@ -61,7 +61,7 @@ export const Register: React.FC = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-slate-900 py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-slate-200 dark:border-slate-800">
+        <div className="darschin-surface bg-white px-4 py-6 shadow-sm sm:px-8 sm:py-8 dark:bg-slate-900">
           
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
@@ -119,7 +119,7 @@ export const Register: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-70"
+              className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-70"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ثبت‌نام'}
             </button>
