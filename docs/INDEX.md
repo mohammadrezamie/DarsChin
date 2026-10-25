@@ -5,6 +5,7 @@
 | Topic | Reference |
 | --- | --- |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
+| استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | ورود بدون حساب به دمو، محدوده پایلوت برق علوم‌وتحقیقات و راه‌اندازی سریع VPS | [PILOT_LAUNCH_FA.md](PILOT_LAUNCH_FA.md) |
 | روند بررسی و تأیید فایل‌های استخراج‌شده از آموزشیار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
