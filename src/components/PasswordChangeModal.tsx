@@ -66,7 +66,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md">
-      <div className="bg-liquid-glass rounded-3xl w-full max-w-md overflow-hidden border border-white/20 dark:border-slate-700/50 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div dir="rtl" role="dialog" aria-modal="true" aria-label="تغییر رمز عبور" className="darschin-dialog darschin-page bg-liquid-glass w-full max-w-md rounded-3xl border border-white/20 shadow-2xl dark:border-slate-700/50">
         {/* Header */}
         <div className="relative bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-800/80 dark:to-slate-900/80 p-6 border-b border-slate-200/60 dark:border-slate-700/60">
           <button
