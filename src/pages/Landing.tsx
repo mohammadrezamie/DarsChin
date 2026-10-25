@@ -167,13 +167,6 @@ const Landing: React.FC = () => {
         </section>
       </main>
 
-      <footer className="border-t border-slate-800 bg-slate-950 px-4 py-10 text-center text-sm text-slate-400">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <Link to="/" className="inline-flex items-center gap-2 font-extrabold text-white"><GraduationCap className="h-5 w-5 text-blue-400" /> درس‌چین</Link>
-          <p>© ۲۰۲۶ درس‌چین · دستیار برنامه‌ریزی تحصیلی</p>
-          <div className="flex items-center gap-4"><Link to="/login" className="transition hover:text-white">ورود</Link><Link to="/register" className="transition hover:text-white">ثبت‌نام</Link></div>
-        </div>
-      </footer>
     </div>
   );
 };
