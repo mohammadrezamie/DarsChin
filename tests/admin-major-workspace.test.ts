@@ -61,15 +61,15 @@ const app=express();
 app.use(express.json());
 app.use('/api/academic',academicRouter);
 let adminToken='',studentToken='';
-const generatedIds:{degrees:string[];majors:string[];tracks:string[];campuses:string[]}={
-  degrees:[],majors:[],tracks:[],campuses:[],
+const generatedIds:{degrees:string[];majors:string[];tracks:string[];campuses:string[];courses:string[]}={
+  degrees:[],majors:[],tracks:[],campuses:[],courses:[],
 };
 const userIds=['major-admin-demo-test','major-guest-demo-test'];
 
 beforeAll(async()=>{
   await db.init(true);
   const admin:User={id:userIds[0],name:'مدیر آزمایشی',mobile:'09120000641',
-    roles:['admin'],permissions:['system.settings.manage'],
+    roles:['admin'],permissions:['system.settings.manage','course.create'],
     createdAt:new Date().toISOString()};
   const guest:User={id:userIds[1],name:'کاربر آزمایشی',mobile:'09120000642',
     roles:['student'],createdAt:new Date().toISOString()};
@@ -82,8 +82,28 @@ afterAll(()=>{
   db.data.majors=db.majors.filter(m=>!generatedIds.majors.includes(m.id));
   db.data.degreeLevels=db.degreeLevels.filter(d=>!generatedIds.degrees.includes(d.id));
   db.data.campuses=db.campuses.filter(c=>!generatedIds.campuses.includes(c.id));
+  db.data.courses=db.courses.filter(c=>!generatedIds.courses.includes(c.id));
   db.data.users=db.users.filter(u=>!userIds.includes(u.id));
   db.save();
+});
+
+describe('catalogued extra-unit field integrity',()=>{
+  it('rejects malformed exception metadata and persists an explicit exception',async()=>{
+    const body={code:'TEMP-EXTRA-20261026',name:'درس آزمایشی مازاد',
+      units:2,practicalUnits:0,category:'عمومی',isExtraUnit:true};
+    const invalid=await request(app).post('/api/academic/courses')
+      .set('Authorization',adminToken).send({...body,isExtraUnit:'yes'});
+    expect(invalid.status).toBe(400);
+    const unauthorized=await request(app).post('/api/academic/courses')
+      .set('Authorization',studentToken).send(body);
+    expect(unauthorized.status).toBe(403);
+    const created=await request(app).post('/api/academic/courses')
+      .set('Authorization',adminToken).send(body);
+    expect(created.status).toBe(200);
+    generatedIds.courses.push(created.body.data.id);
+    expect(created.body.data.isExtraUnit).toBe(true);
+    expect(db.courses.find(c=>c.id===created.body.data.id)?.isExtraUnit).toBe(true);
+  });
 });
 
 describe('named academic creation API preserves references and permissions',()=>{
