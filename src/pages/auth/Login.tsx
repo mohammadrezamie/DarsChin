@@ -69,6 +69,16 @@ export const Login: React.FC = () => {
         </p>
       </div>
 
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-900 dark:bg-blue-950/40">
+          <h3 className="text-base font-black text-blue-900 dark:text-blue-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
+          <p className="mt-1 text-xs leading-6 text-blue-800 dark:text-blue-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-blue-700 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
+            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-blue-300 bg-white px-2 text-center text-sm font-bold text-blue-900 dark:bg-slate-900 dark:text-blue-100">ورود دمو مدیر</Link>
+          </div>
+        </div>
+      </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-slate-900 py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-slate-200 dark:border-slate-800">
           
