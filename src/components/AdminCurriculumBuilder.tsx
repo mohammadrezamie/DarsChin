@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
-import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
+import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification, University, Campus, DegreeLevel } from '../types';
 import { extractSourceCourseIds } from '../utils/academic';
 
 export const AdminCurriculumBuilder: React.FC = () => {
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [degrees, setDegrees] = useState<DegreeLevel[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [newChart, setNewChart] = useState({
+    universityId: '', campusId: '', degreeLevelId: '', majorId: '',
+    entryYearId: '', version: 'draft-1', name: '',
+  });
   const [majors, setMajors] = useState<Major[]>([]);
   const [entryYears, setEntryYears] = useState<EntryYear[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -26,18 +36,24 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [currRes, majRes, yearRes, trkRes, crsRes] = await Promise.all([
+    const [currRes, majRes, yearRes, trkRes, crsRes, metaRes] = await Promise.all([
       apiRequest('/api/curriculum'),
       apiRequest('/api/academic/majors'),
       apiRequest('/api/academic/entry-years'),
       apiRequest('/api/academic/tracks'),
-      apiRequest('/api/academic/courses')
+      apiRequest('/api/academic/courses'),
+      apiRequest('/api/academic/all-meta'),
     ]);
     if (currRes.success) setCurricula(currRes.data);
     if (majRes.success) setMajors(majRes.data);
     if (yearRes.success) setEntryYears(yearRes.data);
     if (trkRes.success) setTracks(trkRes.data);
     if (crsRes.success) setCourses(crsRes.data);
+    if (metaRes.success && metaRes.data) {
+      setUniversities(metaRes.data.universities || []);
+      setCampuses(metaRes.data.campuses || []);
+      setDegrees(metaRes.data.degreeLevels || []);
+    }
     setLoading(false);
   };
 
@@ -60,6 +76,34 @@ export const AdminCurriculumBuilder: React.FC = () => {
       setActiveCourseId(null);
     }
   }, [selectedCurriculumId]);
+
+  const createCurriculum = async () => {
+    if (createBusy) return;
+    setCreateError(null);
+    if (!newChart.name.trim() || !newChart.universityId || !newChart.campusId ||
+        !newChart.degreeLevelId || !newChart.majorId || !newChart.entryYearId) {
+      setCreateError('همه مشخصات پایه چارت الزامی هستند. گرایش برای رشته‌های بدون گرایش لازم نیست.');
+      return;
+    }
+    setCreateBusy(true);
+    try {
+      const result = await apiRequest<Curriculum>('/api/curriculum', {
+        method: 'POST', body: JSON.stringify({ ...newChart, status: 'draft' }),
+      });
+      if (!result.success || !result.data) {
+        setCreateError(result.error || 'چارت پیشنویس ایجاد نشد.');
+        return;
+      }
+      await fetchData();
+      setSelectedCurriculumId(result.data.id);
+      setCreateOpen(false);
+      setNewChart({ universityId: '', campusId: '', degreeLevelId: '', majorId: '', entryYearId: '', version: 'draft-1', name: '' });
+    } catch {
+      setCreateError('اتصال به سامانه برای ایجاد چارت برقرار نشد.');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
 
   const handleAddCourse = async () => {
     if (!addCourseForm.courseId) return alert('شناسه درس الزامی است');
@@ -119,6 +163,69 @@ export const AdminCurriculumBuilder: React.FC = () => {
         <div role="note" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-7 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
           این چارت در نسخه آزمایشی از نظر مصوبه مرجع، سال ورود و اصلاحیه‌های دانشگاه آزاد هنوز تأیید رسمی نشده است. افزودن رابطه پیش‌نیاز/هم‌نیاز در پنل به معنی تأیید آیین‌نامه نیست.
         </div>
+        <button type="button" onClick={() => setCreateOpen(open => !open)}
+          aria-expanded={createOpen} className="mb-4 min-h-11 rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+          {createOpen ? 'بستن فرم تعریف چارت' : 'تعریف چارت جدید (فقط پیش‌نویس)'}
+        </button>
+        {createOpen && (
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+            <h3 className="mb-3 text-sm font-bold">مشخصات چارت براساس واحد، مقطع، رشته و سال ورود</h3>
+            <p className="mb-4 text-xs leading-6 text-slate-600 dark:text-slate-300">این فرم اجازه ثبت پیش‌نویس می‌دهد، نه انتشار مصوبه. چارت رشته ممکن است اساساً گرایش نداشته باشد؛ اجازه گرایش‌های هر واحد باید جداگانه تأیید شود.</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold">دانشگاه
+                <select aria-label="دانشگاه چارت" value={newChart.universityId}
+                  onChange={e => setNewChart(prev => ({ ...prev, universityId: e.target.value, campusId: '' }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                  <option value="">انتخاب دانشگاه</option>
+                  {universities.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold">واحد / پردیس
+                <select aria-label="واحد چارت" value={newChart.campusId}
+                  onChange={e => setNewChart(prev => ({ ...prev, campusId: e.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                  <option value="">انتخاب واحد</option>
+                  {campuses.filter(c => c.universityId === newChart.universityId).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold">مقطع
+                <select aria-label="مقطع چارت" value={newChart.degreeLevelId}
+                  onChange={e => setNewChart(prev => ({ ...prev, degreeLevelId: e.target.value, majorId: '' }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                  <option value="">انتخاب مقطع</option>
+                  {degrees.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold">رشته
+                <select aria-label="رشته چارت" value={newChart.majorId}
+                  onChange={e => setNewChart(prev => ({ ...prev, majorId: e.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                  <option value="">انتخاب رشته</option>
+                  {majors.filter(m => m.degreeLevelId === newChart.degreeLevelId).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold">سال ورود
+                <select aria-label="ورودی چارت" value={newChart.entryYearId}
+                  onChange={e => setNewChart(prev => ({ ...prev, entryYearId: e.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                  <option value="">انتخاب ورودی</option>
+                  {entryYears.map(y => <option key={y.id} value={y.id}>{y.year}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold">نسخه
+                <input aria-label="نسخه چارت" value={newChart.version} onChange={e => setNewChart(prev => ({ ...prev, version: e.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 dark:border-slate-600 dark:bg-slate-900" />
+              </label>
+              <label className="text-xs font-semibold sm:col-span-2">عنوان چارت
+                <input aria-label="عنوان چارت" value={newChart.name} onChange={e => setNewChart(prev => ({ ...prev, name: e.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 dark:border-slate-600 dark:bg-slate-900" />
+              </label>
+            </div>
+            {createError && <p role="alert" className="mt-3 text-sm text-rose-700 dark:text-rose-300">{createError}</p>}
+            <button type="button" disabled={createBusy} onClick={() => void createCurriculum()}
+              className="mt-4 min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white disabled:opacity-50">ذخیره پیش‌نویس چارت</button>
+          </div>
+        )}
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">انتخاب چارت در حال بررسی:</label>
           <select 
