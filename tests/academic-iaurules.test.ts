@@ -52,7 +52,6 @@ describe('IAU Academic Policy & Rules Engine', () => {
       academicRules: rules, passedCourses, currentOfferings: offerings
     });
     
-    console.log(JSON.stringify(res.results[0], null, 2));
     expect(res.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
     expect(res.results[0].isEligible).toBe(false);
   });
@@ -93,7 +92,7 @@ describe('IAU Academic Policy & Rules Engine', () => {
     expect(resBoth.results[0].isEligible).toBe(true);
   });
 
-  test('Final semester ignores prerequisites', () => {
+  test('Final-semester credit permission never waives prerequisites without an explicit rule', () => {
     const passedCourses: StudentPassedCourse[] = [];
     // Student is overriding to final semester
     const finalProfile = { ...profileTemplate, isFinalSemesterOverride: true };
@@ -102,8 +101,8 @@ describe('IAU Academic Policy & Rules Engine', () => {
       academicRules: rules, passedCourses, currentOfferings: offerings
     });
     
-    // Prerequisite for Math 2 is Math 1, but we are in final semester so it's ignored!
-    expect(res.results[0].overallStatus).toBe('AVAILABLE');
+    // A unit-ceiling override is not evidence that this prerequisite was passed.
+    expect(res.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
   });
 
   test('Calculate Academic Limits (Normal, Grade A, Final Semester, Extra Units)', () => {
