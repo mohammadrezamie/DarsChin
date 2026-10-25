@@ -5,7 +5,7 @@
 ## وضعیت آخرین نصب و مرزبندی
 
 - طبق آخرین گزارش ثبت‌شده، نسخهٔ **`5a6c51fe5e5453057d664b96f70ce35bd15879b6`** با ۱۹۷ از ۱۹۷ تست، TypeScript، build و smoke روی **ماشین توسعهٔ ایزوله** پاس شد؛ **این شواهد سلامت سرویس واقعی نیستند**.
-- `darschyn.service` پس از نصبِ همان بسته، ۵۵ بار restart شد، listener پورت `127.0.0.1:3001` نداشت و health fail شد. علت اصلی تا زمان دریافت journalِ پاک‌سازی‌شده مشخص نیست. توقف و غیرفعال‌کردن موقت همین سرویس به اپراتور پیشنهاد شده، ولی **اجرای آن تأیید نشده**.
+- `darschyn.service` پس از نصبِ همان بسته، ۵۵ بار restart شد، listener پورت `127.0.0.1:3001` نداشت و health fail شد. علت اصلی تا زمان دریافت journalِ پاک‌سازی‌شده مشخص نیست. طبق [کامنت جدید Issue #40](https://github.com/mohammadrezamie/DarsChin/issues/40)، مالک فرمان `sudo systemctl disable --now darschyn` را اجرا کرد و خروجی حذف لینک راه‌اندازی خودکار دریافت شد؛ **ولی هنوز خروجی مستقل `systemctl is-active` برای اثبات حالت inactive ارائه نشده است**.
 - ریلیزها: `/opt/darschyn/releases/<full-commit-sha>`، لینک فعال `/opt/darschyn/current`، کاربر `darschyn`، ENV مستقل `/etc/darschyn/darschyn.env`، دادهٔ پایدار `/var/lib/darschyn`.
 - وب و ایمیل تکین روی این VPS با Nginx/PHP/MariaDB/Stalwart فعال‌اند. به `/var/www/tna`، سرویس‌های آن، DNS، Nginx، ایمیل، دیتابیس، secretها و پورت‌های `80/443` دست نزنید. در VPS مشترک **Caddy یا Docker proxy دوم نصب/اجرا نکنید**.
 - فایل `deploy/darschyn.service.example` و `deploy/nginx-darschyn.conf.example` فقط **نمونهٔ اصلاح‌شده برای بررسی** هستند؛ جایگزینی کورکورانهٔ فایل فعلی systemd/Nginx ممنوع است. Installer اولیه که خارج از Git ساخته و روی سرور وصله شده، هنوز در این ریپو موجود نیست؛ ادعای versioned شدن آن نکنید و آن را دوباره روی نصب موجود اجرا نکنید.
