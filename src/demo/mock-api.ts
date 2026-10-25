@@ -1,4 +1,9 @@
 import { DEMO_COURSES } from './course-planner';
+import { processImportPayload } from '../domain/import-validator';
+import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
+import { extractSourceCourseIds } from '../utils/academic';
+import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
+import type { AcademicRule } from '../types';
 import type {
   ApiResponse, AcademicLimitInfo, AcademicPolicySettings, Course, CourseEligibilityResult,
   CourseOffering, StudentAcademicProfile,
@@ -9,7 +14,7 @@ import type {
  * It must never be used to authorize users or declare university eligibility.
  * Unsupported operations fail explicitly instead of pretending to succeed.
  */
-export const DEMO_API_STORE_KEY = 'darschin_browser_mock_v1';
+export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v2';
 const now = () => new Date().toISOString();
 type Row = Record<string, any>;
 interface DemoStore {
@@ -20,16 +25,19 @@ interface DemoStore {
   tickets: Row[];
   messages: Row[];
   bugs: Row[];
+  teacherRatings: TeacherRating[];
+  importBatches: Row[];
+  importRecords: Row[];
   academicSettings: AcademicPolicySettings;
 }
 const semester = { id: 'demo-term', name: 'نیمسال فرضی برای تست', year: 1405, termNumber: 1, isCurrent: true, active: true };
-const university = { id: 'demo-university', name: 'دانشگاه نمونه (غیرواقعی)', code: 'DEMO-U', active: true };
-const province = { id: 'demo-province', name: 'استان نمونه', active: true };
-const campus = { id: 'demo-campus', universityId: university.id, provinceId: province.id, type: 'PROVINCE_UNIT', name: 'واحد نمونه', code: 'DEMO-C', active: true };
-const degree = { id: 'demo-degree', name: 'کارشناسی نمونه', code: 'DEMO-BE', active: true };
-const major = { id: 'demo-major', degreeLevelId: degree.id, name: 'مهندسی برق (نمونه)', code: 'DEMO-EE', active: true };
+const university = { id: 'demo-university', name: 'دانشگاه آزاد اسلامی (محیط آزمایشی)', code: 'DEMO-U', active: true };
+const province = { id: 'demo-province', name: 'استان تهران', active: true };
+const campus = { id: 'demo-campus', universityId: university.id, provinceId: province.id, type: 'INDEPENDENT_UNIT', name: 'واحد علوم و تحقیقات (دمو)', code: 'DEMO-C', active: true };
+const degree = { id: 'demo-degree', name: 'کارشناسی پیوسته (دمو)', code: 'DEMO-BE', active: true };
+const major = { id: 'demo-major', degreeLevelId: degree.id, name: 'مهندسی برق (پایلوت آزمایشی)', code: 'DEMO-EE', active: true };
 const entryYear = { id: 'demo-entry', year: 1403, active: true };
-const curriculum = { id: 'demo-curriculum', universityId: university.id, campusId: campus.id, degreeLevelId: degree.id, majorId: major.id, entryYearId: entryYear.id, version: 'demo-1', name: 'چارت صرفاً نمایشی', status: 'active', createdAt: now() };
+const curriculum = { id: 'demo-curriculum', universityId: university.id, campusId: campus.id, degreeLevelId: degree.id, majorId: major.id, entryYearId: entryYear.id, version: 'demo-1', name: 'چارت آزمایشی کارشناسی برق، غیرمصوب', status: 'active', createdAt: now() };
 const sampleCourses: Course[] = DEMO_COURSES.map((c) => ({
   id: c.id, code: c.code, name: c.name, units: c.units,
   category: c.units === 1 ? 'آزمایشگاه' : 'اصلی', active: true,
@@ -39,6 +47,24 @@ const sampleOfferings: CourseOffering[] = DEMO_COURSES.map((c) => ({
   courseId: c.id, groupCode: '01', instructor: c.instructor, dayOfWeek: c.day,
   startTime: c.start, endTime: c.end, capacity: 40, enrolledCount: 16, source: 'manual', active: true,
 }));
+// Second synthetic class for demonstrating comparison of teachers within one course.
+sampleOfferings.push({
+  id: 'off-math2-alt', termId: semester.id, campusId: campus.id,
+  courseId: 'math2', groupCode: '02', instructor: 'استاد نمونه جایگزین',
+  dayOfWeek: 'دوشنبه', startTime: '08:00', endTime: '10:00',
+  capacity: 35, enrolledCount: 10, source: 'manual', active: true,
+});
+const sampleRatings: TeacherRating[] = sampleOfferings.flatMap((o, idx) =>
+  [1, 2, 3].map((n) => ({
+    reviewerId: `synthetic-reviewer-${n}-${o.courseId}-${o.instructor}`,
+    courseId: o.courseId, instructor: o.instructor,
+    scores: {
+      teachingClarity: Math.min(5, 3 + ((idx + n) % 3)),
+      courseOrganization: 4, assessmentFairness: idx % 2 ? 3 : 4,
+      studentSupport: 4,
+    },
+  })),
+);
 const defaults: AcademicPolicySettings = {
   normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24,
   summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24,
@@ -61,6 +87,7 @@ function initialStore(): DemoStore {
       '/api/offerings': sampleOfferings,
       '/api/curriculum': [curriculum],
       '/api/curriculum/rules': [],
+      '/api/curriculum-courses': [],
       '/api/admin/users': [{ id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] }],
     },
     profile: {
@@ -83,6 +110,9 @@ function initialStore(): DemoStore {
       description: 'این مورد کاملاً ساختگی است و فقط برای آزمایش پنل مدیریت ایجاد شده است.',
       pageContext: '/demo/student', status: 'OPEN', createdAt: '2026-10-25T00:00:00.000Z',
     }],
+    teacherRatings: sampleRatings,
+    importBatches: [],
+    importRecords: [],
     academicSettings: { ...defaults },
   }) as DemoStore;
 }
@@ -95,6 +125,11 @@ function readStore(): DemoStore {
       if (obj && typeof obj === 'object' && obj.collections &&
           typeof obj.collections === 'object' && Array.isArray(obj.passed) &&
           Array.isArray(obj.tickets) && obj.plan && obj.profile) {
+        // Upgrade older browser-only demo sessions without touching real users.
+        if (!Array.isArray(obj.teacherRatings)) obj.teacherRatings = structuredClone(sampleRatings);
+        if (!Array.isArray(obj.collections['/api/curriculum-courses'])) obj.collections['/api/curriculum-courses'] = [];
+        if (!Array.isArray(obj.importBatches)) obj.importBatches = [];
+        if (!Array.isArray(obj.importRecords)) obj.importRecords = [];
         return obj as DemoStore;
       }
     }
@@ -172,7 +207,7 @@ function demoEvaluation(s: DemoStore) {
       courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
       groupCode: o.groupCode, instructor: o.instructor, dayOfWeek: o.dayOfWeek,
       startTime: o.startTime, endTime: o.endTime, capacity: o.capacity,
-      enrolledCount: o.enrolledCount, examDate: o.examDate,
+      enrolledCount: o.enrolledCount, enrolledCountKnown: o.enrolledCountKnown, examDate: o.examDate,
       overallStatus: 'AVAILABLE', isEligible: true, canSelect: true,
       primaryReason: 'فقط دادهٔ ساختگی دمو؛ بررسی آموزشی انجام نشده است.',
       allReasons: ['فقط دادهٔ ساختگی دمو؛ بررسی آموزشی انجام نشده است.'],
@@ -211,6 +246,34 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   const path = endpoint.split('?')[0], data = bodyJson(options);
   if (!path.startsWith('/api/')) return fail('مسیر دمو نامعتبر است.');
 
+  if (path === '/api/demo/teacher-ratings') {
+    const courseId = new URL(endpoint, 'https://demo.invalid').searchParams.get('courseId');
+    if (method === 'GET') {
+      if (!courseId) return fail('شناسه درس مشخص نشده است.');
+      const instructors = (s.collections['/api/offerings'] || [])
+        .filter(o => o.courseId === courseId && o.active)
+        .map(o => String(o.instructor || ''));
+      return good(summarizeCourseTeachers(courseId, instructors, s.teacherRatings || [])) as ApiResponse<T>;
+    }
+    if (method === 'PUT') {
+      const courseId = data.courseId, instructor = data.instructor;
+      if (typeof courseId !== 'string' || typeof instructor !== 'string' || !courseId || !instructor || !validRatingScores(data.scores)
+        || Object.keys(data).some(key => !['courseId', 'instructor', 'scores'].includes(key))) {
+        return fail('فقط چهار امتیاز صحیح بین ۱ تا ۵ برای استاد و درس مجاز است؛ نظر متنی پذیرفته نمی‌شود.');
+      }
+      const offeringExists = (s.collections['/api/offerings'] || [])
+        .some(o => o.active && o.courseId === courseId && o.instructor === instructor);
+      if (!offeringExists) return fail('این استاد در گروه‌های فعال درس نمونه وجود ندارد.');
+      s.teacherRatings ||= [];
+      s.teacherRatings = s.teacherRatings.filter(r => !(r.courseId === courseId && r.instructor === instructor && r.reviewerId === 'demo-student'));
+      s.teacherRatings.push({ reviewerId: 'demo-student', courseId, instructor, scores: data.scores });
+      saveStore(s);
+      return good(summarizeCourseTeachers(courseId,
+        (s.collections['/api/offerings'] || []).filter(o => o.courseId === courseId && o.active).map(o => String(o.instructor || '')),
+        s.teacherRatings)) as ApiResponse<T>;
+    }
+    return fail('درخواست ارزشیابی دمو پشتیبانی نمی‌شود.');
+  }
   if (path === '/api/student/profile') {
     if (method === 'GET') return good({ profile: s.profile }) as ApiResponse<T>;
     if (method === 'PUT') { s.profile = { ...s.profile, ...data, userId: 'demo-student', updatedAt: now() }; saveStore(s); return good(s.profile) as ApiResponse<T>; }
@@ -296,7 +359,61 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   if (path === '/api/admin/diagnostics' && method === 'GET') return fail('سرور واقعی در محیط دمو وجود ندارد؛ عیب‌یابی سرور شبیه‌سازی نشده است.');
   if ((path === '/api/admin/audit-logs' || path === '/api/admin/error-logs') && method === 'GET') return good([]) as ApiResponse<T>;
   if (path === '/api/sync/jobs' && method === 'GET') return good([]) as ApiResponse<T>;
-  if (path === '/api/imports/batches' && method === 'GET') return good([]) as ApiResponse<T>;
+  // Browser-only upload preview: never modifies canonical offerings.
+  if (path === '/api/imports/process' && method === 'POST') {
+    const batchId = id();
+    const review = processImportPayload(data.payload, batchId, semester.id, campus.id, currentCourses(s));
+    if (!review.totalRecords) return fail(review.errors.join(' | ') || 'هیچ داده‌ای در فایل نمونه پیدا نشد.');
+    const batch = {
+      id: batchId, userId: 'demo-student', termId: semester.id, source: 'extension',
+      schemaVersion: '1.0', totalRecords: review.totalRecords, matchedRecords: review.matchedCount,
+      reviewRecords: review.reviewCount, invalidRecords: review.invalidCount, createdAt: now(),
+    };
+    s.importBatches ||= [];
+    s.importRecords ||= [];
+    s.importBatches.unshift(batch);
+    s.importRecords.push(...review.importRecords);
+    saveStore(s);
+    return good({
+      batch, records: review.importRecords,
+      summary: { total: review.totalRecords, matched: review.matchedCount, review: review.reviewCount,
+        invalid: review.invalidCount },
+      createdOfferingsCount: 0, requiresReview: true,
+      message: 'بسته نمونه ذخیره شد؛ هیچ گروه درسی واقعی یا ساختگی به فهرست ارائه‌های اصلی افزوده نشد.',
+    }) as ApiResponse<T>;
+  }
+  if (path === '/api/imports/batches' && method === 'GET') return good(s.importBatches || []) as ApiResponse<T>;
+  if (path.startsWith('/api/imports/batches/') && method === 'GET') {
+    const id = path.split('/').at(-1);
+    const batch = (s.importBatches || []).find(row => row.id === id);
+    if (!batch) return fail('بسته آزمایشی یافت نشد.');
+    return good({ batch, records: (s.importRecords || []).filter(row => row.batchId === id) }) as ApiResponse<T>;
+  }
+  const importReviewRoute = path.match(/^\/api\/imports\/batches\/([^/]+)\/records\/([^/]+)\/review$/);
+  if (importReviewRoute && method === 'PUT') {
+    const batch = (s.importBatches || []).find(item => item.id === importReviewRoute[1]);
+    const record = (s.importRecords || []).find(item => item.batchId === batch?.id && item.id === importReviewRoute[2]);
+    if (!batch || !record) return fail('ردیف مربوط به این بسته در دمو پیدا نشد.');
+    const validKeys = data.action === 'CONFIRM_MATCH'
+      ? ['action', 'courseId', 'reason'] : ['action', 'reason'];
+    if (!['CONFIRM_MATCH', 'REJECT_MATCH'].includes(data.action) ||
+        Object.keys(data).some(key => !validKeys.includes(key)) ||
+        typeof data.reason !== 'string' || data.reason.trim().length < 10 ||
+        data.reason.trim().length > 500) {
+      return fail('درخواست بررسی باید دارای دلیل معتبر و بدون فیلد اضافی باشد.');
+    }
+    if (data.action === 'CONFIRM_MATCH' && !currentCourses(s)
+      .some(course => course.id === data.courseId && course.active !== false)) {
+      return fail('درس مقصد معتبر در کاتالوگ دمو یافت نشد.');
+    }
+    record.reviewDecision = data.action === 'CONFIRM_MATCH' ? 'COURSE_MATCH_CONFIRMED' : 'REJECTED';
+    record.matchedCourseId = data.action === 'CONFIRM_MATCH' ? data.courseId : null;
+    record.reviewNotes = data.reason.trim();
+    record.reviewedBy = 'demo-manager';
+    record.reviewedAt = now();
+    saveStore(s);
+    return good(record) as ApiResponse<T>;
+  }
   if (path === '/api/support/tickets') {
     if(method==='GET') return good(s.tickets) as ApiResponse<T>;
     if(method==='POST'){const t={id:id(),userId:'demo-student',subject:String(data.subject||'درخواست دمو'),status:'OPEN',createdAt:now(),updatedAt:now()};s.tickets.push(t);saveStore(s);return good(t) as ApiResponse<T>;}
@@ -334,11 +451,108 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if (path === '/api/support/admin/tickets' && method === 'GET') return good(s.tickets) as ApiResponse<T>;
   if (path === '/api/support/admin/bugs' && method === 'GET') return good(s.bugs) as ApiResponse<T>;
-  if (path === '/api/curriculum' && method === 'GET') return good(s.collections['/api/curriculum']) as ApiResponse<T>;
-  if (path.match(/^\/api\/curriculum\/[^/]+\/full$/) && method === 'GET') return good({ curriculum, courses: [], rules: [] }) as ApiResponse<T>;
-  if (path.match(/^\/api\/curriculum\/[^/]+\/courses/)) {
-    if(method==='GET') return good([]) as ApiResponse<T>;
-    return fail('ویرایش روابط آموزشی در دمو فعال نیست؛ نیازمند تأیید قوانین دانشگاه است.');
+  // Draft-only mock curriculum editor: changes are local and have NO effect
+  // on demo eligibility or any actual academic regulations.
+  if (path === '/api/curriculum') {
+    if (method === 'GET') return good(s.collections['/api/curriculum']) as ApiResponse<T>;
+    if (method === 'POST') {
+      const required = ['universityId', 'campusId', 'degreeLevelId', 'majorId', 'entryYearId', 'name'];
+      if (data.status !== 'draft' || required.some(key => typeof data[key] !== 'string' || !data[key].trim())) {
+        return fail('چارت دمو فقط به صورت پیش‌نویس و با مشخصات کامل ساخته می‌شود.');
+      }
+      const found = (key: string, value: string) => (s.collections[key] || []).find(row => row.id === value);
+      const match = found('/api/academic/campuses', data.campusId)?.universityId === data.universityId &&
+        found('/api/academic/majors', data.majorId)?.degreeLevelId === data.degreeLevelId &&
+        Boolean(found('/api/academic/degrees', data.degreeLevelId)) &&
+        Boolean(found('/api/academic/entry-years', data.entryYearId)) &&
+        Boolean(found('/api/academic/universities', data.universityId));
+      if (!match) return fail('ترکیب واحد، رشته، مقطع و ورودی در دمو معتبر نیست.');
+      const version = typeof data.version === 'string' && data.version.trim() ? data.version.trim() : 'draft-1';
+      if (s.collections['/api/curriculum'].some(row => row.campusId === data.campusId &&
+        row.majorId === data.majorId && row.entryYearId === data.entryYearId && row.degreeLevelId === data.degreeLevelId &&
+        row.version === version)) return fail('نسخه تکراری چارت آزمایشی.');
+      const row = { ...data, id: id(), version, status: 'draft', createdAt: now() };
+      s.collections['/api/curriculum'].push(row);
+      saveStore(s);
+      return good(row) as ApiResponse<T>;
+    }
+  }
+  const fullChartMatch = path.match(/^\/api\/curriculum\/([^/]+)\/full$/);
+  if (fullChartMatch && method === 'GET') {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === fullChartMatch[1]);
+    if (!chart) return fail('چارت نمونه یافت نشد.');
+    const linked = (s.collections['/api/curriculum-courses'] || [])
+      .filter(row => row.curriculumId === chart.id)
+      .map(row => ({ ...row, course: currentCourses(s).find(course => course.id === row.courseId) }));
+    const rules = (s.collections['/api/curriculum/rules'] || []).filter(row => row.curriculumId === chart.id);
+    return good({ curriculum: chart, courses: linked,
+      prerequisites: rules.filter(rule => rule.relationshipType === 'PREREQUISITE'),
+      corequisites: rules.filter(rule => rule.relationshipType === 'COREQUISITE') }) as ApiResponse<T>;
+  }
+  const chartCourseMatch = path.match(/^\/api\/curriculum\/([^/]+)\/courses(?:\/([^/]+))?$/);
+  if (chartCourseMatch) {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === chartCourseMatch[1]);
+    if (!chart) return fail('چارت نمونه یافت نشد.');
+    s.collections['/api/curriculum-courses'] ||= [];
+    const rows = s.collections['/api/curriculum-courses'];
+    if (method === 'GET') return good(rows.filter(row => row.curriculumId === chart.id)) as ApiResponse<T>;
+    if (chart.status !== 'draft') return fail('فقط چارت پیش‌نویس نمونه قابل ویرایش است.');
+    if (method === 'POST') {
+      if (!currentCourses(s).some(course => course.id === data.courseId) ||
+          !['MAJOR_REQUIRED', 'MAJOR_ELECTIVE', 'TRACK_REQUIRED', 'TRACK_ELECTIVE'].includes(data.classification) ||
+          (data.trackId && !(s.collections['/api/academic/tracks'] || []).some(track => track.id === data.trackId && track.majorId === chart.majorId)) ||
+          rows.some(row => row.curriculumId === chart.id && row.courseId === data.courseId && (row.trackId || '') === (data.trackId || ''))) {
+        return fail('درس، گرایش یا رابطه تکراری این پیش‌نویس نامعتبر است.');
+      }
+      const row = { id: id(), curriculumId: chart.id, courseId: data.courseId,
+        trackId: data.trackId || null, classification: data.classification,
+        suggestedSemester: Number(data.suggestedSemester || 1), active: true };
+      rows.push(row); saveStore(s); return good(row) as ApiResponse<T>;
+    }
+    if (method === 'DELETE' && chartCourseMatch[2]) {
+      const courseId = chartCourseMatch[2];
+      if (!rows.some(row => row.curriculumId === chart.id && row.courseId === courseId)) return fail('درس در چارت پیدا نشد.');
+      s.collections['/api/curriculum-courses'] = rows.filter(row => !(row.curriculumId === chart.id && row.courseId === courseId));
+      s.collections['/api/curriculum/rules'] = (s.collections['/api/curriculum/rules'] || [])
+        .filter(rule => !(rule.curriculumId === chart.id && (rule.targetCourseId === courseId ||
+          extractSourceCourseIds(rule.expression).includes(courseId))));
+      saveStore(s);
+      return good({}) as ApiResponse<T>;
+    }
+  }
+  if (path === '/api/curriculum/rules' && method === 'POST') {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === data.curriculumId);
+    if (!chart || chart.status !== 'draft' ||
+        !['PREREQUISITE', 'COREQUISITE'].includes(data.relationshipType) ||
+        typeof data.targetCourseId !== 'string' || !currentCourses(s).some(course => course.id === data.targetCourseId) ||
+        !data.expression || !['COURSE', 'GROUP'].includes(data.expression.type)) {
+      return fail('تعریف رابطه صرفاً برای چارت پیشنویس با درس مقصد و ساختار معتبر مجاز است.');
+    }
+    const sources = extractSourceCourseIds(data.expression);
+    const assigned = new Set((s.collections['/api/curriculum-courses'] || [])
+      .filter(row => row.curriculumId === chart.id).map(row => row.courseId));
+    if (!assigned.has(data.targetCourseId) || !sources.length ||
+        sources.some(source => !assigned.has(source))) {
+      return fail('درس مقصد و تمام پیش‌نیازها/هم‌نیازها باید ابتدا در همین پیش‌نویس چارت ثبت شده باشند.');
+    }
+    s.collections['/api/curriculum/rules'] ||= [];
+    const existingRules = s.collections['/api/curriculum/rules'] as AcademicRule[];
+    if (data.relationshipType === 'PREREQUISITE' &&
+        createsPrerequisiteCycle(chart.id, data.targetCourseId, data.expression, existingRules)) {
+      return fail('رابطه پیش‌نیاز چرخه ایجاد می‌کند.');
+    }
+    const row = { id: id(), curriculumId: chart.id, targetCourseId: data.targetCourseId,
+      relationshipType: data.relationshipType, expression: data.expression, notes: 'صرفاً آزمایشی — تأییدنشده' };
+    existingRules.push(row); saveStore(s); return good(row) as ApiResponse<T>;
+  }
+  const removeRuleMatch = path.match(/^\/api\/curriculum\/rules\/([^/]+)$/);
+  if (removeRuleMatch && method === 'DELETE') {
+    const rules = s.collections['/api/curriculum/rules'] || [];
+    const rule = rules.find(row => row.id === removeRuleMatch[1]);
+    const chart = s.collections['/api/curriculum'].find(row => row.id === rule?.curriculumId);
+    if (!rule || chart?.status !== 'draft') return fail('رابطه در پیش‌نویس یافت نشد.');
+    s.collections['/api/curriculum/rules'] = rules.filter(row => row.id !== rule.id);
+    saveStore(s); return good({}) as ApiResponse<T>;
   }
   const route=collectionRoute(path);
   if (route) {
