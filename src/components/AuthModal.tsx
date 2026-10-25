@@ -30,7 +30,7 @@ interface AuthModalProps {
 type AuthMode = 'login' | 'register' | 'recover';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const { login, register, recoverPassword } = useAuth();
+  const { login, register } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
 
@@ -141,36 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     }
   };
 
-  // 3. Handle Password Recovery
-  const handleRecover = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMsg(null);
-
-    const m = mobile.trim();
-    if (!m || m.length < 10) {
-      setError('شماره موبایل نامعتبر است.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('رمز عبور جدید باید حداقل ۶ کاراکتر باشد.');
-      return;
-    }
-
-    setLoading(true);
-    const res = await recoverPassword(m, recoveryKey.trim(), password);
-    setLoading(false);
-
-    if (res.success) {
-      setSuccessMsg(res.message || 'رمز عبور با موفقیت بازنشانی شد. اکنون وارد شوید.');
-      setTimeout(() => {
-        resetForm('login');
-      }, 2000);
-    } else {
-      setError(res.error || 'خطا در بازنشانی رمز عبور.');
-    }
-  };
+  // Password reset is a separate OTP-protected page; do not show a dead or unverified recovery form.
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md">
@@ -460,92 +431,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                 </form>
               )}
 
-              {/* ---------------- RECOVERY FORM ---------------- */}
+              {/* ---------------- RECOVERY PATH ---------------- */}
               {mode === 'recover' && (
-                <form onSubmit={handleRecover} className="space-y-4">
-                  {/* Mobile Input */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">شماره موبایل حساب</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Phone className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="tel"
-                        dir="ltr"
-                        required
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
-                        placeholder="09123456789"
-                        className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pr-10 pl-4 text-slate-900 dark:text-white text-left font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Recovery Key Input */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">کلید بازیابی امنیتی</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                        <KeyRound className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="text"
-                        value={recoveryKey}
-                        onChange={(e) => setRecoveryKey(e.target.value)}
-                        placeholder="کلید امنیتی صادرشده هنگام ثبت‌نام"
-                        className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pr-10 pl-4 text-slate-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* New Password Input */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">رمز عبور جدید</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        dir="ltr"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="حداقل ۶ کاراکتر"
-                        className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pr-10 pl-10 text-slate-900 dark:text-white text-left font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading || !mobile || !password}
-                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-900/50 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 text-sm"
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                    بازنشانی رمز عبور
+                <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-right dark:border-blue-900 dark:bg-blue-950/30">
+                  <p className="text-sm leading-7 text-slate-700 dark:text-slate-200">
+                    بازیابی رمز از طریق تأیید شماره موبایل و کد یک‌بارمصرف انجام می‌شود.
+                    برای امنیت حساب، فرم قدیمیِ بدون تأیید پیامکی دیگر استفاده نمی‌شود.
+                  </p>
+                  <a href="/forgot-password"
+                    className="flex min-h-11 items-center justify-center rounded-xl bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
+                    ادامه به بازیابی امن رمز عبور
+                  </a>
+                  <button type="button" onClick={() => resetForm('login')}
+                    className="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-100">
+                    بازگشت به ورود
                   </button>
-
-                  {/* Back to Login */}
-                  <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800/80">
-                    <button
-                      type="button"
-                      onClick={() => resetForm('login')}
-                      className="font-bold text-xs text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                    >
-                      بازگشت به صفحه ورود
-                    </button>
-                  </div>
-                </form>
+                </div>
               )}
             </>
           )}
