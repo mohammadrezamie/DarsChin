@@ -22,6 +22,7 @@ import {
   MapPin,
   GitFork,
   FileSpreadsheet, FileDown,
+  BarChart3,
   AlertTriangle,
   RefreshCw,
   Calendar,
@@ -46,6 +47,7 @@ import { AdminDiagnostics } from './AdminDiagnostics';
 import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
 import { AdminImportCenter } from './AdminImportCenter';
+import { DemandWorkspace } from './DemandWorkspace';
 import { apiRequest } from '../utils/api';
 
 interface AdminStats {
@@ -185,6 +187,7 @@ export const AdminDashboard: React.FC = () => {
         { id: 'terms' as AdminTab, label: 'نیمسال‌های تحصیلی', icon: Clock },
         { id: 'offerings' as AdminTab, label: 'ارائه‌های ترمی', icon: Layers },
         { id: 'imports' as AdminTab, label: 'پایش داده‌های ورودی', icon: FileDown },
+        { id: 'demand' as AdminTab, label: 'نیازسنجی و گزارش مدیر گروه', icon: BarChart3 },
         ...(isSuperAdmin ? [{ id: 'academic-settings' as AdminTab, label: 'آیین‌نامه و سقف واحدها', icon: SlidersHorizontal }] : []),
       ],
     },
@@ -741,6 +744,9 @@ export const AdminDashboard: React.FC = () => {
             ]}
           />
         )}
+
+        {/* Department demand collection is independent from live course registration. */}
+        {activeTab === 'demand' && <DemandWorkspace role="admin" />}
 
         {/* 14. ACADEMIC POLICY & FINAL SEMESTER SETTINGS */}
         {activeTab === 'academic-settings' && isSuperAdmin && <AdminAcademicSettings />}
