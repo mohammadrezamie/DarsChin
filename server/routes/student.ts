@@ -156,7 +156,7 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
 // histories may include repeated attempts: totals count each passed course once.
 const isPassedAttempt = (p:StudentPassedCourse):boolean =>
   p.status!=='FAILED' && p.status!=='ABSENT' &&
-  (p.status==='PASSED' || p.grade===undefined || (Number.isFinite(p.grade) && p.grade>=10));
+  (p.grade===undefined || (Number.isFinite(p.grade) && p.grade>=10));
 
 studentRouter.get('/passed-courses', authenticate, (req:AuthenticatedRequest,res)=>{
   const userId=req.user!.id;
