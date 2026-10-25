@@ -14,7 +14,13 @@ export const eligibilityRouter = Router();
 eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { plannedCourseIds = [] } = req.body;
+    const { plannedCourseIds = [] } = req.body || {};
+    if (!Array.isArray(plannedCourseIds) || plannedCourseIds.length > 100 ||
+        plannedCourseIds.some((id:unknown) => typeof id !== 'string' || id.length > 160)) {
+      return res.status(400).json({
+        success:false,error:'فهرست گروه‌های درسی برای ارزیابی معتبر نیست.',
+      });
+    }
 
     // Get student profile
     const profile = db.studentProfiles.find((p) => p.userId === userId);
@@ -26,26 +32,29 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     }
 
     // Find student's curriculum
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
+    const curriculum = db.curricula.find(c =>
+      c.status === 'active' &&
+      c.universityId === profile.universityId &&
+      c.campusId === profile.campusId &&
+      c.degreeLevelId === profile.degreeLevelId &&
+      c.majorId === profile.majorId &&
+      c.entryYearId === profile.entryYearId
+    ) || null;
 
     if (!curriculum) {
       return res.status(400).json({
         success: false,
-        error: 'هیچ چارت درسی مصوبی برای رشته و سال ورود شما یافت نشد.',
+        error: 'برای واحد دانشگاهی، مقطع، رشته و ورودی شما چارت فعال معتبری یافت نشد. اطلاعات پروفایل یا چارت را بررسی کنید.',
       });
     }
 
     // Filter relevant offerings for the term and campus
     const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-    const relevantOfferings = db.courseOfferings.filter(
-      (o) => o.termId === currentTermId && o.active
+    const relevantOfferings = db.courseOfferings.filter(o =>
+      o.termId === currentTermId &&
+      o.campusId === profile.campusId &&
+      o.active !== false
     );
-    console.log("EVAL Offerings count:", relevantOfferings.length, "TermId:", currentTermId);
     
 
     // Get student passed courses
@@ -66,7 +75,6 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     });
 
     // Also compute recommendations for eligible courses
-    console.log("Eval Res count:", report?.results?.length);
     const recommendations = generateCourseRecommendations({
       curriculum,
       curriculumCourses: db.curriculumCourses,
@@ -97,6 +105,7 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success:false,
+      error:'در ارزیابی آموزشی خطای داخلی رخ داد؛ لطفاً دوباره تلاش کنید.' });
   }
 });
