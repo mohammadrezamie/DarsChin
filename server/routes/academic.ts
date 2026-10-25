@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
+import { extractSourceCourseIds } from '../../src/utils/academic';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
@@ -332,7 +333,8 @@ academicRouter.delete('/courses/:id', authenticate, requirePermission('course.de
       db.demandSurveys.some(s => s.courseIds.includes(req.params.id)) ||
       db.studentPassedCourses.some(p => p.courseId === req.params.id) ||
       db.courseOfferings.some(o => o.courseId === req.params.id) ||
-      db.academicRules.some(r => r.targetCourseId === req.params.id)) {
+      db.academicRules.some(r => r.targetCourseId === req.params.id ||
+        extractSourceCourseIds(r.expression).includes(req.params.id))) {
     return res.status(409).json({
       success: false,
       error: 'این درس به چارت، سوابق دانشجو، ارائه یا نیازسنجی وابسته است؛ برای حفظ سوابق قابل حذف مستقیم نیست.',
