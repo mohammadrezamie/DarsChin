@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { NewCurriculumForm } from './NewCurriculumForm';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
@@ -107,15 +108,20 @@ export const AdminCurriculumBuilder: React.FC = () => {
   if (loading && !curricula.length) return <div className="p-8 text-center">در حال بارگذاری...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xs border border-slate-200 dark:border-slate-800">
+    <div dir="rtl" className="darschin-page space-y-4">
+      <NewCurriculumForm onCreated={(chart) => {
+        setCurricula(prev => [...prev, chart]);
+        setSelectedCurriculumId(chart.id);
+        void fetchData();
+      }} />
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <Layers className="w-5 h-5 text-indigo-500" />
           مدیریت ساختار چارت تحصیلی
         </h2>
         
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">انتخاب چارت مصوب:</label>
+          <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
           <select 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-indigo-500"
             value={selectedCurriculumId || ''}
@@ -123,7 +129,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
           >
             <option value="">-- یک چارت انتخاب کنید --</option>
             {curricula.map(c => (
-              <option key={c.id} value={c.id}>{c.name} ({c.version})</option>
+              <option key={c.id} value={c.id}>{c.name} · {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
             ))}
           </select>
         </div>
