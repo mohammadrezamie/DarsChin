@@ -121,8 +121,24 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
   const termId = body.termId ?? studentProfile?.currentTermId ?? currentTerm?.id;
   const requestedCampusId = body.campusId;
   const campusOverrideAllowed =
-    Array.isArray(req.user?.roles) && req.user.roles.includes('super-admin') ||
+    (Array.isArray(req.user?.roles) && req.user.roles.includes('super-admin')) ||
     Boolean(req.user?.permissions?.includes('admin.panel.access'));
+
+  // TermId is untrusted request data too. Students can only submit for their
+  // own configured/current term; a valid ID for another semester is not enough.
+  if (!campusOverrideAllowed) {
+    if (!studentProfile?.campusId) {
+      return res.status(403).json({
+        success: false, error: 'ابتدا واحد دانشگاهی معتبر خود را در پرونده تحصیلی ثبت کنید.',
+      });
+    }
+    const allowedTermId = studentProfile.currentTermId || currentTerm?.id;
+    if (!allowedTermId || termId !== allowedTermId) {
+      return res.status(403).json({
+        success: false, error: 'همگام‌سازی دانشجو فقط برای نیمسال ثبت‌شده در پرونده تحصیلی مجاز است.',
+      });
+    }
+  }
 
   // Student syncs must stay within the campus attached to their own profile.
   // The browser extension normally omits campusId and relies on this profile value.
