@@ -219,6 +219,8 @@ export const AdminImportCenter: React.FC = () => {
                         <button type="button" onClick={() => void handleExpand(batch.id, true)} className="min-h-11 rounded-lg border px-3 font-bold">تلاش دوباره</button>
                       </div>
                     )}
+                    {reviewError && <p role="alert" className="mb-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{reviewError}</p>}
+                    {reviewMessage && <p role="status" className="mb-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{reviewMessage}</p>}
                     {!recordsLoading && !recordsError && (
                       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                         {records.map(record => {
@@ -234,6 +236,55 @@ export const AdminImportCenter: React.FC = () => {
                               </p>
                               <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">{record.reviewReason || 'توضیحی ثبت نشده است.'}</p>
                               {record.matchedCourseId && <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">شناسه پیشنهادی: {record.matchedCourseId}</p>}
+                              {record.reviewDecision && (
+                                <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs leading-6 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                                  {record.reviewDecision === 'COURSE_MATCH_CONFIRMED' ? 'نگاشت درس توسط مدیر بررسی و تأیید شده' : 'نگاشت این ردیف توسط مدیر رد شده'}
+                                  {record.reviewNotes && <span className="block">دلیل: {record.reviewNotes}</span>}
+                                  <span className="block">این تصمیم هنوز هیچ گروهی را منتشر نمی‌کند.</span>
+                                </p>
+                              )}
+                              <details className="mt-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                                <summary className="cursor-pointer text-xs font-bold text-blue-800 dark:text-blue-200">
+                                  ثبت / اصلاح تصمیم نگاشت
+                                </summary>
+                                <p className="mt-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                                  این عملیات فقط نگاشت کاتالوگ را بررسی می‌کند؛ زمان کلاس و صحت ارائه باید مستقل تأیید شوند.
+                                </p>
+                                <label className="mt-3 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  درس مقصد کاتالوگ
+                                  <select aria-label={`درس مقصد برای ${record.rawData?.courseName || record.id}`}
+                                    value={reviewDrafts[record.id]?.courseId ?? record.matchedCourseId ?? ''}
+                                    onChange={event => updateDraft(record, { courseId: event.target.value })}
+                                    className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm dark:border-slate-600 dark:bg-slate-800">
+                                    <option value="">درس مقصد را انتخاب کنید</option>
+                                    {courses.filter(course => course.active !== false).map(course => (
+                                      <option key={course.id} value={course.id}>{course.code} — {course.name}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <label className="mt-3 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  دلیل مستند تصمیم (حداقل ۱۰ نویسه)
+                                  <textarea aria-label={`دلیل بررسی ${record.rawData?.courseName || record.id}`}
+                                    value={reviewDrafts[record.id]?.reason || ''}
+                                    onChange={event => updateDraft(record, { reason: event.target.value })}
+                                    maxLength={500} rows={2}
+                                    placeholder="مثلاً کد مصوب و عنوان درس با منبع بررسی شد..."
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm dark:border-slate-600 dark:bg-slate-800" />
+                                </label>
+                                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  <button type="button"
+                                    disabled={reviewBusyId !== null || courses.length === 0}
+                                    onClick={() => void reviewRecord(record, 'CONFIRM_MATCH')}
+                                    className="min-h-11 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+                                    {reviewBusyId === record.id ? 'در حال ثبت…' : 'تأیید نگاشت (بدون انتشار)'}
+                                  </button>
+                                  <button type="button" disabled={reviewBusyId !== null}
+                                    onClick={() => void reviewRecord(record, 'REJECT_MATCH')}
+                                    className="min-h-11 rounded-lg border border-rose-300 px-3 text-xs font-bold text-rose-800 disabled:opacity-50 dark:border-rose-700 dark:text-rose-300">
+                                    رد نگاشت با دلیل
+                                  </button>
+                                </div>
+                              </details>
                             </div>
                           );
                         })}
