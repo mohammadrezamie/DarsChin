@@ -21,7 +21,8 @@ const surveySchema = z.object({
   majorId: identifier,
   curriculumId: identifier,
   entryYearIds: z.array(identifier).max(30).default([]),
-  trackIds: z.array(identifier).max(30).default([]),
+  // One academic cohort and at most one chosen track per survey.
+  trackIds: z.array(identifier).max(1).default([]),
   courseIds: z.array(identifier).min(1).max(100),
   recommendedMinimumByCourse: z.record(z.string(), z.number().int().min(0).max(500)).default({}),
   startsAt: z.string().datetime().optional(),
@@ -75,12 +76,14 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     c.universityId === x.universityId && c.campusId === x.campusId &&
     c.degreeLevelId === x.degreeLevelId && c.majorId === x.majorId && c.status !== 'archived');
   if (!validScope || !curriculum) return failure(res, 400, 'حوزه آموزشی، نیمسال یا چارت هدف معتبر نیست.');
-  if (x.entryYearIds.some(y => y !== curriculum.entryYearId || !db.entryYears.some(e => e.id === y))) ||
-      x.trackIds.some(id => !db.tracks.some(t => t.id === id && t.majorId === x.majorId))) {
+  if (x.entryYearIds.length !== 1 || x.entryYearIds[0] !== curriculum.entryYearId ||
+      !db.entryYears.some(e => e.id === curriculum.entryYearId && e.active) ||
+      x.trackIds.some(id => !db.tracks.some(t => t.id === id && t.majorId === x.majorId && t.active))) {
     return failure(res, 400, 'ورودی یا گرایش خارج از حوزهٔ چارت است.');
   }
+  // Cohort-specific chart; track-specific courses require the chosen track.
   const availableIds = new Set(db.curriculumCourses.filter(cc => cc.curriculumId === curriculum.id &&
-    cc.active !== false).map(cc => cc.courseId));
+    cc.active !== false && (!cc.trackId || x.trackIds.includes(cc.trackId))).map(cc => cc.courseId));
   if (new Set(x.courseIds).size !== x.courseIds.length ||
       x.courseIds.some(id => !availableIds.has(id) || !db.courses.some(c => c.id === id && c.active)) ||
       Object.keys(x.recommendedMinimumByCourse).some(id => !x.courseIds.includes(id))) {
