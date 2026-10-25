@@ -261,24 +261,19 @@ curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.man
   res.json({ success: true, data: enriched });
 });
 
-// Helper for cycle detection
-function hasCycle(targetCourseId, expression, allRules, visited = new Set()) {
-  if (visited.has(targetCourseId)) return true;
-  visited.add(targetCourseId);
-  
-  const sourceCourseIds = extractSourceCourseIds(expression);
-  for (const sourceId of sourceCourseIds) {
-    if (sourceId === targetCourseId) return true; // Direct self-reference
-    
-    // Check downstream
-    const sourceRules = allRules.filter(r => r.targetCourseId === sourceId);
-    for (const sr of sourceRules) {
-      if (hasCycle(targetCourseId, sr.expression, allRules, new Set(visited))) {
-        return true;
-      }
-    }
-  }
-  return false;
+// Dependency-cycle checks are scoped to one curriculum. Numerical thresholds
+// do not contribute edges, and each traversal starts from the referenced course.
+function hasCycle(target: string, expression: AcademicRule['expression'],
+  rules: AcademicRule[], curriculumId: string): boolean {
+  const reachesTarget = (courseId: string, visited: Set<string>): boolean => {
+    if (courseId === target) return true;
+    if (visited.has(courseId)) return false;
+    visited.add(courseId);
+    return rules.filter(rule => rule.curriculumId === curriculumId && rule.targetCourseId === courseId)
+      .some(rule => extractSourceCourseIds(rule.expression)
+        .some(source => reachesTarget(source, visited)));
+  };
+  return extractSourceCourseIds(expression).some(source => reachesTarget(source, new Set()));
 }
 
 // Admin: Add Academic Rule
@@ -295,7 +290,7 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   } = req.body;
 
   // Cycle Detection
-  if (hasCycle(targetCourseId, expression, db.data.academicRules)) {
+  if (hasCycle(targetCourseId, expression, db.data.academicRules, curriculumId)) {
     return res.status(400).json({ success: false, error: 'تعریف این قانون باعث ایجاد حلقه (Circular Dependency) می‌شود و مجاز نیست.' });
   }
 
