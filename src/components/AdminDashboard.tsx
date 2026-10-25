@@ -3,6 +3,8 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { resolveAdminTab, type AdminTab } from '../utils/admin-navigation';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield,
@@ -30,6 +32,9 @@ import {
   SlidersHorizontal,
   Menu,
   X,
+  ChevronLeft,
+  PanelRightClose,
+  Search,
 } from 'lucide-react';
 import { AdminCrudTable, Column } from './AdminCrudTable';
 import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
@@ -42,30 +47,6 @@ import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
 import { AdminImportCenter } from './AdminImportCenter';
 import { apiRequest } from '../utils/api';
-
-type AdminTab =
-  | 'overview'
-  // Organization
-  | 'provinces'
-  | 'campuses'
-  // Academic Structure
-  | 'degrees'
-  | 'majors'
-  | 'tracks'
-  | 'entry-years'
-  | 'curricula'
-  // Academic Data
-  | 'courses'
-  | 'academic-rules'
-  | 'terms'
-  | 'offerings'
-  | 'academic-settings'
-  | 'imports'
-  // Operations
-  | 'users'
-  | 'support'
-  | 'diagnostics'
-  | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -82,34 +63,72 @@ interface AdminStats {
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
-  const [sectionsMenuOpen, setSectionsMenuOpen] = useState(false);
-  const sectionsTriggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!sectionsMenuOpen) return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSectionsMenuOpen(false);
-        sectionsTriggerRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [sectionsMenuOpen]);
+  const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [navigationSearch, setNavigationSearch] = useState('');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileCloseRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = mobileDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   const isSuperAdmin = user?.roles?.includes('super-admin');
-  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin;
+  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin || user?.permissions?.includes('admin.panel.access');
+  const activeTab = resolveAdminTab(searchParams.get('tab'), Boolean(isSuperAdmin));
 
   const fetchStats = async () => {
     setLoadingStats(true);
-    const res = await apiRequest<AdminStats>('/api/admin/stats');
-    if (res.success && res.data) {
-      setStats(res.data);
+    setStatsError(null);
+    try {
+      const res = await apiRequest<AdminStats>('/api/admin/stats');
+      if (res.success && res.data) {
+        setStats(res.data);
+      } else {
+        setStats(null);
+        setStatsError(res.error || 'دریافت آمار مدیریت امکان‌پذیر نیست.');
+      }
+    } catch {
+      setStats(null);
+      setStatsError('ارتباط با سرویس آمار برقرار نشد.');
+    } finally {
+      setLoadingStats(false);
     }
-    setLoadingStats(false);
   };
 
   useEffect(() => {
@@ -182,134 +201,179 @@ export const AdminDashboard: React.FC = () => {
     },
   ];
 
+  const activeNavigation = navGroups.flatMap(group => group.items).find(item => item.id === activeTab);
+  const filteredNavGroups = navGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item =>
+        (group.title + ' ' + item.label).toLocaleLowerCase('fa').includes(navigationSearch.trim().toLocaleLowerCase('fa')),
+      ),
+    }))
+    .filter(group => group.items.length > 0);
+
+  const selectTab = (id: AdminTab) => {
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      if (id === 'overview') next.delete('tab');
+      else next.set('tab', id);
+      return next;
+    });
+    setMobileMenuOpen(false);
+    setNavigationSearch('');
+    requestAnimationFrame(() => sectionHeadingRef.current?.focus());
+  };
+
+  const navigation = (
+    <nav aria-label="بخش‌های پنل مدیریت" className="space-y-5">
+      <div className="relative">
+        <Search aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          aria-label="جست‌وجوی بخش‌های مدیریت"
+          placeholder="جست‌وجوی بخش‌ها…"
+          value={navigationSearch}
+          onChange={event => setNavigationSearch(event.target.value)}
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+        />
+      </div>
+      {filteredNavGroups.length === 0 && (
+        <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">بخشی با این عبارت پیدا نشد.</p>
+      )}
+      {filteredNavGroups.map(group => (
+        <div key={group.title}>
+          <h3 className="mb-2 px-3 text-[11px] font-extrabold tracking-wide text-slate-500 dark:text-slate-400">{group.title}</h3>
+          <div className="space-y-1">
+            {group.items.map(item => {
+              const ItemIcon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectTab(item.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
+                    ? 'bg-blue-700 text-white shadow-sm shadow-blue-900/20'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`}
+                >
+                  <ItemIcon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {active && <ChevronLeft aria-hidden="true" className="h-4 w-4" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-liquid-glass rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-            <Shield className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                پنل مدیریت و راهبری جامع درس‌چین
-              </h2>
-              {isSuperAdmin && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                  مدیر ارشد (Super Admin)
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مدیریت یکپارچه ساختار آکادمیک، قوانین پیش‌نیازی و هم‌نیازی، ارائه‌های ترمی و کاربران
-            </p>
-          </div>
-        </div>
-
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-        <button
-          ref={sectionsTriggerRef}
-          type="button"
-          aria-label="بازکردن بخش‌های مدیریت"
-          aria-expanded={sectionsMenuOpen}
-          aria-controls="admin-sections-mobile-navigation"
-          onClick={() => setSectionsMenuOpen(true)}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-800 focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"
-        >
-          <Menu aria-hidden="true" className="h-5 w-5" />
-          بخش‌های مدیریت
-        </button>
-        <button
-          onClick={fetchStats}
-          disabled={loadingStats}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all self-end sm:self-center"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingStats ? 'animate-spin' : ''}`} />
-          <span>بروزرسانی آمار</span>
-        </button>
-        </div>
-      </div>
-
-      {/* Navigation Grouped Bar */}
-      <div className="hidden lg:block bg-liquid-glass rounded-2xl p-2 shadow-xs space-y-2 sticky top-[72px] z-30">
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
-          {navGroups.map((grp) => (
-            <div key={grp.title} className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl">
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-1.5 hidden xl:inline">
-                {grp.title}:
+    <div className="darschin-admin space-y-5">
+      <header className="relative overflow-hidden rounded-[26px] bg-[#101c33] px-5 py-6 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-blue-200">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+                <Shield aria-hidden="true" className="h-4 w-4" />
               </span>
-              {grp.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+              DARSCHIN / CONTROL CENTER
             </div>
-          ))}
+            <h1 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
+            <p className="mt-2 max-w-xl text-sm leading-7 text-slate-300">
+              داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.
+            </p>
+            <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-blue-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
+              {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : 'پنل مدیریتی'}
+              {isSuperAdmin ? ' · مدیر ارشد' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              ref={menuTriggerRef}
+              type="button"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:hidden"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="admin-mobile-navigation"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              بخش‌های مدیریت
+            </button>
+            <button
+              type="button"
+              onClick={fetchStats}
+              disabled={loadingStats}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:opacity-50"
+            >
+              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
+              <span>به‌روزرسانی</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {sectionsMenuOpen && (
-        <div className="fixed inset-0 z-[90] lg:hidden" dir="rtl">
-          <div role="presentation" className="absolute inset-0 bg-slate-950/60"
-            onClick={() => { setSectionsMenuOpen(false); sectionsTriggerRef.current?.focus(); }} />
-          <nav id="admin-sections-mobile-navigation" aria-label="بخش‌های مدیریت"
-            className="absolute inset-y-0 right-0 flex w-[min(88vw,350px)] flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">بخش‌های مدیریت</h3>
-              <button type="button" aria-label="بستن بخش‌های مدیریت"
-                onClick={() => { setSectionsMenuOpen(false); sectionsTriggerRef.current?.focus(); }}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800">
-                <X aria-hidden="true" className="h-5 w-5" />
-              </button>
+      <div className="grid items-start gap-5 lg:grid-cols-[252px_minmax(0,1fr)]">
+        <aside className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
+          <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
+            بخش‌های مدیریت
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">انتخاب سریع بخش مورد نظر</p>
+          </div>
+          {navigation}
+        </aside>
+
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-[90] bg-slate-950/65 lg:hidden" onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }} role="presentation">
+            <div
+              ref={mobileDialogRef}
+              id="admin-mobile-navigation"
+              role="dialog"
+              aria-modal="true"
+              aria-label="فهرست بخش‌های مدیریت"
+              onClick={event => event.stopPropagation()}
+              className="absolute inset-y-0 right-0 flex w-[min(88vw,350px)] flex-col bg-white shadow-2xl dark:bg-slate-900"
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+                <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-blue-600" aria-hidden="true" /> بخش‌های مدیریت</span>
+                <button
+                  ref={mobileCloseRef}
+                  type="button"
+                  aria-label="بستن فهرست مدیریت"
+                  onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800"
+                ><X aria-hidden="true" className="h-5 w-5" /></button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">{navigation}</div>
+              <div className="border-t border-slate-200 p-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                {isBrowserDemo ? 'تغییرات فقط در همین مرورگر ذخیره می‌شوند.' : 'تغییرات داده‌ها ممکن است روی کاربران اثر بگذارند.'}
+              </div>
             </div>
-            <div className="space-y-5">
-              {navGroups.map(group => (
-                <section key={group.title} aria-label={group.title}>
-                  <h4 className="mb-2 px-2 text-xs font-extrabold text-slate-500 dark:text-slate-400">{group.title}</h4>
-                  <div className="space-y-1">
-                    {group.items.map(item => {
-                      const Icon = item.icon;
-                      return (
-                        <button key={item.id} type="button"
-                          aria-current={activeTab === item.id ? 'page' : undefined}
-                          onClick={() => { setActiveTab(item.id); setSectionsMenuOpen(false); }}
-                          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm font-bold focus-visible:ring-2 focus-visible:ring-blue-500 ${activeTab === item.id
-                            ? 'bg-blue-700 text-white'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}>
-                          <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+          </div>
+        )}
+
+        <section aria-label="محتوای مدیریت" className="min-w-0 space-y-4">
+          <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
+              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white">{activeNavigation?.label}</h2>
             </div>
-          </nav>
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
+          </div>
+      {statsError && activeTab === 'overview' && (
+        <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <span className="font-bold">آمار در دسترس نیست: </span>{statsError}
+          <button type="button" onClick={fetchStats} className="mr-3 min-h-11 rounded-lg px-3 font-bold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>
         </div>
       )}
-
       {/* Main Tab Content Area */}
       <div className="pt-1">
         {/* 1. OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* KPI Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-liquid-glass rounded-3xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
@@ -327,7 +391,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="bg-liquid-glass rounded-3xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                    دانشجویان فعال
+                    دانشجویان ثبت‌نام‌شده
                   </span>
                   <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
                     {stats?.totalStudents ?? '...'}
@@ -432,21 +496,21 @@ export const AdminDashboard: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
-                    onClick={() => setActiveTab('courses')}
+                    onClick={() => selectTab('courses')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <BookOpen className="w-4 h-4 text-indigo-500" />
                     بانک دروس
                   </button>
                   <button
-                    onClick={() => setActiveTab('prerequisites')}
+                    onClick={() => selectTab('academic-rules')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <Workflow className="w-4 h-4 text-emerald-500" />
                     پیش‌نیازها و هم‌نیازها
                   </button>
                   <button
-                    onClick={() => setActiveTab('offerings')}
+                    onClick={() => selectTab('offerings')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <Layers className="w-4 h-4 text-amber-500" />
@@ -454,7 +518,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   {isSuperAdmin && (
                     <button
-                                        onClick={() => setActiveTab('diagnostics')}
+                                        onClick={() => selectTab('diagnostics')}
                                         className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                                       >
                                         <Server className="w-4 h-4 text-purple-500" />
@@ -471,14 +535,15 @@ export const AdminDashboard: React.FC = () => {
                     وضعیت سرویس پایگاه داده و تطبیق چارت
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                    موتور تصمیم‌یار هوشمند درس‌چین بر اساس تحلیل گراف وابستگی دروس (DAG)، پیش‌نیازها و هم‌نیازها را به‌صورت بلادرنگ ارزیابی می‌نماید.
+                    {isBrowserDemo
+                      ? 'این پنل فقط داده‌های آزمایشی ذخیره‌شده در مرورگر را نشان می‌دهد؛ موتور رسمی قوانین و دیتابیس مرکزی اجرا نمی‌شوند.'
+                      : 'نمایش داشبورد به‌تنهایی سلامت اتصال به دیتابیس یا صحت موتور قوانین را تأیید نمی‌کند.'}
                   </p>
                 </div>
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
-                  <span className="font-semibold">وضعیت پایگاه داده مرکزی:</span>
-                  <span className="font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    برخط و فعال (Ready)
+                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 text-xs flex items-center justify-between gap-3">
+                  <span className="font-semibold">{isBrowserDemo ? 'نوع ذخیره‌سازی:' : 'وضعیت اتصال:'}</span>
+                  <span className="font-bold">
+                    {isBrowserDemo ? 'شبیه‌ساز محلی — بدون سرور' : 'تأییدنشده — نیازمند آزمون سلامت API'}
                   </span>
                 </div>
               </div>
@@ -659,6 +724,7 @@ export const AdminDashboard: React.FC = () => {
             description="گروه‌ها و اساتید ارائه‌دهنده دروس در نیمسال جاری"
             endpoint="/api/offerings"
             columns={[
+              { key: 'courseId', label: 'درس مرتبط', type: 'select', lookupEndpoint: '/api/academic/courses' },
               { key: 'rawCourseName', label: 'عنوان درس' },
               { key: 'groupCode', label: 'کد گروه' },
               { key: 'instructor', label: 'استاد درس' },
@@ -688,6 +754,8 @@ export const AdminDashboard: React.FC = () => {
 
         {/* 17. LOGS */}
         {activeTab === 'logs' && isSuperAdmin && <AdminLogs />}
+          </div>
+        </section>
       </div>
     </div>
   );
