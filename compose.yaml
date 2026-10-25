@@ -37,6 +37,7 @@ services:
         condition: service_healthy
     environment:
       DARSCHYN_DOMAIN: ${DARSCHYN_DOMAIN:?Point your domain DNS at this VPS first}
+      ACME_CONTACT_EMAIL: ${ACME_CONTACT_EMAIL:?Set certificate contact email}
     ports:
       - "80:80"
       - "443:443"
