@@ -47,6 +47,8 @@ describe('course demand domain boundaries',()=>{
     expect(managerCanAccessDemand(manager(['demand.manage']),survey)).toBe(true);
     expect(managerCanAccessDemand(manager(['demand.manage']),survey,true)).toBe(false);
     expect(managerCanAccessDemand(manager(['demand.export']),survey,true)).toBe(true);
+    expect(managerCanAccessDemand({...manager(['demand.manage','demand.export']),roles:['student']},survey)).toBe(false);
+    expect(managerCanAccessDemand({...manager(['demand.manage','demand.export']),roles:['student']},survey,true)).toBe(false);
   });
   it('counts distinct response records and labels threshold as suggested, not a scheduled class',()=>{
     const result=summarizeDemand(survey,[response('u1',['a','b'],'YES'),response('u2',['a'],'NO')]);
