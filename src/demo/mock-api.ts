@@ -16,7 +16,7 @@ import type {
  * It must never be used to authorize users or declare university eligibility.
  * Unsupported operations fail explicitly instead of pretending to succeed.
  */
-export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v2';
+export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v3';
 const now = () => new Date().toISOString();
 type Row = Record<string, any>;
 interface DemoStore {
@@ -41,7 +41,14 @@ const campus = { id: 'demo-campus', universityId: university.id, provinceId: pro
 const degree = { id: 'demo-degree', name: 'کارشناسی پیوسته (دمو)', code: 'DEMO-BE', active: true };
 const major = { id: 'demo-major', degreeLevelId: degree.id, name: 'مهندسی برق (پایلوت آزمایشی)', code: 'DEMO-EE', active: true };
 const entryYear = { id: 'demo-entry', year: 1403, active: true };
-const curriculum = { id: 'demo-curriculum', universityId: university.id, campusId: campus.id, degreeLevelId: degree.id, majorId: major.id, entryYearId: entryYear.id, version: 'demo-1', name: 'چارت آزمایشی کارشناسی برق، غیرمصوب', status: 'active', createdAt: now() };
+const entryYear1402 = { id: 'demo-entry-1402', year: 1402, active: true };
+const curriculum = { id: 'demo-curriculum', universityId: university.id, campusId: campus.id, degreeLevelId: degree.id, majorId: major.id, entryYearId: entryYear.id, version: '1403-demo', name: 'چارت آزمایشی کارشناسی برق ورودی ۱۴۰۳ (غیرمصوب)', status: 'active', createdAt: now() };
+const curriculum1402 = { ...curriculum, id: 'demo-curriculum-1402', entryYearId: entryYear1402.id, version: '1402-demo', name: 'چارت آزمایشی کارشناسی برق ورودی ۱۴۰۲ (غیرمصوب)' };
+const demo1402CourseIds = ['math2', 'circuits', 'logic', 'english'];
+const tracks = [
+  { id: 'demo-power', majorId: major.id, name: 'قدرت (دمو)', active: true },
+  { id: 'demo-control', majorId: major.id, name: 'کنترل (دمو)', active: true },
+];
 const sampleCourses: Course[] = DEMO_COURSES.map((c) => ({
   id: c.id, code: c.code, name: c.name, units: c.units,
   category: c.units === 1 ? 'آزمایشگاه' : 'اصلی', active: true,
@@ -84,17 +91,23 @@ function initialStore(): DemoStore {
       '/api/academic/campuses': [campus],
       '/api/academic/degrees': [degree],
       '/api/academic/majors': [major],
-      '/api/academic/tracks': [],
-      '/api/academic/entry-years': [entryYear],
+      '/api/academic/tracks': tracks,
+      '/api/academic/entry-years': [entryYear1402, entryYear],
       '/api/academic/terms': [semester],
       '/api/academic/courses': sampleCourses,
       '/api/offerings': sampleOfferings,
-      '/api/curriculum': [curriculum],
+      '/api/curriculum': [curriculum1402, curriculum],
       '/api/curriculum/rules': [],
-      '/api/curriculum-courses': DEMO_COURSES.map(c=>({
-        id:'cc-'+c.id, curriculumId:curriculum.id,courseId:c.id,classification:'MAJOR_REQUIRED',
-        suggestedSemester:3,active:true,course:sampleCourses.find(course=>course.id===c.id),
-      })),
+      '/api/curriculum-courses': [
+        ...DEMO_COURSES.map(c=>({
+          id:'cc-1403-'+c.id, curriculumId:curriculum.id,courseId:c.id,classification:'MAJOR_REQUIRED',
+          suggestedSemester:3,active:true,course:sampleCourses.find(course=>course.id===c.id),
+        })),
+        ...DEMO_COURSES.filter(c=>demo1402CourseIds.includes(c.id)).map(c=>({
+          id:'cc-1402-'+c.id, curriculumId:curriculum1402.id,courseId:c.id,classification:'MAJOR_REQUIRED',
+          suggestedSemester:4,active:true,course:sampleCourses.find(course=>course.id===c.id),
+        })),
+      ],
       '/api/admin/users': [{ id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] }],
     },
     profile: {
@@ -121,12 +134,20 @@ function initialStore(): DemoStore {
     importBatches: [],
     importRecords: [],
     demandSurveys: [{
-      id:'demo-demand-fall',title:'نیازسنجی آزمایشی دروس ترم آینده برق',
+      id:'demo-demand-fall',title:'نیازسنجی آزمایشی برق ورودی ۱۴۰۳',
       description:'فقط برای تست روند ثبت تقاضا و آمار مدیر گروه؛ داده رسمی نیست.',
       targetTermId:semester.id,universityId:university.id,campusId:campus.id,
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
       entryYearIds:[entryYear.id],trackIds:[],courseIds:DEMO_COURSES.map(c=>c.id),
       recommendedMinimumByCourse:Object.fromEntries(DEMO_COURSES.map(c=>[c.id,3])),
+      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+    },{
+      id:'demo-demand-1402',title:'نیازسنجی آزمایشی برق ورودی ۱۴۰۲',
+      description:'فهرست درس‌های ورودی ۱۴۰۲ عمداً با ۱۴۰۳ فرق می‌کند تا تفکیک چارت‌ها تست شود.',
+      targetTermId:semester.id,universityId:university.id,campusId:campus.id,
+      degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum1402.id,
+      entryYearIds:[entryYear1402.id],trackIds:[],courseIds:demo1402CourseIds,
+      recommendedMinimumByCourse:Object.fromEntries(demo1402CourseIds.map(id=>[id,3])),
       status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     }],
     demandResponses: [],
@@ -301,9 +322,15 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       survey.status === 'OPEN' && surveyAppliesToProfile(survey, s.profile)) : s.demandSurveys) as ApiResponse<T>;
   }
   if (path === '/api/demand/surveys' && method === 'POST') {
+    const chart=s.collections['/api/curriculum'].find(row=>row.id===data.curriculumId);
+    const validCourseIds=new Set(s.collections['/api/curriculum-courses']
+      .filter(row=>row.curriculumId===data.curriculumId && row.active!==false &&
+        (!row.trackId || (data.trackIds||[]).includes(row.trackId))).map(row=>row.courseId));
     if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
-      !s.collections['/api/curriculum'].some(row=>row.id===data.curriculumId) ||
-      data.courseIds.some((courseId:string)=>!currentCourses(s).some(c=>c.id===courseId))) {
+      !chart || !Array.isArray(data.entryYearIds) || data.entryYearIds.length!==1 ||
+      data.entryYearIds[0]!==chart.entryYearId || (data.trackIds||[]).length>1 ||
+      data.courseIds.some((courseId:string)=>!validCourseIds.has(courseId)||
+        !currentCourses(s).some(c=>c.id===courseId))) {
       return fail('برای ساخت نیازسنجی، چارت و درس‌های معتبر نمونه لازم است.');
     }
     const record:DemandSurvey={...data,id:id(),status:'DRAFT',createdBy:'demo-manager',
@@ -352,10 +379,21 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good({csv}) as ApiResponse<T>;
     }
   }
-  if (path === `/api/curriculum/${curriculum.id}/full` && method === 'GET') {
-    return good({curriculum,courses:s.collections['/api/curriculum-courses']||[],
-      prerequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.relationshipType==='PREREQUISITE'),
-      corequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.relationshipType==='COREQUISITE')}) as ApiResponse<T>;
+  const demoCurriculumMatch = path.match(/^\/api\/curriculum\/([^/]+)\/full$/);
+  if (demoCurriculumMatch && method === 'GET') {
+    const selectedChart=s.collections['/api/curriculum'].find(row=>row.id===demoCurriculumMatch[1]);
+    if(!selectedChart)return fail('چارت ورودی مورد نظر در دمو موجود نیست.');
+    return good({curriculum:selectedChart,
+      courses:(s.collections['/api/curriculum-courses']||[]).filter(row=>row.curriculumId===selectedChart.id),
+      prerequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.curriculumId===selectedChart.id&&rule.relationshipType==='PREREQUISITE'),
+      corequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.curriculumId===selectedChart.id&&rule.relationshipType==='COREQUISITE')}) as ApiResponse<T>;
+  }
+  if(path==='/api/demo/academic-cohort' && method==='PUT') {
+    if(![entryYear.id,entryYear1402.id].includes(data.entryYearId))return fail('ورودی دمو معتبر نیست.');
+    s.profile={...s.profile,entryYearId:data.entryYearId,isTrackSelected:false,
+      selectedTrackId:null,desiredTrackIds:[],updatedAt:now()};
+    saveStore(s);
+    return good({profile:s.profile}) as ApiResponse<T>;
   }
   if (path === '/api/student/profile') {
     if (method === 'GET') return good({ profile: s.profile }) as ApiResponse<T>;
