@@ -30,28 +30,40 @@ export function calculateAcademicLimits(
     effectiveMaxUnits = policySettings.finalSemesterMaxUnits;
   }
 
-  // Calculate totals based on curriculum
-  const totalCurriculumUnits = curriculumCourses.reduce((acc, cc) => {
-    const c = allCourses.find(x => x.id === cc.courseId);
-    return acc + (c?.units || 0);
-  }, 0);
+  // This compatibility helper is not the authoritative DB scope resolver.
+  // Still, never infer completed units from duplicate, failed or unrelated
+  // transcript rows; never infer a final semester from an empty curriculum.
+  const rows=curriculumCourses.filter(cc=>cc.active!==false &&
+    (!cc.trackId || (studentProfile.isTrackSelected &&
+      cc.trackId===studentProfile.selectedTrackId)));
+  const courseIds=new Set(rows.map(cc=>cc.courseId));
+  const knownById=new Map(allCourses.map(course=>[course.id,course]));
+  const totalCurriculumUnits=[...courseIds].reduce((sum,id)=>
+    sum+(knownById.get(id)?.units||0),0);
+  const passedIds=new Set(passedCourses.filter(p=>
+    p.status!=='FAILED' && p.status!=='ABSENT' &&
+    (p.grade===undefined || (Number.isFinite(p.grade) && p.grade>=10)))
+    .map(p=>p.courseId));
+  const countedPassed=[...courseIds].filter(id=>passedIds.has(id));
+  const passedUnits=countedPassed.reduce((sum,id)=>sum+(knownById.get(id)?.units||0),0);
+  const remainingUnits=Math.max(0,totalCurriculumUnits-passedUnits);
 
-  const passedUnits = passedCourses
-    .filter(p => p.status === 'PASSED')
-    .reduce((acc, pc) => {
-      const c = allCourses.find(x => x.id === pc.courseId);
-      return acc + (c?.units || 0);
-    }, 0);
-
-  const remainingUnits = Math.max(0, totalCurriculumUnits - passedUnits);
-  
-  // Real final semester check logic (IAU)
-  let calculatedIsFinalSemester = isFinalSemester;
-  if (remainingUnits <= policySettings.finalSemesterThresholdUnits && policySettings.finalSemesterRuleEnabled) {
-    calculatedIsFinalSemester = true;
-    effectiveMinUnits = 2;
-    effectiveMaxUnits = policySettings.finalSemesterMaxUnits;
+  let calculatedIsFinalSemester=isFinalSemester;
+  const hasUnknownTrackRequirements=!studentProfile.isTrackSelected &&
+    curriculumCourses.some(cc=>cc.active!==false && !!cc.trackId);
+  if(studentProfile.isFinalSemesterOverride===false){
+    calculatedIsFinalSemester=false;
+  }else if(studentProfile.isFinalSemesterOverride!==true && totalCurriculumUnits>0 &&
+    remainingUnits>0 && !hasUnknownTrackRequirements &&
+    remainingUnits<=policySettings.finalSemesterThresholdUnits &&
+    policySettings.finalSemesterRuleEnabled) {
+    calculatedIsFinalSemester=true;
   }
+  if(calculatedIsFinalSemester && !isSummer){
+    effectiveMinUnits=2;
+    effectiveMaxUnits=policySettings.finalSemesterMaxUnits;
+  }
+
 
   return {
     normalMinUnits,
@@ -65,7 +77,7 @@ export function calculateAcademicLimits(
     totalCurriculumUnits,
     passedUnits,
     remainingUnits,
-    remainingCoursesCount: curriculumCourses.length - passedCourses.filter(p => p.status === 'PASSED').length,
+    remainingCoursesCount: [...courseIds].filter(id=>!passedIds.has(id)).length,
     policySettings,
     majorRequiredPassed: 0,
     majorRequiredRemaining: 0,
