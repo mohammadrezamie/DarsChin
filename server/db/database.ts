@@ -399,10 +399,11 @@ this.isInitialized = true;
         isFinalSemester: false,
         isGradeA: false,
         isSummer: false,
-        totalCurriculumUnits: 140,
+        // No profile means the scope is unknown, not a fabricated 140-unit curriculum.
+        totalCurriculumUnits: 0,
         passedUnits: 0,
-        remainingUnits: 140,
-        remainingCoursesCount: 45,
+        remainingUnits: 0,
+        remainingCoursesCount: 0,
         policySettings: settings,
         majorRequiredPassed: 0,
         majorRequiredRemaining: 0,
@@ -414,27 +415,32 @@ this.isInitialized = true;
     }
 
     // Find student curriculum
-    const curriculum =
-      this.curricula.find(
-        (c) =>
-          c.universityId === profile.universityId &&
-          c.majorId === profile.majorId &&
-          c.entryYearId === profile.entryYearId
-      ) || this.curricula[0];
+    const curriculum = this.curricula.find(c =>
+      c.status === 'active' &&
+      c.universityId === profile.universityId &&
+      c.campusId === profile.campusId &&
+      c.degreeLevelId === profile.degreeLevelId &&
+      c.majorId === profile.majorId &&
+      c.entryYearId === profile.entryYearId
+    ) || null;
 
     const curriculumId = curriculum?.id || '';
 
     // Find courses associated with this curriculum
-    const currCourses = this.curriculumCourses.filter(
-      (cc) =>
-        cc.curriculumId === curriculumId &&
-        (!cc.trackId || !profile.selectedTrackId || cc.trackId === profile.selectedTrackId)
+    // A student who has not formally chosen a track cannot be assumed to
+    // require every track's courses. Count only the common curriculum until
+    // that choice is official; never manufacture a graduation status.
+    const officialTrackId = profile.isTrackSelected ? profile.selectedTrackId : null;
+    const currCourses = this.curriculumCourses.filter(cc =>
+      cc.curriculumId === curriculumId &&
+      cc.active !== false &&
+      (!cc.trackId || (officialTrackId && cc.trackId === officialTrackId))
     );
 
 
     const currCourseIds = new Set(currCourses.map((cc) => cc.courseId));
     const relevantCourses = this.courses.filter((c) => currCourseIds.has(c.id));
-    const totalCurriculumUnits = relevantCourses.reduce((sum, c) => sum + (c.units || 0), 0) || 140;
+    const totalCurriculumUnits = relevantCourses.reduce((sum, c) => sum + (c.units || 0), 0);
 
     // Passed courses for this user (excluding failed or absent attempts)
     const passed = this.studentPassedCourses.filter(
@@ -457,7 +463,12 @@ this.isInitialized = true;
     let electivesPassed = 0;
     let electivesRemaining = 0;
 
+    const countedCourses = new Set<string>();
     for (const cc of currCourses) {
+      // A course may appear once as common and again under a track. Progress
+      // counts course identity once, never both rows.
+      if (countedCourses.has(cc.courseId)) continue;
+      countedCourses.add(cc.courseId);
       const course = this.courses.find(c => c.id === cc.courseId);
       if (!course) continue;
       
@@ -500,7 +511,14 @@ this.isInitialized = true;
     let isFinalSemester = false;
     let finalSemesterReason = '';
 
-    if (profile.isFinalSemesterOverride === true) {
+    if (!curriculum) {
+      // Without an exact active chart there is no verified basis for inferred
+      // remaining credits or final-semester eligibility.
+      finalSemesterReason = 'چارت فعال مطابق واحد، مقطع، رشته و ورودی یافت نشد؛ وضعیت ترم آخر نامشخص است.';
+    } else if (!profile.isTrackSelected && this.curriculumCourses.some(cc =>
+      cc.curriculumId === curriculum.id && cc.active !== false && !!cc.trackId)) {
+      finalSemesterReason = 'گرایش رسمی دانشجو مشخص نیست؛ واحدهای باقی‌ماندهٔ گرایش هنوز قابل محاسبهٔ قطعی نیستند.';
+    } else if (profile.isFinalSemesterOverride === true) {
       isFinalSemester = true;
       finalSemesterReason =
         profile.finalSemesterNotes ||
