@@ -146,7 +146,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
 
     if (res.success && res.data) {
       setImportResult(res.data);
-      onImportSuccess();
+      if (res.data.createdOfferingsCount > 0) onImportSuccess();
     } else {
       setError(res.error || 'خطا در پردازش و تطبیق فایل دروس ارائه‌شده.');
     }
@@ -245,11 +245,11 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <span className="font-bold text-sm text-emerald-950 dark:text-emerald-200">
-                  پردازش و تطبیق بسته با موفقیت انجام شد
+                  بررسی اولیه انجام شد؛ انتشار نیازمند تأیید مدیر است
                 </span>
               </div>
               <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                دروس تطبیق‌داده‌شده بلافاصله در پایگاه داده دروس ارائه‌شده ذخیره و آماده ارزیابی پیش‌نیازها شدند.
+                اطلاعات در صف بررسی نگهداری می‌شوند. تا زمانی که مدیر تطبیق‌ها را تأیید و منتشر نکرده باشد، هیچ گروه جدیدی وارد فهرست دروس ارائه‌شده یا تحلیل پیش‌نیازها نمی‌شود.
               </p>
             </div>
 
@@ -266,7 +266,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
                 <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 block">
                   {importResult.summary.matched}
                 </span>
-                <span className="text-[11px] text-emerald-700 dark:text-emerald-400">تطبیق موفق با چارت</span>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400">پیشنهاد تطبیق اولیه</span>
               </div>
 
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 text-center">
@@ -313,7 +313,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
                           }`}
                         >
                           {r.status === 'MATCHED'
-                            ? '✅ تطبیق موفق'
+                            ? '✓ تطبیق اولیه'
                             : r.status === 'NEEDS_REVIEW'
                             ? '⚠️ نیازمند بررسی'
                             : '❌ نامعتبر'}
