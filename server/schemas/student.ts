@@ -26,7 +26,11 @@ export const batchPassedCoursesSchema = z.object({
 
 export const updatePlanSchema = z.object({
   selectedOfferingIds: z.array(z.string()).optional(),
-  coursePriorities: z.record(z.string(), z.array(z.string())).optional(),
+  // Accept the student UI's ordered array and the persisted rank-map shape.
+  coursePriorities: z.union([
+    z.array(z.string().min(1)).max(150),
+    z.record(z.string(), z.number().int().nonnegative()),
+  ]).optional(),
   offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
 });
 
@@ -34,3 +38,10 @@ export const planSelectSchema = z.object({
   offeringId: z.string().min(1, 'شناسه گروه درسی الزامی است'),
   action: z.enum(['add', 'remove']),
 });
+
+/** Convert the UI's ordered course list to the canonical ranked map in StudentPlan. */
+export function normalizeCoursePriorities(value: string[] | Record<string, number> | undefined): Record<string, number> | undefined {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) return Object.fromEntries([...new Set(value)].map((id, index) => [id, index]));
+  return value;
+}
