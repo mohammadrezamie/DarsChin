@@ -18,6 +18,7 @@ describe('mobile-first admin and typography redesign', () => {
     expect(html).toContain('DARSCHIN / CONTROL CENTER');
     expect(html).toContain('بخش‌های مدیریت');
     expect(html).toContain('ناوبری دسکتاپ مدیریت');
+    expect(html).toContain('aria-label="انتخاب حالت نمایش"');
     expect(html).toContain('aria-controls="admin-mobile-navigation"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('داده‌های آموزشی');
