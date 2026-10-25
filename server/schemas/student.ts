@@ -26,7 +26,11 @@ export const batchPassedCoursesSchema = z.object({
 
 export const updatePlanSchema = z.object({
   selectedOfferingIds: z.array(z.string()).optional(),
-  coursePriorities: z.record(z.string(), z.array(z.string())).optional(),
+  // Historical plans store priority ranks as a map; the current planner sends an ordered array.
+  coursePriorities: z.union([
+    z.array(z.string().min(1)).max(500),
+    z.record(z.string(), z.number().int().nonnegative()),
+  ]).optional(),
   offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
 });
 
