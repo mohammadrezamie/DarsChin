@@ -47,18 +47,25 @@ cp deploy/.env.vps.example deploy/.env.vps
 chmod 600 deploy/.env.vps
 # Edit deploy/.env.vps locally: domain, email, JWT, root mobile/password/recovery key.
 # Generate JWT_SECRET and recovery key separately with: openssl rand -hex 32
+# Record the exact commit you built, without sending this value to any third party:
+sed -i "s/^DARSCHYN_RELEASE_SHA=.*/DARSCHYN_RELEASE_SHA=$(git rev-parse HEAD)/" deploy/.env.vps
 docker compose --env-file deploy/.env.vps config -q
 docker compose --env-file deploy/.env.vps up -d --build
 docker compose --env-file deploy/.env.vps ps
 curl -fsS https://YOUR_DOMAIN/api/health
+# Check releaseSha in this JSON equals: git rev-parse HEAD
+# Do not treat a healthy older deployment as proof that latest main is installed.
 ```
 
 - `Dockerfile` خروجی فرانت و بک‌اند را از `bun.lock` می‌سازد و در Node.js اجرا می‌کند.
 - `compose.yaml` یک نمونه Node (برای JSON DB) و یک Caddy HTTPS دارد؛ پورت Node مستقیماً روی اینترنت منتشر نشده است.
 - `DARSCHYN_DATA_DIR=/app/data` روی volume نام‌دار `darschin-data` ذخیره می‌شود؛ با به‌روزرسانی کانتینر پاک نمی‌شود.
 - کلید JWT و اطلاعات ورود ریشه را **در فایل واقعی خصوصی** نگه دارید؛ فایل `.env.vps` نباید در Git یا خروجی پشتیبانی قرار گیرد.
+- سرور عملیاتی دستور `/api/admin/reset-seed` را حتی برای مدیر ارشد مسدود می‌کند؛ بکاپ JSON فقط با مجوز اختصاصی قابل دریافت است و پاسخ آن cache نمی‌شود.
+- `/api/health` باید علاوه بر سلامت، `releaseSha` منطبق با SHA فایل `deploy/.env.vps` را بدهد تا نسخهٔ نصب‌شده قابل تشخیص باشد.
 - در اولین اجرای production، کاربران ساختگی دارای رمز ثابت ایجاد نمی‌شوند. برای پایلوت سرویس، تنها حساب ریشه با مقادیر خصوصی ایجاد می‌شود. محیط `/demo/*` همچنان بدون حساب واقعی در فرانت است.
 - هنگام راه‌اندازی با دیتابیس قدیمی، دو کاربر seed شناخته‌شده حذف می‌شوند؛ مهاجرت‌ها و تصمیم‌های بررسی موجود حفظ می‌شوند. اگر دیتابیس تولیدی خراب باشد سرویس به‌جای بازنویسی با seed **متوقف می‌شود**.
+- `bun run smoke:api` علاوه بر سلامت، ورود تستی ایزوله، مسیرهای `/demo/student` و `/demo/admin`، احراز هویت API نیازسنجی، ممنوعیت Reset عملیاتی و ماندگاری Sync پس از restart را کنترل می‌کند.
 - بعد از ویرایش کد: روی commit مشخص `bun run verify` و `bun run smoke:api` را در محیط تست ایزوله اجرا کنید، سپس سرویس را به‌روزرسانی کنید. **فایل‌های این تنظیمات در Git ثبت شده‌اند ولی هنوز استقرار واقعی روی VPS آزمایش نشده است.**
 - Caddy گواهی خودکار TLS را می‌گیرد؛ اگر هنوز دامنه یا DNS آماده نیست، ورود واقعی کاربران را به اینترنت باز نکنید و ابتدا در محیط داخلی تست کنید.
 
