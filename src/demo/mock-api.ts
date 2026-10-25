@@ -1012,8 +1012,16 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
          s.profile.desiredTrackIds?.includes(route.id))) {
         return fail('این گرایش در چارت، قانون آموزشی یا پروندهٔ دانشجو سابقه دارد و نمی‌توان آن را حذف کرد.');
       }
-      if (isCourse && (currentOfferings(s).some(o => o.courseId === route.id) || s.passed.some(p => p.courseId === route.id))) {
-        return fail('این درس در گروه‌های ارائه یا سوابق نمونه استفاده شده است؛ ابتدا وابستگی‌ها را بررسی کن.');
+      if (isCourse && (
+        currentOfferings(s).some(o=>o.courseId===route.id) ||
+        s.passed.some(p=>p.courseId===route.id) ||
+        (s.collections['/api/curriculum-courses']||[]).some(cc=>cc.courseId===route.id) ||
+        (s.collections['/api/curriculum/rules']||[]).some(rule=>
+          rule.targetCourseId===route.id ||
+          (rule.expression && extractSourceCourseIds(rule.expression).includes(route.id))) ||
+        s.demandSurveys.some(survey=>survey.courseIds.includes(route.id!))
+      )) {
+        return fail('این درس در چارت، قانون پیش‌نیاز/هم‌نیاز، نیازسنجی یا سوابق دانشجو استفاده شده و حذف مستقیم آن مجاز نیست.');
       }
       s.collections[route.key]=rows.filter(row=>row.id!==route.id);
       if (isCourse || isOffering) cleanDemoPlan(s);
