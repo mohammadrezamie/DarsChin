@@ -54,11 +54,20 @@ const sampleCourses: Course[] = DEMO_COURSES.map((c) => ({
   id: c.id, code: c.code, name: c.name, units: c.units,
   category: c.units === 1 ? 'آزمایشگاه' : 'اصلی', active: true,
 }));
+// Synthetic Math II -> Differential Equations example, NOT an official SRBIAU rule.
+sampleCourses.push({ id:'diff', code:'DEMO-109', name:'معادلات دیفرانسیل (نمونه)', units:3,
+  category:'اصلی', active:true });
 const sampleOfferings: CourseOffering[] = DEMO_COURSES.map((c) => ({
   id: 'off-' + c.id, termId: semester.id, campusId: campus.id,
   courseId: c.id, groupCode: '01', instructor: c.instructor, dayOfWeek: c.day,
   startTime: c.start, endTime: c.end, capacity: 40, enrolledCount: 16, source: 'manual', active: true,
 }));
+sampleOfferings.push({
+  id:'off-diff',termId:semester.id,campusId:campus.id,courseId:'diff',
+  rawCourseCode:'DEMO-109',groupCode:'01',instructor:'استاد نمونه معادلات',
+  dayOfWeek:'دوشنبه',startTime:'14:00',endTime:'16:00',
+  capacity:40,enrolledCount:10,source:'manual',active:true,
+});
 // Second synthetic class for demonstrating comparison of teachers within one course.
 sampleOfferings.push({
   id: 'off-math2-alt', termId: semester.id, campusId: campus.id,
@@ -98,8 +107,16 @@ function initialStore(): DemoStore {
       '/api/academic/courses': sampleCourses,
       '/api/offerings': sampleOfferings,
       '/api/curriculum': [curriculum1402, curriculum],
-      '/api/curriculum/rules': [],
+      '/api/curriculum/rules': [{
+        id:'demo-1403-coreq-differential',curriculumId:curriculum.id,
+        targetCourseId:'diff',relationshipType:'COREQUISITE',
+        expression:{type:'COURSE',courseId:'math2'},
+        notes:'سناریوی ساختگی آموزشی برای تمرین ترتیب همنیاز؛ مصوبه رسمی دانشگاه نیست.',
+      }],
       '/api/curriculum-courses': [
+        { id:'cc-1403-diff',curriculumId:curriculum.id,courseId:'diff',
+          classification:'MAJOR_REQUIRED',suggestedSemester:3,active:true,
+          course:sampleCourses.find(c=>c.id==='diff') },
         ...DEMO_COURSES.map(c=>({
           id:'cc-1403-'+c.id, curriculumId:curriculum.id,courseId:c.id,classification:'MAJOR_REQUIRED',
           suggestedSemester:3,active:true,
