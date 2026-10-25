@@ -103,3 +103,25 @@ node scripts/local-gate.cjs --browser
 - درس غیرفعال داخل عبارت پیش‌نیاز نیز نباید شرطِ معتبر و احرازشده قلمداد شود.
 - برای سازگاری با سوابق واردشده، نبود فیلد قدیمی `active` با `active=false` یکسان فرض نمی‌شود؛ فقط غیرفعال‌سازی صریح مبنای منع است.
 - این قواعد با تست `tests/academic-curriculum-conditions.test.ts` پوشش داده شدند ولی **اجرای واقعی تست و تست مرورگر هنوز انجام نشده است**. تأیید نهایی نیازمند full Local Gate و بررسی نسخهٔ دمو است.
+
+## ۸. حفاظت پروفایل، کدهای ثبت و سوابق خوداظهاری — ممیزی ۲۰۲۶/۱۰/۲۶
+
+- **پروفایل دانشجو:** `PUT /api/student/profile` دیگر با یک ویرایش ناقص، شمارهٔ دانشجویی، تأیید صریح ترم آخری یا یادداشت مدیر را پاک نمی‌کند. سرور سازگاری دانشگاه/واحد/مقطع/رشته/ورودی/گرایش را قبل از تغییر رکورد بررسی می‌کند. تغییر دامنهٔ تحصیلی در صورت داشتن برنامهٔ فعال به خطای قابل توضیح منجر می‌شود؛ برنامهٔ قبلی حذف نمی‌شود. فرم دانشجو معدل و استان ذخیره‌شده را بازیابی می‌کند و پس از تغییر مقطع/رشته، گرایش قدیمی را معتبر فرض نمی‌کند.
+- **کدهای ثبت:** فهرست دروس دیگر رشتهٔ ساختگی `undefined_<group>` یا کد دمو را «آمادهٔ آموزشیار» معرفی نمی‌کند. فقط کد واردشدهٔ موجود در دادهٔ گروه، به‌صورت فهرستی همراه با نام درس و شمارهٔ گروه، کپی می‌شود؛ کپی خودکار، به معنی تأیید اعتبار کد در سامانهٔ دانشگاه نیست. خطای مجوز Clipboard و نداشتن کد معتبر پیام مستقل دارند.
+- **کارنامهٔ دانشجو:** ثبت نمره فقط در بازهٔ ۰ تا ۲۰ و برای درس واقعی مجاز است. نمرهٔ کمتر از ۱۰ حتی اگر دادهٔ قدیمی برچسب `PASSED` داشته باشد، نباید واحد پاس‌شده محسوب شود. رکورد تکراری نیز اعتبار واحدها را مضاعف نمی‌کند. هنگام `replaceAll`، شناسهٔ ناشناخته باعث رد کل درخواست **پیش از پاک‌کردن** تاریخچه می‌شود. دمو و نسخهٔ اصلی باید یک منطق داشته باشند.
+- **چک‌لیست پاس‌شده‌ها:** رکورد مردودی با رنگ/تیک قبولی نشان داده نمی‌شود و لمس روی آن نباید به حذف بی‌اخطار سوابق منجر شود. فهرست خوداظهاری است، نه کارنامهٔ تأییدشدهٔ دانشگاه.
+- **محاسبات موازی:** `server/db/database.ts`، `src/domain/academic-policy.ts` و `src/demo/mock-api.ts` باید از شمارش مردودی، نمرهٔ نامعتبر یا ردیف تکراری جلوگیری کنند. استنباط ترم آخری از چارت خالی یا گرایش نامعلوم مجاز نیست.
+
+**تست‌های افزوده:** `tests/student-profile-integrity.test.ts`، `tests/offerings-copy-safety.test.tsx`، `tests/student-transcript-integrity.test.ts`، `tests/transcript-ui-semantics.test.tsx` و `tests/academic-policy-credit-integrity.test.ts`.
+
+```bash
+node scripts/local-gate.cjs --quick --spec tests/student-profile-integrity.test.ts
+node scripts/local-gate.cjs --quick --spec tests/offerings-copy-safety.test.tsx
+node scripts/local-gate.cjs --quick --spec tests/student-transcript-integrity.test.ts
+node scripts/local-gate.cjs --quick --spec tests/transcript-ui-semantics.test.tsx
+node scripts/local-gate.cjs --quick --spec tests/academic-policy-credit-integrity.test.ts
+node scripts/local-gate.cjs --full
+node scripts/local-gate.cjs --browser
+```
+
+**وضعیت شواهد:** فایل‌ها از GitHub مجدداً خوانده شده‌اند، ولی روی HEAD این مرحله، TypeScript/Vitest/API/Browser واقعی در ماشین دارای checkout و Bun اجرا نشده‌اند؛ به‌ویژه Regex نمره پس از بازخوانی اصلاح شد. برای جلوگیری از انتشارِ تأییدنشده، PR #37 باید Draft باقی بماند و هیچ merge/deploy تا PASS مستند انجام نشود.
