@@ -1,52 +1,59 @@
-# Course Demand Assessment (نیازسنجی دروس)
+# نیازسنجی هوشمند دروس | Course Demand Planning
 
-## Purpose
+> **توافق محصول — ۲۵ اکتبر ۲۰۲۶؛ محدودهٔ پایلوت:** کارشناسی مهندسی برق دانشگاه آزاد اسلامی واحد علوم و تحقیقات. برنامهٔ توسعه بر اساس درخواست مالک محصول ثبت شده است؛ جزئیات مصوبات آموزشی و چارت‌های رسمی هنوز باید یکی‌یکی تأیید شوند. داده‌های دمو ساختگی‌اند. **نیازسنجی ≠ انتخاب واحد ≠ مجوز ارائهٔ درس.**
 
-Allow an authorized department/group manager to ask students which curriculum courses they intend to take in a specified future term, so the department can estimate demand before deciding which offerings to arrange.
+## ۱. هدف و مرز دو محصول
+ماژول مستقل «نیازسنجی» پیش از انتخاب واحد، تقاضای احتمالی ترم **آینده** را از دانشجویان ثبت می‌کند. «دستیار انتخاب واحد» با داده‌های ارائهٔ تأییدشدهٔ **ترم جاری/هدف** برنامه می‌چیند. ارتباط دوطرفه فقط در سطح **اطلاع‌رسانی و پیشنهاد** است:
+- به دانشجو بگو «این درس را قبلاً در نیازسنجی ترم هدف درخواست کرده‌ای/نکرده‌ای»، اما درخواست نکردن مانع انتخاب واحد **نیست**.
+- در نیازسنجی از سوابق قبول‌شده، ورودی، رشته، گرایش و چارت مرتبط استفاده کن؛ پیشنهاد «درس‌های مهم و بازکنندهٔ مسیر ترم بعد» بده، **نه حکم مجازبودن** تا مصوبه تأیید نشده است.
+- نیازسنجی شخصی جایگزین فرم‌های تکراری گوگل فرم می‌شود؛ نام و شماره/شناسهٔ دانشجویی فقط در پروندهٔ خود فرد نگهداری شده و برای پاسخ بعدی بازاستفاده می‌شود.
+- تقاضای بالاتر از «حدنصاب پیشنهادی مدیر» صرفاً **هشدار برای بررسی تشکیل گروه** است؛ هیچ گروه، ظرفیت، ساعت، استاد یا ارائه‌ای خودکار منتشر نمی‌شود.
 
-This is a demand signal, not course registration and not a promise that a course will be offered.
+## ۲. مدیر گروه — چرخهٔ نیازسنجی
+1. مدیرِ دارای مجوز `demand.manage` فقط برای محدودهٔ اختصاص‌داده‌شده‌اش (دانشگاه/واحد/مقطع/رشته/گرایش در صورت نیاز)، یک نیازسنجی برای `targetTermId` می‌سازد. مدیر ارشد می‌تواند تمام محدوده‌ها را ببیند.
+2. عنوان، توضیحات، بازهٔ شروع/پایان به وقت منطقه، چارت/ورودی‌های هدف، گرایش‌های مرتبط، درس‌های قابل انتخاب، حدنصاب **پیشنهادی** هر درس و توضیحات حریم خصوصی تنظیم می‌شود.
+3. وضعیت‌ها: `DRAFT` (ساخت/ویرایش)، `OPEN` (دانشجو می‌بیند)، `CLOSED` (ویرایش پاسخ مسدود، گزارش محفوظ)، `ARCHIVED` (آرشیو). بازگشایی باید حسابرسی شود؛ حذف دائمی پس از داشتن پاسخ مجاز نیست.
+4. صفحهٔ مانیتورینگ: تعداد شرکت‌کنندهٔ یکتا، تقاضای هر درس، نسبت به حدنصاب پیشنهادی، دانشجویان «احتمالاً ترم آخر» **به اظهار خودشان**، تفکیک ورودی/گرایش، پیشرفت نیازسنجی و هشدارهای کیفیت داده.
+5. خروجی: CSV فارسی با UTF-8 BOM قابل باز شدن در Excel و به‌صورت امن در برابر CSV formula injection؛ **هر ردیف دانشجو × درخواست درس** شامل نام، شماره دانشجویی، ورودی، رشته، وضعیت گرایش، گرایش، خوداظهاری ترم آخر، کد/نام درس و زمان پاسخ. خروجی تجمیعی جدا؛ XLSX/PDF حرفه‌ای در فاز بعد. صادرات جزئیات شخصی نیاز به `demand.export` و ثبت Audit دارد.
+6. آستانه‌های تقاضا راهنمای ظرفیت‌سنجی‌اند، نه قواعد آموزشی یا تضمین تشکیل کلاس. مقایسهٔ چند دوره و پیش‌بینی نیاز به داده معتبر تاریخی دارد.
 
-## Proposed workflow
+## ۳. دانشجو — یک پاسخ قابل اصلاح
+- هر فردِ واردشده نیازسنجی‌های **منطبق با پروفایل** را می‌بیند و تنها **یک پاسخ مؤثر** به ازای هر نیازسنجی دارد؛ ارسال مجدد جایگزین قبلی می‌شود و تعداد رأی افزایش نمی‌یابد.
+- اطلاعات پروندهٔ تحصیلیِ مورد نیاز: نام حساب، شماره دانشجویی (فیلد قابل تکمیل و قابل حفاظت)، دانشگاه/واحد/مقطع/رشته، ورودی، آیا گرایش رسماً انتخاب شده، گرایش انتخاب‌شده/درنظرگرفته‌شده، و اظهار احتمالی ترم آخر. «احتمال فارغ‌التحصیلی» **خوداظهاری** است، نه حکم قطعی موتور آموزشی.
+- انتخاب درس فقط از مجموعهٔ تعریف‌شده در نیازسنجی و چارت منطبق است؛ درس پاس‌شده یا خارج از چارت به‌صورت هشدار/نیازمند بررسی مشخص می‌شود. قواعد پیش‌نیاز، هم‌نیاز، مردودی و استثناها تنها پس از تأیید با موتور مشترک بررسی می‌شوند؛ دمو از این نظر قابل استناد نیست.
+- پیشنهادهای آگاه از مسیر وابستگی: تعداد درس‌های «مستقیم» و «غیرمستقیم» که درس مورد نظر باز می‌کند، ترم پیشنهادی، وضعیت گذرانده‌شدن و میزان تقاضای بدون افشای هویت بقیه. «امتیاز توصیه» دلیل شفاف دارد، مجوز اخذ نیست.
+- هنگام برنامه‌ریزی انتخاب واحد در ترم هدف، کنار درس برچسب «در نیازسنجی درخواست داده بودی/نداده بودی» نمایش داده شود؛ انتخاب درس به پاسخ نیازسنجی وابسته نیست.
 
-1. An authorized manager selects the academic term and the target academic cohort/context (campus, major, entry-year curriculum, and track when applicable).
-2. The manager creates a survey, chooses courses from the approved curriculum, sets opening/closing times, and publishes it.
-3. A student sees only surveys applicable to their academic profile.
-4. The server evaluates each candidate course against the student's current academic profile and the canonical eligibility engine. The UI must not be trusted to enforce eligibility.
-5. The student selects one or more courses they are interested in. The system revalidates eligibility on submission and rejects ineligible course IDs.
-6. The manager sees aggregate demand per course and can export a report. Individual student choices should not be exposed by default unless an explicit, approved operational need requires it.
+## ۴. مدل داده و امنیت
+- `DemandSurvey`: id, title, description, targetTermId, universityId, campusId, degreeLevelId, majorId, curriculumId?, allowedEntryYearIds[], trackIds[], courseIds[], recommendedMinimumByCourse{}, startsAt, endsAt, status, createdBy, createdAt, updatedAt.
+- `DemandResponse`: id, surveyId, userId, courseIds[], studentNumber (یا مرجع امن پروفایل), anticipatedGraduation (true/false/unknown), snapshot رشته/ورودی/گرایش در زمان پاسخ، updatedAt. **Unique(surveyId,userId)**؛ گزارش تاریخی باید اختلاف پروفایل امروز و زمان پاسخ را تفکیک کند.
+- `DemandManagerScope`: انتصاب رسمی مدیر به واحد/مقطع/رشته و گرایش اختیاری؛ صرف `admin.panel.access` به معنی اجازهٔ دیدن دادهٔ خصوصی همهٔ رشته‌ها نیست.
+- شناسایی، احراز هویت، CSRF/CORS، کنترل دامنه مجوز روی سرور، قیود حجم ورودی، جلوگیری از تزریق CSV، Audit برای دیدن/صادرات اطلاعات شناسایی‌کننده، سیاست نگهداری/حذف و بکاپ رمزگذاری‌شده؛ برای محیط واقعی، به جای JSON تک‌فرایندی، دیتابیس تراکنشی دارای قیود یکتا توصیه می‌شود.
+- گزارش دانشجو صرفاً پاسخ خودش؛ گزارش آماری برای مدیر مجاز؛ ریز دادهٔ شخصی فقط مدیر صراحتاً مجاز و طبق ضرورت عملیاتی.
+- دانشجو نمی‌تواند `userId`، وضعیت نهایی فارغ‌التحصیلی یا کلیدهای حوزهٔ مدیریتی را در درخواست جعل کند. دادهٔ پروفایل از سرور محاسبه می‌شود.
 
-## Required safeguards
+## ۵. قوانین آموزشی قابل انتقال بین حوزه‌ها (خواستهٔ مستقل محصول)
+تعریف قوانین نباید صرفاً «سراسری دانشگاه آزاد» باشد. دامنهٔ نسخه‌دار: `universityId, campusId, degreeLevelId, majorId, entryYearId?, trackId?, effectiveFromTermId?`.
+- هر دامنه یک **RuleSet** مستقل با وضعیت `DRAFT | VERIFIED | RETIRED`، منبع بخشنامه/مصوبه، تاریخ تأیید، و تاریخچه تغییرات دارد.
+- مدیر می‌تواند از RuleSet مرجع به حوزهٔ دیگر **کپی نسخهٔ پیش‌نویس** بگیرد، سپس استثناها و تفاوت ارائه/چارت را تنظیم کند؛ هیچ تغییر در مقصد، منبع را تغییر نمی‌دهد. «اشتراک یک RuleSet» در نسخه‌های آینده با رابطهٔ صریح و تاریخچهٔ نگه‌داری.
+- قوانین پیش‌نیاز منطقی AND/OR، هم‌نیاز، استثنای مردودی، حدنصاب واحد، معدل، سنوات، کارآموزی، پروژه، تابستان و ترم آخر هر کدام شناسه، منبع و تست مثال مثبت/منفی دارند.
+- **فعلاً هیچ‌یک از حدنصاب‌ها یا استثناهای مصوبه را از روی حدس تغییر نده.** سند تأیید تک‌تک قوانین: [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md). تعداد وابستگی در توصیه‌ها یک معیار رتبه‌بندی قابل توضیح است، نه قانون آموزشی.
+- چارت‌ها و درس‌های عرضه‌شده توسط هر واحد دانشگاهی مستقل‌اند؛ کپی قانون نباید به‌طور ضمنی ارائهٔ درس یا اعتبار همان چارت را در مقصد ایجاد کند.
 
-- Demand responses are scoped to one survey and one student.
-- A student can have at most one active response per survey; editing replaces their prior selection rather than adding duplicate votes.
-- Counts are derived from current response records, not maintained as an independently mutable counter.
-- Closing, archiving, and reopening a survey must preserve its history and audit trail.
-- Survey creation and results access require server-side permissions.
-- The server validates survey scope, term, curriculum membership, survey state, timestamps, student identity, and every submitted course ID.
-- The survey must clearly say that submitting demand does not register the student in a course.
-- Reports should show response counts and demand per course; disclose the number of eligible students in the target cohort only if that population can be computed reliably.
-- Do not use stale client-side eligibility results as authority. Re-evaluate on submission and return clear explanations when a choice is no longer eligible.
+## ۶. نقشهٔ اجرا و پذیرش
+| مرحله | خروجی | وضعیت |
+| --- | --- | --- |
+| D0 | ثبت درخواست، مرز محصول، داده/مجوز/حریم خصوصی، قواعد حوزه‌ای و کپی نسخه‌دار | مستند شده |
+| D1 | مدل و API حداقلی ایجاد/بازکردن/بستن نیازسنجی، تک‌پاسخ دانشجو، آمار و CSV مدیر | در حال توسعه |
+| D2 | پنل دانشجو و مدیر در `/demo/student` و `/demo/admin` با دادهٔ ساختگی | در حال توسعه |
+| D3 | ارتباط غیرمسدودکننده با انتخاب واحد + امتیاز وابستگی‌های مستقیم/غیرمستقیم | در حال توسعه |
+| D4 | راهنمای پیشنهاد معتبر بر پایهٔ سوابق و قواعد **تأییدشده**، اعلان و پیگیری حدنصاب | منتظر تصویب قوانین و داده |
+| D5 | RuleSet حوزه‌ای، کپی پیش‌نویس، نسخه‌بندی، اعتبارسنجی مصوبات و مجوز مدیر گروه | طراحی و پیاده‌سازی مرحله‌ای |
+| D6 | خروجی Excel/PDF، تاریخچهٔ نیازسنجی، ابزار مقایسه و نظارت در مقیاس دانشگاه | آینده |
 
-## Approved academic-policy requirements
+**معیار پذیرش D1:** عدم رؤیت نیازسنجی نامنطبق، جلوگیری از تکرار رأی، حفظ پاسخ در بستن، حفظ حوزه و مجوز مدیر، فایل امن و قابل استفادهٔ CSV با تفکیک ریز/تجمیعی، بدون انتشار خودکار گروه، تست موبایل و اسکرین‌خوان، تست/Build و دیپلوی مستقل.
 
-The implementation must call the existing eligibility/domain policy rather than create a second, divergent set of prerequisite rules.
+## ۷. سؤال‌های جلسهٔ تأیید مقررات (هر بار فقط یکی)
+از [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md) به ترتیب شروع شود. پاسخ مدیر و منبع رسمی به‌عنوان تصمیم ثبت شود؛ تنها پس از تأیید صریح روی رفتار موتور اعمال گردد. فهرست کامل سؤال‌ها نباید یک‌جا به کاربر تحمیل شود.
 
-- **Prerequisite example:** Mathematics 2 has Mathematics 1 as its prerequisite. The course relationship must be represented as a prerequisite, not mislabeled as a co-requisite.
-- **General dependency rule:** For a course that requires another course, whether as a true co-requisite or under an applicable approved exception after the student failed a prerequisite, the student must either have already passed the required course or select it in the same target-term demand response alongside the dependent course.
-- **Block incomplete selections:** If the required course has not been passed and has not been selected in the same response, the dependent course cannot be selected/submitted in the demand survey. The interface should explain which required course must be added. The server must enforce this too; client-side checks alone are insufficient.
-- **Failed prerequisite exception:** Allow the prerequisite and dependent course to be taken together only when the approved IAU rule applies. Do not generalize this exception to unrelated prerequisite relationships or invent additional academic exceptions.
-- **Dynamic validation:** When a student adds or removes a course from the response, recalculate dependent-course eligibility. On submission, validate the final set of selected courses as a whole, so valid course pairs can be submitted together and incomplete dependency sets are rejected.
-
-The demand survey is still not course registration. The eligibility engine should explain why a dependent course is blocked and what course must be added, while respecting the student's curriculum, academic history, and applicable approved rule.
-
-## Suggested implementation boundary
-
-- Domain service: resolve the applicable curriculum and calculate eligible course IDs by reusing the canonical engine; support evaluating a proposed selection set together, not only each course in isolation.
-- API: create/list/publish/close surveys, read eligible courses, submit/update a response, and return aggregate results.
-- Persistence: surveys, response records, and audit events using the repository's existing data conventions initially; introduce schema migrations if persistence is moved to a relational database later.
-- UI: manager survey builder/results view and student demand-selection view.
-- Tests: authorization, survey scope, duplicate prevention, closed survey rejection, curriculum membership, tampered course IDs, prerequisite/co-requisite pair selection, failed-prerequisite exception boundaries, eligibility revalidation, aggregate counts, and privacy boundaries.
-
-## Status
-
-Policy requirements above are confirmed by the academic owner. Feature remains proposed and is not implemented yet. Before implementation, inspect the current eligibility engine and verify it can enforce the confirmed rules; if its behavior conflicts with these requirements, do not silently change academic policy—surface the exact conflict for approval.
+**نکته مهم:** متن قدیمی این فایل درباره «تأیید قطعی پیش‌نیاز ریاضی ۲ / ریاضی ۱ و استثنای مردودی» ادعایی فراتر از تصمیم ثبت‌شده داشت؛ تا دریافت تأیید جدید، آنها نمونهٔ فرضی‌اند و وارد منطق نیازسنجی نمی‌شوند.
