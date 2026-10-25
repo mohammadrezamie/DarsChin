@@ -13,6 +13,18 @@ import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, u
 
 export const studentRouter = Router();
 
+// Academic decisions must never borrow the first chart from another campus
+// or cohort. Prefer one exact active chart, consistent with GET /profile.
+const findStudentCurriculum = (profile: StudentAcademicProfile) =>
+  db.curricula.find(c =>
+    c.status === 'active' &&
+    c.universityId === profile.universityId &&
+    c.campusId === profile.campusId &&
+    c.degreeLevelId === profile.degreeLevelId &&
+    c.majorId === profile.majorId &&
+    c.entryYearId === profile.entryYearId
+  ) || null;
+
 // Get student academic profile
 studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
@@ -46,15 +58,7 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
 
   // Never fall back to the first unrelated university/entry-year chart.
   // Academic recommendations and demand must share the student's exact scope.
-  const matchingCurriculum = db.curricula.find(
-    (c) =>
-      c.status === 'active' &&
-      c.universityId === profile!.universityId &&
-      c.campusId === profile!.campusId &&
-      c.degreeLevelId === profile!.degreeLevelId &&
-      c.majorId === profile!.majorId &&
-      c.entryYearId === profile!.entryYearId
-  ) || null;
+  const matchingCurriculum = findStudentCurriculum(profile!);
 
   res.json({
     success: true,
@@ -265,13 +269,13 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
     if (!profile) {
       return res.status(400).json({ success: false, error: 'پروفایل تحصیلی یافت نشد.' });
     }
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
-    const relevantOfferings = db.courseOfferings.filter((o) => o.termId === currentTermId && o.active);
+    const curriculum = findStudentCurriculum(profile);
+    if(!curriculum){
+      return res.status(409).json({success:false,
+        error:'برای دانشگاه، واحد، مقطع، رشته و ورودی شما چارت فعال معتبری پیدا نشد؛ اطلاعات پروفایل یا چارت را بررسی کنید.'});
+    }
+    const relevantOfferings = db.courseOfferings.filter(o =>
+      o.termId === currentTermId && o.campusId === profile.campusId && o.active !== false);
     const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
     const report = evaluateStudentEligibility({
@@ -388,15 +392,14 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     return res.status(404).json({ success: false, error: 'گروه درسی مورد نظر یافت نشد.' });
   }
 
-  const curriculum = db.curricula.find(
-    (c) =>
-      c.universityId === profile.universityId &&
-      c.majorId === profile.majorId &&
-      c.entryYearId === profile.entryYearId
-  ) || db.curricula[0];
+  const curriculum = findStudentCurriculum(profile);
+  if(!curriculum) {
+    return res.status(409).json({success:false,
+      error:'چارت فعال مربوط به دانشگاه، واحد، مقطع، رشته و ورودی شما یافت نشد.'});
+  }
 
   const relevantOfferings = db.courseOfferings.filter(
-    (o) => o.termId === currentTermId && o.active
+    o => o.termId === currentTermId && o.campusId === profile.campusId && o.active !== false
   );
   const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
