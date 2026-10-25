@@ -201,6 +201,7 @@ export const AdminDashboard: React.FC = () => {
           { id: 'logs' as AdminTab, label: 'لاگ‌های سیستم', icon: Database },
         ] : []),
         { id: 'support' as AdminTab, label: 'پشتیبانی و تیکت‌ها', icon: MessageSquare },
+        ...(isSuperAdmin || user?.permissions?.includes('sms.manage') ? [{id:'sms-center' as AdminTab,label:'مرکز پیامک نیازپرداز',icon:MessageSquare}]:[]),
       ],
     },
   ].map(group => demandOnly
