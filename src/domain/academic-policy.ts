@@ -48,7 +48,7 @@ export function calculateAcademicLimits(
   const passedUnits=countedPassed.reduce((sum,id)=>sum+(knownById.get(id)?.units||0),0);
   const remainingUnits=Math.max(0,totalCurriculumUnits-passedUnits);
 
-  let calculatedIsFinalSemester=isFinalSemester;
+  let calculatedIsFinalSemester=totalCurriculumUnits>0 && isFinalSemester;
   const hasUnknownTrackRequirements=!studentProfile.isTrackSelected &&
     curriculumCourses.some(cc=>cc.active!==false && !!cc.trackId);
   if(studentProfile.isFinalSemesterOverride===false){
