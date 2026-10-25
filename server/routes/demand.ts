@@ -58,7 +58,12 @@ function audit(adminId: string, action: string, entityId: string) {
 
 demandRouter.get('/surveys', (req: AuthenticatedRequest, res) => {
   const list = db.demandSurveys.filter(s => managerCanAccessDemand(req.user!, s) ||
-    (isOpen(s) && !!scopeStudent(req, s)));
+    (!!scopeStudent(req, s) && (
+      isOpen(s) ||
+      // Keep a student's own previously submitted demand visible as history
+      // after the manager closes/archives the survey; editing stays disabled.
+      db.demandResponses.some(r => r.surveyId === s.id && r.userId === req.user!.id)
+    )));
   return res.json({ success: true, data: list });
 });
 
