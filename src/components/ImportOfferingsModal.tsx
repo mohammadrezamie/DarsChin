@@ -158,9 +158,9 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       schemaVersion: '1.0',
       source: 'mock-educational-system',
       extractedAt: new Date().toISOString(),
-      term: 'نیمسال اول ۱۴۰۵–۱۴۰۶',
-      university: 'دانشگاه آزاد اسلامی',
-      campus: 'واحد علوم و تحقیقات',
+      term: 'نیمسال فرضی دمو',
+      university: 'دانشگاه نمونه (کاملاً ساختگی)',
+      campus: 'واحد نمونه',
       records: [
         { courseCode: 'DEMO-101', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'استاد نمونه الف', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
         { courseCode: 'DEMO-102', courseName: 'مدارهای الکتریکی ۱', group: '02', instructor: 'استاد نمونه ب', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
@@ -380,7 +380,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="text-xs text-blue-900 dark:text-blue-200">
-                  جهت آزمون فوری سامانه، می‌توانید داده‌های استخراج‌شده واقعی را با یک کلیک بارگذاری فرمایید.
+                  برای آزمون و دیباگ رابط کاربری می‌توانید سه ردیف کاملاً ساختگی را بررسی کنید؛ این داده‌ها از آموزشیار واقعی دریافت نشده‌اند.
                 </span>
               </div>
               <button
