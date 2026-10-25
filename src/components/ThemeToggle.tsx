@@ -12,7 +12,7 @@ export const ThemeToggle: React.FC = () => {
   ];
   return (
     <>
-      <div className="relative flex h-11 w-[116px] shrink-0 items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:hidden">
+      <div className="relative flex min-h-11 w-[116px] shrink-0 items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:hidden">
         <span className="pointer-events-none absolute right-2.5 flex items-center text-blue-600 dark:text-blue-300" aria-hidden="true">
           {theme === 'dark' ? <Moon className="h-4 w-4" /> : theme === 'light' ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
         </span>
