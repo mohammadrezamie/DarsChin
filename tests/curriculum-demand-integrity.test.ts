@@ -224,6 +224,32 @@ describe('separation of cohorts, campuses and major tracks',()=>{
     expect(deleteTrack.status).toBe(409);
     expect(db.tracks.some(t=>t.id===trackId)).toBe(true);
   });
+  it('never deletes a course referenced only as a nested prerequisite source',async()=>{
+    const sourceId='test-nested-source-only-course';
+    const ruleId='test-source-only-academic-rule';
+    db.courses.push({
+      id:sourceId,code:'SOURCE-ONLY-TEST',name:'پیش‌نیاز آزمایشی درخت قانون',
+      units:2,category:'پایه',active:true,
+    });
+    db.academicRules.push({
+      id:ruleId,curriculumId:chartId,targetCourseId:courseId,
+      relationshipType:'PREREQUISITE',
+      expression:{type:'GROUP',operator:'OR',operands:[
+        {type:'COURSE',courseId:sourceId},
+        {type:'MIN_PASSED_UNITS',minUnits:30},
+      ]},
+    });
+    try{
+      const response=await request(app).delete(`/api/academic/courses/${sourceId}`)
+        .set('Authorization',token);
+      expect(response.status).toBe(409);
+      expect(db.courses.some(course=>course.id===sourceId)).toBe(true);
+      expect(db.academicRules.some(rule=>rule.id===ruleId)).toBe(true);
+    }finally{
+      db.data.academicRules=db.academicRules.filter(rule=>rule.id!==ruleId);
+      db.data.courses=db.courses.filter(course=>course.id!==sourceId);
+    }
+  });
   it('cannot delete a track still used only by academic rules or desired student tracks',async()=>{
     const dependent='test-rule-only-track';
     const ruleId='test-track-required-academic-rule';
