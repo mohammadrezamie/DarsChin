@@ -74,7 +74,8 @@ export function evaluateStudentEligibility(
   // satisfy same-term corequisites. A caller-supplied course ID is not proof
   // that any section has been selected.
   const offeredCoursesById = new Map(currentOfferings.filter(o=>
-    o.active!==false && coursesMap.get(o.courseId)?.active===true)
+    o.active!==false && coursesMap.has(o.courseId) &&
+    coursesMap.get(o.courseId)?.active!==false)
     .map(o=>[o.id,o.courseId]));
   const plannedCourseIdsSet = new Set<string>();
   for (const offeringId of plannedOfferingIdsInSameTerm) {
