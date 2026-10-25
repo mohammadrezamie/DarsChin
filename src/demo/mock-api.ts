@@ -2,6 +2,7 @@ import { DEMO_COURSES } from './course-planner';
 import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { evaluateScheduleQuality, preservesSelectedCourses } from '../domain/schedule-quality';
+import { validatePlanPriorities } from '../domain/plan-priority-integrity';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
 import { summarizeDemand, summarizeDemandByCohort, listDemandStudents, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
@@ -544,6 +545,9 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good(s.plan) as ApiResponse<T>;
     }
     if (method === 'PUT') {
+      const priorityProblem=validatePlanPriorities(data.coursePriorities,data.offeringPriorities,
+        currentOfferings(s),s.profile.campusId,s.profile.currentTermId||semester.id);
+      if(priorityProblem)return fail(priorityProblem);
       if (data.selectedOfferingIds !== undefined &&
         (!Array.isArray(data.selectedOfferingIds) || data.selectedOfferingIds.some((id: unknown) => !isUsableOffering(s, id)))) {
         return fail('یکی از گروه‌های انتخاب‌شده دیگر در دمو فعال یا موجود نیست.');
