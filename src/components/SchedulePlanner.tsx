@@ -850,7 +850,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-lg font-black text-slate-900 dark:text-white">جدول پیوسته هفتگی</h3>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              ساعت‌ها آزادند، نه بازه‌های ثابت دو ساعته. برای نمایش همه روزها در موبایل جدول را افقی حرکت بده.
+              ساعت کلاس‌ها دقیقه‌ای و آزاد است. در موبایل روز موردنظر را انتخاب کن؛ در نمایشگر بزرگ همهٔ روزهای هفته را یک‌جا می‌بینی.
             </p>
           </div>
           <FluidWeekTimetable
