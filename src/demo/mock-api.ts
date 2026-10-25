@@ -120,6 +120,9 @@ function readStore(): DemoStore {
       if (obj && typeof obj === 'object' && obj.collections &&
           typeof obj.collections === 'object' && Array.isArray(obj.passed) &&
           Array.isArray(obj.tickets) && obj.plan && obj.profile) {
+        // Upgrade older browser-only demo sessions without touching real users.
+        if (!Array.isArray(obj.teacherRatings)) obj.teacherRatings = structuredClone(sampleRatings);
+        if (!Array.isArray(obj.collections['/api/curriculum-courses'])) obj.collections['/api/curriculum-courses'] = [];
         return obj as DemoStore;
       }
     }
