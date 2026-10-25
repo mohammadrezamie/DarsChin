@@ -578,13 +578,48 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       }
       if (isOffering) {
         const previous = route.id ? rows.find(row => row.id === route.id) : null;
-        const linkedCourseId = data.courseId ?? previous?.courseId;
-        if (!currentCourses(s).some(course => course.id === linkedCourseId)) {
-          return fail('گروه نمونه باید به یک شناسهٔ درس موجود در بانک دروس متصل شود.');
+        const draft = { ...(previous || {}), ...data };
+        const linkedCourseId = draft.courseId;
+        if (!currentCourses(s).some(course => course.id === linkedCourseId && course.active !== false) ||
+            !(s.collections['/api/academic/terms'] || []).some(term => term.id === (draft.termId || semester.id)) ||
+            !(s.collections['/api/academic/campuses'] || []).some(c => c.id === (draft.campusId || campus.id))) {
+          return fail('درس فعال، نیمسال و واحد نمونه باید از فهرست معتبر دمو انتخاب شوند.');
         }
-        if (data.startTime && data.endTime && data.startTime >= data.endTime) {
-          return fail('زمان پایان گروه نمونه باید بعد از شروع کلاس باشد.');
+        const start = String(draft.startTime ?? '').trim();
+        const end = String(draft.endTime ?? '').trim();
+        const toMinute = (value: string): number | null => {
+          const ascii = value.replace(/[۰-۹]/g, ch => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)))
+            .replace(/[٠-٩]/g, ch => String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)));
+          const match = /^(\d{1,2}):(\d{2})$/.exec(ascii);
+          if (!match) return null;
+          const hour = Number(match[1]), minute = Number(match[2]);
+          return hour < 24 && minute < 60 ? hour * 60 + minute : null;
+        };
+        if (Boolean(start) !== Boolean(end) ||
+            (start && (toMinute(start) === null || toMinute(end) === null ||
+              toMinute(start)! >= toMinute(end)!))) {
+          return fail('ساعت شروع و پایان را هر دو معتبر وارد کنید، یا هر دو خالی بگذارید.');
         }
+        const capacity = Number(draft.capacity === '' || draft.capacity === undefined ? 40 : draft.capacity);
+        const enrolled = Number(draft.enrolledCount === '' || draft.enrolledCount === undefined ? 0 : draft.enrolledCount);
+        if (!Number.isSafeInteger(capacity) || capacity < 1 ||
+            !Number.isSafeInteger(enrolled) || enrolled < 0 || enrolled > capacity) {
+          return fail('ظرفیت گروه در دمو باید مثبت و تعداد ثبت‌نامی بین صفر و ظرفیت باشد.');
+        }
+        // Normalize only an explicitly provided valid clock; leave unspecified
+        // times empty for the unscheduled-class review list.
+        const formatted = (value: string) => {
+          const minute = toMinute(value);
+          return minute === null ? '' : String(Math.floor(minute / 60)).padStart(2, '0') +
+            ':' + String(minute % 60).padStart(2, '0');
+        };
+        data.startTime = start ? formatted(start) : '';
+        data.endTime = end ? formatted(end) : '';
+        data.dayOfWeek = typeof draft.dayOfWeek === 'string' ? draft.dayOfWeek : '';
+        data.capacity = capacity;
+        data.enrolledCount = enrolled;
+        data.enrolledCountKnown = draft.enrolledCountKnown === false ? false :
+          draft.enrolledCountKnown === true || (draft.enrolledCount !== undefined && draft.enrolledCount !== '');
       }
     }
     if(method==='POST'){
@@ -594,6 +629,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         row.campusId ??= campus.id;
         row.source ??= 'manual';
         row.enrolledCount ??= 0;
+        row.enrolledCountKnown ??= false;
         row.capacity ??= 40;
       }
       rows.push(row);s.collections[route.key]=rows;saveStore(s);return good(row) as ApiResponse<T>;
@@ -602,9 +638,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       const idx=rows.findIndex(row=>row.id===route.id);
       if(idx<0)return fail('رکورد دمو یافت نشد.');
       const updated: Row={...rows[idx],...data,id:route.id};
-      if (isOffering && updated.startTime && updated.endTime && updated.startTime >= updated.endTime) {
-        return fail('زمان پایان گروه نمونه باید بعد از شروع کلاس باشد.');
-      }
+
       rows[idx]=updated;
       if (isCourse || isOffering) cleanDemoPlan(s);
       saveStore(s);
