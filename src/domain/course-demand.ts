@@ -25,6 +25,52 @@ export function managerCanAccessDemand(user: User, survey: Pick<DemandSurvey, 'c
     scope.degreeLevelId === survey.degreeLevelId && scope.majorId === survey.majorId);
 }
 
+/** Each selected cohort remains a separate report dimension, even under one survey. */
+export function summarizeDemandByCohort(survey: DemandSurvey, responses: DemandResponse[]) {
+  const scoped = responses.filter(r=>r.surveyId===survey.id &&
+    survey.entryYearIds.includes(r.snapshot.entryYearId));
+  return survey.entryYearIds.map(entryYearId=>{
+    const cohort = scoped.filter(r=>r.snapshot.entryYearId===entryYearId);
+    return {
+      entryYearId,
+      participantCount: cohort.length,
+      declaredGraduationCount: cohort.filter(r=>r.anticipatedGraduation==='YES').length,
+      byCourse: survey.courseIds.map(courseId=>({
+        courseId,
+        count: cohort.filter(r=>r.courseIds.includes(courseId)).length,
+      })).filter(item=>item.count>0),
+    };
+  });
+}
+
+export type DemandStudentRow = {
+  studentName: string;
+  studentNumber: string;
+  entryYearId: string;
+  selectedTrackId: string | null;
+  isTrackSelected: boolean;
+  anticipatedGraduation: DemandResponse['anticipatedGraduation'];
+  courseIds: string[];
+  updatedAt: string;
+};
+
+/** Private administrative report; caller MUST check demand.export and audit access. */
+export function listDemandStudents(survey: DemandSurvey, responses: DemandResponse[]): DemandStudentRow[] {
+  return responses.filter(r=>r.surveyId===survey.id &&
+    survey.entryYearIds.includes(r.snapshot.entryYearId))
+    .map(r=>({
+      studentName:r.snapshot.studentName,
+      studentNumber:r.studentNumber,
+      entryYearId:r.snapshot.entryYearId,
+      selectedTrackId:r.snapshot.selectedTrackId || null,
+      isTrackSelected:r.snapshot.isTrackSelected,
+      anticipatedGraduation:r.anticipatedGraduation,
+      courseIds:[...r.courseIds],
+      updatedAt:r.updatedAt,
+    })).sort((a,b)=>a.entryYearId.localeCompare(b.entryYearId,'fa') ||
+      a.studentName.localeCompare(b.studentName,'fa'));
+}
+
 export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[]) {
   const relevant = responses.filter(r => r.surveyId === survey.id);
   const byCourse = survey.courseIds.map(courseId => {
