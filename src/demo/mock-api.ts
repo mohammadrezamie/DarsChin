@@ -613,9 +613,9 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     const raw=data.grade;
     const noGrade=raw===undefined || raw===null || (typeof raw==='string' && !raw.trim());
     const acceptable=typeof raw==='number' || (typeof raw==='string' &&
-      /^\\d{1,2}(?:\\.\\d{1,2})?$/.test(raw.trim()));
+      /^\d{1,2}(?:\.\d{1,2})?$/.test(raw.trim()));
     const score=noGrade?undefined:Number(raw);
-    if(!noGrade && (!acceptable || !Number.isFinite(score) || score!<0 || score!>20))
+    if(!noGrade && (!acceptable || !Number.isFinite(score) || (score as number)<0 || (score as number)>20))
       return fail('نمره باید عددی بین صفر تا بیست باشد.');
     const record={
       id:id(),userId:'demo-student',courseId:data.courseId,grade:score,
