@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Link, useLocation } from 'react-router-dom';
 import { ExtensionModal } from './ExtensionModal';
+import { adminWorkspaceAccess } from '../utils/admin-navigation';
 
 interface NavbarProps {
   activeTab: 'student' | 'admin' | 'mock-portal' | 'extension';
@@ -17,21 +18,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const activeTab = location.pathname.includes('/admin') ? 'admin' : 'student';
-  const canManage = !!(user?.roles?.includes('super-admin') || user?.permissions?.includes('admin.panel.access'));
+  const canManage = adminWorkspaceAccess(user).isAdmin;
   const [isExtModalOpen, setExtModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const onEscape = (event: KeyboardEvent) => {
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMobileMenuOpen(false);
         triggerRef.current?.focus();
       }
+      if (event.key !== 'Tab') return;
+      const candidates = mobileNavRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!candidates?.length) return;
+      const first = candidates[0], last = candidates[candidates.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
     };
-    window.addEventListener('keydown', onEscape);
-    return () => window.removeEventListener('keydown', onEscape);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [mobileMenuOpen]);
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
   const closeMenu = () => setMobileMenuOpen(false);
@@ -106,11 +126,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
         <div className="fixed inset-0 z-[80] md:hidden print:hidden" dir="rtl">
           <div role="presentation" className="absolute inset-0 bg-slate-950/60"
             onClick={() => { closeMenu(); triggerRef.current?.focus(); }} />
-          <nav id="mobile-main-navigation" aria-label="منوی اصلی موبایل"
-            className="absolute inset-y-0 right-0 flex w-[min(86vw,330px)] flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+          <nav ref={mobileNavRef} id="mobile-main-navigation" role="dialog" aria-modal="true" aria-label="منوی اصلی موبایل"
+            className="darschin-drawer absolute inset-y-0 right-0 flex w-[min(90vw,360px)] flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
               <strong className="text-lg font-black text-slate-900 dark:text-white">منوی درس‌چین</strong>
-              <button type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
+              <button ref={mobileCloseRef} type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
