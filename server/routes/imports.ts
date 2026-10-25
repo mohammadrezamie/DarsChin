@@ -5,11 +5,11 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, AuthenticatedRequest, requirePermission } from '../middleware/auth';
 import { processImportPayload } from '../../src/domain/import-validator';
 import { ImportBatch } from '../../src/types';
 import { validate } from '../middleware/validate';
-import { processImportSchema } from '../schemas/imports';
+import { processImportSchema, reviewImportRecordSchema } from '../schemas/imports';
 
 export const importsRouter = Router();
 
@@ -130,3 +130,56 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
     },
   });
 });
+
+
+/**
+ * This operation records an operator's course-id mapping decision ONLY.
+ * Publication of an offering is intentionally a separate, unavailable flow.
+ * A course match does not verify term, group, teacher, capacity or regulations.
+ */
+importsRouter.put(
+  '/batches/:batchId/records/:recordId/review',
+  authenticate,
+  requirePermission('offering.manage'),
+  validate(reviewImportRecordSchema),
+  (req: AuthenticatedRequest, res) => {
+    const batch = db.importBatches.find(item => item.id === req.params.batchId);
+    if (!batch) return res.status(404).json({ success: false, error: 'بسته واردات پیدا نشد.' });
+    const record = db.importRecords.find(item => item.id === req.params.recordId && item.batchId === batch.id);
+    if (!record) return res.status(404).json({ success: false, error: 'ردیف موردنظر در این بسته پیدا نشد.' });
+
+    const { action, reason } = req.body as { action: 'CONFIRM_MATCH' | 'REJECT_MATCH'; reason: string; courseId?: string };
+    if (action === 'CONFIRM_MATCH' && !db.courses.some(course => course.id === req.body.courseId && course.active)) {
+      return res.status(400).json({ success: false, error: 'درس مقصد در کاتالوگ فعال وجود ندارد.' });
+    }
+    const before = {
+      decision: record.reviewDecision ?? null,
+      matchedCourseId: record.matchedCourseId ?? null,
+    };
+    record.reviewDecision = action === 'CONFIRM_MATCH' ? 'COURSE_MATCH_CONFIRMED' : 'REJECTED';
+    record.matchedCourseId = action === 'CONFIRM_MATCH' ? req.body.courseId : null;
+    record.reviewNotes = reason.trim();
+    record.reviewedBy = req.user!.id;
+    record.reviewedAt = new Date().toISOString();
+
+    db.auditLogs.push({
+      id: 'audit-' + randomUUID(),
+      adminId: req.user!.id,
+      action: 'IMPORT_COURSE_MAPPING_REVIEW',
+      entityType: 'import-record',
+      entityId: record.id,
+      details: JSON.stringify({
+        batchId: batch.id,
+        before,
+        after: { decision: record.reviewDecision, matchedCourseId: record.matchedCourseId },
+      }),
+      createdAt: record.reviewedAt,
+    });
+    db.save();
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({ success: true, data: record,
+      publicationStatus: 'NOT_PUBLISHED',
+      message: 'تصمیم نگاشت ذخیره شد؛ هیچ گروه درسی منتشر نشده است.',
+    });
+  },
+);
