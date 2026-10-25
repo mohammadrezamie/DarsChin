@@ -87,10 +87,18 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
 }) => {
   const [activePlannerTab, setActivePlannerTab] = useState<'priorities' | 'timetable' | 'exams'>('priorities');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const [copyError,setCopyError]=useState('');
+  const handleCopyCode = async (code: string) => {
+    setCopyError('');
+    if(!code){setCopyError('برای این گروه کد معتبری ثبت نشده است.');return;}
+    try {
+      if(!navigator.clipboard?.writeText)throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+    } catch {
+      setCopiedCode(null);
+      setCopyError('کپی خودکار در این مرورگر ممکن نیست؛ از صف سریع ثبت برای کپی دستی استفاده کن.');
+    }
   };
   
   const [addingFallbackForCourseId, setAddingFallbackForCourseId] = useState<string | null>(null);
@@ -346,6 +354,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         <h2 className="text-sm font-bold text-slate-700">برنامه کلاسی، اولویت‌بندی دروس و تقویم امتحانات</h2>
       </div>
 
+      {copyError&&<p role="alert" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">{copyError}</p>}
       {/* Top Academic Status & Capacity Hub */}
       <div className="p-5 sm:p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-4">
         {/* Banner Title & Actions */}
@@ -624,11 +633,11 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                               کد {pc.courseCode}
                             </span>
                             <button
-                              onClick={() => handleCopyCode(primary?.courseCode || primary?.courseCode || pc.courseCode)}
+                              onClick={() => handleCopyCode(primary.rawCourseCode || primary.courseCode)}
                               className="px-2.5 py-1 flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-[11px] font-bold"
-                              title="کپی کد ارائه جهت پیست در آموزشیار"
+                              title={primary.rawCourseCode ? 'کپی کد ثبت‌شدهٔ این گروه' : 'این کد از کاتالوگ است؛ پیش از ثبت در آموزشیار تأیید کن'}
                             >
-                              {copiedCode === (primary?.courseCode || primary?.courseCode || pc.courseCode) ? (
+                              {copiedCode === (primary.rawCourseCode || primary.courseCode) ? (
                                 <>
                                   <Check className="w-3.5 h-3.5" />
                                   کپی شد
@@ -636,7 +645,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                               ) : (
                                 <>
                                   <Copy className="w-3.5 h-3.5" />
-                                  کپی کد آموزشیار
+                                  {primary.rawCourseCode?'کپی کد گروه':'کپی کد کاتالوگ'}
                                 </>
                               )}
                             </button>
