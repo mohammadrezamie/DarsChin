@@ -446,6 +446,8 @@ export interface CourseEligibilityResult {
   rawCourseCode?: string;
   courseName: string;
   units: number;
+  /** Explicit administrator-approved extra-unit exception; not inferred from course name. */
+  isExtraUnit?: boolean;
   category: CourseCategory;
   groupCode: string;
   instructor: string;
