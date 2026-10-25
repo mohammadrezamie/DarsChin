@@ -195,12 +195,14 @@ export const StudentDashboard: React.FC = () => {
     newSelectedIds: string[],
     newCoursePriorities: string[],
     newOfferingPriorities: Record<string, string[]>,
+    qualitySuggestion = false,
   ) => runPlanMutation(() => apiRequest('/api/student/plan', {
     method: 'PUT',
     body: JSON.stringify({
       selectedOfferingIds: newSelectedIds,
       coursePriorities: newCoursePriorities,
       offeringPriorities: newOfferingPriorities,
+      ...(qualitySuggestion ? {qualitySuggestion:true} : {}),
     }),
   }));
 
@@ -266,7 +268,7 @@ export const StudentDashboard: React.FC = () => {
       nextPriorities[ev.courseId]=[ev.offeringId,
         ...(nextPriorities[ev.courseId]||[]).filter(id=>id!==ev.offeringId)];
     }
-    const accepted=await syncPlanToServer(newSelected,coursePriorities,nextPriorities);
+    const accepted=await syncPlanToServer(newSelected,coursePriorities,nextPriorities,true);
     if(!accepted)return false;
     setSelectedOfferingIds(newSelected);
     setOfferingPriorities(nextPriorities);
