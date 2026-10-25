@@ -728,11 +728,21 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     }
     if (method === 'DELETE' && chartCourseMatch[2]) {
       const courseId = chartCourseMatch[2];
-      if (!rows.some(row => row.curriculumId === chart.id && row.courseId === courseId)) return fail('درس در چارت پیدا نشد.');
-      s.collections['/api/curriculum-courses'] = rows.filter(row => !(row.curriculumId === chart.id && row.courseId === courseId));
-      s.collections['/api/curriculum/rules'] = (s.collections['/api/curriculum/rules'] || [])
-        .filter(rule => !(rule.curriculumId === chart.id && (rule.targetCourseId === courseId ||
-          extractSourceCourseIds(rule.expression).includes(courseId))));
+      const matches=rows.filter(row=>row.curriculumId===chart.id && row.courseId===courseId);
+      if(!matches.length)return fail('درس در چارت پیدا نشد.');
+      const trackId=new URL(endpoint,'https://demo.invalid').searchParams.get('trackId');
+      if(!trackId && matches.length>1)return fail('درس در چند گرایش تعریف شده؛ trackId را مشخص کن.');
+      const selected=trackId ? matches.find(row=>row.trackId===trackId) : matches[0];
+      if(!selected)return fail('انتساب درس به گرایش انتخابی پیدا نشد.');
+      if(s.demandSurveys.some(survey=>survey.curriculumId===chart.id && survey.courseIds.includes(courseId)))
+        return fail('درس در نیازسنجی استفاده شده است؛ گزارش‌های تاریخی باید حفظ شوند.');
+      s.collections['/api/curriculum-courses']=rows.filter(row=>row.id!==selected.id);
+      const remains=s.collections['/api/curriculum-courses'].some(row=>row.curriculumId===chart.id&&row.courseId===courseId);
+      if(!remains){
+        s.collections['/api/curriculum/rules']=(s.collections['/api/curriculum/rules']||[])
+          .filter(rule=>!(rule.curriculumId===chart.id && (rule.targetCourseId===courseId ||
+            extractSourceCourseIds(rule.expression).includes(courseId))));
+      }
       saveStore(s);
       return good({}) as ApiResponse<T>;
     }
