@@ -94,6 +94,12 @@ export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
   if (!Array.isArray(data.syncSnapshots)) data.syncSnapshots = [];
 }
 
+/** Demo seed accounts are never acceptable authentication identities on a public service. */
+export function isKnownDemoSeedUser(user: Pick<User, 'id' | 'mobile'>): boolean {
+  return (user.id === 'usr-admin-1' && user.mobile === '09121111111') ||
+    (user.id === 'usr-student-1' && user.mobile === '09120000000');
+}
+
 export class LocalDatabase {
   public data: DatabaseSchema = {
     users: [],
@@ -160,6 +166,7 @@ export class LocalDatabase {
   public async init(seedIfEmpty = true) {
     if (this.isInitialized) return;
     this.ensureDataDir();
+    let loadedExisting = false;
 
     if (fs.existsSync(DB_FILE)) {
       try {
@@ -194,14 +201,22 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
         if (!this.data.otpChallenges) this.data.otpChallenges = [];
         if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
-        this.isInitialized = true;
-        return;
+        if (process.env.NODE_ENV === 'production') {
+          const beforeCount = this.data.users.length;
+          this.data.users = this.data.users.filter(user => !isKnownDemoSeedUser(user));
+          if (this.data.users.length !== beforeCount) this.save();
+        }
+        loadedExisting = true;
       } catch (err) {
+        if (process.env.NODE_ENV === 'production') {
+          // Never overwrite a damaged production database with synthetic seed data.
+          throw new Error('Unable to read persisted production database; restore an audited backup.', { cause: err });
+        }
         console.error('Error reading database file, re-initializing with seed data:', err);
       }
     }
 
-    if (seedIfEmpty) {
+    if (seedIfEmpty && !loadedExisting) {
       const { getInitialSeedData } = await import('./seed');
       this.data = getInitialSeedData();
       if (process.env.NODE_ENV === 'production') {
