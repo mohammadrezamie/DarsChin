@@ -278,8 +278,11 @@ function hasCycle(target: string, expression: AcademicRule['expression'],
 
 function ruleReferencesValid(rule: AcademicRule): boolean {
   const chart = db.curricula.find(c=>c.id===rule.curriculumId);
-  if (!chart || (rule.majorId && rule.majorId!==chart.majorId) ||
-    (rule.entryYearId && rule.entryYearId!==chart.entryYearId)) return false;
+  if (!chart || chart.status==='archived' ||
+    (rule.majorId && rule.majorId!==chart.majorId) ||
+    (rule.entryYearId && rule.entryYearId!==chart.entryYearId) ||
+    (rule.trackId && !db.tracks.some(t=>t.id===rule.trackId &&
+      t.majorId===chart.majorId && t.active!==false))) return false;
   const targetPresent = db.curriculumCourses.some(row=>row.curriculumId===chart.id &&
     row.courseId===rule.targetCourseId && row.active!==false);
   return targetPresent && extractSourceCourseIds(rule.expression).every(id=>
