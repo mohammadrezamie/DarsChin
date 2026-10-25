@@ -92,11 +92,16 @@ export function evaluateScheduleQuality(
   const lookup=new Map(all.map(o=>[o.offeringId,o]));
   const selected=selectedIds.map(id=>lookup.get(id)).filter((o):o is QualityOffering=>!!o);
   const courses=[...new Set(selected.map(o=>o.courseId))];
+  // Unclean imported plans can contain two groups for one course. Do not let
+  // them double-weight that course in the teacher-quality indicator.
+  const distinctSelected=selected.filter((o,index)=>
+    selected.findIndex(item=>item.courseId===o.courseId)===index);
   const ratedCourses=new Map(ratings.filter(r=>r.average!==null&&r.sampleSize>=3)
     .map(r=>[teacherKey(r.courseId,r.instructor),r]));
-  const scored=selected.map(o=>teacherScore(o,ratings));
+  const scored=distinctSelected.map(o=>teacherScore(o,ratings));
   const knownScores=scored.filter((s):s is number=>s!==null);
-  const ratingVotes=selected.reduce((sum,o)=>sum+(ratedCourses.get(teacherKey(o.courseId,o.instructor))?.sampleSize||0),0);
+  const ratingVotes=distinctSelected.reduce((sum,o)=>
+    sum+(ratedCourses.get(teacherKey(o.courseId,o.instructor))?.sampleSize||0),0);
   const teacherReason= !selected.length?'اول درس و گروه انتخاب کن.' :
     !knownScores.length?'هنوز هیچ استاد انتخاب‌شده‌ای تعداد رأی کافی برای امتیازدهی ندارد.' :
     knownScores.length<courses.length?`برای ${knownScores.length} درس از ${courses.length} درس امتیاز معتبر داریم؛ بقیه در میانگین لحاظ نشده‌اند.`:
