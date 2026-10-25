@@ -118,6 +118,13 @@ export const AdminDashboard: React.FC = () => {
   // A department manager receives only the survey workspace, not global admin menus.
   const { isSuperAdmin, demandOnly, isAdmin } = adminWorkspaceAccess(user);
   const activeTab = demandOnly ? 'demand' : resolveAdminTab(searchParams.get('tab'), isSuperAdmin);
+  // Deep links from a major's entry-year chart keep the legacy editor visible,
+  // while the regular manager sees only the simpler major-first navigation.
+  useEffect(()=>{
+    if(['provinces','degrees','tracks','entry-years','curricula'].includes(activeTab))
+      setShowAdvancedStructure(true);
+  },[activeTab]);
+
 
   const fetchStats = async () => {
     setLoadingStats(true);
@@ -392,6 +399,18 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Tab Content Area */}
       <div className="pt-1">
         {/* 1. OVERVIEW TAB */}
+        {activeTab === 'overview' && !demandOnly && (
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+            <button type="button" onClick={()=>selectTab('majors')}
+              className="min-h-11 flex-1 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white">
+              شروع مدیریت رشته و ورودی‌ها
+            </button>
+            <button type="button" onClick={()=>selectTab('demand')}
+              className="min-h-11 flex-1 rounded-xl border border-blue-300 px-4 text-sm font-bold text-blue-900 dark:border-blue-800 dark:text-blue-100">
+              مشاهده نیازسنجی
+            </button>
+          </div>
+        )}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* KPI Cards Grid */}
