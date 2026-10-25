@@ -77,6 +77,20 @@ describe('Educationalyar import: strict matching and human review', () => {
     expect(wrongTitle.importRecords[0].status).toBe('NEEDS_REVIEW');
   });
 
+  it('does not automatically use a course alias restricted to another cohort or track', () => {
+    const onlyScoped = {
+      ...course, code: 'CANONICAL-102',
+      courseCodes: [{
+        code: 'M-102', entryYear: 1403,
+        majorId: 'major-electrical', active: true,
+      }],
+    };
+    const result = process([row()], [onlyScoped]);
+    expect(result.matchedCount).toBe(0);
+    expect(result.reviewCount).toBe(1);
+    expect(result.importRecords[0].matchedCourseId).toBeNull();
+  });
+
   it('never invents group, lecturer, class time, capacity or availability', () => {
     const raw = parseRawInput({ records: [{ courseCode: 'M-102', courseName: 'ریاضی عمومی ۲' }] });
     expect(raw[0]).toMatchObject({ group: '', instructor: '', day: '', startTime: '', endTime: '' });
