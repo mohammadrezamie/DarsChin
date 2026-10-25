@@ -303,6 +303,25 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       });
     }
 
+    // A full-plan write must not bypass the same limits as a one-off add.
+    // The official exception is explicit catalog metadata, NEVER a guessed
+    // substring in a course name.
+    const selectedRows=selectedOfferingIds.map(id=>relevantOfferings.find(o=>o.id===id)!);
+    const selectedCourseIds=selectedRows.map(o=>o.courseId);
+    if(new Set(selectedCourseIds).size!==selectedCourseIds.length){
+      return res.status(409).json({success:false,
+        error:'از هر درس تنها یک گروه اصلی می‌توان در برنامه انتخاب کرد.'});
+    }
+    const selectedUnits=selectedCourseIds.reduce((sum,id)=>{
+      const c=db.courses.find(course=>course.id===id);
+      return sum+(c?.isExtraUnit===true?0:(c?.units||0));
+    },0);
+    const limits=db.calculateStudentAcademicLimits(userId);
+    if(selectedUnits>limits.effectiveMaxUnits){
+      return res.status(400).json({success:false,
+        error:`مجموع ${selectedUnits} واحد برنامه از سقف مجاز این نیمسال (${limits.effectiveMaxUnits} واحد) بیشتر است.`});
+    }
+
     // Strictly validate *atomic suggested schedule* saves, without changing the
     // existing manual plan editor's ability to display imperfect draft plans.
     if(qualitySuggestion===true){
@@ -456,21 +475,13 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     (o) => o.courseId === targetOffering.courseId && o.id !== targetOffering.id
   );
 
-  let currentUnits = currentSelectedOfferings.reduce((sum, o) => {
-    const c = db.courses.find((crs) => crs.id === o.courseId);
-    if (c?.name.includes('وصایا') || c?.name.includes('انس')) return sum;
-    return sum + (c?.units || 0);
-  }, 0);
-
-  // If swapping section of same course, subtract old section's units
-  if (sameCourseExistingOffering) {
-    const oldCourse = db.courses.find((crs) => crs.id === sameCourseExistingOffering.courseId);
-    if (!oldCourse?.name.includes('وصایا') && !oldCourse?.name.includes('انس')) {
-      currentUnits -= oldCourse?.units || 0;
-    }
-  }
-
-  const isExtra = targetCourse?.name.includes('وصایا') || targetCourse?.name.includes('انس');
+  const otherCourseIds = new Set(currentSelectedOfferings
+    .filter(o => o.courseId !== targetOffering.courseId).map(o=>o.courseId));
+  const currentUnits = [...otherCourseIds].reduce((sum,id)=>{
+    const course=db.courses.find(c=>c.id===id);
+    return sum+(course?.isExtraUnit===true?0:(course?.units||0));
+  },0);
+  const isExtra = targetCourse?.isExtraUnit === true;
   if (!isExtra && currentUnits + targetUnits > academicLimits.effectiveMaxUnits) {
     const limitLabel = academicLimits.isSummer
       ? 'ترم تابستان (۸ واحد)'
