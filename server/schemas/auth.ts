@@ -14,11 +14,13 @@ export const registerSchema = z.object({
   password: z.string().min(6, 'رمز عبور باید حداقل ۶ کاراکتر باشد'),
   name: z.string().min(2, 'لطفاً نام و نام خانوادگی خود را وارد کنید'),
   recoveryKey: z.string().optional(),
+  captchaToken: z.string().max(2048).optional(),
 });
 
 export const loginSchema = z.object({
   mobile: iranianMobileSchema,
   password: z.string().min(1, 'رمز عبور الزامی است'),
+  captchaToken: z.string().max(2048).optional(),
 });
 
 export const changePasswordSchema = z.object({
