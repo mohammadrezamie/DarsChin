@@ -12,6 +12,7 @@ export const ForgotPassword: React.FC = () => {
   const [captchaSvg, setCaptchaSvg] = useState('');
   const [captchaValue, setCaptchaValue] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [challengeId, setChallengeId] = useState('');
@@ -64,6 +65,7 @@ export const ForgotPassword: React.FC = () => {
         setError(res.error || 'خطایی رخ داد.');
         if (!turnstileEnabled) loadCaptcha();
         setCaptchaToken('');
+        setCaptchaAttempt(n => n + 1);
         setCaptchaValue('');
       }
     } catch (err: any) {
@@ -156,7 +158,7 @@ export const ForgotPassword: React.FC = () => {
                 <input type="tel" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="09123456789" />
               </div>
               
-              {turnstileEnabled && <GuestHumanCheck action="otp" token={captchaToken} onToken={setCaptchaToken} />}
+              {turnstileEnabled && <GuestHumanCheck key={captchaAttempt} action="otp" token={captchaToken} onToken={setCaptchaToken} />}
               {!turnstileEnabled && captchaSvg && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد امنیتی</label>
