@@ -875,6 +875,32 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     s.collections['/api/curriculum/rules'] = rules.filter(row => row.id !== rule.id);
     saveStore(s); return good({}) as ApiResponse<T>;
   }
+  // Synthetic-only creation of a scoped draft curriculum from the major-first
+  // admin workspace. No academic approval, production API or real students.
+  if(path==='/api/curriculum' && method==='POST'){
+    const majorRow=s.collections['/api/academic/majors'].find(row=>row.id===data.majorId);
+    const degreeRow=s.collections['/api/academic/degrees'].find(row=>row.id===data.degreeLevelId);
+    const unit=s.collections['/api/academic/campuses'].find(row=>row.id===data.campusId);
+    const year=s.collections['/api/academic/entry-years'].find(row=>row.id===data.entryYearId);
+    const charts=s.collections['/api/curriculum'];
+    if(!majorRow||!degreeRow||!unit||!year||
+      majorRow.degreeLevelId!==degreeRow.id || unit.universityId!==data.universityId ||
+      typeof data.name!=='string'||!data.name.trim()||data.status!=='draft'||
+      typeof data.version!=='string'||!data.version.trim()){
+      return fail('چارت آزمایشی باید به واحد، رشته، مقطع و ورودی معتبر تعلق داشته باشد.');
+    }
+    if(charts.some(c=>c.campusId===data.campusId&&c.majorId===data.majorId&&
+      c.degreeLevelId===data.degreeLevelId&&c.entryYearId===data.entryYearId&&c.version===data.version)){
+      return fail('نسخهٔ چارت این ورودی تکراری است.');
+    }
+    const chart={
+      id:id(),universityId:data.universityId,campusId:data.campusId,
+      degreeLevelId:data.degreeLevelId,majorId:data.majorId,
+      entryYearId:data.entryYearId,version:data.version,name:data.name.trim(),
+      status:'draft',createdAt:now(),
+    };
+    charts.push(chart);saveStore(s);return good(chart) as ApiResponse<T>;
+  }
   const route=collectionRoute(path);
   if (route) {
     const rows=s.collections[route.key]||[];
