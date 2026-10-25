@@ -128,6 +128,37 @@ describe('authenticated import preview can never publish offerings', () => {
     expect(db.courseOfferings.map(o => o.id)).toEqual(initialOfferings);
   });
 
+  it('never exposes a legacy raw source blob in import batch lists or details', async () => {
+    const batchId = 'legacy-private-import-' + Date.now();
+    madeBatchIds.push(batchId);
+    db.importBatches.push({
+      id: batchId,
+      userId: testAdminId,
+      termId,
+      source: 'extension',
+      schemaVersion: '1.0',
+      totalRecords: 0,
+      matchedRecords: 0,
+      reviewRecords: 0,
+      invalidRecords: 0,
+      rawJson: '{"privateStudentField":"DO_NOT_DISCLOSE"}',
+      createdAt: new Date().toISOString(),
+    });
+    db.save();
+    const list = await request(app).get('/api/imports/batches')
+      .set('Authorization', authHeader);
+    expect(list.status).toBe(200);
+    expect(list.body.data.find((item: { id: string }) => item.id === batchId)?.rawJson).toBeUndefined();
+    expect(list.headers['cache-control']).toContain('no-store');
+
+    const detail = await request(app).get(`/api/imports/batches/${batchId}`)
+      .set('Authorization', authHeader);
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.batch.rawJson).toBeUndefined();
+    expect(detail.headers['cache-control']).toContain('no-store');
+    expect(db.importBatches.find(batch => batch.id === batchId)?.rawJson).toContain('DO_NOT_DISCLOSE');
+  });
+
   it('refuses to treat arbitrary campus IDs as a valid imported term context', async () => {
     const response = await request(app).post('/api/imports/process')
       .set('Authorization', authHeader)
