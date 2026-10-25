@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
@@ -140,28 +141,50 @@ academicRouter.get('/degrees', (req, res) => res.json({ success: true, data: db.
 academicRouter.get('/majors', (req, res) => res.json({ success: true, data: db.majors }));
 academicRouter.get('/tracks', (req, res) => res.json({ success: true, data: db.tracks }));
 
+// Human-facing academic creation requires names and contextual selections only.
+// INTERNAL-* is an opaque internal reference, never an official academic code.
+const internalReference = () => 'INTERNAL-' + randomUUID().slice(0, 12).toUpperCase();
+const safeAcademicName = (v: unknown): v is string =>
+  typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 120;
+const safeOptionalCode = (v: unknown): v is string | undefined =>
+  v === undefined || (typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 50);
+
 academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, code, active = true } = req.body;
-  const newDeg: DegreeLevel = { id: `deg-${Date.now()}`, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.degreeLevels.push(newDeg);
-  db.save();
-  res.json({ success: true, data: newDeg });
+  const { name, code, active = true } = req.body || {};
+  if (!safeAcademicName(name) || !safeOptionalCode(code))
+    return res.status(400).json({success:false,error:'نام مقطع الزامی است؛ نیازی به شناسهٔ فنی نیست.'});
+  if (db.degreeLevels.some(x=>x.name.trim()===name.trim()))
+    return res.status(409).json({success:false,error:'این مقطع قبلاً تعریف شده است.'});
+  const record:DegreeLevel={id:'deg-'+randomUUID(),name:name.trim(),
+    code:code?.trim()||internalReference(),active:active!==false};
+  db.degreeLevels.push(record);db.save();
+  return res.json({success:true,data:record});
 });
 
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { degreeLevelId, name, code, active = true } = req.body;
-  const newMajor: Major = { id: `maj-${Date.now()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
-  db.majors.push(newMajor);
-  db.save();
-  res.json({ success: true, data: newMajor });
+  const { degreeLevelId, name, code, active = true } = req.body || {};
+  if (!safeAcademicName(name) || !safeOptionalCode(code) ||
+    !db.degreeLevels.some(d=>d.id===degreeLevelId && d.active))
+    return res.status(400).json({success:false,error:'نام رشته و مقطع معتبر لازم است.'});
+  if (db.majors.some(m=>m.name.trim()===name.trim() && m.degreeLevelId===degreeLevelId))
+    return res.status(409).json({success:false,error:'این رشته در این مقطع قبلاً وجود دارد.'});
+  const record:Major={id:'maj-'+randomUUID(),degreeLevelId,name:name.trim(),
+    code:code?.trim()||internalReference(),active:active!==false};
+  db.majors.push(record);db.save();
+  return res.json({success:true,data:record});
 });
 
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { majorId, name, code, active = true } = req.body;
-  const newTrack: Track = { id: `trk-${Date.now()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.tracks.push(newTrack);
-  db.save();
-  res.json({ success: true, data: newTrack });
+  const { majorId, name, code, active = true } = req.body || {};
+  if (!safeAcademicName(name) || !safeOptionalCode(code) ||
+    !db.majors.some(m=>m.id===majorId && m.active))
+    return res.status(400).json({success:false,error:'عنوان گرایش و رشتهٔ مرتبط معتبر لازم است.'});
+  if (db.tracks.some(t=>t.majorId===majorId && t.name.trim()===name.trim()))
+    return res.status(409).json({success:false,error:'این گرایش برای رشته و مقطع انتخاب‌شده تکراری است.'});
+  const record:Track={id:'trk-'+randomUUID(),majorId,name:name.trim(),
+    code:code?.trim()||internalReference(),active:active!==false};
+  db.tracks.push(record);db.save();
+  return res.json({success:true,data:record});
 });
 
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
