@@ -276,6 +276,16 @@ function hasCycle(target: string, expression: AcademicRule['expression'],
   return extractSourceCourseIds(expression).some(source => reachesTarget(source, new Set()));
 }
 
+function ruleReferencesValid(rule: AcademicRule): boolean {
+  const chart = db.curricula.find(c=>c.id===rule.curriculumId);
+  if (!chart || (rule.majorId && rule.majorId!==chart.majorId) ||
+    (rule.entryYearId && rule.entryYearId!==chart.entryYearId)) return false;
+  const targetPresent = db.curriculumCourses.some(row=>row.curriculumId===chart.id &&
+    row.courseId===rule.targetCourseId && row.active!==false);
+  return targetPresent && extractSourceCourseIds(rule.expression).every(id=>
+    id!==rule.targetCourseId && db.courses.some(c=>c.id===id && c.active!==false));
+}
+
 // Admin: Add Academic Rule
 curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
   const {
@@ -289,6 +299,9 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     notes,
   } = req.body;
 
+  if (!ruleReferencesValid(req.body as AcademicRule)) {
+    return res.status(400).json({success:false,error:'درس هدف یا شروط با چارت مطابقت ندارند.'});
+  }
   // Cycle Detection
   if (hasCycle(targetCourseId, expression, db.data.academicRules, curriculumId)) {
     return res.status(400).json({ success: false, error: 'تعریف این قانون باعث ایجاد حلقه (Circular Dependency) می‌شود و مجاز نیست.' });
@@ -321,6 +334,9 @@ curriculumRouter.put('/rules/:ruleId', authenticate, requirePermission('prerequi
     if (next.curriculumId !== original.curriculumId ||
       next.targetCourseId !== original.targetCourseId) {
       return res.status(400).json({success:false,error:'چارت و درس هدف در ویرایش قابل جابه‌جایی نیست.'});
+    }
+    if (!ruleReferencesValid(next)) {
+      return res.status(400).json({success:false,error:'درس هدف یا شروط با چارت مطابقت ندارند.'});
     }
     const remaining = db.data.academicRules.filter(rule=>rule.id!==original.id);
     if (hasCycle(next.targetCourseId, next.expression, remaining, next.curriculumId)) {
