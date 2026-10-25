@@ -15,13 +15,22 @@ let campusId = '';
 let courseCode = '';
 let courseName = '';
 const createdJobIds: string[] = [];
+const testAdminId = 'test-sync-staging-root';
 
 beforeAll(async () => {
   await db.init(true);
-  const admin = db.users.find(user => user.roles?.includes('super-admin'));
+  // Test authorization with a dedicated root fixture, independent of env bootstrap.
+  const admin = {
+    id: testAdminId, name: 'مدیر مصنوعی همگام‌سازی',
+    mobile: '09000000772', roles: ['super-admin'] as ['super-admin'],
+    permissions: ['admin.panel.access', 'offering.manage'],
+    createdAt: new Date().toISOString(),
+  };
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.users.push(admin);
   const course = db.courses.find(item => item.active && item.code && item.name);
-  if (!admin || !course || !db.campuses[0] || !db.academicTerms[0]) {
-    throw new Error('Synthetic admin/course/term fixtures unavailable');
+  if (!course || !db.campuses[0] || !db.academicTerms[0]) {
+    throw new Error('Synthetic academic fixtures unavailable');
   }
   authHeader = 'Bearer ' + generateToken(admin);
   courseCode = course.code;
@@ -31,7 +40,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (!createdJobIds.length) return;
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
   const keys = new Set(createdJobIds);
   const batchKeys = new Set(createdJobIds.map(id => `batch-sync-${id}`));
   db.syncJobs = db.syncJobs.filter(job => !keys.has(job.id));
