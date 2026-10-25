@@ -1,15 +1,17 @@
 import { z } from 'zod';
 
+const academicId = z.string().trim().min(1).max(160);
 export const updateProfileSchema = z.object({
-  universityId: z.string().optional(),
-  campusId: z.string().optional(),
-  degreeLevelId: z.string().optional(),
-  majorId: z.string().optional(),
-  entryYearId: z.string().optional(),
+  universityId: academicId.optional(),
+  provinceId: academicId.nullable().optional(),
+  campusId: academicId.optional(),
+  degreeLevelId: academicId.optional(),
+  majorId: academicId.optional(),
+  entryYearId: academicId.optional(),
   isTrackSelected: z.boolean().optional(),
-  selectedTrackId: z.string().nullable().optional(),
-  desiredTrackIds: z.array(z.string()).optional(),
-  currentTermId: z.string().optional(),
+  selectedTrackId: academicId.nullable().optional(),
+  desiredTrackIds: z.array(academicId).max(100).optional(),
+  currentTermId: academicId.optional(),
   previousTermGpa: z.number().min(0).max(20).nullable().optional(),
 });
 
