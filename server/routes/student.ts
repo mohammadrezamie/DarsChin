@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
@@ -150,123 +151,99 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
   return res.json({success:true,data:updatedProfile});
 });
 
-// --- Passed Courses ---
-studentRouter.get('/passed-courses', authenticate, (req: AuthenticatedRequest, res) => {
-  const userId = req.user!.id;
-  const userPassed = db.studentPassedCourses.filter((spc) => spc.userId === userId);
+// --- Student-declared Passed Courses ---
+// Never count a failed or absent attempt as completed credit. Legacy course
+// histories may include repeated attempts: totals count each passed course once.
+const isPassedAttempt = (p:StudentPassedCourse):boolean =>
+  p.status!=='FAILED' && p.status!=='ABSENT' &&
+  (p.status==='PASSED' || p.grade===undefined || (Number.isFinite(p.grade) && p.grade>=10));
 
-  // Populate course details and compute units
-  let totalUnits = 0;
-  const categorySummary: Record<string, number> = {};
-
-  const enrichedList = userPassed.map((p) => {
-    const course = db.courses.find((c) => c.id === p.courseId);
-    if (course) {
-      totalUnits += course.units;
-      categorySummary[course.category] = (categorySummary[course.category] || 0) + course.units;
+studentRouter.get('/passed-courses', authenticate, (req:AuthenticatedRequest,res)=>{
+  const userId=req.user!.id;
+  const userHistory=db.studentPassedCourses.filter(p=>p.userId===userId);
+  const counted=new Set<string>();
+  let totalUnits=0;
+  const categorySummary:Record<string,number>={};
+  const enrichedList=userHistory.map(p=>{
+    const course=db.courses.find(c=>c.id===p.courseId);
+    if(course && isPassedAttempt(p) && !counted.has(p.courseId)){
+      counted.add(p.courseId);
+      totalUnits+=course.units;
+      categorySummary[course.category]=(categorySummary[course.category]||0)+course.units;
     }
-    return {
-      ...p,
-      course,
+    return {...p,course};
+  });
+  res.json({success:true,data:{passedCourses:enrichedList,totalUnits,categorySummary}});
+});
+
+studentRouter.post('/passed-courses',authenticate,validate(addPassedCourseSchema),
+  (req:AuthenticatedRequest,res)=>{
+    const userId=req.user!.id;
+    const {courseId,grade,termId}=req.body;
+    const course=db.courses.find(c=>c.id===courseId);
+    if(!course){
+      return res.status(400).json({success:false,error:'درس واردشده در بانک دروس یافت نشد.'});
+    }
+    if(termId && !db.academicTerms.some(t=>t.id===termId)){
+      return res.status(400).json({success:false,error:'نیمسال ثبت‌شده برای سابقهٔ درس معتبر نیست.'});
+    }
+    if(db.studentPassedCourses.some(p=>p.userId===userId && p.courseId===courseId)){
+      return res.status(409).json({success:false,error:'این درس قبلاً در سوابق شما ثبت شده است.'});
+    }
+    const score=grade!==undefined && grade!==''?Number(grade):undefined;
+    const newEntry:StudentPassedCourse={
+      id:`spc-${randomUUID()}`,userId,courseId,grade:score,
+      status:score!==undefined && score<10?'FAILED':'PASSED',
+      termId:termId||undefined,passedAt:new Date().toISOString(),
     };
+    db.studentPassedCourses.push(newEntry);
+    db.save();
+    return res.json({success:true,data:{...newEntry,course}});
   });
 
-  res.json({
-    success: true,
-    data: {
-      passedCourses: enrichedList,
-      totalUnits,
-      categorySummary,
-    },
+// Batch replace/add is atomic: reject the entire payload BEFORE removing any
+// historical records. Never silently drop unknown course IDs after replaceAll.
+studentRouter.post('/passed-courses/batch',authenticate,validate(batchPassedCoursesSchema),
+  (req:AuthenticatedRequest,res)=>{
+    const userId=req.user!.id;
+    const {courseIds,replaceAll}=req.body as {courseIds:string[];replaceAll?:boolean};
+    const uniqueIds=[...new Set(courseIds)];
+    const availableIds=new Set(db.courses.map(c=>c.id));
+    const unknown=uniqueIds.filter(id=>!availableIds.has(id));
+    if(unknown.length){
+      return res.status(400).json({success:false,
+        error:'فهرست شامل درس تعریف‌نشده است؛ هیچ سابقه‌ای تغییر نکرد.',
+        invalidIds:unknown});
+    }
+    const existing=replaceAll?[]:db.studentPassedCourses.filter(p=>p.userId===userId);
+    const existingCourseIds=new Set(existing.map(p=>p.courseId));
+    const newRecords:StudentPassedCourse[]=[];
+    for(const courseId of uniqueIds){
+      if(existingCourseIds.has(courseId))continue;
+      newRecords.push({
+        id:`spc-${randomUUID()}`,userId,courseId,status:'PASSED',
+        passedAt:new Date().toISOString(),
+      });
+      existingCourseIds.add(courseId);
+    }
+    if(replaceAll){
+      db.data.studentPassedCourses=db.studentPassedCourses.filter(p=>p.userId!==userId);
+    }
+    db.studentPassedCourses.push(...newRecords);
+    db.save();
+    return res.json({success:true,addedCount:newRecords.length,
+      totalPassed:existingCourseIds.size});
   });
-});
 
-studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSchema), (req: AuthenticatedRequest, res) => {
-  const userId = req.user!.id;
-  const { courseId, grade, termId } = req.body;
-
-  if (!courseId) {
-    return res.status(400).json({ success: false, error: 'شناسه درس مشخص نشده است.' });
-  }
-
-  const existing = db.studentPassedCourses.find(
-    (spc) => spc.userId === userId && spc.courseId === courseId
-  );
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
-  }
-
-  const newEntry: StudentPassedCourse = {
-    id: `spc-${Date.now()}`,
-    userId,
-    courseId,
-    grade: grade !== undefined && grade !== '' ? Number(grade) : undefined,
-    status: (grade !== undefined && grade !== '' && Number(grade) < 10) ? 'FAILED' : 'PASSED',
-    termId: termId || undefined,
-    passedAt: new Date().toISOString(),
-  };
-
-  db.studentPassedCourses.push(newEntry);
+studentRouter.delete('/passed-courses/:id',authenticate,(req:AuthenticatedRequest,res)=>{
+  const userId=req.user!.id;
+  const idx=db.studentPassedCourses.findIndex(p=>
+    p.id===req.params.id && p.userId===userId);
+  if(idx===-1)return res.status(404).json({success:false,
+    error:'رکورد درس پاس‌شده یافت نشد.'});
+  db.studentPassedCourses.splice(idx,1);
   db.save();
-
-  const course = db.courses.find((c) => c.id === courseId);
-  res.json({ success: true, data: { ...newEntry, course } });
-});
-
-// Batch update passed courses
-studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCoursesSchema), (req: AuthenticatedRequest, res) => {
-  const userId = req.user!.id;
-  const { courseIds, replaceAll } = req.body;
-
-  if (!Array.isArray(courseIds)) {
-    return res.status(400).json({ success: false, error: 'لیست شناسه‌های دروس باید آرایه باشد.' });
-  }
-
-  if (replaceAll) {
-    for (let i = db.studentPassedCourses.length - 1; i >= 0; i--) {
-      if (db.studentPassedCourses[i].userId === userId) {
-        db.studentPassedCourses.splice(i, 1);
-      }
-    }
-  }
-
-  const existingCourseIds = new Set(
-    db.studentPassedCourses.filter((spc) => spc.userId === userId).map((spc) => spc.courseId)
-  );
-
-  let addedCount = 0;
-  for (const cid of courseIds) {
-    if (!existingCourseIds.has(cid)) {
-      const course = db.courses.find((c) => c.id === cid);
-      if (course) {
-        db.studentPassedCourses.push({
-          id: `spc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          userId,
-          courseId: cid,
-          passedAt: new Date().toISOString(),
-        });
-        existingCourseIds.add(cid);
-        addedCount++;
-      }
-    }
-  }
-
-  db.save();
-  res.json({ success: true, addedCount, totalPassed: existingCourseIds.size });
-});
-
-studentRouter.delete('/passed-courses/:id', authenticate, (req: AuthenticatedRequest, res) => {
-  const userId = req.user!.id;
-  const idx = db.studentPassedCourses.findIndex(
-    (spc) => spc.id === req.params.id && spc.userId === userId
-  );
-  if (idx === -1) {
-    return res.status(404).json({ success: false, error: 'رکورد درس پاس‌شده یافت نشد.' });
-  }
-
-  db.studentPassedCourses.splice(idx, 1);
-  db.save();
-  res.json({ success: true, message: 'درس با موفقیت از لیست دروس پاس‌شده حذف شد.' });
+  return res.json({success:true,message:'درس از سوابق خوداظهاری حذف شد.'});
 });
 
 // --- Student Course Planning & Authoritative Selection ---
