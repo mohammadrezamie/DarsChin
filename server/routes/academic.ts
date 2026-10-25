@@ -247,9 +247,14 @@ academicRouter.post('/terms', authenticate, requirePermission('system.settings.m
 academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.courses }));
 
 academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
-  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body;
-  if (!code || !name || units === undefined || !category) {
-    return res.status(400).json({ success: false, error: 'کد، نام، تعداد واحد و دسته‌بندی درس الزامی است.' });
+  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit = false } = req.body || {};
+  if (typeof code !== 'string' || !code.trim() || typeof name !== 'string' || !name.trim() ||
+      typeof category !== 'string' || !category.trim() ||
+      !Number.isInteger(Number(units)) || Number(units)<0 || Number(units)>20 ||
+      !Number.isInteger(Number(practicalUnits)) || Number(practicalUnits)<0 ||
+      Number(practicalUnits)>Number(units) ||
+      typeof isExtraUnit !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'کد، نام، واحدهای معتبر، دسته‌بندی و وضعیت واحد مازاد الزامی یا باید معتبر باشند.' });
   }
 
   const existing = db.courses.find((c) => c.code.trim() === code.trim());
@@ -263,6 +268,7 @@ academicRouter.post('/courses', authenticate, requirePermission('course.create')
     name: name.trim(),
     units: Number(units),
     practicalUnits: Number(practicalUnits),
+    isExtraUnit,
     category,
     description: description?.trim() || undefined,
     active: !!active,
