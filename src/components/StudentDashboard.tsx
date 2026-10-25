@@ -66,8 +66,10 @@ export const StudentDashboard: React.FC = () => {
   const [planError, setPlanError] = useState<string | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const planMutationRef = useRef(false);
+  const evaluationVersionRef = useRef(0);
 
   const fetchDashboardData = async () => {
+    const version = ++evaluationVersionRef.current;
     setLoading(true);
     setLoadError(null);
     try {
@@ -76,6 +78,7 @@ export const StudentDashboard: React.FC = () => {
         apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
         apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
       ]);
+      if (version !== evaluationVersionRef.current) return;
       if (profileRes.success && profileRes.data) setProfile(profileRes.data.profile);
       else setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
 
@@ -99,6 +102,7 @@ export const StudentDashboard: React.FC = () => {
       const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
         method: 'POST', body: JSON.stringify({ plannedCourseIds: planned }),
       });
+      if (version !== evaluationVersionRef.current) return;
       if (evalRes.success && evalRes.data) {
         setEvaluations(evalRes.data.report?.results || []);
         setRecommendations(evalRes.data.recommendations || []);
@@ -106,9 +110,11 @@ export const StudentDashboard: React.FC = () => {
         if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
       } else setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
     } catch {
-      setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
+      if (version === evaluationVersionRef.current) {
+        setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
+      }
     } finally {
-      setLoading(false);
+      if (version === evaluationVersionRef.current) setLoading(false);
     }
   };
 
@@ -132,6 +138,7 @@ export const StudentDashboard: React.FC = () => {
         setPlanError(response.error || 'تغییر برنامه ذخیره نشد. برنامه قبلی حفظ شده است.');
         return false;
       }
+      setPlanError(null);
       setPlanStatus('saved');
       return true;
     } catch {
@@ -276,10 +283,12 @@ export const StudentDashboard: React.FC = () => {
     setSelectedOfferingIds(acceptedSelectedIds);
     if (acceptedPriorities) setOfferingPriorities(acceptedPriorities);
     setConflictWarning(null);
+    const version = ++evaluationVersionRef.current;
     const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
       method: 'POST',
       body: JSON.stringify({ plannedCourseIds: acceptedSelectedIds }),
     });
+    if (version !== evaluationVersionRef.current) return;
     if (evalRes.success && evalRes.data) {
       setEvaluations(evalRes.data.report?.results || []);
       setRecommendations(evalRes.data.recommendations || []);
