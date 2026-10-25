@@ -12,6 +12,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       DARSCHYN_DATA_DIR: /app/data
+      DARSCHYN_RELEASE_SHA: ${DARSCHYN_RELEASE_SHA:-unidentified}
       JWT_SECRET: ${JWT_SECRET:?Set a unique random JWT_SECRET}
       ROOT_OWNER_MOBILE: ${ROOT_OWNER_MOBILE:?Set private root mobile}
       ROOT_OWNER_PASSWORD: ${ROOT_OWNER_PASSWORD:?Set strong root password}
