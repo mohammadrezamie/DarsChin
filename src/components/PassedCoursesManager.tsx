@@ -46,7 +46,6 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [batchSaving, setBatchSaving] = useState(false);
 
   const fetchPassedData = async () => {
     setLoading(true);
@@ -123,26 +122,6 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
     }
   };
 
-  const handleQuickBatchSelect = async (categoryName?: string) => {
-    setBatchSaving(true);
-    let targetCourses = allCourses;
-    if (categoryName) {
-      targetCourses = allCourses.filter((c) => c.category === categoryName);
-    }
-
-    const targetIds = targetCourses.map((c) => c.id);
-    const res = await apiRequest('/api/student/passed-courses/batch', {
-      method: 'POST',
-      body: JSON.stringify({ courseIds: targetIds, replaceAll: false }),
-    });
-
-    setBatchSaving(false);
-    if (res.success) {
-      await fetchPassedData();
-      if (onPassedCoursesChanged) onPassedCoursesChanged();
-    }
-  };
-
   const handleRemove = async (id: string) => {
     if (!confirm('آیا از حذف این درس از لیست دروس گذرانده مطمئن هستید؟')) return;
 
@@ -185,90 +164,11 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              مجموع واحدهای گذرانده
-            </span>
-            <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-              {totalUnits} <span className="text-xs font-normal text-slate-500">واحد</span>
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-            <Award className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-              تعداد دروس پاس‌شده
-            </span>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {passedCourses.length} <span className="text-xs font-normal text-slate-500">عنوان درس</span>
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs flex flex-col justify-center">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1.5">
-            تفکیک دسته‌بندی واحدها
-          </span>
-          <div className="flex flex-wrap gap-1.5 text-[11px]">
-            {Object.entries(categorySummary).map(([cat, units]) => (
-              <span
-                key={cat}
-                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium"
-              >
-                {cat}: {units} و
-              </span>
-            ))}
-            {Object.keys(categorySummary).length === 0 && (
-              <span className="text-slate-400 text-xs">هنوز درسی ثبت نشده است</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Batch Actions */}
-      <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-slate-800/80 dark:to-slate-900/80 rounded-2xl border border-blue-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span className="text-xs text-slate-800 dark:text-slate-200 font-medium">
-            تیک‌زدن سریع دروس گذرانده بر اساس چارت درسی:
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            disabled={batchSaving}
-            onClick={() => handleQuickBatchSelect('پایه')}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
-          >
-            + دروس پایه
-          </button>
-          <button
-            type="button"
-            disabled={batchSaving}
-            onClick={() => handleQuickBatchSelect('عمومی')}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
-          >
-            + دروس عمومی
-          </button>
-          <button
-            type="button"
-            disabled={batchSaving}
-            onClick={() => handleQuickBatchSelect('اصلی')}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs transition-all"
-          >
-            + دروس اصلی
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
+        <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-300"/>
+        <span className="font-bold text-slate-900 dark:text-white">{passedCourses.length} درس پاس‌شده</span>
+        <span className="text-slate-600 dark:text-slate-300">· {totalUnits} واحد گذرانده‌شده</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">فقط درس‌هایی را علامت بزن که واقعاً گذرانده‌ای.</span>
       </div>
 
       {/* Main Container with Tabs */}
@@ -277,7 +177,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
           <div className="flex items-center gap-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-emerald-600" />
-              مدیریت و ثبت کارنامه دروس گذرانده
+              فهرست دروس پاس‌شدهٔ من
             </h3>
             <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs">
               <button
