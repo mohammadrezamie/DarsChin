@@ -283,9 +283,10 @@ export interface DemandSurvey {
   campusId: string;
   degreeLevelId: string;
   majorId: string;
-  curriculumId?: string;
+  curriculumId?: string; // Legacy/single-cohort primary chart
+  curriculumIds?: string[]; // One chart per selected entry year in multi-cohort demand
   entryYearIds: string[];
-  trackIds: string[];
+  trackIds: string[]; // Legacy targeted surveys; track is optional student metadata for new surveys
   courseIds: string[];
   recommendedMinimumByCourse: Record<string, number>;
   startsAt?: string;
