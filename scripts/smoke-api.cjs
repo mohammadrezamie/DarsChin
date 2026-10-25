@@ -11,12 +11,14 @@ const binary = path.join(root, 'dist', 'server.cjs');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'darschin-api-smoke-'));
 const rootMobile = '09999999999'; // synthetic only, inside isolated data directory
 const rootPassword = crypto.randomBytes(32).toString('hex');
+const testReleaseSha = crypto.randomBytes(20).toString('hex');
 const environment = {
   ...process.env,
   NODE_ENV: 'production',
   HOST: '127.0.0.1',
   DARSCHYN_DATA_DIR: path.join(temporary, 'data'),
   JWT_SECRET: crypto.randomBytes(32).toString('hex'),
+  DARSCHYN_RELEASE_SHA: testReleaseSha,
   ROOT_OWNER_MOBILE: rootMobile,
   ROOT_OWNER_PASSWORD: rootPassword,
   ROOT_OWNER_RECOVERY_KEY: crypto.randomBytes(32).toString('hex'),
@@ -99,6 +101,7 @@ async function main() {
   await startServer();
   const health = await requestJson('/api/health');
   if (health.status !== 200 || health.body.status !== 'ok') throw new Error('Health response failed');
+  if (health.body.releaseSha !== testReleaseSha) throw new Error('Release fingerprint mismatch');
 
   const missing = await requestJson('/api/not-a-real-route');
   if (missing.status !== 404 || missing.body.success !== false) throw new Error('API 404 contract failed');
