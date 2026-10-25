@@ -311,6 +311,27 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   res.json({ success: true, data: newRule });
 });
 
+// Admin: Update a rule in-place; do not require users to delete and recreate it.
+curriculumRouter.put('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'),
+  validate(createAcademicRuleSchema), (req, res) => {
+    const index = db.data.academicRules.findIndex(rule => rule.id === req.params.ruleId);
+    if (index === -1) return res.status(404).json({ success:false, error:'قانون یافت نشد.' });
+    const original = db.data.academicRules[index];
+    const next = req.body as AcademicRule;
+    if (next.curriculumId !== original.curriculumId ||
+      next.targetCourseId !== original.targetCourseId) {
+      return res.status(400).json({success:false,error:'چارت و درس هدف در ویرایش قابل جابه‌جایی نیست.'});
+    }
+    const remaining = db.data.academicRules.filter(rule=>rule.id!==original.id);
+    if (hasCycle(next.targetCourseId, next.expression, remaining, next.curriculumId)) {
+      return res.status(400).json({success:false,error:'ویرایش موجب حلقهٔ وابستگی دروس می‌شود.'});
+    }
+    const updated = {...original, ...next, id:original.id};
+    db.data.academicRules[index] = updated;
+    db.save();
+    return res.json({success:true,data:updated});
+  });
+
 // Admin: Delete Academic Rule
 curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
