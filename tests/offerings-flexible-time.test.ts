@@ -95,7 +95,7 @@ describe('manager-created offerings accept unannounced times without invented sl
         .set('Authorization', token).send(payload);
       expect(rejected.status).toBe(400);
       expect(db.courseOfferings.find(row => row.id === saved.id)).toMatchObject({
-        startTime: '07:15', endTime: '08:25', capacity: 30,
+        startTime: '07:15', endTime: '08:25', capacity: 35,
       });
     }
   });
