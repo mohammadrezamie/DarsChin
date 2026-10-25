@@ -515,10 +515,9 @@ this.isInitialized = true;
       // Without an exact active chart there is no verified basis for inferred
       // remaining credits or final-semester eligibility.
       finalSemesterReason = 'چارت فعال مطابق واحد، مقطع، رشته و ورودی یافت نشد؛ وضعیت ترم آخر نامشخص است.';
-    } else if (!profile.isTrackSelected && this.curriculumCourses.some(cc =>
-      cc.curriculumId === curriculum.id && cc.active !== false && !!cc.trackId)) {
-      finalSemesterReason = 'گرایش رسمی دانشجو مشخص نیست؛ واحدهای باقی‌ماندهٔ گرایش هنوز قابل محاسبهٔ قطعی نیستند.';
     } else if (profile.isFinalSemesterOverride === true) {
+      // A deliberate administrative override takes precedence over an
+      // incomplete track selection. It changes credit limits, never prereqs.
       isFinalSemester = true;
       finalSemesterReason =
         profile.finalSemesterNotes ||
@@ -526,6 +525,9 @@ this.isInitialized = true;
     } else if (profile.isFinalSemesterOverride === false) {
       isFinalSemester = false;
       finalSemesterReason = 'مجوز ترم آخری توسط اداره آموزش رد شده است.';
+    } else if (!profile.isTrackSelected && this.curriculumCourses.some(cc =>
+      cc.curriculumId === curriculum.id && cc.active !== false && !!cc.trackId)) {
+      finalSemesterReason = 'گرایش رسمی دانشجو مشخص نیست؛ واحدهای باقی‌ماندهٔ گرایش هنوز قابل محاسبهٔ قطعی نیستند.';
     } else if (
       settings.finalSemesterRuleEnabled &&
       remainingUnits > 0 &&
