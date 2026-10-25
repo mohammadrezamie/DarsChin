@@ -73,6 +73,19 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(res.body.data.user.recoveryKey).toBeUndefined(); // Recovery key must not leak
     });
 
+    it("blocks missing CAPTCHA for login and rejects a reused local image challenge", async () => {
+        const payload = { mobile: generateTestMobile(), password: 'wrong-password' };
+        const missing = await request(app).post('/api/auth/login').send(payload);
+        expect(missing.status).toBe(403);
+        const captchaToken = await createLocalCaptchaToken();
+        const attempted = await request(app).post('/api/auth/login')
+            .send({ ...payload, captchaToken });
+        expect(attempted.status).toBe(401); // Valid CAPTCHA; invalid account credentials
+        const replayed = await request(app).post('/api/auth/login')
+            .send({ ...payload, captchaToken });
+        expect(replayed.status).toBe(403);
+    });
+
     it("returns structured validation errors for malformed auth bodies", async () => {
         const res = await request(app)
             .post('/api/auth/register')
