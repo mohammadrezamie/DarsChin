@@ -423,7 +423,9 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                                   )}
                                   {section.capacity !== undefined && (
                                     <span className="text-slate-500 font-mono">
-                                      ظرفیت: {section.capacity - section.enrolledCount} نفر
+                                      {section.enrolledCountKnown === false
+                                        ? 'ظرفیت باقیمانده: نامشخص'
+                                        : `ظرفیت باقیمانده: ${section.capacity - section.enrolledCount} نفر`}
                                     </span>
                                   )}
                                 </div>
