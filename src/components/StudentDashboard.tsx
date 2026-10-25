@@ -661,7 +661,7 @@ export const StudentDashboard: React.FC = () => {
       {/* Conflict Warning Modal */}
       {conflictWarning && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-liquid-glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200">
+          <div dir="rtl" role="alertdialog" aria-modal="true" aria-label="هشدار تداخل برنامه" className="darschin-dialog darschin-page bg-liquid-glass w-full max-w-md rounded-3xl p-4 shadow-xl sm:p-6">
             <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-500">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
               <h3 className="text-xl font-bold">هشدار تداخل برنامه</h3>
