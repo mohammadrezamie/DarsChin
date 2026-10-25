@@ -333,7 +333,10 @@ if (els.syncApiBtn) {
             const snapData = await snapRes.json();
             if (!snapData.success) throw new Error(snapData.error);
             
-            els.syncApiBtn.innerText = 'همگام‌سازی با موفقیت انجام شد ✓';
+            // Upload success is a receipt, never a verified course publication.
+            els.syncApiBtn.innerText = snapData.data?.jobStatus === 'AWAITING_REVIEW'
+                ? 'ارسال شد؛ در انتظار بررسی مدیر'
+                : 'فایل دریافت شد؛ وضعیت را در پنل بررسی کنید';
             els.syncApiBtn.classList.replace('bg-green-600', 'bg-blue-600');
         } catch (err) {
             alert('خطا در همگام‌سازی: ' + err.message);
