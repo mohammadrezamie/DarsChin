@@ -204,6 +204,17 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
     if (seedIfEmpty) {
       const { getInitialSeedData } = await import('./seed');
       this.data = getInitialSeedData();
+      if (process.env.NODE_ENV === 'production') {
+        // NEVER expose well-known sample users/passwords on a public VPS.
+        // Academic seed content remains visibly synthetic until explicitly
+        // replaced with verified pilot catalog/curriculum data.
+        this.data.users = [];
+        this.data.studentProfiles = [];
+        this.data.studentPassedCourses = [];
+        this.data.studentPlans = [];
+        this.data.otpChallenges = [];
+        this.data.captchaChallenges = [];
+      }
       this.save();
     }
     
