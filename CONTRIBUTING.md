@@ -4,7 +4,7 @@ Thanks for contributing to the DarsChin demo platform. For full procedures, see 
 
 ## Branch and PR process
 
-1. Create a short-lived branch from current `main` using `feat/`, `fix/`, `docs/`, or `chore/`.
+1. Keep short, reviewed changes on current `main` when explicitly authorized. For large/high-risk changes use one short-lived `feat/` or `fix/` branch; remove it once the work is merged and verified. Never accumulate abandoned branches.
 2. Keep each change focused and document its intended observable behavior.
 3. Run `bun run verify` (Bun uses the committed `bun.lock` and a temporary test-only database) **when possible**. If a check is unavailable, mark it as not run; never claim that GitHub Actions or static inspection passed it.
 4. Do not commit `.env` files, real user or university exports, password/OTP/recovery materials, mutable database state, build archives, or debug logs.
