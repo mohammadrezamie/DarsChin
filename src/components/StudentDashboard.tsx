@@ -157,9 +157,10 @@ export const StudentDashboard: React.FC = () => {
   }));
 
   // Reorder courses
-  const handleReorderCourses = (newCourseOrder: string[]) => {
-    setCoursePriorities(newCourseOrder);
-    syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities);
+  const handleReorderCourses = async (newCourseOrder: string[]) => {
+    if (await syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities)) {
+      setCoursePriorities(newCourseOrder);
+    }
   };
 
   // Select primary offering for a course (promotes offering to primary)
@@ -185,10 +186,10 @@ export const StudentDashboard: React.FC = () => {
       [courseId]: updatedOfferingList,
     };
 
-    setSelectedOfferingIds(newSelected);
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities)) {
+      setSelectedOfferingIds(newSelected);
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Add a fallback offering for a course
@@ -200,9 +201,9 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: [...currentCourseOfferings, offeringId],
     };
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Remove a fallback offering from a course
@@ -212,9 +213,9 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: currentCourseOfferings.filter((id) => id !== offeringId),
     };
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Calculate schedule conflicts
@@ -247,29 +248,43 @@ export const StudentDashboard: React.FC = () => {
     const isAdding = !selectedOfferingIds.includes(offeringId);
     const newSelected = isAdding
       ? [...selectedOfferingIds, offeringId]
-      : selectedOfferingIds.filter((id) => id !== offeringId);
+      : selectedOfferingIds.filter(id => id !== offeringId);
 
-    setSelectedOfferingIds(newSelected);
-    setConflictWarning(null);
-
-    try {
-      await apiRequest('/api/student/plan/select', {
+    // Backend authorization/eligibility is authoritative; do not optimistically
+    // render an offering the API may reject.
+    let acceptedSelectedIds = newSelected;
+    let acceptedPriorities: Record<string, string[]> | undefined;
+    const saved = await runPlanMutation(async () => {
+      const response = await apiRequest<{
+        selectedOfferingIds?: string[];
+        plan?: { offeringPriorities?: Record<string, string[]> };
+        offeringPriorities?: Record<string, string[]>;
+      }>('/api/student/plan/select', {
         method: 'POST',
-        body: JSON.stringify({
-          offeringId,
-          action: isAdding ? 'add' : 'remove',
-        }),
+        body: JSON.stringify({ offeringId, action: isAdding ? 'add' : 'remove' }),
       });
-    
-      const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ plannedCourseIds: newSelected }),
-      });
-      if (evalRes.success && evalRes.data) {
-        setEvaluations(evalRes.data.report?.results || []);
+      if (response.success) {
+        if (Array.isArray(response.data?.selectedOfferingIds)) {
+          acceptedSelectedIds = response.data.selectedOfferingIds;
+        }
+        acceptedPriorities = response.data?.plan?.offeringPriorities || response.data?.offeringPriorities;
       }
-    } catch (err) {
-      console.error('Plan sync error:', err);
+      return response;
+    });
+    if (!saved) return;
+
+    setSelectedOfferingIds(acceptedSelectedIds);
+    if (acceptedPriorities) setOfferingPriorities(acceptedPriorities);
+    setConflictWarning(null);
+    const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
+      method: 'POST',
+      body: JSON.stringify({ plannedCourseIds: acceptedSelectedIds }),
+    });
+    if (evalRes.success && evalRes.data) {
+      setEvaluations(evalRes.data.report?.results || []);
+      setRecommendations(evalRes.data.recommendations || []);
+    } else {
+      setLoadError(evalRes.error || 'تغییر برنامه ثبت شد؛ تحلیل جدید در دسترس نیست. اطلاعات را دوباره دریافت کنید.');
     }
   };
 
@@ -366,10 +381,11 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  const handleClearSchedule = () => {
+  const handleClearSchedule = async () => {
     if (confirm('آیا از پاکسازی کل برنامه انتخابی مطمئن هستید؟')) {
-      setSelectedOfferingIds([]);
-      syncPlanToServer([], coursePriorities, offeringPriorities);
+      if (await syncPlanToServer([], coursePriorities, offeringPriorities)) {
+        setSelectedOfferingIds([]);
+      }
     }
   };
 
