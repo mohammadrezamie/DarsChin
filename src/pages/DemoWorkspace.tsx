@@ -12,7 +12,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
   const [resetConfirm, setResetConfirm] = useState(false);
   return (
     <DemoAuthProvider role={role}>
-      <div dir="rtl" className="min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <div className="relative z-50 border-b border-amber-200 bg-amber-50 px-3 py-3 dark:border-amber-900 dark:bg-amber-950 md:sticky md:top-0 md:px-5">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-2 text-amber-950 dark:text-amber-100">
