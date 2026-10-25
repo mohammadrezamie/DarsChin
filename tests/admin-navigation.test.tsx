@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { DemoWorkspace } from '../src/pages/DemoWorkspace';
-import { ADMIN_TABS, resolveAdminTab } from '../src/utils/admin-navigation';
+import { ADMIN_TABS, resolveAdminTab, adminWorkspaceAccess } from '../src/utils/admin-navigation';
 
 describe('admin workspace navigation', () => {
   it('resolves only known deep links and falls back safely', () => {
@@ -21,6 +21,19 @@ describe('admin workspace navigation', () => {
       expect(resolveAdminTab(tab, true)).toBe(tab);
     }
     expect(resolveAdminTab('support', false)).toBe('support');
+  });
+
+  it('only enables the demand workspace for an explicitly scoped, permitted department manager', () => {
+    const scope = { campusId: 'campus-srb', degreeLevelId: 'be', majorId: 'ee' };
+    expect(adminWorkspaceAccess(null).isAdmin).toBe(false);
+    expect(adminWorkspaceAccess({ roles: ['student'], permissions: ['admin.panel.access'] }).isAdmin).toBe(false);
+    expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['demand.manage'] }).isAdmin).toBe(false);
+    expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['demand.manage'], demandScopes: [scope] }))
+      .toMatchObject({ demandOnly: true, hasFullPanel: false, isAdmin: true });
+    expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['admin.panel.access'], demandScopes: [scope] }))
+      .toMatchObject({ demandOnly: false, hasFullPanel: true, isAdmin: true });
+    expect(adminWorkspaceAccess({ roles: ['super-admin'] }))
+      .toMatchObject({ isSuperAdmin: true, demandOnly: false, isAdmin: true });
   });
 
   it('renders the deep-linked demo management section and visible navigation search', () => {
