@@ -177,7 +177,7 @@ export const AdminDashboard: React.FC = () => {
         { id: 'majors' as AdminTab, label: 'رشته‌های تحصیلی', icon: Settings },
         { id: 'tracks' as AdminTab, label: 'گرایش‌ها', icon: GitFork },
         { id: 'entry-years' as AdminTab, label: 'سال‌های ورود', icon: Calendar },
-        { id: 'curricula' as AdminTab, label: 'چارت‌های مصوب', icon: FileSpreadsheet },
+        { id: 'curricula' as AdminTab, label: 'چارت‌های تحصیلی', icon: FileSpreadsheet },
       ],
     },
     {
@@ -429,7 +429,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="bg-liquid-glass rounded-3xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                    چارت‌های مصوب
+                    چارت‌های تحصیلی
                   </span>
                   <span className="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono">
                     {stats?.totalCurricula ?? '...'}
