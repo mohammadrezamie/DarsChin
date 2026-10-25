@@ -51,6 +51,8 @@ export const StudentDashboard: React.FC = () => {
   const [currentTerm, setCurrentTerm] = useState<any>(null);
   const [evaluations, setEvaluations] = useState<CourseEligibilityResult[]>([]);
   const [recommendations, setRecommendations] = useState<CourseRecommendation[]>([]);
+  const [demandCourseIds, setDemandCourseIds] = useState<string[]>([]);
+  const [demandSurveyAvailable, setDemandSurveyAvailable] = useState(false);
   const [selectedOfferingIds, setSelectedOfferingIds] = useState<string[]>([]);
   const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
@@ -124,6 +126,22 @@ export const StudentDashboard: React.FC = () => {
   useEffect(() => {
     if (user && user.roles?.includes('student')) void fetchDashboardData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id || activeTab !== 'recommendations') return;
+    let mounted = true;
+    const loadDemandHints = async () => {
+      const surveys = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
+      const open = surveys.data?.find(item => item.status === 'OPEN');
+      if (!mounted) return;
+      setDemandSurveyAvailable(!!open);
+      if (!open) { setDemandCourseIds([]); return; }
+      const prior = await apiRequest<{courseIds:string[]} | null>(`/api/demand/surveys/${open.id}/response`);
+      if (mounted) setDemandCourseIds(prior.data?.courseIds || []);
+    };
+    void loadDemandHints();
+    return () => { mounted = false; };
+  }, [user?.id, activeTab]);
 
   // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
   const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
@@ -594,6 +612,9 @@ export const StudentDashboard: React.FC = () => {
                 evaluations={evaluations}
                 selectedOfferingIds={selectedOfferingIds}
                 onToggleScheduleOffering={handleToggleScheduleOffering}
+                demandCourseIds={demandCourseIds}
+                demandSurveyAvailable={demandSurveyAvailable}
+                onOpenDemand={() => setActiveTab('demand')}
               />
             )}
 
