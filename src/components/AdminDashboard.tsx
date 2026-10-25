@@ -683,13 +683,14 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'courses' && (
           <AdminCrudTable
             title="بانک جامع دروس آموزشی"
-            description="تعریف کلیه عناوین دروس، تعداد واحدهای نظری و عملی و دسته‌بندی موضوعی"
+            description="مقدار «کل واحدها» شامل بخش عملی است. استثنای مازاد بر سقف فقط با تأیید مقررات آموزشی و به‌صورت صریح فعال شود."
             endpoint="/api/academic/courses"
             columns={[
               { key: 'code', label: 'کد درس' },
               { key: 'name', label: 'عنوان درس' },
-              { key: 'units', label: 'واحد نظری', type: 'number' },
-              { key: 'practicalUnits', label: 'واحد عملی', type: 'number' },
+              { key: 'units', label: 'کل واحدهای درس', type: 'number' },
+              { key: 'practicalUnits', label: 'واحد عملی (از کل)', type: 'number' },
+              { key: 'isExtraUnit', label: 'مازاد بر سقف (در صورت تأیید آموزش)', type: 'boolean' },
               {
                 key: 'category',
                 label: 'دسته‌بندی',
