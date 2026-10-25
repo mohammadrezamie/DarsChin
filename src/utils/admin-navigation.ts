@@ -1,3 +1,20 @@
+/** True only for the globally authorized admin or the specifically scoped demand manager. */
+export function adminWorkspaceAccess(user: {
+  roles: string[];
+  permissions?: string[];
+  demandScopes?: {campusId:string;degreeLevelId:string;majorId:string}[];
+} | null | undefined) {
+  const isSuperAdmin = Boolean(user?.roles.includes('super-admin'));
+  const hasFullPanel = isSuperAdmin || Boolean(user?.roles.includes('admin') &&
+    user?.permissions?.includes('admin.panel.access'));
+  const demandOnly = !hasFullPanel && Boolean(
+    user?.roles.includes('admin') &&
+    user?.permissions?.includes('demand.manage') &&
+    user?.demandScopes?.length
+  );
+  return { isSuperAdmin, hasFullPanel, demandOnly, isAdmin: hasFullPanel || demandOnly };
+}
+
 /**
  * Canonical admin workspace identifiers for URL navigation.
  * Never resolve a privileged workspace for a non-super-admin account.
