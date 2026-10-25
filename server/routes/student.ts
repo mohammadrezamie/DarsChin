@@ -7,7 +7,7 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
-import { evaluateScheduleQuality } from '../../src/domain/schedule-quality';
+import { evaluateScheduleQuality, preservesSelectedCourses } from '../../src/domain/schedule-quality';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
 
@@ -304,14 +304,8 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
     if(qualitySuggestion===true){
       const existing=db.studentPlans.find(p=>p.userId===userId&&p.termId===currentTermId);
       const previous=existing?.selectedOfferingIds||[];
-      const previousCourses=previous.map(id=>db.courseOfferings.find(o=>o.id===id)?.courseId);
-      const newCourses=selectedOfferingIds.map(id=>db.courseOfferings.find(o=>o.id===id)?.courseId);
-      if(!previous.length||!newCourses.length ||
-        previousCourses.some(id=>!id) || newCourses.some(id=>!id) ||
-        new Set(previousCourses).size!==previousCourses.length ||
-        new Set(newCourses).size!==newCourses.length ||
-        new Set(newCourses).size!==new Set(previousCourses).size ||
-        newCourses.some(id=>!previousCourses.includes(id))){
+      if(!preservesSelectedCourses(previous,selectedOfferingIds,
+        db.courseOfferings.map(o=>({offeringId:o.id,courseId:o.courseId})))){
         return res.status(409).json({
           success:false,error:'پیشنهاد باید فقط گروه‌های همین دروس فعلی را جابه‌جا کند؛ برنامه تغییر نکرد.',
         });
