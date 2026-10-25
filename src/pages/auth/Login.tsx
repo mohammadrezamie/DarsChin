@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { GuestHumanCheck } from '../../components/GuestHumanCheck';
 import { apiRequest } from '../../utils/api';
 
 export const Login: React.FC = () => {
@@ -10,6 +11,7 @@ export const Login: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ export const Login: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const result = await login(mobile, password);
+      const result = await login(mobile, password, captchaToken);
       if (result.success) {
         // Route by the authenticated user's role; never treat a result object as a boolean.
         const isAdmin = result.user?.roles?.includes('super-admin') ||
@@ -155,6 +157,7 @@ export const Login: React.FC = () => {
                 </Link>
               </div>
 
+              <GuestHumanCheck action="login" token={captchaToken} onToken={setCaptchaToken} />
               <button
                 type="submit"
                 disabled={isLoading}
