@@ -3,6 +3,7 @@ import { apiRequest } from '../utils/api';
 import { User } from '../types';
 import { Shield, User as UserIcon, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AdminDemandAccessManager } from './AdminDemandAccessManager';
 
 const getHighestRole = (roles?: string[]) => {
   if (roles?.includes('super-admin')) return 'super-admin';
@@ -16,6 +17,8 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'admin.create', label: 'ایجاد مدیر' },
   { id: 'system.settings.manage', label: 'تنظیمات سیستم' },
   { id: 'student.access', label: 'دسترسی دانشجویی' },
+  { id: 'demand.manage', label: 'ساخت و مدیریت نیازسنجیِ محدودهٔ اختصاصی' },
+  { id: 'demand.export', label: 'صادرات ریز اطلاعات نیازسنجی در محدودهٔ اختصاصی' },
 ];
 
 export const UserManagement: React.FC = () => {
@@ -150,6 +153,7 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
+      <AdminDemandAccessManager admins={users} onChanged={fetchUsers} />
     </div>
   );
 };
