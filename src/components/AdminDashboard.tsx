@@ -275,7 +275,7 @@ export const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="darschin-admin space-y-5">
+    <div dir="rtl" className="darschin-page darschin-admin space-y-5">
       <header className="relative overflow-hidden rounded-[26px] bg-[#101c33] px-5 py-6 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
         <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
