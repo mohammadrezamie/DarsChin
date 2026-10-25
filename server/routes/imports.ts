@@ -13,6 +13,14 @@ import { processImportSchema, reviewImportRecordSchema } from '../schemas/import
 
 export const importsRouter = Router();
 
+// A legacy import may still retain rawJson; never send that source blob to a
+// browser or an admin listing. Review rows already contain the scoped fields.
+function publicImportBatch(batch: ImportBatch): ImportBatch {
+  const safe = { ...batch };
+  delete safe.rawJson;
+  return safe;
+}
+
 // Process uploaded JSON from Chrome Extension
 importsRouter.post('/process', authenticate, validate(processImportSchema), (req: AuthenticatedRequest, res) => {
   try {
@@ -106,7 +114,8 @@ importsRouter.get('/batches', authenticate, (req: AuthenticatedRequest, res) => 
     ? db.importBatches
     : db.importBatches.filter((b) => b.userId === userId);
 
-  res.json({ success: true, data: list });
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ success: true, data: list.map(publicImportBatch) });
 });
 
 // Get detailed records for a batch
@@ -122,10 +131,11 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
 
   const records = db.importRecords.filter((r) => r.batchId === req.params.id);
 
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({
     success: true,
     data: {
-      batch,
+      batch: publicImportBatch(batch),
       records,
     },
   });
