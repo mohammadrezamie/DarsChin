@@ -35,6 +35,7 @@ adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'),
 
 // Export Database Backup (without sensitive passwords)
 adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   const backup = db.exportBackup();
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
@@ -57,6 +58,12 @@ adminRouter.post('/restore', authenticate, requirePermission('backup.manage'), (
 
 // Reset Database to Original Seed Data
 adminRouter.post('/reset-seed', authenticate, requirePermission('system.settings.manage'), (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({
+      success: false,
+      error: 'بازنشانی داده‌های نمونه در محیط عملیاتی به‌صورت دائمی غیرفعال است.',
+    });
+  }
   try {
     db.resetToSeed();
     res.json({ success: true, message: 'پایگاه داده به داده‌های آزمایشی اولیه بازنشانی شد.' });
