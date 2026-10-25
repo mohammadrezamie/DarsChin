@@ -32,7 +32,6 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [newDescription, setNewDescription] = useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
-  const [newTrack, setNewTrack] = useState('');
   const [selectedChartIds, setSelectedChartIds] = useState<string[]>([]);
   const [personalRows, setPersonalRows] = useState<DemandPerson[]>([]);
   const [privateAccessError, setPrivateAccessError] = useState('');
@@ -280,24 +279,40 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <label className="text-xs font-bold">عنوان نیازسنجی<input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="نیازسنجی ترم آینده برق" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
             <label className="text-xs font-bold">نیمسال هدف<select value={newTerm} onChange={e=>setNewTerm(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">{terms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-            <label className="text-xs font-bold">چارت اختصاصی ورودی (مثلاً ۱۴۰۲ یا ۱۴۰۳)
-              <select value={newCurriculum} onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+            <label className="text-xs font-bold">رشته و چارت مرجع
+              <select value={newCurriculum}
+                onChange={e=>{setNewCurriculum(e.target.value);setSelectedChartIds(e.target.value?[e.target.value]:[]);setNewCourseIds([])}}
+                className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
                 {curricula.map(c=><option key={c.id} value={c.id}>ورودی {yearLabel(c.entryYearId)} · {c.name}</option>)}
               </select>
             </label>
-            <label className="text-xs font-bold">محدودهٔ گرایش
-              <select value={newTrack} onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
-                <option value="">تمام دانشجویان این ورودی (دروس مشترک)</option>
-                {tracks.filter(t=>t.majorId===curriculum?.majorId).map(t=><option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
-              </select>
-            </label>
+            <div className="min-w-0 space-y-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900 dark:bg-blue-950/20 md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong>ورودی‌های هدف این نیازسنجی</strong>
+                <button type="button" className="min-h-10 rounded-lg border border-blue-200 px-3 text-blue-800 dark:border-blue-800 dark:text-blue-200"
+                  onClick={()=>{setSelectedChartIds(sameDepartmentCharts.map(c=>c.id));setNewCourseIds([])}}>
+                  انتخاب همهٔ ورودی‌های این رشته
+                </button>
+              </div>
+              <p className="leading-6 text-slate-600 dark:text-slate-300">یک یا چند ورودی را انتخاب کن. درس‌های هر ورودی از چارت خودش می‌آیند و پاسخ‌ها در گزارش قابل تفکیک‌اند. گرایش، فیلتر اجباری نیست.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {sameDepartmentCharts.map(chart=><label key={chart.id} className="flex min-w-0 items-center gap-2 rounded-lg bg-white p-2 dark:bg-slate-900">
+                  <input type="checkbox" checked={effectiveChartIds.includes(chart.id)}
+                    onChange={()=>{setSelectedChartIds(current=>{
+                      const existing=current.length?current:[curriculum!.id];
+                      return existing.includes(chart.id)?existing.filter(id=>id!==chart.id):[...existing,chart.id];
+                    });setNewCourseIds([])}}/>
+                  <span className="min-w-0 break-words">ورودی {yearLabel(chart.entryYearId)} · {chart.name}</span>
+                </label>)}
+              </div>
+            </div>
             <label className="text-xs font-bold">حدنصاب پیشنهادی (نه مصوبه)<input type="number" min={1} max={500} value={threshold} onChange={e=>setThreshold(Number(e.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
             <label className="text-xs font-bold md:col-span-2">توضیحات<textarea rows={2} value={newDescription} onChange={e=>setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/></label>
           </div>
           <div className="mt-3">
             <p className="mb-2 text-sm font-black">دروس چارت مورد نیازسنجی</p>
             <div className="grid max-h-56 gap-1 overflow-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2 dark:border-slate-700">
-              {assigned.filter(c=>c.active!==false && (!c.trackId||c.trackId===newTrack)).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
+              {assigned.filter(c=>c.active!==false).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
               {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
             </div>
           </div>
@@ -308,7 +323,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 className="text-base font-black">{role==='admin'?'پایش نیازسنجی‌ها':'نیازسنجی‌های قابل پاسخ'}</h3>
         {!surveys.length && <p className="mt-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800">فعلاً نیازسنجی قابل دسترسی وجود ندارد.</p>}
-        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی‌ها: {s.entryYearIds.map(yearLabel).join('، ')} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
       </section>
 
       {survey && role==='student' && (
@@ -329,7 +344,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           </p>
           <h4 className="font-black">کدام درس‌ها را احتمالاً ترم آینده می‌خواهی؟</h4>
           <div className="grid gap-2 sm:grid-cols-2">
-            {survey.courseIds.map(courseId=>{
+            {survey.courseIds.filter(courseId=>assigned.some(row=>row.courseId===courseId && row.active!==false)).map(courseId=>{
               const impacted = downstreamCourseIds(courseId,survey.curriculumId||'',rules).length;
               return <label key={courseId} className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-blue-400 dark:border-slate-700">
                 <input type="checkbox" checked={selectedCourses.includes(courseId)} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
@@ -356,6 +371,14 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           </div>
           <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-blue-800 dark:text-blue-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{report?.participantCount ?? '—'}</strong></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(report?.byCohort || []).map(cohort=><div key={cohort.entryYearId} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+              <h4 className="text-sm font-black">ورودی {yearLabel(cohort.entryYearId)}</h4>
+              <p className="mt-1 text-xs">پاسخ‌دهندگان: <strong>{cohort.participantCount}</strong> · احتمال فارغ‌التحصیلی (خوداظهاری): <strong>{cohort.declaredGraduationCount}</strong></p>
+              <div className="mt-2 flex flex-wrap gap-1.5">{cohort.byCourse.map(item=><span key={item.courseId}
+                className="rounded-md bg-white px-2 py-1 text-xs dark:bg-slate-900">{courseMap.get(item.courseId)?.name||item.courseId}: {item.count}</span>)}</div>
+            </div>)}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {report?.byCourse.map(item=>(
               <div key={item.courseId} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <h4 className="text-sm font-black">{courseMap.get(item.courseId)?.name || item.courseId}</h4>
@@ -366,6 +389,55 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               </div>
             ))}
           </div>
+          <section aria-label="جزئیات دانشجویان درخواست‌دهنده" className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700 sm:p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div><h4 className="font-black">پاسخ‌های فردبه‌فرد دانشجویان</h4>
+                <p className="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400">صرفاً برای مدیر دارای دسترسی مجزای گزارش فردی؛ وضعیت فارغ‌التحصیلی بر اساس اظهار دانشجوست.</p>
+              </div>
+              <strong className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:bg-blue-950 dark:text-blue-100">{visiblePeople.length} دانشجو</strong>
+            </div>
+            {privateAccessError?<p role="note" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">{privateAccessError}</p>:<>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <label className="text-xs">نام یا شماره دانشجویی
+                  <input value={personSearch} onChange={e=>setPersonSearch(e.target.value)} placeholder="جست‌وجوی دانشجو"
+                    className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-transparent px-2 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs">ورودی
+                  <select value={personCohort} onChange={e=>setPersonCohort(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-transparent px-2 dark:border-slate-700">
+                    <option value="">همهٔ ورودی‌ها</option>{survey.entryYearIds.map(id=><option key={id} value={id}>ورودی {yearLabel(id)}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs">وضعیت فارغ‌التحصیلی
+                  <select value={personGraduation} onChange={e=>setPersonGraduation(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-transparent px-2 dark:border-slate-700">
+                    <option value="">همهٔ وضعیت‌ها</option><option value="YES">احتمال فارغ‌التحصیلی دارد</option>
+                    <option value="NO">احتمال فارغ‌التحصیلی ندارد</option><option value="UNKNOWN">نامشخص</option>
+                  </select>
+                </label>
+                <label className="text-xs">درس درخواست‌شده
+                  <select value={personCourse} onChange={e=>setPersonCourse(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-transparent px-2 dark:border-slate-700">
+                    <option value="">همهٔ دروس</option>{survey.courseIds.map(id=><option key={id} value={id}>{courseMap.get(id)?.name||id}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="grid min-w-0 gap-2 lg:grid-cols-2">
+                {visiblePeople.map(person=><article key={person.entryYearId+'-'+person.studentNumber} className="min-w-0 space-y-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
+                  <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0"><h5 className="break-words font-black">{person.studentName}</h5>
+                      <p className="text-xs text-slate-500 dark:text-slate-300" dir="ltr">{person.studentNumber}</p></div>
+                    <span className="rounded-lg bg-white px-2 py-1 text-xs dark:bg-slate-900">ورودی {yearLabel(person.entryYearId)}</span>
+                  </div>
+                  <p className="text-xs leading-6">فارغ‌التحصیلی احتمالی: <strong>{person.anticipatedGraduation==='YES'?'بله (خوداظهاری)':person.anticipatedGraduation==='NO'?'خیر (خوداظهاری)':'نامشخص'}</strong></p>
+                  <p className="text-xs leading-6">گرایش: {person.selectedTrackId?tracks.find(t=>t.id===person.selectedTrackId)?.name||person.selectedTrackId:'اعلام نشده'}</p>
+                  <div className="flex min-w-0 flex-wrap gap-1.5">{person.courseIds.map(courseId=><span key={courseId} className="max-w-full break-words rounded-lg bg-white px-2 py-1.5 text-xs dark:bg-slate-900">{courseMap.get(courseId)?.name||courseId}</span>)}</div>
+                  {!person.courseIds.length&&<p className="text-xs text-slate-500">هیچ درسی انتخاب نکرده است.</p>}
+                </article>)}
+                {!visiblePeople.length&&<p className="text-xs text-slate-500 dark:text-slate-400">پاسخی با این فیلترها پیدا نشد.</p>}
+              </div>
+            </>}
+          </section>
           <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300"><ShieldCheck className="h-4 w-4"/> گزارش ریز فقط برای مدیر دارای مجوز صادر می‌شود؛ این آمار تشکیل کلاس نیست.</p>
         </section>
       )}
