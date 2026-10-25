@@ -11,10 +11,14 @@ export function assertTurnstileConfiguration(): void {
   if (!process.env.TURNSTILE_SITE_KEY || !process.env.TURNSTILE_SECRET_KEY) {
     throw new Error('TURNSTILE_ENABLED=true requires TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY.');
   }
-  if (process.env.NODE_ENV === 'production' &&
-      (/^1x00000000000000000000/.test(process.env.TURNSTILE_SITE_KEY) ||
-       /^1x0000000000000000000000000000000/.test(process.env.TURNSTILE_SECRET_KEY))) {
-    throw new Error('Turnstile testing keys are forbidden in production.');
+  if (process.env.NODE_ENV === 'production') {
+    const allowed = (process.env.TURNSTILE_ALLOWED_HOSTNAMES || '').split(',')
+      .map(hostname => hostname.trim()).filter(Boolean);
+    if (!allowed.length) throw new Error('Production Turnstile requires TURNSTILE_ALLOWED_HOSTNAMES.');
+    if (/^[123]x0{8}/.test(process.env.TURNSTILE_SITE_KEY) ||
+        /^[123]x0{8}/.test(process.env.TURNSTILE_SECRET_KEY)) {
+      throw new Error('Turnstile testing keys are forbidden in production.');
+    }
   }
 }
 
