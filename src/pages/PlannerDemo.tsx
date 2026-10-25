@@ -50,7 +50,7 @@ export const PlannerDemo: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-950 dark:bg-slate-950 dark:text-slate-100">
+    <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-950 dark:bg-slate-950 dark:text-slate-100">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="inline-flex items-center gap-2 font-extrabold text-blue-700 hover:underline dark:text-blue-300">
