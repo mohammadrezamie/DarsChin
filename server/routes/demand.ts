@@ -20,9 +20,10 @@ const surveySchema = z.object({
   degreeLevelId: identifier,
   majorId: identifier,
   curriculumId: identifier,
-  entryYearIds: z.array(identifier).max(30).default([]),
-  // One academic cohort and at most one chosen track per survey.
-  trackIds: z.array(identifier).max(1).default([]),
+  curriculumIds: z.array(identifier).min(1).max(30).optional(),
+  entryYearIds: z.array(identifier).min(1).max(30),
+  // Legacy track-scoped surveys remain readable; new forms collect track as optional profile metadata.
+  trackIds: z.array(identifier).max(30).default([]),
   courseIds: z.array(identifier).min(1).max(100),
   recommendedMinimumByCourse: z.record(z.string(), z.number().int().min(0).max(500)).default({}),
   startsAt: z.string().datetime().optional(),
@@ -39,8 +40,9 @@ const failure = (res: any, code: number, error: string) => res.status(code).json
 function scopeStudent(req: AuthenticatedRequest, survey: DemandSurvey) {
   const profile = db.studentProfiles.find(x => x.userId === req.user!.id);
   return profile && surveyAppliesToProfile(survey, profile) &&
-    (!survey.curriculumId || db.curricula.some(c => c.id === survey.curriculumId &&
-      c.entryYearId === profile.entryYearId));
+    db.curricula.some(c => (survey.curriculumIds?.length
+      ? survey.curriculumIds.includes(c.id) : c.id === survey.curriculumId) &&
+      c.entryYearId === profile.entryYearId);
 }
 const getSurvey = (id: string) => db.demandSurveys.find(s => s.id === id);
 function isOpen(survey: DemandSurvey) {
@@ -77,22 +79,28 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     db.degreeLevels.some(d => d.id === x.degreeLevelId && d.active) &&
     db.majors.some(m => m.id === x.majorId && m.degreeLevelId === x.degreeLevelId && m.active) &&
     db.academicTerms.some(t => t.id === x.targetTermId);
-  const curriculum = db.curricula.find(c => c.id === x.curriculumId &&
-    c.universityId === x.universityId && c.campusId === x.campusId &&
-    c.degreeLevelId === x.degreeLevelId && c.majorId === x.majorId && c.status !== 'archived');
-  if (!validScope || !curriculum) return failure(res, 400, 'حوزه آموزشی، نیمسال یا چارت هدف معتبر نیست.');
-  if (x.entryYearIds.length !== 1 || x.entryYearIds[0] !== curriculum.entryYearId ||
-      !db.entryYears.some(e => e.id === curriculum.entryYearId && e.active) ||
-      x.trackIds.some(id => !db.tracks.some(t => t.id === id && t.majorId === x.majorId && t.active))) {
-    return failure(res, 400, 'ورودی یا گرایش خارج از حوزهٔ چارت است.');
+  const chosenChartIds = x.curriculumIds || [x.curriculumId];
+  const charts = chosenChartIds.map(id=>db.curricula.find(c=>c.id===id &&
+    c.universityId===x.universityId && c.campusId===x.campusId &&
+    c.degreeLevelId===x.degreeLevelId && c.majorId===x.majorId &&
+    c.status!=='archived'));
+  if (!validScope || !charts.length || charts.some(c=>!c) ||
+    new Set(chosenChartIds).size!==chosenChartIds.length ||
+    new Set(x.entryYearIds).size!==x.entryYearIds.length ||
+    charts.length!==x.entryYearIds.length ||
+    charts.some(c=>!x.entryYearIds.includes(c!.entryYearId)) ||
+    charts.some(c=>!db.entryYears.some(year=>year.id===c!.entryYearId && year.active)) ||
+    x.trackIds.some(id=>!db.tracks.some(t=>t.id===id && t.majorId===x.majorId && t.active))) {
+    return failure(res,400,'ورودی‌ها و چارت‌های هر ورودی باید یکتا و متعلق به یک رشته و مقطع باشند.');
   }
-  // Cohort-specific chart; track-specific courses require the chosen track.
-  const availableIds = new Set(db.curriculumCourses.filter(cc => cc.curriculumId === curriculum.id &&
-    cc.active !== false && (!cc.trackId || x.trackIds.includes(cc.trackId))).map(cc => cc.courseId));
-  if (new Set(x.courseIds).size !== x.courseIds.length ||
-      x.courseIds.some(id => !availableIds.has(id) || !db.courses.some(c => c.id === id && c.active)) ||
-      Object.keys(x.recommendedMinimumByCourse).some(id => !x.courseIds.includes(id))) {
-    return failure(res, 400, 'درس‌های نیازسنجی باید یکتا و متعلق به چارت فعال باشند.');
+  // Courses can come from any of the selected entry-year charts. The response
+  // endpoint separately checks that each student requests only own-chart courses.
+  const availableIds = new Set(db.curriculumCourses.filter(cc =>
+    chosenChartIds.includes(cc.curriculumId) && cc.active!==false).map(cc=>cc.courseId));
+  if (new Set(x.courseIds).size!==x.courseIds.length ||
+    x.courseIds.some(id=>!availableIds.has(id) || !db.courses.some(c=>c.id===id && c.active)) ||
+    Object.keys(x.recommendedMinimumByCourse).some(id=>!x.courseIds.includes(id))) {
+    return failure(res,400,'دروس نیازسنجی باید یکتا و متعلق به چارت یکی از ورودی‌های منتخب باشند.');
   }
   if (x.startsAt && x.endsAt && x.startsAt >= x.endsAt) return failure(res, 400, 'زمان پایان باید پس از آغاز باشد.');
   const survey: DemandSurvey = { ...x, id: 'demand-' + randomUUID(), status: 'DRAFT',
@@ -136,10 +144,15 @@ demandRouter.put('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
   const parsed = responseSchema.safeParse(req.body);
   if (!parsed.success) return failure(res, 400, 'شماره دانشجویی، وضعیت ترم آخر یا لیست دروس معتبر نیست.');
   const x = parsed.data;
-  if (new Set(x.courseIds).size !== x.courseIds.length || x.courseIds.some(id => !survey.courseIds.includes(id))) {
-    return failure(res, 400, 'فقط دروس تعریف‌شدهٔ همین نیازسنجی قابل درخواست‌اند.');
-  }
   const profile = db.studentProfiles.find(p => p.userId === req.user!.id)!;
+  const chartsForStudent = db.curricula.filter(c=>c.entryYearId===profile.entryYearId &&
+    (survey.curriculumIds?.length ? survey.curriculumIds.includes(c.id) : c.id===survey.curriculumId));
+  const availableForStudent = new Set(db.curriculumCourses.filter(cc=>
+    chartsForStudent.some(c=>c.id===cc.curriculumId) && cc.active!==false).map(cc=>cc.courseId));
+  if (new Set(x.courseIds).size!==x.courseIds.length ||
+    x.courseIds.some(id=>!survey.courseIds.includes(id) || !availableForStudent.has(id))) {
+    return failure(res,400,'فقط دروس موجود در چارت ورودی خودتان قابل درخواست‌اند.');
+  }
   const studentNumber = x.studentNumber.replace(/[۰-۹]/g, d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
     .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
   const previous = db.demandResponses.find(r => r.surveyId === survey.id && r.userId === req.user!.id);
