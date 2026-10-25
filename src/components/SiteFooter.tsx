@@ -41,7 +41,8 @@ export const SiteFooter: React.FC = () => (
         aria-label="بازدید از وب‌سایت شرکت تکین نوآوران آینده، در زبانهٔ جدید"
         className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-white transition-colors hover:border-blue-500 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       >
-        وب‌سایت شرکت
+        <span>وب‌سایت شرکت</span>
+        <span dir="ltr" className="text-[11px] text-blue-200">tnacompany.ir</span>
         <ExternalLink aria-hidden="true" className="h-4 w-4 text-blue-300" />
       </a>
     </div>
