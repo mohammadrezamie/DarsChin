@@ -83,6 +83,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   }), [evaluations, selectedOfferingIds, coursePriorities, rules, passed, profile?.majorId, profile?.entryYearId, profile?.selectedTrackId]);
 
   const todo = queue.steps.filter(step => !doneIds.includes(step.courseId));
+  const nextReady = todo.find(step => step.ready && step.copyCode &&
+    step.dependencyCourseIds.every(id => doneIds.includes(id)));
   const copied = useCallback(async (value: string | null, label: string) => {
     if (!value) { setCopyState('کد قابل اطمینان موجود نیست.'); return; }
     const ok = await copyToClipboard(value);
@@ -139,8 +141,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
       {queue.steps.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
           <button type="button"
-            disabled={loading || Boolean(dataError) || !todo[0]?.copyCode}
-            onClick={()=>void copied(todo[0]?.copyCode || null,'درس بعدی')}
+            disabled={loading || Boolean(dataError) || rules.length===0 || !nextReady}
+            onClick={()=>void copied(nextReady?.copyCode || null,'درس بعدی')}
             className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-black text-white disabled:opacity-50 sm:flex-none">
             <ClipboardCopy className="h-4 w-4" /> کپی کد درس بعدی
           </button>
@@ -159,6 +161,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         {queue.steps.map(step=>{
           const done=doneIds.includes(step.courseId);
           const alternatives=evaluations.filter(e=>e.courseId===step.courseId && e.offeringId!==step.offeringId);
+          const pendingDependencies=step.dependencyCourseIds.filter(id => !doneIds.includes(id));
+          const locked=pendingDependencies.length>0;
           return <li key={step.courseId} className={`darschin-surface min-w-0 p-4 sm:p-5 ${done?'opacity-65':''}`}>
             <div className="flex flex-wrap items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 font-black text-white">{step.effectiveRank}</span>
@@ -171,30 +175,32 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                   <ArrowDownUp className="h-4 w-4 shrink-0" /> جایگاه ثبت به‌خاطر وابستگی همنیاز تنظیم شد.
                 </p>}
               </div>
-              <button type="button" onClick={()=>confirmed(step.courseId)} aria-pressed={done}
+              <button type="button" onClick={()=>confirmed(step.courseId)} aria-pressed={done} disabled={locked && !done}
                 className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-black ${done
                   ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
                   : 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
-                {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}{done?'علامت‌خورده':'ثبت شد (دستی)'}
+                {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}{done?'علامت‌خورده':locked?'در انتظار همنیاز':'ثبت شد (دستی)'}
               </button>
             </div>
             {step.dependencyNames.length>0 && <p className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-xs leading-6 text-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
-              <GraduationCap className="mt-1 h-4 w-4 shrink-0" /> اول این همنیازها را ثبت کن: {step.dependencyNames.join('، ')}
+              <GraduationCap className="mt-1 h-4 w-4 shrink-0" /> اول این همنیازها را در آموزشیار ثبت کن و اینجا علامت بزن: {step.dependencyNames.join('، ')}
             </p>}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
                 <span className="block text-xs font-bold text-slate-600 dark:text-slate-300">کد درس برای جست‌وجوی آموزشیار</span>
-                <code dir="ltr" className="my-2 block overflow-wrap-anywhere text-left text-lg font-black text-slate-950 dark:text-white">{step.copyCode || 'نامشخص'}</code>
-                <button type="button" disabled={!step.copyCode} onClick={()=>void copied(step.copyCode,'درس')}
+                <code dir="ltr" className="my-2 block break-all text-left text-lg font-black text-slate-950 dark:text-white">{step.copyCode || 'نامشخص'}</code>
+                <button type="button" disabled={!step.copyCode || locked} onClick={()=>void copied(step.copyCode,'درس')}
                   className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-sm font-black text-white disabled:opacity-50">
                   <ClipboardCopy className="h-4 w-4" /> کپی کد درس
                 </button>
-                {!step.codeVerifiedFromOffering && <p className="mt-2 text-xs leading-6 text-amber-700 dark:text-amber-300">کدِ منبع ارائه تأیید نشده؛ با آموزشیار تطبیق بده.</p>}
+                <p className="mt-2 text-xs leading-6 text-amber-700 dark:text-amber-300">{step.codeFromOffering
+                  ? 'کد از اطلاعات ارائه دریافت شده، ولی پذیرش آن در آموزشیار تضمین نشده است.'
+                  : 'کد فقط از کاتالوگ درس آمده؛ با کد جست‌وجوی آموزشیار تطبیق بده.'}</p>
               </div>
               <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
                 <span className="block text-xs font-bold text-slate-600 dark:text-slate-300">گروه موردنظر</span>
                 <code dir="ltr" className="my-2 block text-left text-lg font-black text-slate-950 dark:text-white">{step.groupCode||'نامشخص'}</code>
-                <button type="button" disabled={!step.groupCode} onClick={()=>void copied(step.groupCode,'گروه')}
+                <button type="button" disabled={!step.groupCode || locked} onClick={()=>void copied(step.groupCode,'گروه')}
                   className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-blue-300 px-3 text-sm font-black text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:text-blue-200">
                   <ClipboardCopy className="h-4 w-4" /> کپی شماره گروه
                 </button>
