@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { resolveAdminTab, type AdminTab } from '../utils/admin-navigation';
+import { resolveAdminTab, adminWorkspaceAccess, type AdminTab } from '../utils/admin-navigation';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield,
@@ -110,17 +110,8 @@ export const AdminDashboard: React.FC = () => {
     };
   }, [mobileMenuOpen]);
 
-  const isSuperAdmin = Boolean(user?.roles?.includes('super-admin'));
-  const hasFullPanel = isSuperAdmin || Boolean(
-    user?.roles?.includes('admin') && user?.permissions?.includes('admin.panel.access')
-  );
-  // Department managers have access only to their assigned survey workspace;
-  // receiving demand.manage does not reveal unrelated campus administrative panels.
-  const hasDepartmentScope = Boolean(user?.demandScopes?.length);
-  const demandOnly = !hasFullPanel && Boolean(
-    user?.roles?.includes('admin') && user?.permissions?.includes('demand.manage') && hasDepartmentScope
-  );
-  const isAdmin = hasFullPanel || demandOnly;
+  // A department manager receives only the survey workspace, not global admin menus.
+  const { isSuperAdmin, demandOnly, isAdmin } = adminWorkspaceAccess(user);
   const activeTab = demandOnly ? 'demand' : resolveAdminTab(searchParams.get('tab'), isSuperAdmin);
 
   const fetchStats = async () => {
