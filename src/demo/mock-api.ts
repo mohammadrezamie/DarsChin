@@ -366,7 +366,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(method==='PUT'){
       if(!['log','niazpardaz'].includes(data.mode)||typeof data.senderLine!=='string'||
         !/^[0-9+]*$/.test(data.senderLine)||typeof data.otpTemplate!=='string'||
-        data.otpTemplate.length>320||(data.otpTemplate.match(/\\{code\\}/g)||[]).length!==1){
+        data.otpTemplate.length>320||(data.otpTemplate.match(/\{code\}/g)||[]).length!==1){
         return fail('قالب پیامک دمو نامعتبر است.');
       }
       s.smsSettings={mode:data.mode,senderLine:data.senderLine,otpTemplate:data.otpTemplate};
