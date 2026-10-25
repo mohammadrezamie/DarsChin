@@ -29,13 +29,15 @@ import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
+import { DemandWorkspace } from './DemandWorkspace';
 
-type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'passed' | 'support' | 'bugs';
+type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'demand' | 'passed' | 'support' | 'bugs';
 
 const studentTabs = [
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
+  { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
   { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
   { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
   { id: 'bugs', label: 'گزارش خطاهای سامانه', short: 'گزارش باگ', icon: Bug },
@@ -518,7 +520,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
       <nav aria-label="بخش‌های میز کار دانشجو" className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-7">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
             const current = activeTab === tab.id;
@@ -570,7 +572,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Tab Content */}
       <section className="min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
-        {loading && activeTab !== 'support' && activeTab !== 'bugs' ? (
+        {loading && activeTab !== 'demand' && activeTab !== 'support' && activeTab !== 'bugs' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
@@ -613,6 +615,7 @@ export const StudentDashboard: React.FC = () => {
               />
             )}
 
+            {activeTab === 'demand' && <DemandWorkspace role="student" />}
             {activeTab === 'passed' && (
               <PassedCoursesManager onPassedCoursesChanged={fetchDashboardData} />
             )}
