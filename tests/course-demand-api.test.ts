@@ -170,5 +170,12 @@ describe('department course-demand workflow',()=>{
       .send({studentNumber:'1403123456',anticipatedGraduation:'YES',courseIds:[courseId]});
     expect(edit.status).toBe(409);
     expect(db.demandResponses.find(r=>r.surveyId===id)?.anticipatedGraduation).toBe('NO');
+    const history=await request(app).get('/api/demand/surveys').set('Authorization',auth.student);
+    expect(history.status).toBe(200);
+    expect(history.body.data.some((item:{id:string})=>item.id===id)).toBe(true);
+    const own=await request(app).get(`/api/demand/surveys/${id}/response`)
+      .set('Authorization',auth.student);
+    expect(own.status).toBe(200);
+    expect(own.body.data?.anticipatedGraduation).toBe('NO');
   });
 });
