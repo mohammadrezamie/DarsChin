@@ -126,6 +126,7 @@ export const AdminImportCenter: React.FC = () => {
     setReviewError(null);
     setReviewMessage(null);
     setReviewBusyId(record.id);
+    const reviewSequence = detailsSequence.current;
     try {
       const payload = action === 'CONFIRM_MATCH'
         ? { action, courseId: draft.courseId, reason: draft.reason.trim() }
