@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { FluidWeekTimetable } from '../src/components/FluidWeekTimetable';
+import { ScheduleSection } from '../src/pages/landing-sections/ScheduleSection';
 
 const read = (path:string) => readFileSync(resolve(process.cwd(), path),'utf8');
 
@@ -89,5 +90,29 @@ describe('Persian-first responsive UI guardrails',()=>{
     expect(html).toContain('20:00');
     expect(html).toContain('پروژه بدون ساعت');
     expect(html).toContain('md:block');
+  });
+
+  it('fits the landing conflict preview on phones without clipping teacher names or forcing a wide grid', () => {
+    const code = read('src/pages/landing-sections/ScheduleSection.tsx');
+    const html = renderToStaticMarkup(<ScheduleSection />);
+
+    // All schedule details are accessible in narrow-screen cards, not clipped
+    // inside absolutely positioned fixed-width timetable cells.
+    expect(html).toContain('aria-label="برنامهٔ هفتگی نمونه به تفکیک روز"');
+    expect(html).toContain('aria-label="جدول هفتگی نمونه"');
+    expect(html).toContain('دکتر احمدی');
+    expect(html).toContain('دکتر کریمی');
+    expect(html).toContain('دکتر رضایی');
+    expect(html).toContain('گروه جایگزین در این مثال');
+    expect(html).toContain('تداخل نمونه با');
+    expect(code).toContain('grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden');
+    expect(code).toContain('hidden min-w-0 lg:block');
+    expect(code).toContain('grid-cols-[5rem_repeat(5,minmax(0,1fr))]');
+    expect(code).toContain('[overflow-wrap:anywhere]');
+    expect(code).toContain('shrink-0');
+    expect(code).not.toContain('min-w-[700px]');
+    expect(code).not.toContain('overflow-x-auto');
+    expect(code).not.toContain('absolute inset-2');
+    expect(code).not.toContain('left-full');
   });
 });
