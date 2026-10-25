@@ -63,10 +63,10 @@ export const AdminCurriculumBuilder: React.FC = () => {
   },[searchParams]);
 
   useEffect(() => {
-    if (selectedCurriculumId) {
-      loadCurriculumDetails(selectedCurriculumId);
-      setActiveCourseId(null);
-    }
+    setCurriculumFull(null);
+    setActiveCourseId(null);
+    setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
+    if (selectedCurriculumId) void loadCurriculumDetails(selectedCurriculumId);
   }, [selectedCurriculumId]);
 
   const handleAddCourse = async () => {
@@ -120,11 +120,18 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page space-y-4">
-      <NewCurriculumForm onCreated={(chart) => {
-        setCurricula(prev => [...prev, chart]);
-        setSelectedCurriculumId(chart.id);
-        void fetchData();
-      }} />
+      <details className="rounded-2xl border border-dashed border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+        <summary className="cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200">
+          ایجاد چارت دیگر (روش پیشرفته)
+        </summary>
+        <div className="mt-3">
+          <NewCurriculumForm onCreated={(chart) => {
+            setCurricula(prev => [...prev, chart]);
+            setSelectedCurriculumId(chart.id);
+            void fetchData();
+          }} />
+        </div>
+      </details>
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <Layers className="w-5 h-5 text-indigo-500" />
@@ -189,7 +196,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
                     <option value="">همه گرایش‌ها</option>
-                    {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    {tracks.filter(t=>t.majorId===curriculumFull.curriculum.majorId && t.active!==false)
+                      .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                   <button 
                     onClick={handleAddCourse}
@@ -237,8 +245,18 @@ export const AdminCurriculumBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Rule Builder Sidebar */}
-            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+            {/* The official easy rule editor is in AdminAcademicRules.
+                Retain this legacy one-course editor as an optional advanced
+                path, not a mandatory second set of admin forms. */}
+            <details className="lg:col-span-1 min-w-0 self-start rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/30">
+              <summary className="cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200">
+                قوانین این چارت · مشاهده و ویرایش پیشرفته
+              </summary>
+              <p className="mt-2 text-xs leading-6 text-slate-500 dark:text-slate-300">
+                برای ویرایش سریع شرط‌های یک درس، از دکمهٔ «تنظیم شرایط» در بالای صفحه استفاده کن.
+                این بخش قدیمی صرفاً برای بررسی جزئیات بیشتر نگه داشته شده است.
+              </p>
+              <div className="mt-4">
               {!activeCourseId ? (
                 <div className="text-center text-slate-500 text-sm py-8">
                   یک درس را از جدول انتخاب کنید تا قوانین آن را مدیریت کنید.
@@ -305,7 +323,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </details>
           </div>
           </>
         )}
