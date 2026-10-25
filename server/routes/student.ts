@@ -362,7 +362,10 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
 
   const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
   let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
+  const isNewPlan = !plan;
   if (!plan) {
+    // Keep a new plan in memory until the selected group passes ALL checks.
+    // Otherwise an invalid/unauthorized add leaves an empty persisted record.
     plan = {
       id: `plan-${userId}-${currentTermId}`,
       userId,
@@ -372,10 +375,12 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
       offeringPriorities: {},
       updatedAt: new Date().toISOString(),
     };
-    db.studentPlans.push(plan);
   }
 
   if (action === 'remove') {
+    if (isNewPlan) {
+      return res.json({success:true,action:'removed',selectedOfferingIds:[]});
+    }
     plan.selectedOfferingIds = plan.selectedOfferingIds.filter((id) => id !== offeringId);
     plan.updatedAt = new Date().toISOString();
     db.save();
@@ -503,6 +508,7 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   plan.offeringPriorities[targetOffering.courseId] = updatedCourseOfferings;
 
   plan.updatedAt = new Date().toISOString();
+  if(isNewPlan) db.studentPlans.push(plan);
   db.save();
 
   res.json({
