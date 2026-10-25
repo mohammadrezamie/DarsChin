@@ -25,7 +25,7 @@ beforeAll(async () => {
     id: testAdminId,
     name: 'مدیر مصنوعی بررسی واردات',
     mobile: '09000000771',
-    roles: ['super-admin'] as const,
+    roles: ['super-admin'] as ['super-admin'],
     permissions: ['admin.panel.access', 'offering.manage'],
     createdAt: new Date().toISOString(),
   };
