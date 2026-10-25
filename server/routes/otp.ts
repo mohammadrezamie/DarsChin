@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { generateToken } from '../middleware/auth';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { NiazpardazSmsClient } from 'niazpardazsms';
+import { sendOtpSms } from '../sms/service';
 import svgCaptcha from 'svg-captcha';
 import { normalizeIranianMobile } from '../auth/normalize-mobile';
 import { validateGuestChallenge } from '../security/turnstile';
@@ -168,30 +168,19 @@ otpRouter.post('/send', async (req, res) => {
     }
     db.save();
     
-    const apiKey = process.env.NIAZPARDAZ_API_KEY;
-    if (apiKey) {
-        try {
-            const client = new NiazpardazSmsClient(apiKey);
-            const sender = process.env.NIAZPARDAZ_SENDER_NUMBER || '5000249';
-            const messageText = `کد ورود به درس‌چین:\n${finalOtp}\n\nاین کد 2 دقیقه اعتبار دارد.`;
-            const result = await client.send(sender, mobile, messageText);
-            
-            if (result.resultCode !== 0) {
-                console.error('[NIAZPARDAZ] Failed to send SMS:', result);
-                return res.status(500).json({ success: false, error: 'خطا در ارسال پیامک' });
-            }
-        } catch (err) {
-            console.error('[NIAZPARDAZ] Error:', err);
-            return res.status(500).json({ success: false, error: 'خطا در ارتباط با سرویس پیامک' });
-        }
-    } else {
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`[LOCAL OTP] Code for ${mobile}: ${finalOtp}`);
-        } else {
-            return res.status(500).json({ success: false, error: 'سرویس پیامک تنظیم نشده است' });
-        }
+    try {
+        await sendOtpSms(mobile, finalOtp, purpose);
+    } catch {
+        // A code with no confirmed delivery must not become usable or consume
+        // the student's resend quota. An uncertain provider response is NOT retried.
+        db.data.otpChallenges = db.otpChallenges.filter(challenge => challenge.id !== id);
+        db.save();
+        return res.status(503).json({
+            success: false,
+            error: 'ارسال پیامک در دسترس نیست؛ تنظیمات پنل پیامک و سرویس‌دهنده را بررسی کنید.',
+        });
     }
-    
+
     // Do NOT return the OTP code
     res.json({ success: true, message: 'کد تایید ارسال شد.', data: { challengeId: id } });
 });
