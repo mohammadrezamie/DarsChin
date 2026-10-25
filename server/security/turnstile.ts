@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { db } from '../db/database';
 
 const VERIFY_ENDPOINT = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export function turnstilePublicConfiguration() {
@@ -22,9 +23,32 @@ export function assertTurnstileConfiguration(): void {
   }
 }
 
-/** The widget is not authentication. The server must validate every token, action and hostname. */
+/**
+ * Fallback for visitors unable to access Cloudflare, including the Iranian pilot.
+ * The existing OTP CAPTCHA generator issues the random id and SVG. Its answer is
+ * never sent by the server, and every successful answer is single-use.
+ */
+function validateLocalGuestChallenge(token: unknown): boolean {
+  if (typeof token !== 'string' || token.length > 128) return false;
+  const parts = /^local:([a-f0-9-]{36}):([a-z0-9]{1,12})$/i.exec(token.trim());
+  if (!parts) return false;
+
+  const challenge = db.captchaChallenges.find(item => item.id === parts[1]);
+  const now = Date.now();
+  if (!challenge || !Number.isFinite(challenge.expiresAt) ||
+    challenge.expiresAt <= now || challenge.consumedAt ||
+    challenge.attempts >= 5) return false;
+
+  const valid = challenge.value.toLowerCase() === parts[2].toLowerCase();
+  challenge.attempts += 1;
+  if (valid) challenge.consumedAt = now;
+  db.save();
+  return valid;
+}
+
+/** Both Turnstile and the local image require a real server-side, single-use check. */
 export async function validateGuestChallenge(token: unknown, expectedAction: string): Promise<boolean> {
-  if (process.env.TURNSTILE_ENABLED !== 'true') return true;
+  if (process.env.TURNSTILE_ENABLED !== 'true') return validateLocalGuestChallenge(token);
   if (typeof token !== 'string' || !token.trim() || token.length > 2048) return false;
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) return false;
@@ -57,7 +81,6 @@ export async function validateGuestChallenge(token: unknown, expectedAction: str
 
 export function requireGuestChallenge(action: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (process.env.TURNSTILE_ENABLED !== 'true') return next();
     if (!(await validateGuestChallenge(req.body?.captchaToken, action))) {
       return res.status(403).json({
         success: false,
