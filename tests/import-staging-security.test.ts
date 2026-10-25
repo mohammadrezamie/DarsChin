@@ -16,6 +16,7 @@ let campusId = '';
 let termId = '';
 let code = '';
 let courseName = '';
+let activeCourseId = '';
 
 beforeAll(async () => {
   await db.init(true);
@@ -38,6 +39,7 @@ beforeAll(async () => {
   }
   code = course.code;
   courseName = course.name;
+  activeCourseId = course.id;
   campusId = db.campuses[0].id;
   termId = db.academicTerms[0].id;
 });
@@ -96,12 +98,12 @@ describe('authenticated import preview can never publish offerings', () => {
     const endpoint = `/api/imports/batches/${batchId}/records/${recordId}/review`;
     const missingReason = await request(app).put(endpoint)
       .set('Authorization', authHeader).send({
-        action: 'CONFIRM_MATCH', courseId: db.courses[0].id, reason: 'x',
+        action: 'CONFIRM_MATCH', courseId: activeCourseId, reason: 'x',
       });
     expect(missingReason.status).toBe(400);
     const confirmed = await request(app).put(endpoint)
       .set('Authorization', authHeader).send({
-        action: 'CONFIRM_MATCH', courseId: db.courses[0].id,
+        action: 'CONFIRM_MATCH', courseId: activeCourseId,
         reason: 'شناسه و نام درس در کاتالوگ با نمونه بررسی شد.',
       });
     expect(confirmed.status).toBe(200);
