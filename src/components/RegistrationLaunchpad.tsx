@@ -145,7 +145,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
-              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
+              className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
             <button type="button" disabled={!step.groupCode} onClick={()=>void copy(step.groupCode, `گروه ${step.courseName}`)}
