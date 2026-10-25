@@ -82,8 +82,9 @@ export const StudentDashboard: React.FC = () => {
       if (profileRes.success && profileRes.data) setProfile(profileRes.data.profile);
       else setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
 
-      const planned = planRes.success && Array.isArray(planRes.data?.selectedOfferingIds)
-        ? planRes.data.selectedOfferingIds
+      const savedSelected = planRes.data?.selectedOfferingIds;
+      const planned: string[] = planRes.success && Array.isArray(savedSelected)
+        ? savedSelected
         : selectedOfferingIds;
       if (planRes.success && planRes.data) {
         setSelectedOfferingIds(planned);
