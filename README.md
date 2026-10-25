@@ -14,15 +14,23 @@ The first scope is **B.E. Electrical Engineering at Islamic Azad University, Sci
 
 Links are provided on the homepage and `/login`. Browser-only demo state lives in the visitor's own storage. The continuous timetable spans **07:00–20:00** with arbitrary start/end times and a separate list for unscheduled/out-of-range classes. Theme controls (day/system/night) and right-edge RTL hamburger menus are visible in demo screens. Read the [pilot and quick VPS launch guide](docs/PILOT_LAUNCH_FA.md).
 
+## SMS, human verification and GitHub layout
+
+- **Unified SMS center** for login/recovery codes and Niazpardaz: `/demo/admin?tab=sms-center` (browser-only fake settings) or the authorized real admin route. Private keys are set on the server only. See [Takin reference and DarsChin implementation](docs/TAKIN_REFERENCE_SMS_CAPTCHA_FA.md).
+- **«من ربات نیستم»** on guest sign-in/sign-up/OTP forms uses server-verified Cloudflare Turnstile **only when configured**. With the integration disabled, OTP retains the local SVG image captcha. Test access from Iran before enabling on the public domain.
+- **Clean repository:** 22 one-off root scripts were preserved under `scripts/legacy/`; run `bun run repo:check` and read [repository structure](docs/REPOSITORY_STRUCTURE_FA.md).
+- **Separate domain on the same VPS as Takin:** use the existing Nginx and a different localhost port, without deploying a competing Caddy instance. See [shared-VPS/domain guide](docs/VPS_SHARED_DOMAIN_FA.md).
+
 ## VPS quick start
 
-An initial **single-process** Node.js + HTTPS Caddy Docker Compose stack lives in `Dockerfile`, `compose.yaml` and `deploy/`. The example uses a persistent Docker volume and private root secrets and does not create known-password demo users in production.
+An initial **single-process** Node.js + HTTPS Caddy Docker Compose stack lives in `Dockerfile`, `compose.yaml` and `deploy/`. This full stack is suitable for a **dedicated VPS only**. For a VPS **shared with Takin/Nginx**, do **not** start the bundled Caddy proxy: use the existing Nginx and run only the `darschin` container via the localhost-only compose overlay, as shown in [the shared server guide](docs/VPS_SHARED_DOMAIN_FA.md). Both configurations keep independent persistence and private secrets and avoid known-password demo users in production.
 
 ```bash
 cp deploy/.env.vps.example deploy/.env.vps
 chmod 600 deploy/.env.vps
 # Set secrets and DNS/domain inside deploy/.env.vps before running:
 docker compose --env-file deploy/.env.vps config -q
+# DEDICATED VPS only; existing Nginx hosts should NOT start Caddy:
 docker compose --env-file deploy/.env.vps up -d --build
 ```
 
