@@ -98,20 +98,25 @@ academicRouter.get('/campuses', (req, res) => {
 });
 
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body;
-  if (!name || !code) {
-    return res.status(400).json({ success: false, error: 'انتخاب دانشگاه و درج نام و کد واحد الزامی است.' });
+  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT',
+    name, code, active = true } = req.body || {};
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 120 ||
+      (code != null && (typeof code !== 'string' || code.trim().length > 50)) ||
+      !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type) ||
+      !db.universities.some(u=>u.id===universityId&&u.active) ||
+      (provinceId && !db.provinces.some(p=>p.id===provinceId&&p.active))) {
+    return res.status(400).json({ success:false,
+      error:'نام واحد و دانشگاه معتبر را انتخاب کن؛ درج شناسه یا کد ساختگی لازم نیست.' });
   }
-  const newCampus: Campus = {
-    id: `camp-${Date.now()}`,
-    universityId,
-    provinceId: provinceId || null, type, name: name.trim(),
-    code: code.trim().toUpperCase(),
-    active: !!active,
+  if(db.campuses.some(c=>c.universityId===universityId&&c.name.trim()===name.trim()))
+    return res.status(409).json({success:false,error:'واحدی با این نام در همین دانشگاه وجود دارد.'});
+  const newCampus: Campus={
+    id:'camp-'+randomUUID(),universityId,provinceId:provinceId||null,type,
+    name:name.trim(),code:code?.trim()||'INTERNAL-'+randomUUID().slice(0,12).toUpperCase(),
+    active:active!==false,
   };
-  db.campuses.push(newCampus);
-  db.save();
-  res.json({ success: true, data: newCampus });
+  db.campuses.push(newCampus);db.save();
+  return res.json({ success:true,data:newCampus });
 });
 
 academicRouter.put('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -205,11 +210,15 @@ academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.set
 // --- Entry Years & Academic Terms ---
 academicRouter.get('/entry-years', (req, res) => res.json({ success: true, data: db.entryYears }));
 academicRouter.post('/entry-years', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { year, active = true } = req.body;
-  const newYear: EntryYear = { id: `yr-${year}`, year: Number(year), active };
-  db.entryYears.push(newYear);
-  db.save();
-  res.json({ success: true, data: newYear });
+  const { year, active = true } = req.body || {};
+  const parsed=Number(year);
+  if(!Number.isInteger(parsed)||parsed<1300||parsed>1600)
+    return res.status(400).json({success:false,error:'سال ورود باید چهار رقم شمسی معتبر باشد.'});
+  if(db.entryYears.some(e=>e.year===parsed))
+    return res.status(409).json({success:false,error:'این سال ورود از قبل تعریف شده است.'});
+  const newYear:EntryYear={id:'yr-'+parsed,year:parsed,active:active!==false};
+  db.entryYears.push(newYear);db.save();
+  return res.json({success:true,data:newYear});
 });
 
 academicRouter.get('/terms', (req, res) => res.json({ success: true, data: db.academicTerms }));
