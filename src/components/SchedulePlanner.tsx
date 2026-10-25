@@ -33,6 +33,7 @@ import {
 import { CourseEligibilityResult, AcademicLimitInfo } from '../types';
 import { ExamCalendar } from './ExamCalendar';
 import { FluidWeekTimetable } from './FluidWeekTimetable';
+import { ScheduleQualityPanel } from './ScheduleQualityPanel';
 import { generateExamsICS, downloadICSFile } from '../utils/calendar';
 
 export interface PlannedCourseCardData {
@@ -64,6 +65,7 @@ interface SchedulePlannerProps {
   onAddFallbackOffering?: (courseId: string, offeringId: string) => void;
   onRemoveFallbackOffering?: (courseId: string, offeringId: string) => void;
   onReorderCourses?: (newCourseOrder: string[]) => void;
+  onApplySuggestedSchedule?: (selectedOfferingIds: string[]) => Promise<boolean>;
   onClearSchedule: () => void;
 }
 
@@ -77,6 +79,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   onAddFallbackOffering,
   onRemoveFallbackOffering,
   onReorderCourses,
+  onApplySuggestedSchedule,
   onClearSchedule,
   profile,
   currentTerm,
@@ -568,6 +571,11 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         </button>
       </div>
 
+      <ScheduleQualityPanel evaluations={evaluations}
+        selectedOfferingIds={selectedOfferingIds}
+        onApplySuggestedSchedule={onApplySuggestedSchedule}
+        demo={typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/')} />
+
       {/* VIEW 1: COURSE PRIORITIES & PLANNED ALTERNATIVES DECK */}
       {activePlannerTab === 'priorities' && (
         <div className="space-y-4">
@@ -634,6 +642,11 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                             </button>
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                               {pc.units} واحد
+                            </span>
+                            <span className="break-words text-xs text-slate-600 dark:text-slate-300">
+                              {primary.instructor || 'استاد نامشخص'} ·
+                              {' '}{primary.dayOfWeek||'روز نامشخص'} ·
+                              {' '}{primary.startTime&&primary.endTime?primary.startTime+'–'+primary.endTime:'ساعت نامشخص'}
                             </span>
                           </div>
                         </div>
