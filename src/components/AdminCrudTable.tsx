@@ -213,7 +213,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
       {/* Feedback is inline so mobile users can see errors without blocking alerts. */}
       {feedback && (
         <div role={feedback.kind === 'error' ? 'alert' : 'status'} aria-live={feedback.kind === 'error' ? 'assertive' : 'polite'}
-          className={`mx-4 mt-4 flex items-start justify-between gap-3 rounded-xl border p-3 text-sm font-semibold sm:mx-5 ${feedback.kind === 'error'
+          className={`fixed inset-x-4 bottom-4 z-[80] mx-auto flex max-w-xl items-start justify-between gap-3 rounded-xl border p-4 text-sm font-semibold shadow-xl ${feedback.kind === 'error'
             ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200'
             : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'}`}>
           <p className="leading-7">{feedback.text}</p>
@@ -223,7 +223,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
         </div>
       )}
       {pendingDeleteId && (
-        <div role="group" aria-label="تأیید حذف رکورد" className="mx-4 mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/40 sm:mx-5">
+        <div role="group" aria-label="تأیید حذف رکورد" className="fixed inset-x-4 bottom-4 z-[80] mx-auto max-w-xl rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-xl dark:border-rose-800 dark:bg-rose-950">
           <p className="text-sm font-bold leading-7 text-rose-900 dark:text-rose-200">
             این رکورد حذف شود؟ ممکن است داده‌های دیگر به آن وابسته باشند.
           </p>
