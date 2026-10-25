@@ -16,7 +16,32 @@ describe('different entrance cohorts never receive each other\'s academic demand
     const second = await browserDemoRequest<any[]>('/api/demand/surveys');
     expect(second.data?.map(item => item.id)).toEqual(['demo-demand-1402']);
     expect(second.data?.[0]?.courseIds).toHaveLength(4);
-    expect(first.data?.[0]?.courseIds).toHaveLength(8);
+    expect(first.data?.[0]?.courseIds).toHaveLength(6);
+  });
+
+  it('shows only common plus selected-track survey for 1403, not the opposite track', async () => {
+    const power = await browserDemoRequest<any>('/api/demo/academic-cohort', {
+      method: 'PUT', body: JSON.stringify({ entryYearId: 'demo-entry', selectedTrackId: 'demo-power' }),
+    });
+    expect(power.success).toBe(true);
+    const powerList = await browserDemoRequest<any[]>('/api/demand/surveys');
+    expect(powerList.data?.map(item=>item.id).sort()).toEqual(['demo-demand-1403-power','demo-demand-fall']);
+    const denied = await browserDemoRequest<any>('/api/demand/surveys/demo-demand-1403-control/response', {
+      method: 'PUT', body: JSON.stringify({
+        studentNumber:'1403123456',anticipatedGraduation:'NO',courseIds:['signals'],
+      }),
+    });
+    expect(denied.success).toBe(false);
+    const control = await browserDemoRequest('/api/demo/academic-cohort', {
+      method: 'PUT', body: JSON.stringify({ entryYearId: 'demo-entry', selectedTrackId: 'demo-control' }),
+    });
+    expect(control.success).toBe(true);
+    const controlList = await browserDemoRequest<any[]>('/api/demand/surveys');
+    expect(controlList.data?.map(item=>item.id).sort()).toEqual(['demo-demand-1403-control','demo-demand-fall']);
+    const cannotMix = await browserDemoRequest('/api/demo/academic-cohort',{
+      method:'PUT',body:JSON.stringify({entryYearId:'demo-entry-1402',selectedTrackId:'demo-power'}),
+    });
+    expect(cannotMix.success).toBe(false);
   });
 
   it('rejects cross-cohort requests and keeps responses separate from the other cohort', async () => {
