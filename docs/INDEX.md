@@ -8,6 +8,8 @@
 | **دفتر تاریخ‌دار همهٔ درخواست‌ها، برنامه‌ها، اولویت‌ها و تغییر تصمیم مالک** | [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md) |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
 | طراحی جدید پنل مدیریت: رشته ← مقطع ← گرایش/ورودی ← چارت، بدون شناسه‌های فنی | [ADMIN_MAJOR_WORKSPACE_FA.md](ADMIN_MAJOR_WORKSPACE_FA.md) |
+| صف سریع ثبت: نمایش کامل عنوان درس، استاد و ساعت کنار اولویت‌ها | [REGISTRATION_QUEUE_UX_FA.md](REGISTRATION_QUEUE_UX_FA.md) |
+| کیفیت برنامهٔ انتخاب واحد: امتیاز روزهای حضور، استادها و پیشنهاد بدون تداخل | [PLAN_QUALITY_SCORING_FA.md](PLAN_QUALITY_SCORING_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
 | دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) |
 | راهنمای ساختار پوشه‌ها، آرشیو ابزارهای قدیمی و نظافت GitHub | [REPOSITORY_STRUCTURE_FA.md](REPOSITORY_STRUCTURE_FA.md) |
