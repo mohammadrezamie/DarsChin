@@ -293,7 +293,11 @@ export function processImportPayload(
   for (const course of existingCourses) {
     if (course.active === false) continue;
     const codes = [course.code, ...(course.alternateCodes ?? []), ...(course.courseCodes ?? [])
-      .filter(item => item.active !== false).map(item => item.code)];
+      // Cohort/major/track aliases cannot be trusted without the verified
+      // program context. They remain review candidates, not automatic links.
+      .filter(item => item.active !== false &&
+        item.entryYear === undefined && !item.majorId && !item.trackId)
+      .map(item => item.code)];
     for (const code of codes) {
       const key = normalizeCode(code);
       if (!key) continue;
