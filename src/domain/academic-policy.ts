@@ -25,10 +25,7 @@ export function calculateAcademicLimits(
   let effectiveMinUnits = isSummer ? policySettings.summerMinUnits : normalMinUnits;
   let effectiveMaxUnits = isSummer ? policySettings.summerMaxUnits : normalMaxUnits;
 
-  if (isFinalSemester) {
-    effectiveMinUnits = 2; // IAU final semester logic
-    effectiveMaxUnits = policySettings.finalSemesterMaxUnits;
-  }
+  // Apply a final-term ceiling only AFTER verifying a real curriculum below.
 
   // This compatibility helper is not the authoritative DB scope resolver.
   // Still, never infer completed units from duplicate, failed or unrelated
