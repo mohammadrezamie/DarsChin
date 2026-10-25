@@ -10,6 +10,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use('/api/imports', importsRouter);
 
 const madeBatchIds: string[] = [];
+const testAdminId = 'test-import-staging-root';
 let authHeader = '';
 let campusId = '';
 let termId = '';
@@ -18,9 +19,19 @@ let courseName = '';
 
 beforeAll(async () => {
   await db.init(true);
-  const root = db.users.find(user => user.roles?.includes('super-admin'));
-  if (!root) throw new Error('Synthetic root fixture missing');
-  authHeader = 'Bearer ' + generateToken(root);
+  // Never depend on an environment-created production root account.
+  // The isolated fixture has the necessary capability and is cleaned up below.
+  const fixture = {
+    id: testAdminId,
+    name: 'مدیر مصنوعی بررسی واردات',
+    mobile: '09000000771',
+    roles: ['super-admin'] as const,
+    permissions: ['admin.panel.access', 'offering.manage'],
+    createdAt: new Date().toISOString(),
+  };
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.users.push({ ...fixture, roles: ['super-admin'] });
+  authHeader = 'Bearer ' + generateToken(fixture);
   const course = db.courses.find(item => item.active);
   if (!course || !db.campuses[0] || !db.academicTerms[0]) {
     throw new Error('Synthetic academic fixtures missing');
@@ -32,7 +43,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (!madeBatchIds.length) return;
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
   db.data.importBatches = db.data.importBatches.filter(batch => !madeBatchIds.includes(batch.id));
   db.data.importRecords = db.data.importRecords.filter(record => !madeBatchIds.includes(record.batchId));
   db.save();
