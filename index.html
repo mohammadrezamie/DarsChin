@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>درس‌چین - سامانه هوشمند تصمیم‌یار انتخاب واحد</title>
     <meta name="description" content="سامانه تصمیم‌یار انتخاب واحد دانشگاهی و بررسی تطبیقی پیش‌نیازها و هم‌نیازها" />
+    <meta name="theme-color" content="#f3f6fb" />
+    <script>
+      // Apply the saved display preference before rendering React to avoid
+      // the wrong light/dark background flashing on small screens.
+      try {
+        const mode = localStorage.getItem('darschyn_theme_mode') || 'system';
+        const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        const dark = mode === 'dark' || (mode === 'system' && prefersDark);
+        document.documentElement.classList.toggle('dark', dark);
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute('content', dark ? '#09111e' : '#f3f6fb');
+      } catch {
+        // Storage may be inaccessible in private browser contexts.
+        const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        document.documentElement.classList.toggle('dark', dark);
+      }
+    </script>
     
     
     
