@@ -46,7 +46,10 @@ async function startServer() {
     res.json({ 
       status: 'ok', 
       product: 'درس‌چین', 
-      version: '1.0.0',
+      version: '3.3.6',
+      releaseSha: /^[a-f0-9]{7,40}$/i.test(process.env.DARSCHYN_RELEASE_SHA || '')
+        ? process.env.DARSCHYN_RELEASE_SHA
+        : 'unidentified',
       uptime: process.uptime(),
       memory: {
         rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
