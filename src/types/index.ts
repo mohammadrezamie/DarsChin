@@ -319,7 +319,8 @@ export interface StudentPlan {
   userId: string;
   termId: string;
   selectedOfferingIds: string[];
-  coursePriorities?: Record<string, number>;
+  /** New clients store ordered course IDs; old plans may contain numeric priority ranks. */
+  coursePriorities?: string[] | Record<string, number>;
   offeringPriorities?: Record<string, string[]>;
   updatedAt: string;
 }
