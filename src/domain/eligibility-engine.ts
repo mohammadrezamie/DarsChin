@@ -1,4 +1,3 @@
-import { calculateAcademicLimits } from './academic-policy';
 // ============================================================================
 // DARSCHYN (درس‌چین) - Core Eligibility Engine (Deterministic Rule-Based)
 // ============================================================================
@@ -273,18 +272,9 @@ export function evaluateStudentEligibility(
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
           const wasFailed = passedCourses.some(p => p.courseId === reqCourse.id && (p.status === 'FAILED' || (p.grade !== undefined && p.grade < 10)));
 
-          // Final Semester Rule Bypass
-          const { isFinalSemester } = calculateAcademicLimits(
-            studentProfile,
-            allCourses,
-            curriculumCourses,
-            passedCourses,
-            { finalSemesterRuleEnabled: true, finalSemesterThresholdUnits: 24, normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24, summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24 } as any
-          );
-          if (isFinalSemester) {
-             return { passed: true, missing: [], reasons: [] };
-          }
-
+          // Never infer a blanket prerequisite waiver from a hard-coded
+          // final-semester threshold. An actual approved exception must be
+          // represented explicitly in the academic rule for this curriculum.
           if (isCorequisite) {
             // Corequisite logic
             if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
@@ -301,7 +291,7 @@ export function evaluateStudentEligibility(
             };
           }
 
-          console.log('Eval:', {courseId: reqCourse.id, isPassed, isFinalSemester, wasFailed, isContextualRetake, isCorequisite}); // Normal Prerequisite
+          // Normal prerequisite: only a verified pass meets this requirement.
           if (isPassed) return { passed: true, missing: [], reasons: [] };
           return {
             passed: false,
@@ -309,7 +299,9 @@ export function evaluateStudentEligibility(
             reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`],
           };
         } else if (node.type === 'GROUP') {
-          if (!node.operands || node.operands.length === 0) return { passed: true, missing: [], reasons: [] };
+          if (!node.operands || node.operands.length === 0) return {
+            passed: false, missing: [], reasons: ['گروه شروط این درس خالی یا ناقص است؛ بررسی مدیر آموزش لازم است.'],
+          };
           
           if (node.operator === 'OR') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
