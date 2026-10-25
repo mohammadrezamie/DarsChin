@@ -25,7 +25,7 @@ import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, 
 import { AcademicProfileModal } from './AcademicProfileModal';
 import { PassedCoursesManager } from './PassedCoursesManager';
 import { SupportPanel } from './SupportPanel';
-import { BugReportPanel } from './BugReportPanel';
+import { StudentHelpCenter } from './StudentHelpCenter';
 import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
@@ -33,17 +33,16 @@ import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
 
-type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support' | 'bugs';
+type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support';
 
 const studentTabs = [
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
-  { id: 'registration', label: 'آماده‌باش سریع آموزشیار', short: 'ثبت سریع', icon: Zap },
+  { id: 'registration', label: 'صف سریع ثبت دروس', short: 'صف ثبت', icon: Zap },
   { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
-  { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
-  { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
-  { id: 'bugs', label: 'گزارش خطاهای سامانه', short: 'گزارش باگ', icon: Bug },
+  { id: 'passed', label: 'دروس پاس‌شده', short: 'پاس‌شده‌ها', icon: BookOpen },
+  { id: 'support', label: 'پشتیبانی و گزارش خطا', short: 'پشتیبانی', icon: MessageCircle },
 ] as const;
 
 export const StudentDashboard: React.FC = () => {
@@ -137,7 +136,7 @@ export const StudentDashboard: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!user?.id || activeTab !== 'recommendations') return;
+    if (!user?.id || !user.roles.includes('student')) return;
     let mounted = true;
     const loadDemandHints = async () => {
       const surveys = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
@@ -555,15 +554,18 @@ export const StudentDashboard: React.FC = () => {
               <button
                 type="button"
                 key={tab.id}
+                disabled={tab.id === 'demand' && !demandSurveyAvailable}
+                title={tab.id === 'demand' && !demandSurveyAvailable ? 'پس از بازکردن نیازسنجی توسط مدیر گروه فعال می‌شود' : undefined}
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={current ? 'page' : undefined}
                 className={`flex min-h-12 min-w-0 items-center justify-start gap-2 rounded-xl border px-3 py-3 text-right text-xs font-bold leading-6 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
                   ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
-                  : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+                  : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
                 <span className="sm:hidden">{tab.short}</span>
                 <span className="hidden sm:inline">{tab.label}</span>
+                {tab.id === 'demand' && !demandSurveyAvailable && <span className="sr-only">فعلاً غیرفعال است</span>}
               </button>
             );
           })}
@@ -599,7 +601,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Tab Content */}
       <section className="min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
-        {loading && activeTab !== 'demand' && activeTab !== 'support' && activeTab !== 'bugs' ? (
+        {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
@@ -653,15 +655,15 @@ export const StudentDashboard: React.FC = () => {
                 profile={profile}
                 curriculumId={curriculumId}
                 onEditPriorities={() => setActiveTab('schedule')}
+                onReorderCourses={handleReorderCourses}
               />
             )}
 
-            {activeTab === 'demand' && <DemandWorkspace role="student" />}
+            {activeTab === 'demand' && demandSurveyAvailable && <DemandWorkspace role="student" />}
             {activeTab === 'passed' && (
               <PassedCoursesManager onPassedCoursesChanged={fetchDashboardData} />
             )}
-            {activeTab === 'support' && <SupportPanel />}
-            {activeTab === 'bugs' && <BugReportPanel />}
+            {activeTab === 'support' && <StudentHelpCenter />}
           </>
         )}
       </section>
