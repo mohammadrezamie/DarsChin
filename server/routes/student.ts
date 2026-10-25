@@ -253,8 +253,8 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
       offeringPriorities: {},
       updatedAt: new Date().toISOString(),
     };
-    db.studentPlans.push(plan);
-    db.save();
+    // GET must be side-effect free. Persist a plan only after a successful
+    // mutation, not merely because the user opened the planner screen.
   }
 
   res.json({ success: true, data: plan });
