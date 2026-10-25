@@ -13,13 +13,15 @@ export interface RegistrationStep {
   courseName: string;
   /** Code displayed by the catalog or actually seen on the imported offering. */
   copyCode: string | null;
-  codeVerifiedFromOffering: boolean;
+  /** The code came from an offering import, not necessarily an official portal confirmation. */
+  codeFromOffering: boolean;
   groupCode: string;
   offeringId: string;
   requestedRank: number;
   effectiveRank: number;
   advancedForCorequisite: boolean;
   dependencyNames: string[];
+  dependencyCourseIds: string[];
   warnings: string[];
   ready: boolean;
 }
@@ -158,10 +160,11 @@ export function buildRegistrationQueue(input: {
     const requestedRank = requested.indexOf(id) + 1;
     return {
       courseId: id, courseName: o.courseName,
-      copyCode: code || null, codeVerifiedFromOffering: Boolean(explicit),
+      copyCode: code || null, codeFromOffering: Boolean(explicit),
       groupCode: o.groupCode, offeringId: o.offeringId, requestedRank,
       effectiveRank: index + 1, advancedForCorequisite: index + 1 !== requestedRank,
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
+      dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
       ready: !hasCycle && !problems.some(text =>
         !text.startsWith('کد از کاتالوگ/تطبیق')),
