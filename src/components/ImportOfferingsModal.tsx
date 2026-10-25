@@ -137,18 +137,21 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       }
     }
 
-    const res = await apiRequest('/api/imports/process', {
-      method: 'POST',
-      body: JSON.stringify({ payload: contentToSend }),
-    });
-
-    setIsProcessing(false);
-
-    if (res.success && res.data) {
-      setImportResult(res.data);
-      onImportSuccess();
-    } else {
-      setError(res.error || 'خطا در پردازش و تطبیق فایل دروس ارائه‌شده.');
+    try {
+      const res = await apiRequest('/api/imports/process', {
+        method: 'POST',
+        body: JSON.stringify({ payload: contentToSend }),
+      });
+      if (res.success && res.data) {
+        setImportResult(res.data);
+        if (res.data.createdOfferingsCount > 0) onImportSuccess();
+      } else {
+        setError(res.error || 'خطا در پردازش و تطبیق فایل دروس ارائه‌شده.');
+      }
+    } catch {
+      setError('ارتباط با سامانه برقرار نشد؛ فایل منتشر نشده است. دوباره تلاش کنید.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -158,26 +161,17 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       schemaVersion: '1.0',
       source: 'mock-educational-system',
       extractedAt: new Date().toISOString(),
-      term: 'نیمسال اول ۱۴۰۵–۱۴۰۶',
-      university: 'دانشگاه آزاد اسلامی',
-      campus: 'واحد علوم و تحقیقات',
+      term: 'نیمسال فرضی دمو',
+      university: 'دانشگاه نمونه (کاملاً ساختگی)',
+      campus: 'واحد نمونه',
       records: [
-        { courseCode: '2104102', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'دکتر صابری', units: 3, day: 'یکشنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
-        { courseCode: '2104103', courseName: 'معادلات دیفرانسیل', group: '01', instructor: 'دکتر علوی', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
-        { courseCode: '2104112', courseName: 'مدارهای الکتریکی ۲', group: '01', instructor: 'دکتر خسروی', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 5 },
-        { courseCode: '2104113', courseName: 'آزمایشگاه مدارهای الکتریکی', group: '02', instructor: 'مهندس رستمی', units: 1, day: 'چهارشنبه', startTime: '14:00', endTime: '16:00', capacity: 15, availableCapacity: 3 },
-        { courseCode: '2104115', courseName: 'الکترونیک ۱', group: '01', instructor: 'دکتر یزدانی', units: 3, day: 'یکشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 7 },
-        { courseCode: '2104131', courseName: 'معماری کامپیوتر', group: '01', instructor: 'دکتر حسینی', units: 3, day: 'سه‌شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 12 },
-        { courseCode: '2104132', courseName: 'میکروکنترلرها و ریزپردازنده‌ها', group: '01', instructor: 'دکتر تقوی', units: 3, day: 'سه‌شنبه', startTime: '13:30', endTime: '15:30', capacity: 25, availableCapacity: 5 },
-        { courseCode: '2104133', courseName: 'طراحی سیستم‌های دیجیتال با FPGA', group: '01', instructor: 'دکتر میرزایی', units: 3, day: 'دوشنبه', startTime: '13:30', endTime: '15:30', capacity: 20, availableCapacity: 6 },
-        { courseCode: '2104104', courseName: 'ریاضیات مهندسی', group: '01', instructor: 'دکتر صابری', units: 3, day: 'شنبه', startTime: '10:00', endTime: '12:00', capacity: 40, availableCapacity: 5 },
-        { courseCode: '2104114', courseName: 'سیگنال‌ها و سیستم‌ها', group: '01', instructor: 'دکتر محمودی', units: 3, day: 'چهارشنبه', startTime: '08:00', endTime: '10:00', capacity: 35, availableCapacity: 13 },
-        { courseCode: '1101003', courseName: 'اندیشه اسلامی ۱ (مبدأ و معاد)', group: '03', instructor: 'حجت‌الاسلام موسوی', units: 2, day: 'سه‌شنبه', startTime: '10:00', endTime: '12:00', capacity: 50, availableCapacity: 9 },
-        { courseCode: '1101004', courseName: 'آیین زندگی (اخلاق کاربردی)', group: '01', instructor: 'استاد کریمی', units: 2, day: 'دوشنبه', startTime: '08:00', endTime: '10:00', capacity: 45, availableCapacity: 15 },
-        { courseCode: '9999999', courseName: 'درس فرضی خارج از چارت', group: '99', instructor: 'نامشخص', units: 3, day: 'نامشخص', startTime: '00:00', endTime: '00:00', capacity: 10, availableCapacity: 0 },
+        { courseCode: 'DEMO-101', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'استاد نمونه الف', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
+        { courseCode: 'DEMO-102', courseName: 'مدارهای الکتریکی ۱', group: '02', instructor: 'استاد نمونه ب', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
+        { courseCode: 'DEMO-999', courseName: 'درس ناشناخته برای بررسی', group: '99', instructor: 'نامشخص', units: 3, day: 'نامشخص', startTime: '', endTime: '', capacity: 10 },
+
       ],
     };
-    setSelectedFileName('داده‌های آزمایشی واقعی (۱۳ عنوان درس نیمسال)');
+    setSelectedFileName('داده‌های ساختگی آموزشیار (۳ گروه؛ یکی نیازمند بررسی)');
     setJsonText(JSON.stringify(demoPayload, null, 2));
     handleProcessImport(demoPayload);
   };
@@ -211,8 +205,10 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       >
         <button
           id="btnCloseImportModal"
+          type="button"
+          aria-label="بستن پنجره واردکردن فایل"
           onClick={onClose}
-          className="absolute top-4 left-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+          className="absolute top-4 left-4 min-h-11 min-w-11 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>
@@ -245,11 +241,11 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <span className="font-bold text-sm text-emerald-950 dark:text-emerald-200">
-                  پردازش و تطبیق بسته با موفقیت انجام شد
+                  بررسی اولیه انجام شد؛ انتشار نیازمند تأیید مدیر است
                 </span>
               </div>
               <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                دروس تطبیق‌داده‌شده بلافاصله در پایگاه داده دروس ارائه‌شده ذخیره و آماده ارزیابی پیش‌نیازها شدند.
+                اطلاعات در صف بررسی نگهداری می‌شوند. تا زمانی که مدیر تطبیق‌ها را تأیید و منتشر نکرده باشد، هیچ گروه جدیدی وارد فهرست دروس ارائه‌شده یا تحلیل پیش‌نیازها نمی‌شود.
               </p>
             </div>
 
@@ -266,7 +262,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
                 <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 block">
                   {importResult.summary.matched}
                 </span>
-                <span className="text-[11px] text-emerald-700 dark:text-emerald-400">تطبیق موفق با چارت</span>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400">پیشنهاد تطبیق اولیه</span>
               </div>
 
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 text-center">
@@ -285,8 +281,8 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
             </div>
 
             {/* Records Details Table */}
-            <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-              <table className="w-full text-xs text-right border-collapse">
+            <div className="max-h-56 overflow-auto rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+              <table className="w-full min-w-[640px] text-xs text-right border-collapse">
                 <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   <tr>
                     <th className="py-2 px-3">کد استخراج‌شده</th>
@@ -313,7 +309,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
                           }`}
                         >
                           {r.status === 'MATCHED'
-                            ? '✅ تطبیق موفق'
+                            ? '✓ تطبیق اولیه'
                             : r.status === 'NEEDS_REVIEW'
                             ? '⚠️ نیازمند بررسی'
                             : '❌ نامعتبر'}
@@ -389,7 +385,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="text-xs text-blue-900 dark:text-blue-200">
-                  جهت آزمون فوری سامانه، می‌توانید داده‌های استخراج‌شده واقعی را با یک کلیک بارگذاری فرمایید.
+                  برای آزمون و دیباگ رابط کاربری می‌توانید سه ردیف کاملاً ساختگی را بررسی کنید؛ این داده‌ها از آموزشیار واقعی دریافت نشده‌اند.
                 </span>
               </div>
               <button
