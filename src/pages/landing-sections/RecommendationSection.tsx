@@ -66,7 +66,7 @@ export const RecommendationSection: React.FC = () => {
           </motion.div>
         </div>
 
-        <div className="flex-1 space-y-8 text-left md:text-right">
+        <div className="flex-1 space-y-8 text-center md:text-right">
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight">
             درس‌چین بهت نمیگه چه چیزی ارائه شده؛
             <br />
