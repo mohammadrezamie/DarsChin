@@ -336,6 +336,11 @@ export interface ImportRecord {
   matchedCourseId?: string | null;
   status: ImportRecordStatus;
   reviewReason?: string;
+  /** An operator's mapping decision, never a published course offering. */
+  reviewDecision?: 'COURSE_MATCH_CONFIRMED' | 'REJECTED';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 }
 
 export interface ImportBatch {
