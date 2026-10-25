@@ -31,6 +31,15 @@ Educationalyar / authorized source
  Complete-snapshot reconciliation
              |
              v
+ ImportBatch + manager review records
+             |
+             v
+ Checked source/course/class permissions
+             |
+             v
+ Audited publication flow (NOT YET AVAILABLE)
+             |
+             v
  Canonical course offerings
              |
        +-----+------+
@@ -45,6 +54,7 @@ Educationalyar / authorized source
 
 ## Invariants
 
+- **Student extension snapshots must never write canonical offerings.** Completed sync jobs queue normalized candidates for human review; independent audited publication is intentionally disabled.
 - A source adapter must not directly implement academic policy.
 - A partial or failed sync must never mark unseen offerings inactive.
 - Replaying the same completed snapshot must be idempotent.
@@ -55,4 +65,4 @@ Educationalyar / authorized source
 
 ## Current implementation caveat
 
-The earlier baseline did not finalize imported offerings. The current source has a reconciliation implementation and regression tests in `server/sync/reconciliation.ts` and `tests/sync-*.test.ts`; those tests passed in an isolated runner. **This is not an end-to-end verification against live Educationalyar, and the Vercel frontend preview still has no connected production-grade API and durable database.** For current scope and rollout gates see [the fullstack Vercel plan](VERCEL_FULLSTACK_PLAN_FA.md).
+The earlier sync route directly applied matched student-provided snapshots to campus-wide offerings. The Draft PR changes this to **review staging only**: validated candidates become import-review records, job status becomes `AWAITING_REVIEW`, submitted raw snapshots are cleared after finalization, and no class is published. Historical `RECONCILED` jobs may predate this boundary and cannot be treated as proof of review. **New sync tests, TypeScript, build and actual browser QA have not been verified in this session.** The Vercel preview still lacks a connected persistent API. See [the Educationalyar review policy](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) and [fullstack deployment plan](VERCEL_FULLSTACK_PLAN_FA.md).
