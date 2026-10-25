@@ -44,6 +44,12 @@ function resolveRequirement(
   planned: Set<string>,
   names: Map<string, string>,
 ): Choice {
+  if (node.type === 'MIN_PASSED_UNITS') {
+    // This compact queue receives only the selected offerings, not the complete
+    // official passed-course unit catalogue. Never assume the threshold is met.
+    return { prerequisites: [], missing: [],
+      notes: [`حداقل ${node.minUnits} واحد پاس‌شده لازم است؛ شمارش واحدها باید در موتور بررسی شرایط تأیید شود.`] };
+  }
   if (node.type === 'COURSE') {
     const id = node.courseId;
     if (!id) return { prerequisites: [], missing: [], notes: ['قانون دارای شناسهٔ درس نامعتبر است.'] };
