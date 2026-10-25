@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
+import { createsPrerequisiteCycle } from '../../src/domain/prerequisite-graph';
 import { validate } from '../middleware/validate';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
@@ -189,26 +190,6 @@ curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.man
   res.json({ success: true, data: enriched });
 });
 
-// Helper for cycle detection
-function hasCycle(targetCourseId, expression, allRules, visited = new Set()) {
-  if (visited.has(targetCourseId)) return true;
-  visited.add(targetCourseId);
-  
-  const sourceCourseIds = extractSourceCourseIds(expression);
-  for (const sourceId of sourceCourseIds) {
-    if (sourceId === targetCourseId) return true; // Direct self-reference
-    
-    // Check downstream
-    const sourceRules = allRules.filter(r => r.targetCourseId === sourceId);
-    for (const sr of sourceRules) {
-      if (hasCycle(targetCourseId, sr.expression, allRules, new Set(visited))) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 // Admin: Add Academic Rule
 curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
   const {
@@ -222,9 +203,17 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     notes,
   } = req.body;
 
-  // Cycle Detection
-  if (hasCycle(targetCourseId, expression, db.data.academicRules)) {
-    return res.status(400).json({ success: false, error: 'تعریف این قانون باعث ایجاد حلقه (Circular Dependency) می‌شود و مجاز نیست.' });
+  const sourceIds = extractSourceCourseIds(expression);
+  if (!db.curricula.some(curriculum => curriculum.id === curriculumId) ||
+      !db.courses.some(course => course.id === targetCourseId) ||
+      sourceIds.length === 0 || sourceIds.some(id => !db.courses.some(course => course.id === id))) {
+    return res.status(400).json({ success: false, error: 'چارت، درس مقصد یا درس مبدا معتبر نیست.' });
+  }
+  // An AND/OR logical group remains an AST. Only the PREREQUISITE edges
+  // must form a DAG; true structural COREQUISITEs can be reciprocal.
+  if (relationshipType === 'PREREQUISITE' &&
+      createsPrerequisiteCycle(curriculumId, targetCourseId, expression, db.data.academicRules)) {
+    return res.status(400).json({ success: false, error: 'این پیش‌نیاز چرخه وابستگی ایجاد می‌کند.' });
   }
 
   const newRule = {
