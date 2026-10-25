@@ -186,7 +186,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="darschin-page space-y-5" dir="rtl">
       <div className="rounded-2xl border border-blue-200 bg-gradient-to-l from-blue-50 to-white p-5 dark:border-blue-900 dark:from-blue-950/50 dark:to-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
