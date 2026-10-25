@@ -9,6 +9,12 @@
 - **کیفیت محلی:** Windows + Bun 1.4.4، SHA `5a6c51fe5e5453057d664b96f70ce35bd15879b6`، TypeScript، ۱۹۷ از ۱۹۷ Vitest، build و API smoke ایزوله موفق. SHA256 بسته روی ویندوز/سرور: `de8e29aa5aee13b2f86dbeb0b269e32fde3c3bd1535376d6b1a8be370169da4b`. [PR #39](https://github.com/mohammadrezamie/DarsChin/pull/39) مرج‌شده.
 - **حادثه باز P0:** بعد از نصب، وضعیت `NRestarts=55`، `activating / auto-restart`، بدون listener پورت 3001 و `curl: (7) connection refused`. بنابراین سرویس **راه‌اندازی سالم ندارد**. پیام «INSTALLED AND HEALTH CHECKED» اسکریپت قبلی اشتباه بود، چون آزمون سلامت فقط وقتی اجرا می‌شد که پورت شنود می‌کرد. علت Crash **بدون journal قطعی نیست**. وضعیت `systemctl disable --now darschyn` باید توسط اپراتور روی سرور اعمال/تأیید شود؛ هنوز تأیید آن دریافت نشده است.
 
+## تکمیل گزارش مهار حادثه — طبق کامنت مالک در Issue #40
+
+مالک در ۲۰۲۶/۱۰/۲۶ اجرای فرمان `sudo systemctl disable --now darschyn` را از همان VPS گزارش کرد؛ خروجی `Removed "/etc/systemd/system/multi-user.target.wants/darschyn.service".` و بازگشت بدون خطا تأیید می‌کند که لینک فعال‌سازی خودکار حذف و درخواست توقف صادر شده است. **چون هنوز `systemctl is-active darschyn` و گزارش listener جدید دریافت نشده، به‌صورت قطعی نمی‌گوییم runtime خاموش/پایدار شده است.** این گزارش در [کامنت Issue #40](https://github.com/mohammadrezamie/DarsChin/issues/40) ثبت شده، نه خروجی مستقیم ابزارهای ما از سرور.
+
+برای جلوگیری از تکرار موفقیت کاذب installer، [Draft PR #42](https://github.com/mohammadrezamie/DarsChin/pull/42) نمونهٔ systemd و درگاه خواندنیِ `scripts/check-vps-readiness.cjs` را در **ریپوی درس‌چین** افزود. این ابزار باید ابتدا روی ماشین جدا تست و بعد با اجازهٔ اپراتور روی نسخهٔ نصب‌شده آزمایش شود. **پیاده‌سازی ابزار، رفع Crash-loop یا اعمال آن روی VPS نیست.** سند قدیمی نصب مستقل در [deploy/README.md](../deploy/README.md) اصلاح شده است.
+
 ## قواعد غیرقابل دورزدن استقرار هم‌سروری
 
 1. GitHub دو پروژه مستقل بماند: هیچ hook، GitHub Action، cron یا `git pull` خودکار روی VPS بدون آزمون، بررسی SHA، تأیید مالک و قابلیت برگشت تنظیم نشود. ادغام PR مساوی Deploy نیست.
