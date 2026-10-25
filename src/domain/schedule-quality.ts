@@ -64,6 +64,27 @@ const score=(days:number,min:number,max:number)=>
 const mean=(values:number[])=>values.length?
   Math.round(values.reduce((sum,n)=>sum+n,0)/values.length):null;
 
+/**
+ * A quality suggestion can replace sections, never change the student's
+ * chosen course set. Pure helper shared by server and browser-only demo.
+ */
+export function preservesSelectedCourses(
+  previous:string[],proposed:string[],
+  offeringRefs:ReadonlyArray<{offeringId:string;courseId:string}>,
+):boolean {
+  const mapping=new Map(offeringRefs.map(o=>[o.offeringId,o.courseId]));
+  const courseList=(ids:string[])=>ids.map(id=>mapping.get(id));
+  if(!previous.length || previous.length!==proposed.length ||
+    new Set(previous).size!==previous.length ||
+    new Set(proposed).size!==proposed.length)return false;
+  const before=courseList(previous),after=courseList(proposed);
+  if(before.some(id=>!id)||after.some(id=>!id))return false;
+  if(new Set(before).size!==before.length||new Set(after).size!==after.length)
+    return false;
+  const oldSet=new Set(before);
+  return after.every(id=>oldSet.has(id));
+}
+
 export function evaluateScheduleQuality(
   all:QualityOffering[],selectedIds:string[],ratings:TeacherRatingSummary[]=[],
   maxVisits=40000,
