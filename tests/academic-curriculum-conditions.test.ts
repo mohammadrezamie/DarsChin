@@ -48,6 +48,36 @@ function status(entryYearId:string,rules:AcademicRule[]){
 }
 
 describe('per-curriculum editable conditions (all numbers are synthetic)',()=>{
+  it('does not silently waive a missing prerequisite for an inferred final-semester student',()=>{
+    const missing:AcademicRule={
+      id:'no-automatic-prereq-waiver',curriculumId:'chart-1403',
+      targetCourseId:'internship',relationshipType:'PREREQUISITE',
+      expression:{type:'COURSE',courseId:'general-2'},
+    };
+    const result=status('1403',[missing]);
+    // This tiny sample has only a few remaining credits. That alone cannot
+    // override an explicit prerequisite; no official exemption was configured.
+    expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(result.missingPrerequisites.some(r=>r.id==='general-2')).toBe(true);
+
+    const forced=evaluateStudentEligibility({
+      studentProfile:{...profile('1403'),isFinalSemesterOverride:true},
+      curriculum:curriculum('chart-1403','1403'),curriculumCourses:courseLinks,
+      allCourses:courses,tracks:[],academicRules:[missing],
+      passedCourses:passed,currentOfferings:[offering],
+    });
+    expect(forced.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
+  });
+  it('fails closed for an invalid empty prerequisite group',()=>{
+    const malformed:AcademicRule={
+      id:'malformed-empty-group',curriculumId:'chart-1403',
+      targetCourseId:'internship',relationshipType:'PREREQUISITE',
+      expression:{type:'GROUP',operator:'AND',operands:[]},
+    };
+    const result=status('1403',[malformed]);
+    expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(result.allReasons.join(' ')).toMatch(/خالی|ناقص/);
+  });
   it('does not inherit the other entry year internship threshold',()=>{
     const rules=[rule('chart-1402',5),rule('chart-1403',3)];
     expect(status('1402',rules).overallStatus).toBe('BLOCKED_PREREQUISITE');
