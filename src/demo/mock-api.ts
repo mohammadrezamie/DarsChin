@@ -34,6 +34,8 @@ interface DemoStore {
   importRecords: Row[];
   demandSurveys: DemandSurvey[];
   demandResponses: DemandResponse[];
+  smsSettings?: {mode:'log'|'niazpardaz';senderLine:string;otpTemplate:string};
+  smsHistory?: Row[];
   academicSettings: AcademicPolicySettings;
 }
 const semester = { id: 'demo-term', name: 'نیمسال فرضی برای تست', year: 1405, termNumber: 1, isCurrent: true, active: true };
@@ -194,6 +196,8 @@ function initialStore(): DemoStore {
       status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     }],
     demandResponses: [],
+    smsSettings:{mode:'log',senderLine:'',otpTemplate:'کد تأیید درس‌چین: {code}\\nاعتبار: ۲ دقیقه'},
+    smsHistory:[],
     academicSettings: { ...defaults },
   }) as DemoStore;
 }
@@ -213,6 +217,8 @@ function readStore(): DemoStore {
         if (!Array.isArray(obj.importRecords)) obj.importRecords = [];
         if (!Array.isArray(obj.demandSurveys)) obj.demandSurveys = structuredClone(initialStore().demandSurveys);
         if (!Array.isArray(obj.demandResponses)) obj.demandResponses = [];
+        if (!obj.smsSettings) obj.smsSettings = structuredClone(initialStore().smsSettings);
+        if (!Array.isArray(obj.smsHistory)) obj.smsHistory = [];
         if (obj.registrationDemoVersion !== 1) {
           // Introduce the fictional Math II/differential exercise once in old
           // local demo sessions, keeping edits, passed courses and priorities.
@@ -348,6 +354,29 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   const s = readStore(), method = (options.method || 'GET').toUpperCase();
   const path = endpoint.split('?')[0], data = bodyJson(options);
   if (!path.startsWith('/api/')) return fail('مسیر دمو نامعتبر است.');
+
+  if (path === '/api/security/challenge' && method === 'GET')
+    return good({enabled:false,siteKey:''}) as ApiResponse<T>;
+  if(path==='/api/sms-center/settings'){
+    if(method==='GET')return good({...s.smsSettings,readiness:{
+      senderConfigured:Boolean(s.smsSettings?.senderLine),apiKeyConfigured:false,
+      providerTemplateApproved:false,canDeliver:false,logMode:s.smsSettings?.mode==='log',
+    }}) as ApiResponse<T>;
+    if(method==='PUT'){
+      if(!['log','niazpardaz'].includes(data.mode)||typeof data.senderLine!=='string'||
+        !/^[0-9+]*$/.test(data.senderLine)||typeof data.otpTemplate!=='string'||
+        data.otpTemplate.length>320||(data.otpTemplate.match(/\\{code\\}/g)||[]).length!==1){
+        return fail('قالب پیامک دمو نامعتبر است.');
+      }
+      s.smsSettings={mode:data.mode,senderLine:data.senderLine,otpTemplate:data.otpTemplate};
+      saveStore(s);
+      return good({...s.smsSettings,readiness:{
+        senderConfigured:Boolean(data.senderLine),apiKeyConfigured:false,
+        providerTemplateApproved:false,canDeliver:false,logMode:data.mode==='log',
+      }}) as ApiResponse<T>;
+    }
+  }
+  if(path==='/api/sms-center/history' && method==='GET') return good(s.smsHistory||[]) as ApiResponse<T>;
 
   if (path === '/api/demo/teacher-ratings') {
     const courseId = new URL(endpoint, 'https://demo.invalid').searchParams.get('courseId');
