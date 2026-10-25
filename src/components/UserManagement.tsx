@@ -27,12 +27,12 @@ export const UserManagement: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     // Use the admin-management API to list admins
-    const res = await apiRequest<{ data: User[] }>('/api/admin-management');
+    const res = await apiRequest<User[]>('/api/admin-management');
     if (res.success && res.data) {
       setUsers(res.data);
     } else {
       // Fallback if not admin.manage
-      const resFallback = await apiRequest<{ data: User[] }>('/api/admin/users');
+      const resFallback = await apiRequest<User[]>('/api/admin/users');
       if (resFallback.success && resFallback.data) setUsers(resFallback.data);
       else setError(resFallback.error || 'خطا در دریافت لیست کاربران');
     }
