@@ -206,6 +206,24 @@ describe('department course-demand workflow',()=>{
         entryYearIds:[base.entryYearId,otherYear.id],trackIds:[],
         courseIds:[courseId,otherCourse.id],recommendedMinimumByCourse:{},
       };
+      // A count-only validator accepted two different chart IDs from the SAME
+      // cohort while claiming the survey covered two different entry years.
+      // The route must reject that mismatch without touching saved surveys.
+      const duplicateCohortChartId='test-demand-same-year-alternative-chart';
+      db.curricula.push({...base,id:duplicateCohortChartId,version:'another-version'});
+      try {
+        const falseMulti=await request(app).post('/api/demand/surveys')
+          .set('Authorization',auth.manager).send({
+            ...payload,curriculumIds:[base.id,duplicateCohortChartId],
+            courseIds:[courseId],
+          });
+        expect(falseMulti.status).toBe(400);
+        const duplicateTrack=await request(app).post('/api/demand/surveys')
+          .set('Authorization',auth.manager).send({...payload,trackIds:['some-track','some-track']});
+        expect(duplicateTrack.status).toBe(400);
+      } finally {
+        db.data.curricula=db.curricula.filter(c=>c.id!==duplicateCohortChartId);
+      }
       const created=await request(app).post('/api/demand/surveys')
         .set('Authorization',auth.manager).send(payload);
       expect(created.status).toBe(201);
