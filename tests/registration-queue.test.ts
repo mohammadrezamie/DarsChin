@@ -82,8 +82,8 @@ describe('manual Educationalyar registration priority queue',()=>{
     const imported={...diff,rawCourseCode:'410019'};
     const q=buildRegistrationQueue({...input([]),evaluations:[imported,math,physics]});
     expect(q.steps[0].copyCode).toBe('410019');
-    expect(q.steps[0].codeVerifiedFromOffering).toBe(true);
-    expect(q.steps[1].codeVerifiedFromOffering).toBe(false);
+    expect(q.steps[0].codeFromOffering).toBe(true);
+    expect(q.steps[1].codeFromOffering).toBe(false);
     expect(q.steps[1].warnings.join(' ')).toContain('تأیید نشده');
   });
 });
