@@ -1,5 +1,8 @@
 import { DEMO_COURSES } from './course-planner';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
+import { extractSourceCourseIds } from '../utils/academic';
+import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
+import type { AcademicRule } from '../types';
 import type {
   ApiResponse, AcademicLimitInfo, AcademicPolicySettings, Course, CourseEligibilityResult,
   CourseOffering, StudentAcademicProfile,
@@ -81,6 +84,7 @@ function initialStore(): DemoStore {
       '/api/offerings': sampleOfferings,
       '/api/curriculum': [curriculum],
       '/api/curriculum/rules': [],
+      '/api/curriculum-courses': [],
       '/api/admin/users': [{ id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] }],
     },
     profile: {
@@ -383,11 +387,105 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if (path === '/api/support/admin/tickets' && method === 'GET') return good(s.tickets) as ApiResponse<T>;
   if (path === '/api/support/admin/bugs' && method === 'GET') return good(s.bugs) as ApiResponse<T>;
-  if (path === '/api/curriculum' && method === 'GET') return good(s.collections['/api/curriculum']) as ApiResponse<T>;
-  if (path.match(/^\/api\/curriculum\/[^/]+\/full$/) && method === 'GET') return good({ curriculum, courses: [], rules: [] }) as ApiResponse<T>;
-  if (path.match(/^\/api\/curriculum\/[^/]+\/courses/)) {
-    if(method==='GET') return good([]) as ApiResponse<T>;
-    return fail('ویرایش روابط آموزشی در دمو فعال نیست؛ نیازمند تأیید قوانین دانشگاه است.');
+  // Draft-only mock curriculum editor: changes are local and have NO effect
+  // on demo eligibility or any actual academic regulations.
+  if (path === '/api/curriculum') {
+    if (method === 'GET') return good(s.collections['/api/curriculum']) as ApiResponse<T>;
+    if (method === 'POST') {
+      const required = ['universityId', 'campusId', 'degreeLevelId', 'majorId', 'entryYearId', 'name'];
+      if (data.status !== 'draft' || required.some(key => typeof data[key] !== 'string' || !data[key].trim())) {
+        return fail('چارت دمو فقط به صورت پیش‌نویس و با مشخصات کامل ساخته می‌شود.');
+      }
+      const found = (key: string, value: string) => (s.collections[key] || []).find(row => row.id === value);
+      const match = found('/api/academic/campuses', data.campusId)?.universityId === data.universityId &&
+        found('/api/academic/majors', data.majorId)?.degreeLevelId === data.degreeLevelId &&
+        Boolean(found('/api/academic/degrees', data.degreeLevelId)) &&
+        Boolean(found('/api/academic/entry-years', data.entryYearId)) &&
+        Boolean(found('/api/academic/universities', data.universityId));
+      if (!match) return fail('ترکیب واحد، رشته، مقطع و ورودی در دمو معتبر نیست.');
+      const version = typeof data.version === 'string' && data.version.trim() ? data.version.trim() : 'draft-1';
+      if (s.collections['/api/curriculum'].some(row => row.campusId === data.campusId &&
+        row.majorId === data.majorId && row.entryYearId === data.entryYearId && row.degreeLevelId === data.degreeLevelId &&
+        row.version === version)) return fail('نسخه تکراری چارت آزمایشی.');
+      const row = { ...data, id: id(), version, status: 'draft', createdAt: now() };
+      s.collections['/api/curriculum'].push(row);
+      saveStore(s);
+      return good(row) as ApiResponse<T>;
+    }
+  }
+  const fullChartMatch = path.match(/^\/api\/curriculum\/([^/]+)\/full$/);
+  if (fullChartMatch && method === 'GET') {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === fullChartMatch[1]);
+    if (!chart) return fail('چارت نمونه یافت نشد.');
+    const linked = (s.collections['/api/curriculum-courses'] || [])
+      .filter(row => row.curriculumId === chart.id)
+      .map(row => ({ ...row, course: currentCourses(s).find(course => course.id === row.courseId) }));
+    const rules = (s.collections['/api/curriculum/rules'] || []).filter(row => row.curriculumId === chart.id);
+    return good({ curriculum: chart, courses: linked,
+      prerequisites: rules.filter(rule => rule.relationshipType === 'PREREQUISITE'),
+      corequisites: rules.filter(rule => rule.relationshipType === 'COREQUISITE') }) as ApiResponse<T>;
+  }
+  const chartCourseMatch = path.match(/^\/api\/curriculum\/([^/]+)\/courses(?:\/([^/]+))?$/);
+  if (chartCourseMatch) {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === chartCourseMatch[1]);
+    if (!chart) return fail('چارت نمونه یافت نشد.');
+    s.collections['/api/curriculum-courses'] ||= [];
+    const rows = s.collections['/api/curriculum-courses'];
+    if (method === 'GET') return good(rows.filter(row => row.curriculumId === chart.id)) as ApiResponse<T>;
+    if (chart.status !== 'draft') return fail('فقط چارت پیش‌نویس نمونه قابل ویرایش است.');
+    if (method === 'POST') {
+      if (!currentCourses(s).some(course => course.id === data.courseId) ||
+          !['MAJOR_REQUIRED', 'MAJOR_ELECTIVE', 'TRACK_REQUIRED', 'TRACK_ELECTIVE'].includes(data.classification) ||
+          (data.trackId && !(s.collections['/api/academic/tracks'] || []).some(track => track.id === data.trackId && track.majorId === chart.majorId)) ||
+          rows.some(row => row.curriculumId === chart.id && row.courseId === data.courseId && (row.trackId || '') === (data.trackId || ''))) {
+        return fail('درس، گرایش یا رابطه تکراری این پیش‌نویس نامعتبر است.');
+      }
+      const row = { id: id(), curriculumId: chart.id, courseId: data.courseId,
+        trackId: data.trackId || null, classification: data.classification,
+        suggestedSemester: Number(data.suggestedSemester || 1), active: true };
+      rows.push(row); saveStore(s); return good(row) as ApiResponse<T>;
+    }
+    if (method === 'DELETE' && chartCourseMatch[2]) {
+      const courseId = chartCourseMatch[2];
+      if (!rows.some(row => row.curriculumId === chart.id && row.courseId === courseId)) return fail('درس در چارت پیدا نشد.');
+      s.collections['/api/curriculum-courses'] = rows.filter(row => !(row.curriculumId === chart.id && row.courseId === courseId));
+      s.collections['/api/curriculum/rules'] = (s.collections['/api/curriculum/rules'] || [])
+        .filter(rule => !(rule.curriculumId === chart.id && (rule.targetCourseId === courseId ||
+          extractSourceCourseIds(rule.expression).includes(courseId))));
+      saveStore(s);
+      return good({}) as ApiResponse<T>;
+    }
+  }
+  if (path === '/api/curriculum/rules' && method === 'POST') {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === data.curriculumId);
+    if (!chart || chart.status !== 'draft' ||
+        !['PREREQUISITE', 'COREQUISITE'].includes(data.relationshipType) ||
+        typeof data.targetCourseId !== 'string' || !currentCourses(s).some(course => course.id === data.targetCourseId) ||
+        !data.expression || !['COURSE', 'GROUP'].includes(data.expression.type)) {
+      return fail('تعریف رابطه صرفاً برای چارت پیشنویس با درس مقصد و ساختار معتبر مجاز است.');
+    }
+    const sources = extractSourceCourseIds(data.expression);
+    if (!sources.length || sources.some(source => !currentCourses(s).some(course => course.id === source))) {
+      return fail('درس مبدا رابطه باید در بانک دروس نمونه موجود باشد.');
+    }
+    s.collections['/api/curriculum/rules'] ||= [];
+    const existingRules = s.collections['/api/curriculum/rules'] as AcademicRule[];
+    if (data.relationshipType === 'PREREQUISITE' &&
+        createsPrerequisiteCycle(chart.id, data.targetCourseId, data.expression, existingRules)) {
+      return fail('رابطه پیش‌نیاز چرخه ایجاد می‌کند.');
+    }
+    const row = { id: id(), curriculumId: chart.id, targetCourseId: data.targetCourseId,
+      relationshipType: data.relationshipType, expression: data.expression, notes: 'صرفاً آزمایشی — تأییدنشده' };
+    existingRules.push(row); saveStore(s); return good(row) as ApiResponse<T>;
+  }
+  const removeRuleMatch = path.match(/^\/api\/curriculum\/rules\/([^/]+)$/);
+  if (removeRuleMatch && method === 'DELETE') {
+    const rules = s.collections['/api/curriculum/rules'] || [];
+    const rule = rules.find(row => row.id === removeRuleMatch[1]);
+    const chart = s.collections['/api/curriculum'].find(row => row.id === rule?.curriculumId);
+    if (!rule || chart?.status !== 'draft') return fail('رابطه در پیش‌نویس یافت نشد.');
+    s.collections['/api/curriculum/rules'] = rules.filter(row => row.id !== rule.id);
+    saveStore(s); return good({}) as ApiResponse<T>;
   }
   const route=collectionRoute(path);
   if (route) {
