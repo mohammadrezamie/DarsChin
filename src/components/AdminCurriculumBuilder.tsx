@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
+import { extractSourceCourseIds } from '../utils/academic';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
@@ -75,10 +76,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
     }
   };
 
-  const handleRemoveCourse = async (courseId: string) => {
-    if (!confirm('حذف درس و تمامی قوانین مرتبط از چارت؟')) return;
-    await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}`, { method: 'DELETE' });
-    loadCurriculumDetails(selectedCurriculumId!);
+  const handleRemoveCourse = async (courseId: string, trackId?: string | null) => {
+    if (!confirm('انتساب این درس از چارت حذف شود؟ سوابق نیازسنجی حذف نخواهند شد.')) return;
+    const query=trackId ? `?trackId=${encodeURIComponent(trackId)}`:'';
+    const result=await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}${query}`,{method:'DELETE'});
+    if (!result.success) { alert(result.error||'حذف درس مجاز نیست.');return; }
+    void loadCurriculumDetails(selectedCurriculumId!);
     if (activeCourseId === courseId) setActiveCourseId(null);
   };
 
@@ -89,7 +92,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
       body: JSON.stringify({
         curriculumId: selectedCurriculumId,
         targetCourseId: activeCourseId,
-        ...addRuleForm
+        relationshipType: addRuleForm.relationshipType,
+        expression: { type: 'COURSE', courseId: addRuleForm.sourceCourseId }
       })
     });
     if (res.success) {
@@ -203,7 +207,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         </td>
                         <td className="p-2 text-xs">{cc.trackId ? tracks.find(t => t.id === cc.trackId)?.name : '-'}</td>
                         <td className="p-2 flex items-center gap-2">
-                           <button onClick={(e) => { e.stopPropagation(); handleRemoveCourse(cc.courseId); }} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); void handleRemoveCourse(cc.courseId,cc.trackId); }} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -226,11 +230,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-500">پیش‌نیازها</h4>
-                    {curriculumFull.prereqs.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
+                    {curriculumFull.prerequisites.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
-                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.conditionType}</span>
-                          <span>{courses.find(c => c.id === r.sourceCourseId)?.name}</span>
+                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -239,11 +243,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-500 mt-4">هم‌نیازها</h4>
-                    {curriculumFull.coreqs.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
+                    {curriculumFull.corequisites.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
-                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.conditionType}</span>
-                          <span>{courses.find(c => c.id === r.sourceCourseId)?.name}</span>
+                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -269,14 +273,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         <option value="PREREQUISITE">پیش‌نیاز</option>
                         <option value="COREQUISITE">هم‌نیاز</option>
                       </select>
-                      <select 
-                        className="w-24 p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
-                        value={addRuleForm.conditionType}
-                        onChange={(e) => setAddRuleForm({...addRuleForm, conditionType: e.target.value})}
-                      >
-                        <option value="AND">AND (و)</option>
-                        <option value="OR">OR (یا)</option>
-                      </select>
+                      <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">یک درس مرتبط</span>
                     </div>
                     <button 
                       onClick={handleAddRule}
