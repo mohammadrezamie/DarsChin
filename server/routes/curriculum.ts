@@ -187,10 +187,20 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
 
 // Admin: Remove Course from Curriculum
 curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermission('curriculum.manage'), (req, res) => {
-  const idx = db.curriculumCourses.findIndex(
-    (cc) => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
+  const matches = db.curriculumCourses.filter(
+    cc => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
-  if (idx === -1) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
+  if (!matches.length) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
+  const selectedTrack = typeof req.query.trackId === 'string' ? req.query.trackId : null;
+  if (!selectedTrack && matches.length > 1) {
+    return res.status(409).json({
+      success: false, error: 'این درس برای بیش از یک گرایش ثبت شده؛ گرایش را با trackId مشخص کنید تا درس اشتباه حذف نشود.',
+    });
+  }
+  const assignment = selectedTrack
+    ? matches.find(cc => cc.trackId === selectedTrack)
+    : matches[0];
+  if (!assignment) return res.status(404).json({ success: false, error: 'این درس برای گرایش انتخاب‌شده ثبت نشده است.' });
 
   if (db.demandSurveys.some(s => s.curriculumId === req.params.id && s.courseIds.includes(req.params.courseId))) {
     return res.status(409).json({
@@ -198,13 +208,20 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
       error: 'این درس در نیازسنجی ثبت شده است و حذف آن می‌تواند گزارش تاریخی مدیر گروه را تخریب کند.',
     });
   }
-  db.curriculumCourses.splice(idx, 1);
-  // Also clean up rules pointing to or from this course in this curriculum
-  db.data.academicRules = db.data.academicRules.filter(
-    (r) => !(r.curriculumId === req.params.id && (r.targetCourseId === req.params.courseId || r.expression.courseId === req.params.courseId))
+  db.data.curriculumCourses = db.curriculumCourses.filter(cc => cc.id !== assignment.id);
+  // Keep shared prerequisite rules if the same course remains in another track.
+  const stillAssigned = db.curriculumCourses.some(cc =>
+    cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
+  if (!stillAssigned) {
+    db.data.academicRules = db.data.academicRules.filter(
+      rule => !(rule.curriculumId === req.params.id &&
+        (rule.targetCourseId === req.params.courseId ||
+         extractSourceCourseIds(rule.expression).includes(req.params.courseId)))
+    );
+  }
   db.save();
-  res.json({ success: true, message: 'درس و قوانین مرتبط از چارت حذف شدند.' });
+  res.json({ success: true, message: 'انتساب درس به چارت/گرایش حذف شد.' });
 });
 
 
