@@ -111,7 +111,11 @@ function initialStore(): DemoStore {
           suggestedSemester:4,active:true,course:sampleCourses.find(course=>course.id===c.id),
         })),
       ],
-      '/api/admin/users': [{ id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] }],
+      '/api/admin/users': [
+        { id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] },
+        { id: 'demo-department-manager', name: 'مدیر گروه نمونهٔ برق', mobile: 'مدیر ساختگی', roles: ['admin'],
+          permissions: ['demand.manage', 'demand.export'], demandScopes: [] },
+      ],
     },
     profile: {
       userId: 'demo-student', universityId: university.id, provinceId: province.id,
@@ -527,6 +531,26 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   // User administration here edits fake rows only; it never changes real auth roles.
   if (path === '/api/admin-management' && method === 'GET') {
     return good(s.collections['/api/admin/users']) as ApiResponse<T>;
+  }
+  // Synthetic department scope assignment. Never reaches an authenticated server.
+  const mockScopePath = path.match(/^\/api\/admin-management\/([^/]+)\/demand-scopes$/);
+  if (mockScopePath && method === 'PUT') {
+    const manager=s.collections['/api/admin/users'].find(row=>row.id===mockScopePath[1]);
+    const scopes=data.scopes;
+    if (!manager || !manager.roles.includes('admin') || !Array.isArray(scopes) || scopes.length>20 ||
+      scopes.some((scope:unknown)=>{
+        if(!scope || typeof scope!=='object' || Array.isArray(scope))return true;
+        const row=scope as {campusId?:string;degreeLevelId?:string;majorId?:string};
+        return !s.collections['/api/academic/campuses'].some(c=>c.id===row.campusId) ||
+          !s.collections['/api/academic/degrees'].some(d=>d.id===row.degreeLevelId) ||
+          !s.collections['/api/academic/majors'].some(m=>m.id===row.majorId && m.degreeLevelId===row.degreeLevelId);
+      }) || new Set(scopes.map((scope:{campusId:string;degreeLevelId:string;majorId:string})=>
+        [scope.campusId,scope.degreeLevelId,scope.majorId].join(':'))).size!==scopes.length) {
+      return fail('محدودهٔ مدیریتی دمو نامعتبر یا تکراری است.');
+    }
+    manager.demandScopes=scopes;
+    saveStore(s);
+    return good({id:manager.id,demandScopes:manager.demandScopes}) as ApiResponse<T>;
   }
   const demoUserPermission = path.match(/^\/api\/admin-management\/([^/]+)$/);
   if (demoUserPermission && method === 'PUT') {
