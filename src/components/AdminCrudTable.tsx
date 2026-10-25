@@ -7,6 +7,7 @@ export interface Column {
   label: string;
   type?: 'text' | 'number' | 'boolean' | 'select';
   options?: { label: string; value: string }[];
+  lookupEndpoint?: string;
 }
 
 interface AdminCrudTableProps {
@@ -23,6 +24,27 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [lookupOptions, setLookupOptions] = useState<Record<string, { label: string; value: string }[]>>({});
+  const lookupKey = columns.filter(column => column.lookupEndpoint)
+    .map(column => column.key + ':' + column.lookupEndpoint).join('|');
+  useEffect(() => {
+    let active = true;
+    for (const column of columns.filter(item => item.lookupEndpoint)) {
+      void apiRequest<any[]>(column.lookupEndpoint!).then(response => {
+        if (!active) return;
+        const choices = response.success && Array.isArray(response.data)
+          ? response.data.filter(row => row && row.id && row.active !== false).map(row => ({
+              value: String(row.id),
+              label: String(row.name || row.code || row.id) +
+                (row.code ? ' · ' + String(row.code) : ''),
+            }))
+          : [];
+        setLookupOptions(previous => ({ ...previous, [column.key]: choices }));
+      });
+    }
+    return () => { active = false; };
+  }, [lookupKey]);
+  const getOptions = (column: Column) => column.options ?? lookupOptions[column.key] ?? [];
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,7 +100,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
     const initialForm: any = {};
     columns.forEach(c => {
       if (c.type === 'boolean') initialForm[c.key] = true;
-      else if (c.type === 'select' && c.options && c.options.length > 0) initialForm[c.key] = c.options[0].value;
+      else if (c.type === 'select') initialForm[c.key] = getOptions(c)[0]?.value || '';
       else initialForm[c.key] = '';
     });
     setEditingId('new');
@@ -174,13 +196,13 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                           {editForm[c.key] ? 'فعال' : 'غیرفعال'}
                         </span>
                       </label>
-                    ) : c.type === 'select' && c.options ? (
+                    ) : c.type === 'select' && (c.options || c.lookupEndpoint) ? (
                       <select
                         className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
                         value={editForm[c.key] || ''}
                         onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                       >
-                        {c.options.map((opt) => (
+                        {getOptions(c).map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
@@ -252,13 +274,13 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             />
                             <span className="text-xs">{editForm[c.key] ? 'فعال' : 'غیرفعال'}</span>
                           </label>
-                        ) : c.type === 'select' && c.options ? (
+                        ) : c.type === 'select' && (c.options || c.lookupEndpoint) ? (
                           <select
                             className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs"
                             value={editForm[c.key] || ''}
                             onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                           >
-                            {c.options.map((opt) => (
+                            {getOptions(c).map((opt) => (
                               <option key={opt.value} value={opt.value}>
                                 {opt.label}
                               </option>
