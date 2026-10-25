@@ -13,6 +13,7 @@ describe('canonical company footer', () => {
     expect(html).toContain(COMPANY_NAME_FA);
     expect(html).toContain('کلیهٔ حقوق مادی و معنوی سامانهٔ درس‌چین متعلق به شرکت');
     expect(html).toContain(`href="${COMPANY_WEBSITE}"`);
+    expect(html).toContain('tnacompany.ir');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).not.toContain('®');
