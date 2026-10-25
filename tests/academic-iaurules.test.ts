@@ -128,4 +128,26 @@ describe('IAU Academic Policy & Rules Engine', () => {
     expect(resFinal.effectiveMinUnits).toBe(2);
     expect(resFinal.effectiveMaxUnits).toBe(24);
   });
+  test('credit threshold only counts unique truly passed units, not failed or duplicate courses', () => {
+    const thresholdRule: AcademicRule = {
+      id:'test-units',curriculumId:'curr1',targetCourseId:'math2',
+      relationshipType:'PREREQUISITE',expression:{type:'MIN_PASSED_UNITS',minUnits:6},
+    };
+    const onePass: StudentPassedCourse[] = [
+      {id:'passed-physics',userId:'u1',courseId:'physics1',status:'PASSED',grade:15,passedAt:''},
+      {id:'duplicate-physics',userId:'u1',courseId:'physics1',status:'PASSED',grade:15,passedAt:''},
+      {id:'failed-math',userId:'u1',courseId:'math1',status:'FAILED',grade:8,passedAt:''},
+    ];
+    const data = (passed: StudentPassedCourse[]) => evaluateStudentEligibility({
+      studentProfile:profileTemplate,curriculum,curriculumCourses,allCourses,
+      tracks:[],academicRules:[thresholdRule],passedCourses:passed,currentOfferings:offerings,
+    }).results[0];
+    const blocked=data(onePass);
+    expect(blocked.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(blocked.allReasons.join(' ')).toContain('حداقل 6 واحد');
+    const allowed=data([...onePass,{id:'passed-math',userId:'u1',courseId:'math1',
+      status:'PASSED',grade:18,passedAt:''}]);
+    expect(allowed.overallStatus).toBe('AVAILABLE');
+  });
+
 });
