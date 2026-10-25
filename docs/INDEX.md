@@ -8,6 +8,7 @@
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | ورود بدون حساب به دمو، محدوده پایلوت برق علوم‌وتحقیقات و راه‌اندازی سریع VPS | [PILOT_LAUNCH_FA.md](PILOT_LAUNCH_FA.md) |
 | روند بررسی و تأیید فایل‌های استخراج‌شده از آموزشیار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
+| آماده‌باش انتخاب واحد: صف کپی سریع کدهای آموزشیار، اولویت‌ها و تقدم همنیاز | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
 | ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | نیازسنجی درس‌های ترم آینده، گزارش مدیر گروه، حریم خصوصی و برنامهٔ توسعه | [FEATURE_COURSE_DEMAND.md](FEATURE_COURSE_DEMAND.md) |
 | قوانین حوزه‌ایِ دانشگاه/واحد/مقطع/رشته/گرایش و طرح کپی پیش‌نویس | [FEATURE_COURSE_DEMAND.md §۵](FEATURE_COURSE_DEMAND.md) |
