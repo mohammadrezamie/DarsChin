@@ -49,6 +49,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
   const [isCopyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyListFeedback,setCopyListFeedback]=useState('');
 
   // Group evaluations by course
   const groupedCourses = useMemo(() => {
@@ -160,7 +161,28 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
     }
   };
 
-  const selectedOfferingsList = evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
+  const selectedOfferingsList = evaluations.filter(e=>selectedOfferingIds.includes(e.offeringId));
+  const copyableRows=selectedOfferingsList.filter(e=>
+    typeof e.rawCourseCode==='string' && e.rawCourseCode.trim().length>0 &&
+    !/^DEMO[-_]/i.test(e.rawCourseCode.trim()) &&
+    typeof e.groupCode==='string' && e.groupCode.trim().length>0);
+  const handleCopyRegisteredCodes=async()=>{
+    setCopyListFeedback('');
+    if(!copyableRows.length){
+      setCopyListFeedback('برای گروه‌های انتخاب‌شده کد ثبت‌شدهٔ قابل کپی موجود نیست؛ از صف سریع ثبت استفاده کن.');
+      return;
+    }
+    const plainText=copyableRows.map(o=>
+      `${o.courseName} | کد ثبت‌شده: ${o.rawCourseCode!.trim()} | گروه: ${o.groupCode.trim()}`).join('\n');
+    try{
+      if(typeof navigator==='undefined' || !navigator.clipboard?.writeText)
+        throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(plainText);
+      setCopyListFeedback(`اطلاعات ${copyableRows.length} گروه کپی شد؛ کدها را پیش از ثبت در آموزشیار بررسی کن.`);
+    }catch{
+      setCopyListFeedback('مرورگر اجازهٔ کپی نداد. برای کپی دستیِ کدها از صف سریع ثبت استفاده کن.');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -198,21 +220,21 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
             </select>
 
             {selectedOfferingIds.length > 0 && (
-              <button
-                onClick={() => {
-    const codes = selectedOfferingsList.map(o => o.rawCourseCode + '_' + o.groupCode).join('\n');
-    navigator.clipboard.writeText(codes).then(() => {
-      alert('کد دروس کپی شد.');
-    });
-  }}
-                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0"
+              <button type="button" onClick={()=>void handleCopyRegisteredCodes()}
+                disabled={copyableRows.length===0}
+                title="فهرست اطلاعات گروه‌های دارای کد ثبت‌شده؛ ثبت خودکار انجام نمی‌شود"
+                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0 disabled:opacity-40"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>کپی برای آموزشیار ({selectedOfferingIds.length})</span>
+                <span>کپی فهرست کدها ({copyableRows.length})</span>
               </button>
             )}
           </div>
         </div>
+        {copyListFeedback&&<p role="status" aria-live="polite"
+          className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-950 dark:bg-blue-950/50 dark:text-blue-100">
+          {copyListFeedback}
+        </p>}
 
         {/* Status Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
