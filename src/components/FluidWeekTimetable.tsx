@@ -5,7 +5,7 @@ import { Clock3, AlertTriangle } from 'lucide-react';
 export const CLASS_START_MINUTE = 7 * 60;
 export const CLASS_END_MINUTE = 20 * 60;
 export const HOUR_HEIGHT = 56;
-export const CLASS_DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه'] as const;
+export const CLASS_DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'] as const;
 
 export interface TimedClass {
   id: string;
