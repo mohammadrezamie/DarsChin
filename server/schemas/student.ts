@@ -3,7 +3,7 @@ import { z } from 'zod';
 const academicId = z.string().trim().min(1).max(160);
 export const updateProfileSchema = z.object({
   universityId: academicId.optional(),
-  provinceId: academicId.nullable().optional(),
+  provinceId: z.union([academicId,z.literal('')]).nullable().optional(),
   campusId: academicId.optional(),
   degreeLevelId: academicId.optional(),
   majorId: academicId.optional(),
