@@ -195,6 +195,33 @@ describe('separation of cohorts, campuses and major tracks',()=>{
     expect(deleteTrack.status).toBe(409);
     expect(db.tracks.some(t=>t.id===trackId)).toBe(true);
   });
+  it('cannot delete a track still used only by academic rules or desired student tracks',async()=>{
+    const dependent='test-rule-only-track';
+    const ruleId='test-track-required-academic-rule';
+    db.tracks.push({id:dependent,majorId,name:'گرایش فقط قانون آزمایشی',code:'TMP',active:true});
+    db.academicRules.push({
+      id:ruleId,curriculumId:chartId,targetCourseId:courseId,
+      relationshipType:'PREREQUISITE',trackId:dependent,
+      expression:{type:'MIN_PASSED_UNITS',minUnits:9},
+    });
+    const profile=db.studentProfiles.find(p=>p.userId===studentId)!;
+    const before=[...(profile.desiredTrackIds||[])];
+    try{
+      const ruleConflict=await request(app).delete(`/api/academic/tracks/${dependent}`)
+        .set('Authorization',token);
+      expect(ruleConflict.status).toBe(409);
+      db.data.academicRules=db.academicRules.filter(rule=>rule.id!==ruleId);
+      profile.desiredTrackIds=[...before,dependent];
+      const desiredConflict=await request(app).delete(`/api/academic/tracks/${dependent}`)
+        .set('Authorization',token);
+      expect(desiredConflict.status).toBe(409);
+      expect(db.tracks.some(t=>t.id===dependent)).toBe(true);
+    }finally{
+      profile.desiredTrackIds=before;
+      db.data.academicRules=db.academicRules.filter(rule=>rule.id!==ruleId);
+      db.data.tracks=db.tracks.filter(t=>t.id!==dependent);
+    }
+  });
   it('recognizes multi-cohort survey links even when the old singular field points elsewhere',async()=>{
     const survey=db.demandSurveys.find(s=>s.id===surveyId)!;
     const savedSingular=survey.curriculumId;
