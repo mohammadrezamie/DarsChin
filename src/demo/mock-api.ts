@@ -207,7 +207,8 @@ function academicLimits(s: DemoStore): AcademicLimitInfo {
   const passed = s.passed.reduce((n, p) => n + (courses.find(c => c.id === p.courseId)?.units || 0), 0);
   return {
     ...defaults, effectiveMinUnits: 0, effectiveMaxUnits: 99,
-    isFinalSemester: false, isGradeA: false, isSummer: false,
+    isFinalSemester: s.profile.isFinalSemesterOverride === true,
+    isGradeA: false, isSummer: false,
     totalCurriculumUnits: total, passedUnits: passed, remainingUnits: total - passed,
     remainingCoursesCount: Math.max(0, courses.length - s.passed.length),
     policySettings: { ...s.academicSettings }, majorRequiredPassed: passed,
@@ -437,7 +438,52 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if (method === 'GET') return good(s.academicSettings) as ApiResponse<T>;
     if (method === 'PUT') {s.academicSettings={...s.academicSettings,...data};saveStore(s);return good(s.academicSettings) as ApiResponse<T>;}
   }
-  if (path === '/api/admin/students-overview' && method === 'GET') return good([]) as ApiResponse<T>;
+  if (path === '/api/admin/students-overview' && method === 'GET') return good([{
+    userId: 'demo-student',
+    name: 'دانشجوی نمونهٔ برق',
+    mobile: 'شمارهٔ ساختگی',
+    majorName: major.name,
+    profile: s.profile,
+    limits: academicLimits(s),
+  }]) as ApiResponse<T>;
+  const overrideMatch = path.match(/^\/api\/admin\/students\/([^/]+)\/final-semester-override$/);
+  if (overrideMatch && method === 'PUT') {
+    if (overrideMatch[1] !== 'demo-student' ||
+        ![true, false, null].includes(data.isFinalSemesterOverride) ||
+        typeof data.finalSemesterNotes !== 'string' || data.finalSemesterNotes.length > 500) {
+      return fail('مجوز آزمایشی ترم آخر یا توضیحات واردشده معتبر نیستند.');
+    }
+    s.profile.isFinalSemesterOverride = data.isFinalSemesterOverride;
+    s.profile.finalSemesterNotes = data.finalSemesterNotes;
+    s.profile.updatedAt = now();
+    saveStore(s);
+    return good(s.profile) as ApiResponse<T>;
+  }
+  // User administration here edits fake rows only; it never changes real auth roles.
+  if (path === '/api/admin-management' && method === 'GET') {
+    return good(s.collections['/api/admin/users']) as ApiResponse<T>;
+  }
+  const demoUserPermission = path.match(/^\/api\/admin-management\/([^/]+)$/);
+  if (demoUserPermission && method === 'PUT') {
+    const user = s.collections['/api/admin/users'].find(row => row.id === demoUserPermission[1]);
+    if (!user || !Array.isArray(data.permissions) ||
+        data.permissions.some((p: unknown) => typeof p !== 'string' || p.length > 100)) {
+      return fail('دسترسی ساختگی کاربر قابل ثبت نیست.');
+    }
+    user.permissions = [...new Set(data.permissions)];
+    saveStore(s);
+    return good(user) as ApiResponse<T>;
+  }
+  const demoRoleUpdate = path.match(/^\/api\/admin\/users\/([^/]+)\/role$/);
+  if (demoRoleUpdate && method === 'PUT') {
+    const user = s.collections['/api/admin/users'].find(row => row.id === demoRoleUpdate[1]);
+    if (!user || !['student', 'admin'].includes(data.role)) {
+      return fail('فقط نقش‌های مجازِ ساختگی دانشجو و مدیر در دمو پشتیبانی می‌شوند.');
+    }
+    user.roles = [data.role];
+    saveStore(s);
+    return good(user) as ApiResponse<T>;
+  }
   if (path === '/api/admin/diagnostics' && method === 'GET') return fail('سرور واقعی در محیط دمو وجود ندارد؛ عیب‌یابی سرور شبیه‌سازی نشده است.');
   if ((path === '/api/admin/audit-logs' || path === '/api/admin/error-logs') && method === 'GET') return good([]) as ApiResponse<T>;
   if (path === '/api/sync/jobs' && method === 'GET') return good([]) as ApiResponse<T>;
