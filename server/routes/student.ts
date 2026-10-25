@@ -33,13 +33,18 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
   let profile = db.studentProfiles.find((p) => p.userId === userId);
 
   if (!profile) {
-    // Create initial profile if doesn't exist
-    const defaultUniv = db.universities[0];
-    const defaultCampus = db.campuses[0];
-    const defaultDeg = db.degreeLevels[0];
-    const defaultMaj = db.majors[0];
-    const defaultYear = db.entryYears.find((y) => y.year === 1403) || db.entryYears[0];
-    const defaultTerm = db.academicTerms.find((t) => t.isCurrent) || db.academicTerms[0];
+    // A starter profile must be internally consistent. The first university,
+    // campus, degree and major records are not guaranteed to belong together.
+    const defaultCampus = db.campuses.find(c=>c.active!==false &&
+      db.universities.some(u=>u.id===c.universityId && u.active!==false));
+    const defaultUniv = db.universities.find(u=>u.id===defaultCampus?.universityId);
+    const defaultMaj = db.majors.find(m=>m.active!==false &&
+      db.degreeLevels.some(d=>d.id===m.degreeLevelId && d.active!==false));
+    const defaultDeg = db.degreeLevels.find(d=>d.id===defaultMaj?.degreeLevelId);
+    const defaultYear = db.entryYears.find(y=>y.year===1403 && y.active!==false) ||
+      db.entryYears.find(y=>y.active!==false);
+    const defaultTerm = db.academicTerms.find(t=>t.isCurrent && t.active!==false) ||
+      db.academicTerms.find(t=>t.active!==false);
 
     profile = {
       userId,
@@ -50,7 +55,7 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
       entryYearId: defaultYear?.id || '',
       isTrackSelected: false,
       selectedTrackId: null,
-      desiredTrackIds: db.tracks.filter((t) => t.majorId === defaultMaj?.id).map((t) => t.id),
+      desiredTrackIds: db.tracks.filter(t=>t.majorId===defaultMaj?.id && t.active!==false).map(t=>t.id),
       currentTermId: defaultTerm?.id || '',
       updatedAt: new Date().toISOString(),
     };
