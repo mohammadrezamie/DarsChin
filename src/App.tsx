@@ -7,6 +7,8 @@ import { ExtensionModal } from './components/ExtensionModal';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 const Landing = lazy(() => import('./pages/Landing').then((module) => ({ default: module.Landing })));
+const PlannerDemo = lazy(() => import('./pages/PlannerDemo').then((module) => ({ default: module.PlannerDemo })));
+const DemoWorkspace = lazy(() => import('./pages/DemoWorkspace').then((module) => ({ default: module.DemoWorkspace })));
 const Login = lazy(() => import('./pages/auth/Login').then((module) => ({ default: module.Login })));
 const Register = lazy(() => import('./pages/auth/Register').then((module) => ({ default: module.Register })));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then((module) => ({ default: module.ForgotPassword })));
@@ -71,6 +73,10 @@ export default function App() {
 <Suspense fallback={<div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">درحال بارگذاری...</div>}>
             <Routes>
               <Route path="/" element={<Landing />} />
+              {/* Full-featured synthetic workspaces: no account, token, or backend required. */}
+              <Route path="/demo" element={<PlannerDemo />} />
+              <Route path="/demo/student" element={<DemoWorkspace role="student" />} />
+              <Route path="/demo/admin" element={<DemoWorkspace role="admin" />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
