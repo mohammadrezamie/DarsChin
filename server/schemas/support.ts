@@ -16,6 +16,11 @@ export const reportBugSchema = z.object({
   pageContext: z.string().optional(),
 });
 
-export const updateStatusSchema = z.object({
-  status: z.enum(['OPEN', 'CLOSED', 'IN_PROGRESS', 'RESOLVED']),
+// Ticket and bug reports have different status lifecycles.
+export const updateTicketStatusSchema = z.object({
+  status: z.enum(['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED']),
+});
+
+export const updateBugStatusSchema = z.object({
+  status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']),
 });
