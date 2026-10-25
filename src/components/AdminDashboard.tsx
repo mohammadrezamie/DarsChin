@@ -276,7 +276,7 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page darschin-admin space-y-5">
-      <header className="relative overflow-hidden rounded-[26px] bg-[#101c33] px-5 py-6 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
+      <header className="relative overflow-hidden rounded-3xl border border-blue-300/10 bg-[#101c33] px-4 py-5 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
         <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div className="max-w-2xl">
@@ -286,7 +286,7 @@ export const AdminDashboard: React.FC = () => {
               </span>
               DARSCHIN / CONTROL CENTER
             </div>
-            <h1 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
+            <h1 className="text-2xl font-black leading-[1.5] tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
             <p className="mt-2 max-w-xl text-sm leading-7 text-slate-300">
               {demandOnly
                 ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
@@ -323,7 +323,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[252px_minmax(0,1fr)]">
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-6">
         <aside className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
           <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
             بخش‌های مدیریت
@@ -341,7 +341,7 @@ export const AdminDashboard: React.FC = () => {
               aria-modal="true"
               aria-label="فهرست بخش‌های مدیریت"
               onClick={event => event.stopPropagation()}
-              className="absolute inset-y-0 right-0 flex w-[min(88vw,350px)] flex-col bg-white shadow-2xl dark:bg-slate-900"
+              className="darschin-drawer absolute inset-y-0 right-0 flex w-[min(90vw,360px)] flex-col bg-white shadow-2xl dark:bg-slate-900"
             >
               <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
                 <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-blue-600" aria-hidden="true" /> بخش‌های مدیریت</span>
@@ -365,7 +365,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
-              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white">{activeNavigation?.label}</h2>
+              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black leading-relaxed text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white">{activeNavigation?.label}</h2>
             </div>
             <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
           </div>
