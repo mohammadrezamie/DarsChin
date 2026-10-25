@@ -448,7 +448,7 @@ this.isInitialized = true;
         sp.userId === userId &&
         sp.status !== 'FAILED' &&
         sp.status !== 'ABSENT' &&
-        (sp.status === 'PASSED' || sp.grade === undefined || sp.grade >= 10)
+        (sp.grade === undefined || (Number.isFinite(sp.grade) && sp.grade >= 10))
     );
     const passedCourseIds = new Set(passed.map((p) => p.courseId));
     const passedUnits = this.courses
