@@ -37,7 +37,6 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('انتقال مدارهای الکتریکی به بالا');
     expect(html).toContain('انتقال مدارهای الکتریکی به پایین');
     expect(html).toContain('ثبت خودکار در آموزشیار نیست');
-    expect(html).toContain('410100');
     expect(html).toContain('02');
     expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
     expect(html).not.toContain('flex-nowrap');
@@ -46,6 +45,7 @@ describe('compact manual Educationalyar registration queue', () => {
   it('places optional details below the compact action row, not alongside it', () => {
     const html = renderQueue({ ...offering, rawCourseCode: undefined });
     expect(html).toContain('<details class="w-full border-t');
+    expect(html).toContain('410100');
     expect(html).toContain('کد از کاتالوگ/تطبیق درس آمده');
     expect(html).toMatch(/<\/div><details class="w-full border-t/);
   });
