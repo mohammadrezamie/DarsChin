@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
@@ -90,7 +91,7 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
   }
 
   const newCurriculum: Curriculum = {
-    id: `curr-${Date.now()}`,
+    id: `curr-${randomUUID()}`,
     universityId,
     campusId,
     degreeLevelId,
@@ -113,7 +114,10 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
-  const { name, version, status, majorId, entryYearId } = req.body;
+  if (db.curricula[idx].status !== 'draft') {
+    return res.status(409).json({ success: false, error: 'چارت فعال یا بایگانی‌شده را نمی‌توان مستقیم تغییر داد؛ برای اصلاح باید نسخه پیش‌نویس جدید ساخته شود.' });
+  }
+  const { name, version, status, majorId, entryYearId } = req.body || {};
   if (name) db.curricula[idx].name = name.trim();
   if (version) db.curricula[idx].version = version.trim();
   if (status && status !== 'draft' && status !== 'archived') {
@@ -132,13 +136,12 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
-  // Soft delete or hard delete? Let's hard delete for MVP.
+  if (db.curricula[idx].status !== 'draft') {
+    return res.status(409).json({ success: false, error: 'حذف مستقیم چارت فعال یا بایگانی‌شده مجاز نیست؛ سابقه مصوبات باید حفظ شود.' });
+  }
   db.curricula.splice(idx, 1);
-  
-  // Cascade delete curriculum courses and rules
   db.data.curriculumCourses = db.curriculumCourses.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
+  db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
   
   db.save();
   res.json({ success: true, message: 'چارت با موفقیت حذف شد.' });
@@ -147,9 +150,20 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
 // Admin: Assign Course to Curriculum
 curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const curriculumId = req.params.id;
-  const { courseId, trackId, suggestedSemester = 1, classification = 'MAJOR_REQUIRED', categoryOverride } = req.body;
+  const chart = db.curricula.find(c => c.id === curriculumId);
+  if (!chart) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
+  if (chart.status !== 'draft') return res.status(409).json({ success: false, error: 'فقط چارت پیش‌نویس قابل ویرایش است.' });
 
-  if (!courseId) return res.status(400).json({ success: false, error: 'شناسه درس الزامی است.' });
+  const { courseId, trackId, suggestedSemester = 1, classification = 'MAJOR_REQUIRED', categoryOverride } = req.body || {};
+  if (!db.courses.some(course => course.id === courseId) ||
+      !['MAJOR_REQUIRED', 'MAJOR_ELECTIVE', 'TRACK_REQUIRED', 'TRACK_ELECTIVE'].includes(classification) ||
+      (trackId && !db.tracks.some(track => track.id === trackId && track.majorId === chart.majorId))) {
+    return res.status(400).json({ success: false, error: 'شناسه درس، دسته‌بندی یا گرایش معتبر نیست.' });
+  }
+  const semester = Number(suggestedSemester);
+  if (!Number.isInteger(semester) || semester < 1 || semester > 12) {
+    return res.status(400).json({ success: false, error: 'نیمسال پیشنهادی باید عدد صحیح بین ۱ تا ۱۲ باشد.' });
+  }
 
   const existing = db.curriculumCourses.find(
     (cc) => cc.curriculumId === curriculumId && cc.courseId === courseId && cc.trackId === (trackId || null)
@@ -159,11 +173,12 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
   }
 
   const newEntry: CurriculumCourse = {
-    id: `cc-${Date.now()}`,
+    id: `cc-${randomUUID()}`,
     curriculumId,
     courseId,
-    suggestedSemester: Number(suggestedSemester),
+    suggestedSemester: semester,
     classification,
+    trackId: trackId || null,
     categoryOverride,
     active: true,
   };
@@ -175,6 +190,9 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
 
 // Admin: Remove Course from Curriculum
 curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermission('curriculum.manage'), (req, res) => {
+  const chart = db.curricula.find(c => c.id === req.params.id);
+  if (!chart) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
+  if (chart.status !== 'draft') return res.status(409).json({ success: false, error: 'فقط چارت پیش‌نویس قابل ویرایش است.' });
   const idx = db.curriculumCourses.findIndex(
     (cc) => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
@@ -183,7 +201,7 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
   db.curriculumCourses.splice(idx, 1);
   // Also clean up rules pointing to or from this course in this curriculum
   db.data.academicRules = db.data.academicRules.filter(
-    (r) => !(r.curriculumId === req.params.id && (r.targetCourseId === req.params.courseId || r.expression.courseId === req.params.courseId))
+    (r) => !(r.curriculumId === req.params.id && (r.targetCourseId === req.params.courseId || extractSourceCourseIds(r.expression).includes(req.params.courseId)))
   );
   db.save();
   res.json({ success: true, message: 'درس و قوانین مرتبط از چارت حذف شدند.' });
@@ -223,7 +241,16 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     notes,
   } = req.body;
 
+  const chart = db.curricula.find(curriculum => curriculum.id === curriculumId);
+  if (!chart) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
+  if (chart.status !== 'draft') {
+    return res.status(409).json({ success: false, error: 'قوانین فقط در چارت پیش‌نویس قابل ویرایش‌اند.' });
+  }
   const sourceIds = extractSourceCourseIds(expression);
+  const assigned = new Set(db.curriculumCourses.filter(row => row.curriculumId === curriculumId).map(row => row.courseId));
+  if (!assigned.has(targetCourseId) || sourceIds.some(id => !assigned.has(id))) {
+    return res.status(400).json({ success: false, error: 'پیش از تعریف رابطه، درس مقصد و همه دروس مبدا را به همین چارت اضافه کنید.' });
+  }
   if (!db.curricula.some(curriculum => curriculum.id === curriculumId) ||
       !db.courses.some(course => course.id === targetCourseId) ||
       sourceIds.length === 0 || sourceIds.some(id => !db.courses.some(course => course.id === id))) {
@@ -237,7 +264,7 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   }
 
   const newRule = {
-    id: `rule-${Date.now()}`,
+    id: `rule-${randomUUID()}`,
     curriculumId,
     entryYearId: entryYearId || null,
     majorId: majorId || null,
@@ -257,6 +284,10 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
 curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
+  const chart = db.curricula.find(c => c.id === db.data.academicRules[idx].curriculumId);
+  if (!chart || chart.status !== 'draft') {
+    return res.status(409).json({ success: false, error: 'ویرایش قانون چارت فعال یا فاقد پیش‌نویس مجاز نیست.' });
+  }
   db.data.academicRules.splice(idx, 1);
   db.save();
   res.json({ success: true, message: 'قانون حذف شد.' });
