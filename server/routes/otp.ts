@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { NiazpardazSmsClient } from 'niazpardazsms';
 import svgCaptcha from 'svg-captcha';
 import { normalizeIranianMobile } from '../auth/normalize-mobile';
+import { validateGuestChallenge } from '../security/turnstile';
 
 export const otpRouter = Router();
 
@@ -85,16 +86,15 @@ function isSupportedOtpPurpose(value: unknown): value is 'login' | 'password_rec
 otpRouter.post('/send', async (req, res) => {
     if (pruneExpiredChallenges()) db.save();
     const body = req.body ?? {};
-    let { mobile, purpose, captchaId, captchaValue } = body;
+    let { mobile, purpose, captchaId, captchaValue, captchaToken } = body;
+    const usingTurnstile = process.env.TURNSTILE_ENABLED === 'true';
 
     if (
         typeof mobile !== 'string' ||
         typeof purpose !== 'string' ||
         !isSupportedOtpPurpose(purpose) ||
-        typeof captchaId !== 'string' ||
-        !captchaId.trim() ||
-        typeof captchaValue !== 'string' ||
-        !captchaValue.trim()
+        (!usingTurnstile && (typeof captchaId !== 'string' || !captchaId.trim() ||
+          typeof captchaValue !== 'string' || !captchaValue.trim()))
     ) {
         return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
     }
@@ -104,7 +104,11 @@ otpRouter.post('/send', async (req, res) => {
         return res.status(400).json({ success: false, error: 'شماره موبایل نامعتبر است.' });
     }
     
-    // Verify CAPTCHA
+    // Either provider-verified Turnstile or the legacy local image challenge.
+    if (usingTurnstile && !(await validateGuestChallenge(captchaToken, 'otp'))) {
+      return res.status(403).json({ success: false, error: 'تأیید «من ربات نیستم» ناموفق بود.' });
+    }
+    if (!usingTurnstile) {
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
     if (!captcha || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
@@ -123,7 +127,8 @@ otpRouter.post('/send', async (req, res) => {
     // Consume CAPTCHA
     captcha.consumedAt = Date.now();
     db.save();
-    
+    }
+
     // Verify user state before sending SMS
     if (purpose === 'login' || purpose === 'password_recovery') {
         const user = db.users.find(u => normalizeIranianMobile(u.mobile) === mobile);
