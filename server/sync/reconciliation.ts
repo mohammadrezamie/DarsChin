@@ -89,7 +89,10 @@ function findCourse(courseCode: string, courseName: string, courses: Course[]): 
       const candidates = [
         course.code,
         ...(course.alternateCodes ?? []),
-        ...(course.courseCodes ?? []).map((item) => item.code),
+        ...(course.courseCodes ?? [])
+          .filter(item => item.active !== false &&
+            item.entryYear === undefined && !item.majorId && !item.trackId)
+          .map(item => item.code),
       ];
       return candidates.some((candidate) => normalizeCode(candidate) === code);
     });
