@@ -68,12 +68,28 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
     status = 'active',
   } = req.body;
 
-  if (!universityId || !campusId || !degreeLevelId || !majorId || !entryYearId || !name) {
-    return res.status(400).json({ success: false, error: 'لطفاً تمام اطلاعات اصلی چارت را وارد کنید.' });
+  if (![universityId,campusId,degreeLevelId,majorId,entryYearId,name].every(
+    v=>typeof v==='string' && v.trim().length>0 && v.length<=150
+  )) return res.status(400).json({success:false,error:'اطلاعات اصلی چارت معتبر نیست.'});
+  if (!['draft','active'].includes(status) ||
+      (version != null && (typeof version!=='string'||version.length>48)) ||
+      (notes != null && (typeof notes!=='string'||notes.length>2000))) {
+    return res.status(400).json({success:false,error:'وضعیت، نسخه یا یادداشت چارت معتبر نیست.'});
+  }
+  if (!db.universities.some(x=>x.id===universityId&&x.active) ||
+      !db.campuses.some(x=>x.id===campusId&&x.universityId===universityId&&x.active) ||
+      !db.degreeLevels.some(x=>x.id===degreeLevelId&&x.active) ||
+      !db.majors.some(x=>x.id===majorId&&x.degreeLevelId===degreeLevelId&&x.active) ||
+      !db.entryYears.some(x=>x.id===entryYearId&&x.active)) {
+    return res.status(400).json({success:false,error:'دانشگاه، واحد، مقطع، رشته یا ورودی با هم تطابق ندارند.'});
+  }
+  if(db.curricula.some(x=>x.campusId===campusId&&x.majorId===majorId&&
+      x.degreeLevelId===degreeLevelId&&x.entryYearId===entryYearId&&x.version===(version||'1.0'))) {
+    return res.status(409).json({success:false,error:'برای این ورودی، نسخهٔ چارت تکراری است.'});
   }
 
   const newCurriculum: Curriculum = {
-    id: `curr-${Date.now()}`,
+    id: 'curr-' + randomUUID(),
     universityId,
     campusId,
     degreeLevelId,
