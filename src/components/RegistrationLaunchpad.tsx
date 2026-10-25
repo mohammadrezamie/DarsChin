@@ -87,7 +87,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyToClipboard(value);
-    setCopyState(ok?`کد «${courseName}» کپی شد.`:'کپی خودکار ممکن نیست؛ کد را انتخاب و دستی کپی کن.');
+    setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[]);
   const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
   const move=(index:number,direction:-1|1)=>{
