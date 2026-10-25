@@ -173,6 +173,7 @@ demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => 
     new Map(db.courses.map(c=>[c.id, c.name])),
     new Map(db.entryYears.map(y=>[y.id, String(y.year)])),
     new Map(db.tracks.map(t=>[t.id, t.name])),
+    new Map(db.majors.map(m=>[m.id, m.name])),
   );
   audit(req.user!.id, 'DEMAND_PERSONAL_REPORT_EXPORTED', survey.id);
   db.save();
