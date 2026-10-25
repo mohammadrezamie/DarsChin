@@ -43,13 +43,17 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
     db.save();
   }
 
-  // Find matching curriculum for profile
+  // Never fall back to the first unrelated university/entry-year chart.
+  // Academic recommendations and demand must share the student's exact scope.
   const matchingCurriculum = db.curricula.find(
     (c) =>
+      c.status === 'active' &&
       c.universityId === profile!.universityId &&
+      c.campusId === profile!.campusId &&
+      c.degreeLevelId === profile!.degreeLevelId &&
       c.majorId === profile!.majorId &&
       c.entryYearId === profile!.entryYearId
-  ) || db.curricula[0];
+  ) || null;
 
   res.json({
     success: true,
