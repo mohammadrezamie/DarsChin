@@ -70,7 +70,20 @@ function initialStore(): DemoStore {
       currentTermId: semester.id, previousTermGpa: null, updatedAt: now(),
     },
     plan: { selectedOfferingIds: ['off-math2', 'off-physics'], coursePriorities: [], offeringPriorities: {} },
-    passed: [], tickets: [], messages: [], bugs: [], academicSettings: { ...defaults },
+    passed: [],
+    tickets: [{
+      id: 'demo-ticket-1', userId: 'demo-student',
+      subject: 'نمونه تیکت برای تست گردش پاسخ‌گویی',
+      status: 'OPEN', createdAt: '2026-10-25T00:00:00.000Z', updatedAt: '2026-10-25T00:00:00.000Z',
+    }],
+    messages: [],
+    bugs: [{
+      id: 'demo-bug-1', userId: 'demo-student',
+      title: 'نمونه گزارش باگ دمو', category: 'UI', severity: 'LOW',
+      description: 'این مورد کاملاً ساختگی است و فقط برای آزمایش پنل مدیریت ایجاد شده است.',
+      pageContext: '/demo/student', status: 'OPEN', createdAt: '2026-10-25T00:00:00.000Z',
+    }],
+    academicSettings: { ...defaults },
   }) as DemoStore;
 }
 let volatileStore: DemoStore | undefined;
@@ -246,6 +259,28 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   if (path === '/api/support/bugs') {
     if(method==='GET') return good(s.bugs) as ApiResponse<T>;
     if(method==='POST'){const bug={...data,id:id(),userId:'demo-student',status:'OPEN',createdAt:now()};s.bugs.push(bug);saveStore(s);return good(bug) as ApiResponse<T>;}
+  }
+  // Exercise exactly the status workflows shown by the real admin component.
+  // This is an in-browser simulation, never a privileged server operation.
+  const statusParts = path.split('/');
+  const statusRoute = statusParts.length === 7 &&
+    statusParts[1] === 'api' && statusParts[2] === 'support' &&
+    statusParts[3] === 'admin' && ['tickets', 'bugs'].includes(statusParts[4]) &&
+    statusParts[6] === 'status';
+  if (statusRoute && method === 'PUT') {
+    const kind = statusParts[4];
+    const recordId = statusParts[5];
+    const allowed = kind === 'tickets'
+      ? ['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED']
+      : ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+    if (!allowed.includes(data.status)) return fail('وضعیت در این گردش پشتیبانی معتبر نیست.');
+    const records = kind === 'tickets' ? s.tickets : s.bugs;
+    const item = records.find(record => record.id === recordId);
+    if (!item) return fail('رکورد ساختگی پیدا نشد.');
+    item.status = data.status;
+    if (kind === 'tickets') item.updatedAt = now();
+    saveStore(s);
+    return good(item) as ApiResponse<T>;
   }
   if (path === '/api/support/admin/tickets' && method === 'GET') return good(s.tickets) as ApiResponse<T>;
   if (path === '/api/support/admin/bugs' && method === 'GET') return good(s.bugs) as ApiResponse<T>;

@@ -8,7 +8,7 @@ export const BugReportPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<'UI' | 'FUNCTIONAL' | 'DATA' | 'OTHER'>('FUNCTIONAL');
+  const [category, setCategory] = useState<BugReport['category']>('OTHER');
   const [severity, setSeverity] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('MEDIUM');
   const [description, setDescription] = useState('');
 
@@ -57,8 +57,8 @@ export const BugReportPanel: React.FC = () => {
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">دسته‌بندی</label>
               <select value={category} onChange={e => setCategory(e.target.value as any)} className="w-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 rounded-xl px-4 py-2 text-sm outline-none focus:border-red-500 text-slate-900 dark:text-white">
                 <option value="UI">رابط کاربری (ظاهر)</option>
-                <option value="FUNCTIONAL">عملکرد سیستم</option>
-                <option value="DATA">اطلاعات نادرست</option>
+                <option value="OTHER">عملکرد سیستم / سایر</option>
+                <option value="ACADEMIC_DATA">اطلاعات آموزشی نادرست</option>
                 <option value="OTHER">سایر موارد</option>
               </select>
             </div>

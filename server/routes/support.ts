@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission, AuthenticatedRequest } from '../middleware/auth';
 import { SupportTicket, SupportMessage, BugReport } from '../../src/types';
 import { validate } from '../middleware/validate';
-import { createTicketSchema, addMessageSchema, reportBugSchema, updateStatusSchema } from '../schemas/support';
+import { createTicketSchema, addMessageSchema, reportBugSchema, updateTicketStatusSchema, updateBugStatusSchema } from '../schemas/support';
 
 export const supportRouter = Router();
 
@@ -95,12 +95,12 @@ supportRouter.get('/admin/tickets', authenticate, requirePermission('support.man
 supportRouter.get('/admin/bugs', authenticate, requirePermission('support.manage'), (req, res) => {
   res.json({ success: true, data: db.bugReports });
 });
-supportRouter.put('/admin/tickets/:id/status', authenticate, requirePermission('support.manage'), validate(updateStatusSchema), (req, res) => {
+supportRouter.put('/admin/tickets/:id/status', authenticate, requirePermission('support.manage'), validate(updateTicketStatusSchema), (req, res) => {
   const t = db.supportTickets.find(x => x.id === req.params.id);
   if (t) { t.status = req.body.status; db.save(); }
   res.json({ success: true, data: t });
 });
-supportRouter.put('/admin/bugs/:id/status', authenticate, requirePermission('support.manage'), validate(updateStatusSchema), (req, res) => {
+supportRouter.put('/admin/bugs/:id/status', authenticate, requirePermission('support.manage'), validate(updateBugStatusSchema), (req, res) => {
   const b = db.bugReports.find(x => x.id === req.params.id);
   if (b) { b.status = req.body.status; db.save(); }
   res.json({ success: true, data: b });
