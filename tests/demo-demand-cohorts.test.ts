@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { browserDemoRequest, resetBrowserDemo } from '../src/demo/mock-api';
 
-beforeEach(() => { resetBrowserDemo(); vi.stubGlobal('window', { location: { pathname: '/demo/student' } }); });
+beforeEach(async () => {
+  resetBrowserDemo();
+  vi.stubGlobal('window', { location: { pathname: '/demo/admin' } });
+  const all = await browserDemoRequest<any[]>('/api/demand/surveys');
+  for(const survey of all.data || []) {
+    const r=await browserDemoRequest(`/api/demand/surveys/${survey.id}/status`,{method:'PUT',body:JSON.stringify({status:'OPEN'})});
+    if(!r.success)throw new Error('Failed to open demo survey');
+  }
+  vi.stubGlobal('window', { location: { pathname: '/demo/student' } });
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('different entrance cohorts never receive each other\'s academic demand form', () => {
