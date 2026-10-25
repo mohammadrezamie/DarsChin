@@ -315,7 +315,7 @@ function demoEvaluation(s: DemoStore) {
     return {
       offeringId: o.id, courseId: o.courseId, courseCode: c?.code || 'DEMO',
       rawCourseCode: o.rawCourseCode,
-      courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
+      courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, isExtraUnit: c?.isExtraUnit === true, category: c?.category || 'سایر',
       groupCode: o.groupCode, instructor: o.instructor, dayOfWeek: o.dayOfWeek,
       startTime: o.startTime, endTime: o.endTime, capacity: o.capacity,
       enrolledCount: o.enrolledCount, enrolledCountKnown: o.enrolledCountKnown, examDate: o.examDate,
