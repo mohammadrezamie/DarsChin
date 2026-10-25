@@ -74,19 +74,19 @@ export const HeroSection: React.FC = () => {
         </div>
 
         <motion.div initial={demoAnimation} animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.65, delay: 0.12, ease: 'easeOut' }} className="relative mx-auto w-full max-w-2xl">
+          transition={{ duration: 0.65, delay: 0.12, ease: 'easeOut' }} className="relative mx-auto w-full min-w-0 max-w-2xl">
           <div aria-hidden="true" className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-violet-500/20 blur-2xl" />
           <div className="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/90 shadow-[0_28px_90px_-32px_rgba(30,64,175,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90">
-            <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4 dark:border-slate-800 sm:px-6">
-              <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-4 dark:border-slate-800 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><GraduationCap className="h-5 w-5" /></div>
                 <div><div className="font-black text-slate-900 dark:text-white">میز برنامه‌ریزی</div><div className="text-xs text-slate-500 dark:text-slate-400">پیش‌نمایش تعاملی محصول</div></div>
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300"><WandSparkles className="h-3.5 w-3.5" /> داده نمونه</span>
             </div>
 
-            <div className="grid gap-5 p-4 sm:p-6">
-              <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:gap-3">
+            <div className="grid min-w-0 gap-5 p-3 sm:p-6">
+              <div className="grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:gap-3">
                 <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"><div className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" /> درس انتخابی</div><div className="text-2xl font-black text-slate-900 dark:text-white">{persianNumber(selectedOfferings.length)}</div></div>
                 <div className="rounded-2xl bg-blue-50/80 p-3 dark:bg-blue-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300"><GraduationCap className="h-3.5 w-3.5" /> مجموع واحد</div><div className="text-2xl font-black text-blue-800 dark:text-blue-200">{persianNumber(selectedUnits)}</div></div>
                 <div className="rounded-2xl bg-emerald-50/80 p-3 dark:bg-emerald-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300"><Check className="h-3.5 w-3.5" /> وضعیت</div><div className="text-sm font-black text-emerald-800 dark:text-emerald-200">قابل بررسی</div></div>
@@ -98,9 +98,9 @@ export const HeroSection: React.FC = () => {
                   {demoOfferings.map((offering) => {
                     const selected = selectedIds.includes(offering.id);
                     return <button key={offering.id} type="button" aria-pressed={selected} onClick={() => toggleOffering(offering.id)}
-                      className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-right transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20 sm:p-4 ${selected ? 'border-blue-300 bg-blue-50/70 dark:border-blue-500/50 dark:bg-blue-500/10' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'}`}>
+                      className={`flex w-full min-w-0 items-center gap-2 rounded-2xl border p-3 text-right sm:gap-3 transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20 sm:p-4 ${selected ? 'border-blue-300 bg-blue-50/70 dark:border-blue-500/50 dark:bg-blue-500/10' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'}`}>
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{selected ? <Check className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}</span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold text-slate-900 dark:text-white">{offering.name}</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{offering.code} · {persianNumber(offering.units)} واحد</span></span>
+                      <span className="min-w-0 flex-1"><span className="block break-words text-sm font-extrabold leading-6 text-slate-900 [overflow-wrap:anywhere] dark:text-white">{offering.name}</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{offering.code} · {persianNumber(offering.units)} واحد</span></span>
                       <span className="hidden shrink-0 items-center gap-1 text-xs text-slate-500 dark:text-slate-400 sm:inline-flex"><Clock3 className="h-3.5 w-3.5" />{offering.day}</span>
                       <span className={`shrink-0 rounded-xl px-3 py-2 text-xs font-extrabold ${selected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{selected ? 'انتخاب شد' : 'افزودن'}</span>
                     </button>;
@@ -110,7 +110,7 @@ export const HeroSection: React.FC = () => {
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                 <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 font-extrabold text-slate-900 dark:text-white"><CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" /> برنامه انتخابی نمونه</div><span className="text-xs text-slate-500 dark:text-slate-400">{persianNumber(selectedOfferings.length)} درس</span></div>
-                {selectedOfferings.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">{selectedOfferings.map((offering) => <div key={offering.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900"><span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">{offering.name}</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{offering.day} · {offering.time}</span></span><span className="shrink-0 text-xs font-extrabold text-blue-700 dark:text-blue-300">{persianNumber(offering.units)} واحد</span></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">هنوز درسی انتخاب نکرده‌ای؛ یک گزینه را اضافه کن تا این بخش به‌روزرسانی شود.</div>}
+                {selectedOfferings.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">{selectedOfferings.map((offering) => <div key={offering.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900"><span className="min-w-0"><span className="block break-words text-sm font-bold leading-6 text-slate-800 [overflow-wrap:anywhere] dark:text-slate-100">{offering.name}</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{offering.day} · {offering.time}</span></span><span className="shrink-0 text-xs font-extrabold text-blue-700 dark:text-blue-300">{persianNumber(offering.units)} واحد</span></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">هنوز درسی انتخاب نکرده‌ای؛ یک گزینه را اضافه کن تا این بخش به‌روزرسانی شود.</div>}
               </div>
               <p className="text-right text-xs leading-6 text-slate-500 dark:text-slate-400">این پیش‌نمایش صرفاً برای نمایش تعاملات رابط کاربری است؛ اطلاعات آن از حساب یا سامانه آموزشیار دریافت نمی‌شود.</p>
             </div>
