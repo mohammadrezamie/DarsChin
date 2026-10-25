@@ -1,6 +1,10 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { buildRegistrationQueue } from '../src/domain/registration-queue';
+import type { AcademicRule } from '../src/types';
 import { RegistrationLaunchpad } from '../src/components/RegistrationLaunchpad';
 import type { CourseEligibilityResult, StudentAcademicProfile } from '../src/types';
 
@@ -40,6 +44,23 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('02');
     expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
     expect(html).not.toContain('flex-nowrap');
+  });
+
+  it('does not promote a course with unresolved academic prerequisites to quick-copy', () => {
+    const prerequisite: AcademicRule = {
+      id: 'rule-1', curriculumId: 'chart-example', targetCourseId: 'test-course',
+      relationshipType: 'PREREQUISITE', expression: { type: 'COURSE', courseId: 'missing-pre' },
+    };
+    const queue = buildRegistrationQueue({
+      evaluations: [offering], selectedOfferingIds: ['test-off-1'],
+      preferredCourseIds: ['test-course'], rules: [prerequisite],
+      passedCourses: [], profile: { majorId: 'ee', entryYearId: '1403', selectedTrackId: null },
+    });
+    expect(queue.steps[0].copyCode).toBe('410100');
+    expect(queue.steps[0].ready).toBe(false);
+    const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
+    expect(source).toContain('s.ready&&!doneIds.includes(s.courseId)');
+    expect(source).toContain('disabled={!step.ready||!step.copyCode||locked}');
   });
 
   it('places optional details below the compact action row, not alongside it', () => {
