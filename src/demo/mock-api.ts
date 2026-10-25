@@ -504,8 +504,11 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return fail('تعریف رابطه صرفاً برای چارت پیشنویس با درس مقصد و ساختار معتبر مجاز است.');
     }
     const sources = extractSourceCourseIds(data.expression);
-    if (!sources.length || sources.some(source => !currentCourses(s).some(course => course.id === source))) {
-      return fail('درس مبدا رابطه باید در بانک دروس نمونه موجود باشد.');
+    const assigned = new Set((s.collections['/api/curriculum-courses'] || [])
+      .filter(row => row.curriculumId === chart.id).map(row => row.courseId));
+    if (!assigned.has(data.targetCourseId) || !sources.length ||
+        sources.some(source => !assigned.has(source))) {
+      return fail('درس مقصد و تمام پیش‌نیازها/هم‌نیازها باید ابتدا در همین پیش‌نویس چارت ثبت شده باشند.');
     }
     s.collections['/api/curriculum/rules'] ||= [];
     const existingRules = s.collections['/api/curriculum/rules'] as AcademicRule[];
