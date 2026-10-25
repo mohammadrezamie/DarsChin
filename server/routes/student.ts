@@ -7,6 +7,7 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
+import { evaluateScheduleQuality } from '../../src/domain/schedule-quality';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
 
@@ -256,7 +257,7 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
 // Update whole plan (e.g. sync priorities or offerings)
 studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const { selectedOfferingIds, coursePriorities, offeringPriorities } = req.body;
+  const { selectedOfferingIds, coursePriorities, offeringPriorities, qualitySuggestion } = req.body;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
 
@@ -296,6 +297,31 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
         error: 'برخی از دروس انتخابی دارای منع آیین‌نامه‌ای هستند و قابل ثبت نیستند.',
         invalidIds: invalidOfferings
       });
+    }
+
+    // Strictly validate *atomic suggested schedule* saves, without changing the
+    // existing manual plan editor's ability to display imperfect draft plans.
+    if(qualitySuggestion===true){
+      const existing=db.studentPlans.find(p=>p.userId===userId&&p.termId===currentTermId);
+      const previous=existing?.selectedOfferingIds||[];
+      const previousCourses=previous.map(id=>db.courseOfferings.find(o=>o.id===id)?.courseId);
+      const newCourses=selectedOfferingIds.map(id=>db.courseOfferings.find(o=>o.id===id)?.courseId);
+      if(!previous.length||!newCourses.length ||
+        previousCourses.some(id=>!id) || newCourses.some(id=>!id) ||
+        new Set(previousCourses).size!==previousCourses.length ||
+        new Set(newCourses).size!==newCourses.length ||
+        new Set(newCourses).size!==new Set(previousCourses).size ||
+        newCourses.some(id=>!previousCourses.includes(id))){
+        return res.status(409).json({
+          success:false,error:'پیشنهاد باید فقط گروه‌های همین دروس فعلی را جابه‌جا کند؛ برنامه تغییر نکرد.',
+        });
+      }
+      const quality=evaluateScheduleQuality(report.results,selectedOfferingIds);
+      if(quality.activeDays===null){
+        return res.status(409).json({
+          success:false,error:'گروه‌های پیشنهادشده ساعت معتبر یا ترکیب بدون تداخل ندارند؛ برنامه تغییر نکرد.',
+        });
+      }
     }
   }
 
