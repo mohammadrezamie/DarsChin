@@ -88,6 +88,8 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     selectedTrackId: isTrackSelected ? selectedTrackId : null,
     desiredTrackIds: Array.isArray(desiredTrackIds) ? desiredTrackIds : [],
     currentTermId: currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || '',
+    // Student identifier was collected for demand planning; profile edits must preserve it.
+    studentNumber: idx !== -1 ? db.studentProfiles[idx].studentNumber : undefined,
     previousTermGpa: previousTermGpa !== undefined ? Number(previousTermGpa) : null,
     updatedAt: new Date().toISOString(),
   };
