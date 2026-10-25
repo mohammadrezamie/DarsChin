@@ -59,8 +59,10 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({
       >
         <button
           id="btnCloseExtModal"
+          type="button"
+          aria-label="بستن پنجرهٔ افزونه"
           onClick={onClose}
-          className="absolute top-4 left-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+          className="absolute top-3 left-3 flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:top-4 sm:left-4"
         >
           <X className="w-5 h-5" />
         </button>
