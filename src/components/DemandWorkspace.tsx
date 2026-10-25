@@ -54,7 +54,15 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setEntryYears(meta.data?.entryYears || []);
     setTracks(meta.data?.tracks || []);
     setCurricula(chart.data || []);
-    setSelectedId(prev=>list.data?.some(s=>s.id===prev)?prev:list.data?.[0]?.id || '');
+    const stillSelected = list.data?.find(item => item.id === selectedId);
+    setSelectedId(prev => list.data?.some(item => item.id === prev) ? prev : list.data?.[0]?.id || '');
+    // A same-ID refresh otherwise leaves the report effect untouched, displaying
+    // stale counts even after another browser tab submits new demand.
+    if (role === 'admin' && stillSelected) {
+      const latest = await apiRequest<SurveyStats>(`/api/demand/surveys/${stillSelected.id}/report`);
+      if (latest.success) setReport(latest.data || null);
+      else setError(latest.error || 'آمار نیازسنجی به‌روزرسانی نشد.');
+    }
     if (role === 'student') {
       const p = await apiRequest<{profile:StudentAcademicProfile}>('/api/student/profile');
       if (p.success && p.data?.profile) {
