@@ -173,6 +173,7 @@ demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => 
   );
   audit(req.user!.id, 'DEMAND_PERSONAL_REPORT_EXPORTED', survey.id);
   db.save();
+  if (req.query.format === 'json') return res.json({ success: true, data: { csv: contents } });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="darschin-demand-' + survey.id + '.csv"');
   return res.send(contents);
