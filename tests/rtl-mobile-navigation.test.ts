@@ -29,6 +29,16 @@ describe('RTL mobile navigation and accessible theme modes', () => {
     expect(navbar).toContain('canManage &&');
   });
 
+  it('uses a right-side drawer for admin sections instead of mobile tab overflow', () => {
+    const admin = source('src/components/AdminDashboard.tsx');
+    expect(admin).toContain('aria-label="بازکردن بخش‌های مدیریت"');
+    expect(admin).toContain('aria-controls="admin-sections-mobile-navigation"');
+    expect(admin).toContain('absolute inset-y-0 right-0');
+    expect(admin).toContain('hidden lg:block bg-liquid-glass');
+    expect(admin).toContain('setSectionsMenuOpen(false)');
+    expect(admin).toContain("event.key === 'Escape'");
+  });
+
   it('shows a usable day / automatic / night switch on mobile and desktop', () => {
     const toggle = source('src/components/ThemeToggle.tsx');
     expect(toggle).toContain("mode: 'light', label: 'روز'");
