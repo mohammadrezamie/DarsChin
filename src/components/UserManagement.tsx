@@ -77,13 +77,13 @@ export const UserManagement: React.FC = () => {
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
-    <div className="bg-liquid-glass rounded-3xl p-6">
+    <div dir="rtl" className="darschin-surface min-w-0 p-4 sm:p-6">
       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
         <ShieldAlert className="w-5 h-5 text-red-500" /> مدیریت مدیران (دسترسی‌ها)
       </h3>
       
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-right">
+      <div className="darschin-scroll-x">
+        <table className="darschin-people-table w-full min-w-[680px] text-sm text-right">
           <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <tr>
               <th className="px-4 py-3 rounded-r-xl">نام کاربر</th>
@@ -96,9 +96,9 @@ export const UserManagement: React.FC = () => {
           <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
             {users.map(u => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
-                <td className="px-4 py-4 text-slate-500 font-mono" dir="ltr">{u.mobile}</td>
-                <td className="px-4 py-4">
+                <td data-label="نام مدیر" className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
+                <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers" dir="ltr">{u.mobile}</td>
+                <td data-label="نقش" className="px-4 py-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
                     getHighestRole(u.roles) === 'super-admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                     getHighestRole(u.roles) === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
@@ -108,20 +108,20 @@ export const UserManagement: React.FC = () => {
                     {getHighestRole(u.roles) === 'super-admin' ? 'مدیر ارشد' : getHighestRole(u.roles) === 'admin' ? 'مدیر سیستم' : 'دانشجو'}
                   </span>
                 </td>
-                <td className="px-4 py-4">
+                <td data-label="مجوزها" className="px-4 py-4">
                   {getHighestRole(u.roles) === 'admin' && (
                     <div className="flex flex-wrap gap-2">
                       {AVAILABLE_PERMISSIONS.map(perm => {
                         const hasPerm = u.permissions?.includes(perm.id);
                         const canGrant = currentUser?.roles?.includes('super-admin') || currentUser?.permissions?.includes(perm.id);
                         return (
-                          <label key={perm.id} className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md border ${hasPerm ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300' : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700'} ${canGrant ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700' : 'opacity-50 cursor-not-allowed'}`}>
+                          <label key={perm.id} className={`flex min-h-10 items-center gap-2 text-xs px-2.5 py-2 rounded-lg border ${hasPerm ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300' : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700'} ${canGrant ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700' : 'opacity-50 cursor-not-allowed'}`}>
                             <input 
                               type="checkbox" 
                               checked={hasPerm} 
                               disabled={!canGrant}
                               onChange={(e) => handlePermissionChange(u.id, perm.id, e.target.checked)}
-                              className="hidden" 
+                              className="h-4 w-4 shrink-0 accent-blue-600" 
                             />
                             {perm.label}
                           </label>
@@ -133,12 +133,12 @@ export const UserManagement: React.FC = () => {
                     <span className="text-xs text-slate-400">دارای تمامی دسترسی‌ها (Root)</span>
                   )}
                 </td>
-                <td className="px-4 py-4">
+                <td data-label="تغییر نقش" className="px-4 py-4">
                   {u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
                     <span className="text-xs text-slate-400 italic">شما مالک (Root) هستید</span>
                   ) : (
                     <select
-                      className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                      className="darschin-field bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
                       value={getHighestRole(u.roles)}
                       onChange={(e) => handleRoleChange(u.id, e.target.value)}
                     >
