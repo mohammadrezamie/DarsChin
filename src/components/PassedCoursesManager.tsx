@@ -25,6 +25,11 @@ interface EnrichedPassedCourse extends StudentPassedCourse {
   course?: Course;
 }
 
+const isCompletedCourse=(row:StudentPassedCourse):boolean=>
+  row.status!=='FAILED' && row.status!=='ABSENT' &&
+  (row.status==='PASSED' || row.grade===undefined ||
+    (typeof row.grade==='number' && Number.isFinite(row.grade) && row.grade>=10));
+
 interface PassedCoursesManagerProps {
   onPassedCoursesChanged?: () => void;
 }
@@ -46,6 +51,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [historyNotice,setHistoryNotice]=useState('');
 
   const fetchPassedData = async () => {
     setLoading(true);
@@ -101,7 +107,12 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
   const handleToggleCoursePassed = async (courseId: string) => {
     const existing = passedCourses.find((pc) => pc.courseId === courseId);
     if (existing) {
-      // Remove it
+      if(!isCompletedCourse(existing)){
+        setViewMode('table');
+        setHistoryNotice('این درس سابقهٔ مردودی یا غیبت دارد. برای ویرایش آگاهانهٔ سابقه، ابتدا آن را در جدول بررسی کن.');
+        return;
+      }
+      // Remove an explicitly marked passed course.
       const res = await apiRequest(`/api/student/passed-courses/${existing.id}`, {
         method: 'DELETE',
       });
@@ -138,8 +149,10 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
   };
 
   // Filter available courses not yet passed for the dropdown
-  const passedIds = new Set(passedCourses.map((pc) => pc.courseId));
-  const availableToPass = allCourses.filter((c) => !passedIds.has(c.id));
+  const recordedIds = new Set(passedCourses.map(pc=>pc.courseId));
+  const completedCourses=passedCourses.filter(isCompletedCourse);
+  const passedIds=new Set(completedCourses.map(pc=>pc.courseId));
+  const availableToPass = allCourses.filter(c=>!recordedIds.has(c.id));
 
   // Filter current passed list by search query & category
   const filteredPassed = passedCourses.filter((pc) => {
@@ -166,10 +179,12 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
         <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-300"/>
-        <span className="font-bold text-slate-900 dark:text-white">{passedCourses.length} درس پاس‌شده</span>
+        <span className="font-bold text-slate-900 dark:text-white">{passedIds.size} درس پاس‌شده</span>
         <span className="text-slate-600 dark:text-slate-300">· {totalUnits} واحد گذرانده‌شده</span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">فقط درس‌هایی را علامت بزن که واقعاً گذرانده‌ای.</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">اطلاعات خوداظهاری است؛ سابقهٔ مردودی به واحد پاس‌شده اضافه نمی‌شود.</span>
       </div>
+
+      {historyNotice&&<p role="status" aria-live="polite" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">{historyNotice}</p>}
 
       {/* Main Container with Tabs */}
       <div className="p-5 sm:p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-4">
@@ -243,6 +258,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-96 overflow-y-auto p-1">
               {checklistCourses.map((course) => {
                 const isPassed = passedIds.has(course.id);
+                const hasFailedRecord=recordedIds.has(course.id) && !isPassed;
                 return (
                   <div
                     key={course.id}
@@ -250,6 +266,8 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                     className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 ${
                       isPassed
                         ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 shadow-xs'
+                        : hasFailedRecord
+                        ? 'bg-amber-50 dark:bg-amber-950/25 border-amber-300 dark:border-amber-800'
                         : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500'
                     }`}
                   >
@@ -258,6 +276,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                         <span className="font-bold text-xs text-slate-900 dark:text-white">
                           {course.name}
                         </span>
+                        {hasFailedRecord&&<span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-900/50 dark:text-amber-100">مردود / غایب</span>}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                         <span className="font-mono">{course.code}</span>
@@ -277,7 +296,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                           : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
                       }`}
                     >
-                      {isPassed ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {isPassed ? <Check className="w-4 h-4" /> : hasFailedRecord ? <span className="text-[10px] font-bold">!</span> : <Plus className="w-4 h-4" />}
                     </div>
                   </div>
                 );
@@ -314,7 +333,8 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                       </span>
                     </td>
                     <td className="py-2.5 px-3 font-mono">
-                      {pc.grade !== undefined && pc.grade !== null ? pc.grade : 'قبول (بدون نمره)'}
+                      {pc.grade !== undefined && pc.grade !== null ? pc.grade : 'بدون نمره'}
+                      {!isCompletedCourse(pc)&&<span className="mr-1 font-bold text-amber-700 dark:text-amber-300">(مردود / غایب)</span>}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <button
