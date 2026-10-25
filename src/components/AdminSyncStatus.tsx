@@ -15,6 +15,8 @@ interface SyncJobView {
   totalSnapshots: number;
   processedSnapshots: number;
   reconciledOfferings?: number;
+  reviewCandidates?: number;
+  importBatchId?: string;
   duplicateRecords?: number;
   reconciliationErrors?: string[];
   error?: string;
@@ -24,6 +26,7 @@ const statusLabels: Record<string, string> = {
   PENDING: 'در انتظار',
   RUNNING: 'در حال دریافت',
   RECEIVED: 'داده دریافت شده؛ در انتظار تطبیق',
+  AWAITING_REVIEW: 'در انتظار بررسی مدیر',
   RECONCILED: 'تطبیق موفق',
   FAILED: 'ناموفق',
   COMPLETED: 'پایان‌یافته (وضعیت قدیمی)',
@@ -33,6 +36,7 @@ const statusStyles: Record<string, string> = {
   PENDING: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
   RUNNING: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300',
   RECEIVED: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
+  AWAITING_REVIEW: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100',
   RECONCILED: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
   FAILED: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
   COMPLETED: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -73,7 +77,7 @@ export const AdminSyncStatus: React.FC = () => {
             <RefreshCw className="h-5 w-5 text-blue-500" /> پایش واقعی عملیات همگام‌سازی
           </h3>
           <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            دریافت داده با تطبیق موفق یکی نیست. این فهرست وضعیت عملیات ثبت‌شده در سرور را نشان می‌دهد؛ نه داده زنده آموزشیار.
+            دریافت داده به معنی انتشار نیست. خروجی‌های افزونه ابتدا برای بازبینی مدیر در صف واردات ثبت می‌شوند و هیچ کلاس جدیدی خودکار به دانشجویان نمایش داده نمی‌شود.
           </p>
         </div>
         <button
@@ -105,7 +109,7 @@ export const AdminSyncStatus: React.FC = () => {
                 <th className="px-3 py-3">ترم / واحد</th>
                 <th className="px-3 py-3">شروع / پایان</th>
                 <th className="px-3 py-3">بخش‌ها</th>
-                <th className="px-3 py-3">ارائه‌های تطبیق‌شده</th>
+                <th className="px-3 py-3">پیشنهادهای در انتظار بررسی</th>
                 <th className="rounded-l-xl px-3 py-3">پیام نتیجه</th>
               </tr>
             </thead>
@@ -115,7 +119,12 @@ export const AdminSyncStatus: React.FC = () => {
               ) : syncs.map((sync) => {
                 const isSuccessful = sync.status === 'RECONCILED';
                 const isFailed = sync.status === 'FAILED';
-                const message = sync.error || sync.reconciliationErrors?.[0] || (isSuccessful ? 'داده‌ها با موفقیت تطبیق داده شدند.' : 'هنوز نتیجه نهایی ثبت نشده است.');
+                const message = sync.error || sync.reconciliationErrors?.[0] ||
+                  (sync.status === 'AWAITING_REVIEW'
+                    ? 'اطلاعات در صف بررسی واردات قرار گرفت؛ هیچ گروهی منتشر نشده است.'
+                    : isSuccessful
+                      ? 'تطبیق از نسخه قبلی؛ وضعیت انتشار باید جداگانه بررسی شود.'
+                      : 'هنوز نتیجه نهایی ثبت نشده است.');
                 return (
                   <tr key={sync.id} className="align-top hover:bg-white/40 dark:hover:bg-slate-800/30">
                     <td className="px-3 py-4 font-mono text-xs text-slate-600 dark:text-slate-300">{sync.id}</td>
@@ -134,7 +143,7 @@ export const AdminSyncStatus: React.FC = () => {
                       <div>{formatDate(sync.completedAt || sync.receivedAt)}</div>
                     </td>
                     <td className="px-3 py-4 tabular-nums">{sync.processedSnapshots} / {sync.totalSnapshots}</td>
-                    <td className="px-3 py-4 font-bold tabular-nums">{isSuccessful ? sync.reconciledOfferings ?? 0 : '—'}</td>
+                    <td className="px-3 py-4 font-bold tabular-nums">{sync.status === 'AWAITING_REVIEW' ? sync.reviewCandidates ?? 0 : '—'}</td>
                     <td className={`max-w-64 whitespace-normal px-3 py-4 text-xs leading-5 ${isFailed ? 'text-rose-700 dark:text-rose-300' : 'text-slate-500 dark:text-slate-400'}`} title={message}>{message}</td>
                   </tr>
                 );
