@@ -264,7 +264,7 @@ academicRouter.post('/courses', authenticate, requirePermission('course.create')
     return res.status(400).json({ success: false, error: 'کد، نام، واحدهای معتبر، دسته‌بندی و وضعیت واحد مازاد الزامی یا باید معتبر باشند.' });
   }
 
-  const existing = db.courses.find((c) => c.code.trim() === code.trim());
+  const existing = db.courses.find(c => c.code.trim().toLowerCase() === code.trim().toLowerCase());
   if (existing) {
     return res.status(400).json({ success: false, error: 'درسی با این کد قبلاً ثبت شده است.' });
   }
