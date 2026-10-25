@@ -46,6 +46,7 @@ afterAll(() => {
   db.data.users = db.users.filter(user => user.id !== testAdminId);
   db.data.importBatches = db.data.importBatches.filter(batch => !madeBatchIds.includes(batch.id));
   db.data.importRecords = db.data.importRecords.filter(record => !madeBatchIds.includes(record.batchId));
+  db.data.auditLogs = db.auditLogs.filter(log => !(log.adminId === testAdminId && log.action === 'IMPORT_COURSE_MAPPING_REVIEW'));
   db.save();
 });
 
