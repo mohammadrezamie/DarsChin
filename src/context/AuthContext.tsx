@@ -9,12 +9,13 @@ import { apiRequest, getStoredToken, setStoredToken } from '../utils/api';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (mobile: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (mobile: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (
     mobile: string,
     password: string,
     name: string,
-    recoveryKey?: string
+    recoveryKey?: string,
+    captchaToken?: string
   ) => Promise<{ success: boolean; error?: string; recoveryKey?: string }>;
   recoverPassword: (
     mobile: string,
@@ -105,10 +106,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (mobile: string, password: string) => {
+  const login = async (mobile: string, password: string, captchaToken?: string) => {
     const res = await apiRequest<{ token: string; user: User }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ mobile, password }),
+      body: JSON.stringify({ mobile, password, captchaToken }),
     });
     if (res.success && res.data) {
       setStoredToken(res.data.token);
@@ -118,10 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: res.error || 'خطا در ورود به حساب کاربری.' };
   };
 
-  const register = async (mobile: string, password: string, name: string, recoveryKey?: string) => {
+  const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string) => {
     const res = await apiRequest<{ token: string; user: User & { recoveryKey?: string } }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ mobile, password, name, recoveryKey }),
+      body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken }),
     });
     if (res.success && res.data) {
       setStoredToken(res.data.token);
