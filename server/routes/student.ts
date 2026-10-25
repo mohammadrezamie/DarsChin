@@ -8,6 +8,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { evaluateScheduleQuality, preservesSelectedCourses } from '../../src/domain/schedule-quality';
+import { plannedUnitCount } from '../../src/domain/plan-unit-limits';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
 
@@ -312,10 +313,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       return res.status(409).json({success:false,
         error:'از هر درس تنها یک گروه اصلی می‌توان در برنامه انتخاب کرد.'});
     }
-    const selectedUnits=selectedCourseIds.reduce((sum,id)=>{
-      const c=db.courses.find(course=>course.id===id);
-      return sum+(c?.isExtraUnit===true?0:(c?.units||0));
-    },0);
+    const selectedUnits=plannedUnitCount(selectedCourseIds,db.courses);
     const limits=db.calculateStudentAcademicLimits(userId);
     if(selectedUnits>limits.effectiveMaxUnits){
       return res.status(400).json({success:false,
@@ -477,10 +475,7 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
 
   const otherCourseIds = new Set(currentSelectedOfferings
     .filter(o => o.courseId !== targetOffering.courseId).map(o=>o.courseId));
-  const currentUnits = [...otherCourseIds].reduce((sum,id)=>{
-    const course=db.courses.find(c=>c.id===id);
-    return sum+(course?.isExtraUnit===true?0:(course?.units||0));
-  },0);
+  const currentUnits = plannedUnitCount([...otherCourseIds],db.courses);
   const isExtra = targetCourse?.isExtraUnit === true;
   if (!isExtra && currentUnits + targetUnits > academicLimits.effectiveMaxUnits) {
     const limitLabel = academicLimits.isSummer
