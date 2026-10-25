@@ -19,6 +19,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'student.access', label: 'دسترسی دانشجویی' },
   { id: 'demand.manage', label: 'ساخت و مدیریت نیازسنجیِ محدودهٔ اختصاصی' },
   { id: 'demand.export', label: 'صادرات ریز اطلاعات نیازسنجی در محدودهٔ اختصاصی' },
+  { id: 'sms.manage', label: 'مدیریت مرکز پیامک و قالب‌های ارسال' },
 ];
 
 export const UserManagement: React.FC = () => {
