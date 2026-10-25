@@ -88,7 +88,12 @@ export const StudentDashboard: React.FC = () => {
         setProfile(profileRes.data.profile);
         setCurriculumId(profileRes.data.curriculum?.id || null);
       } else {
+        setProfile(null);
         setCurriculumId(null);
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
         setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
       }
 
@@ -119,9 +124,21 @@ export const StudentDashboard: React.FC = () => {
         setRecommendations(evalRes.data.recommendations || []);
         if (evalRes.data.academicLimits) setAcademicLimits(evalRes.data.academicLimits);
         if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
-      } else setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
+      } else {
+        // A missing/mismatched chart must never leave another cohort's previous
+        // eligibility or recommendations on screen as if still authoritative.
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
+        setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
+      }
     } catch {
       if (version === evaluationVersionRef.current) {
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
         setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
       }
     } finally {
