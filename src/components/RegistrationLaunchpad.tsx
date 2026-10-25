@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap } from 'lucide-react';
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
@@ -38,6 +38,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [copyState,setCopyState]=useState('');
+  const [reordering,setReordering]=useState(false);
+  const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
@@ -95,9 +97,12 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
-    if(target<0||target>=stepIds.length)return;
+    if(reorderLock.current||target<0||target>=stepIds.length)return;
     const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
-    // The server may reject a save; never display an optimistic success.
+    // Reject overlapping requests: the slower response must never overwrite a
+    // newer reorder, or report a success when the server refused to save.
+    reorderLock.current=true;
+    setReordering(true);
     try {
       const saved=await onReorderCourses(order);
       setCopyState(saved
@@ -105,6 +110,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         : 'ذخیرهٔ ترتیب انجام نشد؛ ترتیب قبلی حفظ شده است.');
     } catch {
       setCopyState('خطا در ذخیرهٔ اولویت؛ ترتیب قبلی حفظ شده است.');
+    } finally {
+      reorderLock.current=false;
+      setReordering(false);
     }
   };
 
@@ -161,9 +169,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               </span>
             </div>
             <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
-              <button type="button" disabled={index===0} onClick={()=>move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
+              <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
-              <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
+              <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
               <button type="button" disabled={!step.copyCode||locked||!step.ready} onClick={()=>void copy(step.copyCode,step.courseName)}
                 aria-label={`کپی کد ${step.courseName}`}
