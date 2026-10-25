@@ -17,6 +17,7 @@ import { importsRouter } from './server/routes/imports';
 import { syncRouter } from './server/routes/sync';
 import { eligibilityRouter } from './server/routes/eligibility';
 import { demandRouter } from './server/routes/demand';
+import { assertTurnstileConfiguration, turnstilePublicConfiguration } from './server/security/turnstile';
 import { adminRouter } from './server/routes/admin';
 import { adminManagementRouter } from './server/routes/admin-management';
 import { supportRouter } from './server/routes/support';
@@ -36,6 +37,7 @@ async function startServer() {
   // Development remains reachable on the LAN/container interface unless HOST is set.
   const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
+  assertTurnstileConfiguration();
   // JSON Body Parser with limit for batch imports (2MB is sufficient for text data and prevents OOM)
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -56,6 +58,11 @@ async function startServer() {
         heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
       }
     });
+  });
+
+  app.get('/api/security/challenge', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, data: turnstilePublicConfiguration() });
   });
 
   // Register API routes
