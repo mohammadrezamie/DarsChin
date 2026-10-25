@@ -92,7 +92,7 @@ describe('separation of cohorts, campuses and major tracks',()=>{
   it('requires an explicit track for ambiguous duplicate course assignments',async()=>{
     const shared=await request(app).post(`/api/curriculum/${chartId}/courses`)
       .set('Authorization',token).send({
-        courseId,classification:'MAJOR_REQUIRED',suggestedSemester:3,
+        courseId,trackId:'',classification:'MAJOR_REQUIRED',suggestedSemester:3,
       });
     expect(shared.status).toBe(200);
     expect(shared.body.data.trackId).toBeNull();
