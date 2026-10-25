@@ -5,6 +5,7 @@ import { db } from '../server/db/database';
 import { curriculumRouter } from '../server/routes/curriculum';
 import { academicRouter } from '../server/routes/academic';
 import { studentRouter } from '../server/routes/student';
+import { eligibilityRouter } from '../server/routes/eligibility';
 import { generateToken } from '../server/middleware/auth';
 import type { Curriculum, DemandSurvey, StudentAcademicProfile, Track, User } from '../src/types';
 
@@ -12,6 +13,7 @@ const app=express();
 app.use(express.json());
 app.use('/api/curriculum',curriculumRouter);
 app.use('/api/student',studentRouter);
+app.use('/api/eligibility',eligibilityRouter);
 app.use('/api/academic',academicRouter);
 const id='demand-curriculum-safety-fixture';
 const userId=id+'-manager', studentId=id+'-student';
@@ -110,6 +112,33 @@ describe('separation of cohorts, campuses and major tracks',()=>{
     const absent=await request(app).post('/api/curriculum/does-not-exist/courses')
       .set('Authorization',token).send({courseId});
     expect(absent.status).toBe(404);
+  });
+  it('rejects plans and recommendations when the student has no active exact-scope chart',async()=>{
+    const profile=db.studentProfiles.find(p=>p.userId===studentId)!;
+    const originalCampus=profile.campusId;
+    const existingPlanCount=db.studentPlans.filter(p=>p.userId===studentId).length;
+    const offering=db.courseOfferings[0];
+    try{
+      profile.campusId='unrelated-campus-should-not-match';
+      const evaluate=await request(app).post('/api/eligibility/evaluate')
+        .set('Authorization',studentToken).send({plannedCourseIds:[]});
+      expect(evaluate.status).toBe(400);
+      const saved=await request(app).put('/api/student/plan')
+        .set('Authorization',studentToken)
+        .send({selectedOfferingIds:['unrelated-selected-offering']});
+      expect(saved.status).toBe(409);
+      if(offering){
+        const selected=await request(app).post('/api/student/plan/select')
+          .set('Authorization',studentToken).send({offeringId:offering.id,action:'add'});
+        expect(selected.status).toBe(409);
+      }
+      expect(db.studentPlans.filter(p=>p.userId===studentId)).toHaveLength(existingPlanCount);
+    }finally{profile.campusId=originalCampus;}
+  });
+  it('rejects malformed eligibility selections without an internal server error',async()=>{
+    const response=await request(app).post('/api/eligibility/evaluate')
+      .set('Authorization',studentToken).send({plannedCourseIds:{bad:'payload'}});
+    expect(response.status).toBe(400);
   });
   it('never assigns the student the first matching major from a different campus',async()=>{
     const answer=await request(app).get('/api/student/profile').set('Authorization',studentToken);
