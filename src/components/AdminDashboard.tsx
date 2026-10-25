@@ -591,6 +591,7 @@ export const AdminDashboard: React.FC = () => {
             description="گروه‌ها و اساتید ارائه‌دهنده دروس در نیمسال جاری"
             endpoint="/api/offerings"
             columns={[
+              { key: 'courseId', label: 'درس مرتبط', type: 'select', lookupEndpoint: '/api/academic/courses' },
               { key: 'rawCourseName', label: 'عنوان درس' },
               { key: 'groupCode', label: 'کد گروه' },
               { key: 'instructor', label: 'استاد درس' },
