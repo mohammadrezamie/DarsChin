@@ -45,6 +45,7 @@ const entryYear1402 = { id: 'demo-entry-1402', year: 1402, active: true };
 const curriculum = { id: 'demo-curriculum', universityId: university.id, campusId: campus.id, degreeLevelId: degree.id, majorId: major.id, entryYearId: entryYear.id, version: '1403-demo', name: 'چارت آزمایشی کارشناسی برق ورودی ۱۴۰۳ (غیرمصوب)', status: 'active', createdAt: now() };
 const curriculum1402 = { ...curriculum, id: 'demo-curriculum-1402', entryYearId: entryYear1402.id, version: '1402-demo', name: 'چارت آزمایشی کارشناسی برق ورودی ۱۴۰۲ (غیرمصوب)' };
 const demo1402CourseIds = ['math2', 'circuits', 'logic', 'english'];
+const demo1403CommonCourseIds = ['math2','circuits','physics','logic','lab','english'];
 const tracks = [
   { id: 'demo-power', majorId: major.id, name: 'قدرت (دمو)', active: true },
   { id: 'demo-control', majorId: major.id, name: 'کنترل (دمو)', active: true },
@@ -101,7 +102,9 @@ function initialStore(): DemoStore {
       '/api/curriculum-courses': [
         ...DEMO_COURSES.map(c=>({
           id:'cc-1403-'+c.id, curriculumId:curriculum.id,courseId:c.id,classification:'MAJOR_REQUIRED',
-          suggestedSemester:3,active:true,course:sampleCourses.find(course=>course.id===c.id),
+          suggestedSemester:3,active:true,
+          trackId: c.id==='em' ? 'demo-power' : c.id==='signals' ? 'demo-control' : undefined,
+          course:sampleCourses.find(course=>course.id===c.id),
         })),
         ...DEMO_COURSES.filter(c=>demo1402CourseIds.includes(c.id)).map(c=>({
           id:'cc-1402-'+c.id, curriculumId:curriculum1402.id,courseId:c.id,classification:'MAJOR_REQUIRED',
@@ -138,8 +141,24 @@ function initialStore(): DemoStore {
       description:'فقط برای تست روند ثبت تقاضا و آمار مدیر گروه؛ داده رسمی نیست.',
       targetTermId:semester.id,universityId:university.id,campusId:campus.id,
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
-      entryYearIds:[entryYear.id],trackIds:[],courseIds:DEMO_COURSES.map(c=>c.id),
-      recommendedMinimumByCourse:Object.fromEntries(DEMO_COURSES.map(c=>[c.id,3])),
+      entryYearIds:[entryYear.id],trackIds:[],courseIds:demo1403CommonCourseIds,
+      recommendedMinimumByCourse:Object.fromEntries(demo1403CommonCourseIds.map(id=>[id,3])),
+      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+    },{
+      id:'demo-demand-1403-power',title:'نیازسنجی گرایش قدرت ورودی ۱۴۰۳',
+      description:'در این آزمایش، الکترومغناطیس درس اختصاصی گرایش قدرت فرض شده است؛ این نسبت واقعی دانشگاه نیست.',
+      targetTermId:semester.id,universityId:university.id,campusId:campus.id,
+      degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
+      entryYearIds:[entryYear.id],trackIds:['demo-power'],courseIds:['math2','em'],
+      recommendedMinimumByCourse:{math2:3,em:3},
+      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+    },{
+      id:'demo-demand-1403-control',title:'نیازسنجی گرایش کنترل ورودی ۱۴۰۳',
+      description:'در این آزمایش، سیگنال‌ها درس اختصاصی گرایش کنترل فرض شده است؛ این نسبت واقعی دانشگاه نیست.',
+      targetTermId:semester.id,universityId:university.id,campusId:campus.id,
+      degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
+      entryYearIds:[entryYear.id],trackIds:['demo-control'],courseIds:['math2','signals'],
+      recommendedMinimumByCourse:{math2:3,signals:3},
       status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     },{
       id:'demo-demand-1402',title:'نیازسنجی آزمایشی برق ورودی ۱۴۰۲',
@@ -329,6 +348,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
       !chart || !Array.isArray(data.entryYearIds) || data.entryYearIds.length!==1 ||
       data.entryYearIds[0]!==chart.entryYearId || (data.trackIds||[]).length>1 ||
+      (data.trackIds||[]).some((trackId:string)=>!tracks.some(track=>track.id===trackId&&track.majorId===chart.majorId)) ||
       data.courseIds.some((courseId:string)=>!validCourseIds.has(courseId)||
         !currentCourses(s).some(c=>c.id===courseId))) {
       return fail('برای ساخت نیازسنجی، چارت و درس‌های معتبر نمونه لازم است.');
@@ -391,8 +411,11 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if(path==='/api/demo/academic-cohort' && method==='PUT') {
     if(![entryYear.id,entryYear1402.id].includes(data.entryYearId))return fail('ورودی دمو معتبر نیست.');
-    s.profile={...s.profile,entryYearId:data.entryYearId,isTrackSelected:false,
-      selectedTrackId:null,desiredTrackIds:[],updatedAt:now()};
+    const selectedTrackId=typeof data.selectedTrackId==='string'&&data.selectedTrackId ? data.selectedTrackId : null;
+    if(selectedTrackId && (data.entryYearId!==entryYear.id ||
+      !tracks.some(track=>track.id===selectedTrackId)))return fail('گرایش با ورودی آزمایشی تطابق ندارد.');
+    s.profile={...s.profile,entryYearId:data.entryYearId,isTrackSelected:!!selectedTrackId,
+      selectedTrackId,desiredTrackIds:[],updatedAt:now()};
     saveStore(s);
     return good({profile:s.profile}) as ApiResponse<T>;
   }
