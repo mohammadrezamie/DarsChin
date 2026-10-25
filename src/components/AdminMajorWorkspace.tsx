@@ -143,7 +143,9 @@ export const AdminMajorWorkspace:React.FC=()=>{
     }finally{setBusy(null);}
   };
   const createYear=async()=>{
-    const year=Number(newYear);
+    const asciiYear=newYear.replace(/[۰-۹]/g,ch=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)))
+      .replace(/[٠-٩]/g,ch=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)));
+    const year=Number(asciiYear);
     if(!Number.isInteger(year)||year<1300||year>1600){
       setError('سال ورودی را به صورت چهار رقم شمسی، مثلاً ۱۴۰۳، وارد کن.');return;
     }
@@ -154,7 +156,7 @@ export const AdminMajorWorkspace:React.FC=()=>{
     if(created){setYearId(created.id);setNewYear('');}
   };
   const createChart=async()=>{
-    if(!currentMajor||!degree||!selectedCampus||!selectedYear){
+    if(!group||!currentMajor||!degree||!selectedCampus||!selectedYear){
       setError('برای ساخت چارت، مقطع، واحد و ورودی لازم است.');return;
     }
     const version=advanced&&chartVersion.trim()?chartVersion.trim():'1.0';
