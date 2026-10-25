@@ -7,7 +7,7 @@ import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, 
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
 export const AdminCurriculumBuilder: React.FC = () => {
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [majors, setMajors] = useState<Major[]>([]);
   const [entryYears, setEntryYears] = useState<EntryYear[]>([]);
@@ -15,7 +15,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(searchParams.get('curriculumId'));
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -56,6 +56,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
       setCurriculumFull(null);
     }
   };
+
+  useEffect(()=>{
+    const linkedChart=searchParams.get('curriculumId');
+    if(linkedChart && linkedChart!==selectedCurriculumId)setSelectedCurriculumId(linkedChart);
+  },[searchParams]);
 
   useEffect(() => {
     if (selectedCurriculumId) {
