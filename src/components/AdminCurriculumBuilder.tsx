@@ -253,12 +253,18 @@ export const AdminCurriculumBuilder: React.FC = () => {
           </select>
         </div>
 
+        {mutationError && <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{mutationError}</p>}
+        {curriculumFull && !isEditableChart && (
+          <div role="status" className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+            این نسخه چارت فعال یا بایگانی‌شده فقط خواندنی است. برای اصلاح، باید پیش‌نویس جدید با مستند معتبر تهیه شود.
+          </div>
+        )}
         {curriculumFull && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <h3 className="font-bold text-sm mb-4">افزودن درس به چارت</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <fieldset disabled={!isEditableChart} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <select 
                     className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.courseId}
@@ -283,7 +289,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
                     <option value="">همه گرایش‌ها</option>
-                    {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    {tracks.filter(t => t.majorId === curriculumFull.curriculum.majorId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                   <button 
                     onClick={handleAddCourse}
@@ -291,7 +297,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   >
                     <Plus className="w-3.5 h-3.5" /> افزودن
                   </button>
-                </div>
+                </fieldset>
               </div>
 
               <div className="overflow-x-auto">
@@ -322,7 +328,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         </td>
                         <td className="p-2 text-xs">{cc.trackId ? tracks.find(t => t.id === cc.trackId)?.name : '-'}</td>
                         <td className="p-2 flex items-center gap-2">
-                           <button onClick={(e) => { e.stopPropagation(); handleRemoveCourse(cc.courseId); }} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button>
+                           <button disabled={!isEditableChart} aria-label="حذف درس از پیش‌نویس" onClick={(e) => { e.stopPropagation(); void handleRemoveCourse(cc.courseId); }} className="min-h-11 min-w-11 rounded-lg text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))}
@@ -351,7 +357,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.expression?.operator || 'مستقیم'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id => courses.find(c => c.id === id)?.name || id).join('، ')}</span>
                         </div>
-                        <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
+                        <button disabled={!isEditableChart} aria-label="حذف قانون پیش‌نویس" onClick={() => void handleRemoveRule(r.id)} className="min-h-11 min-w-11 text-red-500 disabled:opacity-40"><X className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                   </div>
@@ -364,7 +370,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.expression?.operator || 'مستقیم'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id => courses.find(c => c.id === id)?.name || id).join('، ')}</span>
                         </div>
-                        <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
+                        <button disabled={!isEditableChart} aria-label="حذف قانون پیش‌نویس" onClick={() => void handleRemoveRule(r.id)} className="min-h-11 min-w-11 text-red-500 disabled:opacity-40"><X className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                   </div>
@@ -377,7 +383,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       onChange={(e) => setAddRuleForm({...addRuleForm, sourceCourseId: e.target.value})}
                     >
                       <option value="">-- انتخاب درس مبدا --</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {courses.filter(c => c.id !== activeCourseId && curriculumFull.courses.some((row: any) => row.courseId === c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <select 
@@ -392,6 +398,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     </div>
                     <p className="text-xs leading-6 text-amber-700 dark:text-amber-300">این فرم یک ارتباط مستقیم را ثبت می‌کند. تعریف شرط مرکب «و / یا» به ویرایشگر جداگانه و بازبینی مرجع مصوبه نیاز دارد.</p>
                     <button
+                      disabled={!isEditableChart}
                       onClick={handleAddRule}
                       className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                     >
