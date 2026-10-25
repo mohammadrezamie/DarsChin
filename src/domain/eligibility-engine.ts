@@ -238,7 +238,9 @@ export function evaluateStudentEligibility(
         (r) =>
           r.curriculumId === curriculum.id &&
           r.targetCourseId === course.id &&
-          (r.trackId === null || r.trackId === undefined || r.trackId === trackId)
+          (!r.majorId || r.majorId === studentProfile.majorId) &&
+          (!r.entryYearId || r.entryYearId === studentProfile.entryYearId) &&
+          (!r.trackId || r.trackId === trackId)
       );
 
       
