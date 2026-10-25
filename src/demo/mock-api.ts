@@ -200,7 +200,7 @@ function demoEvaluation(s: DemoStore) {
       courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
       groupCode: o.groupCode, instructor: o.instructor, dayOfWeek: o.dayOfWeek,
       startTime: o.startTime, endTime: o.endTime, capacity: o.capacity,
-      enrolledCount: o.enrolledCount, examDate: o.examDate,
+      enrolledCount: o.enrolledCount, enrolledCountKnown: o.enrolledCountKnown, examDate: o.examDate,
       overallStatus: 'AVAILABLE', isEligible: true, canSelect: true,
       primaryReason: 'فقط دادهٔ ساختگی دمو؛ بررسی آموزشی انجام نشده است.',
       allReasons: ['فقط دادهٔ ساختگی دمو؛ بررسی آموزشی انجام نشده است.'],
