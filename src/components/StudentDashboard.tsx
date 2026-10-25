@@ -240,6 +240,53 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
+  // Batch-apply a timetable suggestion atomically, rather than calling the
+  // per-course setter in a loop (which would race against stale React state).
+  const handleApplySuggestedSchedule = async (newSelected:string[]):Promise<boolean> => {
+    const original=evaluations.filter(ev=>selectedOfferingIds.includes(ev.offeringId));
+    const proposed=evaluations.filter(ev=>newSelected.includes(ev.offeringId));
+    const courses=new Set(original.map(ev=>ev.courseId));
+    if(proposed.length!==newSelected.length || proposed.length!==courses.size ||
+      new Set(proposed.map(ev=>ev.courseId)).size!==courses.size ||
+      proposed.some(ev=>!courses.has(ev.courseId) || ev.overallStatus!=='AVAILABLE' ||
+        !ev.isEligible||!ev.canSelect)){
+      setPlanError('پیشنهاد با گروه‌های قابل‌اخذ همین درس‌ها سازگار نیست؛ تغییری ذخیره نشد.');
+      return false;
+    }
+    const conflicting=proposed.some((a,index)=>proposed.slice(index+1).some(b=>
+      (a.dayOfWeek===b.dayOfWeek&&a.startTime&&b.startTime&&a.endTime&&b.endTime&&
+        a.startTime<b.endTime&&b.startTime<a.endTime) ||
+      (a.examDate&&b.examDate&&a.examDate===b.examDate)));
+    if(conflicting){
+      setPlanError('گروه‌های پیشنهادشده تداخل دارند؛ ترکیب اعمال نشد.');
+      return false;
+    }
+    const nextPriorities={...offeringPriorities};
+    for(const ev of proposed){
+      nextPriorities[ev.courseId]=[ev.offeringId,
+        ...(nextPriorities[ev.courseId]||[]).filter(id=>id!==ev.offeringId)];
+    }
+    const accepted=await syncPlanToServer(newSelected,coursePriorities,nextPriorities);
+    if(!accepted)return false;
+    setSelectedOfferingIds(newSelected);
+    setOfferingPriorities(nextPriorities);
+    // Re-read eligibility because a persisted suggestion never substitutes for
+    // authoritative server validation of the student's current academic state.
+    const version=++evaluationVersionRef.current;
+    const evaluation=await apiRequest<any>('/api/eligibility/evaluate',{
+      method:'POST',body:JSON.stringify({plannedCourseIds:newSelected}),
+    });
+    if(version===evaluationVersionRef.current){
+      if(evaluation.success&&evaluation.data){
+        setEvaluations(evaluation.data.report?.results||[]);
+        setRecommendations(evaluation.data.recommendations||[]);
+      }else{
+        setLoadError(evaluation.error||'پیشنهاد ذخیره شد؛ ارزیابی مجدد در دسترس نیست.');
+      }
+    }
+    return true;
+  };
+
   // Add a fallback offering for a course
   const handleAddFallbackOffering = async (courseId: string, offeringId: string) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
@@ -651,6 +698,7 @@ export const StudentDashboard: React.FC = () => {
                 onAddFallbackOffering={handleAddFallbackOffering}
                 onRemoveFallbackOffering={handleRemoveFallbackOffering}
                 onReorderCourses={handleReorderCourses}
+                onApplySuggestedSchedule={handleApplySuggestedSchedule}
                 onClearSchedule={handleClearSchedule}
                 profile={profile}
                 currentTerm={currentTerm}
