@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { Trash2, Edit2, Plus, Search, Check, X, RefreshCw } from 'lucide-react';
 
@@ -27,6 +27,9 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const fetchVersion = useRef(0);
   const [lookupOptions, setLookupOptions] = useState<Record<string, { label: string; value: string }[]>>({});
 
   useEffect(() => {
@@ -58,52 +61,86 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
 
 
   const fetchData = async () => {
+    const version = ++fetchVersion.current;
     setLoading(true);
-    const res = await apiRequest(endpoint);
-    if (res.success && res.data) {
-      setData(res.data);
+    try {
+      const response = await apiRequest<any[]>(endpoint);
+      if (version !== fetchVersion.current) return;
+      if (response.success && Array.isArray(response.data)) {
+        setData(response.data);
+      } else {
+        setFeedback({ kind: 'error', text: response.error || 'دریافت رکوردهای این بخش ناموفق بود. دوباره تلاش کن.' });
+        setData([]);
+      }
+    } catch {
+      if (version !== fetchVersion.current) return;
+      setFeedback({ kind: 'error', text: 'اتصال به سرویس برقرار نشد. اتصال اینترنت یا سرور را بررسی کن.' });
+      setData([]);
+    } finally {
+      if (version === fetchVersion.current) setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
     setEditingId(null);
+    setPendingDeleteId(null);
+    setFeedback(null);
+    setData([]);
+    void fetchData();
+    return () => { fetchVersion.current += 1; };
   }, [endpoint]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
-    const res = await apiRequest(`${endpoint}/${id}`, { method: 'DELETE' });
-    if (res.success) {
-      fetchData();
-    } else {
-      alert(res.error || 'خطا در حذف آیتم');
+    if (saving) return;
+    setPendingDeleteId(null);
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const response = await apiRequest(`${endpoint}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (response.success) {
+        setFeedback({ kind: 'success', text: 'رکورد با موفقیت حذف شد.' });
+        await fetchData();
+      } else {
+        setFeedback({ kind: 'error', text: response.error || 'حذف رکورد ناموفق بود.' });
+      }
+    } catch {
+      setFeedback({ kind: 'error', text: 'خطای ارتباط هنگام حذف رکورد. دوباره تلاش کن.' });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleSave = async (id: string) => {
+    if (saving) return;
     setSaving(true);
+    setFeedback(null);
     const isNew = id === 'new';
     const method = isNew ? 'POST' : 'PUT';
-    const url = isNew ? endpoint : `${endpoint}/${id}`;
-    
+    const url = isNew ? endpoint : `${endpoint}/${encodeURIComponent(id)}`;
+
     const payload = { ...editForm };
-    columns.forEach(c => {
-      if (c.type === 'number' && payload[c.key] !== undefined && payload[c.key] !== '') {
-        payload[c.key] = Number(payload[c.key]);
+    columns.forEach(column => {
+      if (column.type === 'number' && payload[column.key] !== undefined && payload[column.key] !== '') {
+        payload[column.key] = Number(payload[column.key]);
       }
-      if (c.type === 'boolean') {
-        payload[c.key] = Boolean(payload[c.key]);
+      if (column.type === 'boolean') {
+        payload[column.key] = Boolean(payload[column.key]);
       }
     });
 
-    const res = await apiRequest(url, { method, body: JSON.stringify(payload) });
-    setSaving(false);
-    if (res.success) {
-      setEditingId(null);
-      fetchData();
-    } else {
-      alert(res.error || 'خطا در ذخیره سازی اطلاعات');
+    try {
+      const response = await apiRequest(url, { method, body: JSON.stringify(payload) });
+      if (response.success) {
+        setEditingId(null);
+        setFeedback({ kind: 'success', text: isNew ? 'رکورد جدید ثبت شد.' : 'تغییرات رکورد ذخیره شد.' });
+        await fetchData();
+      } else {
+        setFeedback({ kind: 'error', text: response.error || 'ذخیره‌سازی انجام نشد. اطلاعات فرم حفظ شده‌اند.' });
+      }
+    } catch {
+      setFeedback({ kind: 'error', text: 'ارتباط هنگام ذخیره‌سازی قطع شد. اطلاعات فرم حفظ شده‌اند.' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -114,6 +151,8 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
       else if (c.type === 'select' && columnOptions(c).length > 0) initialForm[c.key] = columnOptions(c)[0].value;
       else initialForm[c.key] = '';
     });
+    setFeedback(null);
+    setPendingDeleteId(null);
     setEditingId('new');
     setEditForm(initialForm);
   };
@@ -152,8 +191,10 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
           </div>
 
           <button
-            onClick={fetchData}
+            onClick={() => { setFeedback(null); void fetchData(); }}
             title="بروزرسانی داده‌ها"
+            aria-label="بروزرسانی داده‌ها"
+            disabled={loading}
             className="min-h-11 min-w-11 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -168,6 +209,36 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
           </button>
         </div>
       </div>
+
+      {/* Feedback is inline so mobile users can see errors without blocking alerts. */}
+      {feedback && (
+        <div role={feedback.kind === 'error' ? 'alert' : 'status'} aria-live={feedback.kind === 'error' ? 'assertive' : 'polite'}
+          className={`mx-4 mt-4 flex items-start justify-between gap-3 rounded-xl border p-3 text-sm font-semibold sm:mx-5 ${feedback.kind === 'error'
+            ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'}`}>
+          <p className="leading-7">{feedback.text}</p>
+          <button type="button" onClick={() => setFeedback(null)} aria-label="بستن پیام" className="rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+      {pendingDeleteId && (
+        <div role="group" aria-label="تأیید حذف رکورد" className="mx-4 mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/40 sm:mx-5">
+          <p className="text-sm font-bold leading-7 text-rose-900 dark:text-rose-200">
+            این رکورد حذف شود؟ ممکن است داده‌های دیگر به آن وابسته باشند.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={saving} onClick={() => void handleDelete(pendingDeleteId)}
+              className="min-h-11 rounded-xl bg-rose-700 px-5 text-sm font-black text-white disabled:opacity-50">
+              {saving ? 'در حال حذف…' : 'بله، حذف رکورد'}
+            </button>
+            <button type="button" onClick={() => setPendingDeleteId(null)}
+              className="min-h-11 rounded-xl border border-rose-200 bg-white px-5 text-sm font-bold text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+              انصراف
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mobile: actual responsive CRUD cards instead of a horizontally squeezed table. */}
       <div className="grid gap-3 p-3 sm:p-4 md:hidden" aria-label={`رکوردهای ${title}`}>
@@ -256,7 +327,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                       <Edit2 aria-hidden="true" className="h-4 w-4" /> ویرایش
                     </button>
-                    <button type="button" onClick={() => handleDelete(item.id)}
+                    <button type="button" onClick={() => { setFeedback(null); setPendingDeleteId(item.id); }}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-bold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
                       <Trash2 aria-hidden="true" className="h-4 w-4" /> حذف
                     </button>
@@ -449,7 +520,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => { setFeedback(null); setPendingDeleteId(item.id); }}
                           title="حذف"
                           className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
