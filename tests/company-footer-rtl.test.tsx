@@ -49,6 +49,11 @@ describe('Persian alignment and footer integration contract', () => {
       const page = readFileSync(new URL(`../src/pages/${path}`, import.meta.url), 'utf8');
       expect(page).not.toContain('<footer');
     }
+    const recommendation = readFileSync(
+      new URL('../src/pages/landing-sections/RecommendationSection.tsx', import.meta.url), 'utf8'
+    );
+    expect(recommendation).toContain('text-center md:text-right');
+    expect(recommendation).not.toContain('text-left md:text-right');
     const demo = readFileSync(new URL('../src/pages/DemoWorkspace.tsx', import.meta.url), 'utf8');
     expect(demo).toContain('محدودیت محیط آزمایشی');
   });
