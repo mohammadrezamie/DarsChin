@@ -110,9 +110,18 @@ export const AdminDashboard: React.FC = () => {
     };
   }, [mobileMenuOpen]);
 
-  const isSuperAdmin = user?.roles?.includes('super-admin');
-  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin || user?.permissions?.includes('admin.panel.access');
-  const activeTab = resolveAdminTab(searchParams.get('tab'), Boolean(isSuperAdmin));
+  const isSuperAdmin = Boolean(user?.roles?.includes('super-admin'));
+  const hasFullPanel = isSuperAdmin || Boolean(
+    user?.roles?.includes('admin') && user?.permissions?.includes('admin.panel.access')
+  );
+  // Department managers have access only to their assigned survey workspace;
+  // receiving demand.manage does not reveal unrelated campus administrative panels.
+  const hasDepartmentScope = Boolean(user?.demandScopes?.length);
+  const demandOnly = !hasFullPanel && Boolean(
+    user?.roles?.includes('admin') && user?.permissions?.includes('demand.manage') && hasDepartmentScope
+  );
+  const isAdmin = hasFullPanel || demandOnly;
+  const activeTab = demandOnly ? 'demand' : resolveAdminTab(searchParams.get('tab'), isSuperAdmin);
 
   const fetchStats = async () => {
     setLoadingStats(true);
@@ -134,10 +143,10 @@ export const AdminDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !demandOnly) {
       fetchStats();
     }
-  }, [isAdmin]);
+  }, [isAdmin, demandOnly]);
 
   // Role Access Guard
   if (!user || !isAdmin) {
@@ -202,7 +211,10 @@ export const AdminDashboard: React.FC = () => {
         { id: 'support' as AdminTab, label: 'پشتیبانی و تیکت‌ها', icon: MessageSquare },
       ],
     },
-  ];
+  ].map(group => demandOnly
+    ? { ...group, items: group.items.filter(item => item.id === 'demand') }
+    : group
+  ).filter(group => group.items.length > 0);
 
   const activeNavigation = navGroups.flatMap(group => group.items).find(item => item.id === activeTab);
   const filteredNavGroups = navGroups
@@ -285,11 +297,13 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <h1 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
             <p className="mt-2 max-w-xl text-sm leading-7 text-slate-300">
-              داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.
+              {demandOnly
+                ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
+                : 'داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.'}
             </p>
             <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-blue-100">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
-              {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : 'پنل مدیریتی'}
+              {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : demandOnly ? 'محدودهٔ مدیر گروه' : 'پنل مدیریتی'}
               {isSuperAdmin ? ' · مدیر ارشد' : ''}
             </span>
           </div>
@@ -305,7 +319,7 @@ export const AdminDashboard: React.FC = () => {
               <Menu aria-hidden="true" className="h-5 w-5" />
               بخش‌های مدیریت
             </button>
-            <button
+            {!demandOnly && <button
               type="button"
               onClick={fetchStats}
               disabled={loadingStats}
@@ -313,7 +327,7 @@ export const AdminDashboard: React.FC = () => {
             >
               <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
               <span>به‌روزرسانی</span>
-            </button>
+            </button>}
           </div>
         </div>
       </header>
