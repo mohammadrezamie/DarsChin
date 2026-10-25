@@ -9,6 +9,7 @@ import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { evaluateScheduleQuality, preservesSelectedCourses } from '../../src/domain/schedule-quality';
 import { plannedUnitCount } from '../../src/domain/plan-unit-limits';
+import { validatePlanPriorities } from '../../src/domain/plan-priority-integrity';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
 
@@ -265,6 +266,17 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   const { selectedOfferingIds, coursePriorities, offeringPriorities, qualitySuggestion } = req.body;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
+
+  // Priority-only saves also need authoritative course/offering scope checks.
+  // A fallback choice must belong to its claimed course in this student's
+  // campus and semester, even when the selected offerings did not change.
+  if(coursePriorities !== undefined || offeringPriorities !== undefined){
+    if(!profile)return res.status(409).json({success:false,
+      error:'ابتدا پروندهٔ تحصیلی دانشجو را تکمیل کنید.'});
+    const priorityError=validatePlanPriorities(
+      coursePriorities,offeringPriorities,db.courseOfferings,profile.campusId,currentTermId);
+    if(priorityError)return res.status(400).json({success:false,error:priorityError});
+  }
 
   if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
     if (!profile) {
