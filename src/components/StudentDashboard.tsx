@@ -545,8 +545,8 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
-      <nav aria-label="بخش‌های میز کار دانشجو" className="darschin-surface p-2 print:hidden">
-        <div className="grid grid-cols-1 gap-1.5 min-[390px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
+      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-2 z-30 min-w-0 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
+        <div className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
             const current = activeTab === tab.id;
@@ -558,13 +558,12 @@ export const StudentDashboard: React.FC = () => {
                 title={tab.id === 'demand' && !demandSurveyAvailable ? 'پس از بازکردن نیازسنجی توسط مدیر گروه فعال می‌شود' : undefined}
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={current ? 'page' : undefined}
-                className={`flex min-h-12 min-w-0 items-center justify-start gap-2 rounded-xl border px-3 py-3 text-right text-xs font-bold leading-6 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
+                className={`flex min-h-10 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
                   ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
                   : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
-                <span className="sm:hidden">{tab.short}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span>{tab.short}</span>
                 {tab.id === 'demand' && !demandSurveyAvailable && <span className="sr-only">فعلاً غیرفعال است</span>}
               </button>
             );
