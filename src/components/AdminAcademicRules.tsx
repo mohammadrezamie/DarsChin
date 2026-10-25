@@ -5,7 +5,7 @@ import type { AcademicRule, AcademicRuleNode, Course, Curriculum, RelationshipTy
 
 type ListedRule = AcademicRule & { targetCourseName?: string; curriculumName?: string };
 type Condition = { key: string; type: 'COURSE' | 'MIN_PASSED_UNITS'; courseId: string; minUnits: number };
-const empty = (): Condition => ({ key: `condition-${Math.random().toString(36).slice(2)}`, type: 'COURSE', courseId: '', minUnits: 1 });
+const empty = (): Condition => ({ key: `condition-${Math.random().toString(36).slice(2)}`, type: 'COURSE', courseId: '', minUnits: 0 });
 const field = 'mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 
 function describeCondition(node: AcademicRuleNode, names: Map<string,string>): string {
@@ -22,7 +22,7 @@ function asSimpleEditor(node: AcademicRuleNode): { conditions: Condition[]; oper
   return {
     operator: operator === 'OR' ? 'OR' : 'AND',
     conditions: children.map(item=>({ ...empty(),
-      type: item.type as Condition['type'], courseId: item.courseId || '', minUnits: item.minUnits || 1 })),
+      type: item.type as Condition['type'], courseId: item.courseId || '', minUnits: item.minUnits ?? 0 })),
   };
 }
 
@@ -30,6 +30,8 @@ function asSimpleEditor(node: AcademicRuleNode): { conditions: Condition[]; oper
 export const AdminAcademicRules: React.FC = () => {
   const [rules, setRules] = useState<ListedRule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
+  const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [curriculumId, setCurriculumId] = useState('');
   const [targetCourseId, setTargetCourseId] = useState('');
@@ -44,7 +46,14 @@ export const AdminAcademicRules: React.FC = () => {
   const [message, setMessage] = useState('');
   const courseNames = useMemo(()=>new Map(courses.map(c=>[c.id,c.name])),[courses]);
   const selectedChart = curricula.find(c=>c.id===curriculumId);
+  const courseOptions = useMemo(()=>{
+    const active = courses.filter(c=>c.active!==false);
+    const assigned = new Set(assignedCourseIds);
+    return showAllCatalog ? active : active.filter(c=>assigned.has(c.id));
+  },[courses,assignedCourseIds,showAllCatalog]);
+
   const visibleRules = rules.filter(r=>!curriculumId || r.curriculumId===curriculumId);
+  const targetRules = rules.filter(r=>r.curriculumId===curriculumId && r.targetCourseId===targetCourseId);
 
   const refresh = async () => {
     setLoading(true);
@@ -61,9 +70,27 @@ export const AdminAcademicRules: React.FC = () => {
   };
   useEffect(()=>{ void refresh(); },[]);
 
+  // Read the chart's own assigned courses. Don't flood the rule editor with
+  // unrelated departments/years by default. The complete catalog remains
+  // available explicitly for remedial or exceptional source-course rules.
+  useEffect(()=>{
+    if(!curriculumId){setAssignedCourseIds([]);return;}
+    let active=true;
+    setAssignedCourseIds([]);
+    void apiRequest<{courses:{courseId:string;active?:boolean}[]}>(`/api/curriculum/${curriculumId}/full`)
+      .then(result=>{
+        if(!active)return;
+        setAssignedCourseIds((result.data?.courses||[])
+          .filter(row=>row.active!==false).map(row=>row.courseId));
+        if(!result.success)setMessage('بارگذاری دروس این چارت ناموفق بود. لطفاً دوباره تلاش کن.');
+      });
+    return ()=>{active=false;};
+  },[curriculumId]);
+
+
   const resetForm = () => {
     setEditId('');setTargetCourseId('');setRelationshipType('PREREQUISITE');
-    setConditions([empty()]);setOperator('AND');setNotes('');setFormOpen(false);
+    setConditions([empty()]);setOperator('AND');setNotes('');setFormOpen(false);setShowAllCatalog(false);
   };
   const startEdit = (rule: ListedRule) => {
     const editable = asSimpleEditor(rule.expression);
@@ -71,7 +98,7 @@ export const AdminAcademicRules: React.FC = () => {
     setCurriculumId(rule.curriculumId);setTargetCourseId(rule.targetCourseId);
     setRelationshipType(rule.relationshipType);setConditions(editable.conditions);
     setOperator(editable.operator);setNotes(rule.notes || '');setEditId(rule.id);
-    setFormOpen(true);setMessage('');
+    setFormOpen(true);setMessage('');setShowAllCatalog(false);
   };
   const change = (key:string, patch:Partial<Condition>) =>
     setConditions(list=>list.map(row=>row.key===key?{...row,...patch}:row));
@@ -113,8 +140,8 @@ export const AdminAcademicRules: React.FC = () => {
           <GraduationCap className="h-5 w-5 text-blue-600" /> تنظیم شرایط اخذ دروس
         </h2>
         <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
-          هر درس می‌تواند هر تعداد پیش‌نیاز یا هم‌نیاز داشته باشد، یا اصلاً شرطی نداشته باشد.
-          حداقل واحد گذرانده‌شده نیز مثل انتخاب یک درس، یک ردیف ساده است.
+          شرط‌های هر درس فقط در چارت انتخاب‌شدهٔ همان رشته، ورودی و نسخه تعریف می‌شوند.
+          هیچ تعداد واحد یا شرطی از قبل برای کارآموزی، پروژه یا درس دیگری الزامی فرض نمی‌شود.
         </p>
       </div>
       <button type="button" onClick={()=>{resetForm();setFormOpen(true);setMessage('')}}
@@ -136,8 +163,9 @@ export const AdminAcademicRules: React.FC = () => {
           <select className={field} value={targetCourseId} disabled={!!editId}
             onChange={e=>setTargetCourseId(e.target.value)}>
             <option value="">انتخاب درس</option>
-            {courses.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
+            {courseOptions.map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
           </select>
+          {selectedChart&&<span className="mt-1 block text-xs leading-6 text-slate-500 dark:text-slate-400">چارت: {selectedChart.name} · نسخه {selectedChart.version}</span>}
         </label>
         <label className="min-w-0 text-xs font-bold">نوع شرط
           <select className={field} value={relationshipType}
@@ -155,7 +183,17 @@ export const AdminAcademicRules: React.FC = () => {
         </label>
       </div>
       <div className="space-y-2">
-        <h4 className="text-sm font-black">شرط‌ها</h4>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <h4 className="text-sm font-black">شرط‌های همین درس</h4>
+          <label className="inline-flex items-center gap-2 text-xs leading-6 text-slate-600 dark:text-slate-300">
+            <input type="checkbox" checked={showAllCatalog} onChange={e=>setShowAllCatalog(e.target.checked)} />
+            نمایش تمام دروس فهرست عمومی (برای موارد استثنایی)
+          </label>
+        </div>
+        {!!targetCourseId&&!!targetRules.length&&<p className="rounded-xl bg-blue-50 p-3 text-xs leading-6 text-blue-950 dark:bg-blue-950/40 dark:text-blue-100">
+          برای این درس در همین چارت {targetRules.length} قانون ثبت شده است.
+          هنگام افزودن قانون جدید، قوانین قبلی حذف نمی‌شوند؛ برای تغییر آن‌ها دکمهٔ «ویرایش» را بزن.
+        </p>}
         {conditions.map((row,index)=><div key={row.key} className="grid min-w-0 gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70 sm:grid-cols-[auto_11rem_minmax(0,1fr)_auto] sm:items-end">
           <span className="text-xs font-bold text-slate-500">#{index+1}</span>
           <label className="min-w-0 text-xs font-bold">نوع
@@ -167,9 +205,10 @@ export const AdminAcademicRules: React.FC = () => {
           <label className="min-w-0 text-xs font-bold">{row.type==='COURSE'?'درس موردنیاز':'تعداد واحد گذرانده‌شده'}
             {row.type==='COURSE'?<select className={field} value={row.courseId} onChange={e=>change(row.key,{courseId:e.target.value})}>
               <option value="">انتخاب درس</option>
-              {courses.filter(c=>c.active!==false && c.id!==targetCourseId).map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
-            </select>:<input type="number" min={1} max={999} step={1} value={row.minUnits}
-              onChange={e=>change(row.key,{minUnits:Number(e.target.value)})} className={field}/>}
+              {courseOptions.filter(c=>c.id!==targetCourseId || row.courseId===c.id).map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
+              {!!row.courseId&&!courseOptions.some(c=>c.id===row.courseId)&&<option value={row.courseId}>{courseNames.get(row.courseId)||row.courseId} (خارج از چارت)</option>}
+            </select>:<input type="number" min={1} max={999} step={1} placeholder="مثلاً مقدار مصوب این چارت" value={row.minUnits||''}
+              onChange={e=>change(row.key,{minUnits:e.target.value===''?0:Number(e.target.value)})} className={field}/>}
           </label>
           <button type="button" aria-label={`حذف شرط ${index+1}`} onClick={()=>setConditions(list=>list.filter(x=>x.key!==row.key))}
             className="min-h-11 rounded-xl border border-rose-200 px-3 text-rose-700 dark:border-rose-900 dark:text-rose-300">
@@ -181,7 +220,7 @@ export const AdminAcademicRules: React.FC = () => {
           <Plus className="h-4 w-4"/> افزودن شرط دیگر
         </button>
         <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
-          اگر این درس نه پیش‌نیاز دارد و نه هم‌نیاز، هیچ قانونی برایش نساز. قواعد چندشرطی در یک فرم ذخیره می‌شوند.
+          عدد حداقل واحد را خودت بر اساس مصوبهٔ معتبر همان چارت وارد کن؛ سیستم برای هیچ درسی آستانهٔ پیش‌فرض تعیین نمی‌کند. درس‌های بدون شرط نیازی به ثبت قانون ندارند.
         </p>
       </div>
       <label className="block text-xs font-bold">توضیح داخلی (اختیاری)
