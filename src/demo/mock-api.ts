@@ -389,6 +389,31 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if (!batch) return fail('بسته آزمایشی یافت نشد.');
     return good({ batch, records: (s.importRecords || []).filter(row => row.batchId === id) }) as ApiResponse<T>;
   }
+  const importReviewRoute = path.match(/^\/api\/imports\/batches\/([^/]+)\/records\/([^/]+)\/review$/);
+  if (importReviewRoute && method === 'PUT') {
+    const batch = (s.importBatches || []).find(item => item.id === importReviewRoute[1]);
+    const record = (s.importRecords || []).find(item => item.batchId === batch?.id && item.id === importReviewRoute[2]);
+    if (!batch || !record) return fail('ردیف مربوط به این بسته در دمو پیدا نشد.');
+    const validKeys = data.action === 'CONFIRM_MATCH'
+      ? ['action', 'courseId', 'reason'] : ['action', 'reason'];
+    if (!['CONFIRM_MATCH', 'REJECT_MATCH'].includes(data.action) ||
+        Object.keys(data).some(key => !validKeys.includes(key)) ||
+        typeof data.reason !== 'string' || data.reason.trim().length < 10 ||
+        data.reason.trim().length > 500) {
+      return fail('درخواست بررسی باید دارای دلیل معتبر و بدون فیلد اضافی باشد.');
+    }
+    if (data.action === 'CONFIRM_MATCH' && !currentCourses(s)
+      .some(course => course.id === data.courseId && course.active !== false)) {
+      return fail('درس مقصد معتبر در کاتالوگ دمو یافت نشد.');
+    }
+    record.reviewDecision = data.action === 'CONFIRM_MATCH' ? 'COURSE_MATCH_CONFIRMED' : 'REJECTED';
+    record.matchedCourseId = data.action === 'CONFIRM_MATCH' ? data.courseId : null;
+    record.reviewNotes = data.reason.trim();
+    record.reviewedBy = 'demo-manager';
+    record.reviewedAt = now();
+    saveStore(s);
+    return good(record) as ApiResponse<T>;
+  }
   if (path === '/api/support/tickets') {
     if(method==='GET') return good(s.tickets) as ApiResponse<T>;
     if(method==='POST'){const t={id:id(),userId:'demo-student',subject:String(data.subject||'درخواست دمو'),status:'OPEN',createdAt:now(),updatedAt:now()};s.tickets.push(t);saveStore(s);return good(t) as ApiResponse<T>;}
