@@ -35,12 +35,13 @@ export const AdminDemandAccessManager: React.FC<{
   const managers = admins.filter(entry =>
     entry.roles.includes('admin') && !entry.roles.includes('super-admin'));
   const selected = managers.find(entry => entry.id === managerId) || managers[0];
+  const effectiveDegreeLevelId = degreeLevelId || meta.degreeLevels.find(d => d.active !== false)?.id || '';
   const validMajors = useMemo(() =>
-    meta.majors.filter(m => m.active !== false && (!degreeLevelId || m.degreeLevelId === degreeLevelId)),
-    [meta.majors, degreeLevelId]);
+    meta.majors.filter(m => m.active !== false && m.degreeLevelId === effectiveDegreeLevelId),
+    [meta.majors, effectiveDegreeLevelId]);
   const candidate = {
     campusId: campusId || meta.campuses.find(c => c.active !== false)?.id || '',
-    degreeLevelId: degreeLevelId || meta.degreeLevels.find(d => d.active !== false)?.id || '',
+    degreeLevelId: effectiveDegreeLevelId,
     majorId: majorId || validMajors[0]?.id || '',
   };
   const scopes = selected?.demandScopes || [];
