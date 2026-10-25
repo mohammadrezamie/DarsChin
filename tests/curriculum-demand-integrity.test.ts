@@ -60,6 +60,24 @@ afterAll(()=>{
 });
 
 describe('separation of cohorts, campuses and major tracks',()=>{
+  it('creates a new draft for a valid campus/degree/major/entry-year, rejecting mismatches and duplicate versions', async()=>{
+    const payload={
+      universityId,campusId,degreeLevelId:degreeId,majorId,entryYearId,
+      version:'visual-qa-fixture-20261025',name:'چارت تست قابل ساخت',status:'draft',
+      notes:'صرفاً آزمایش ساخت چارت',
+    };
+    const mismatch=await request(app).post('/api/curriculum').set('Authorization',token)
+      .send({...payload,majorId:'not-a-real-major'});
+    expect(mismatch.status).toBe(400);
+    const created=await request(app).post('/api/curriculum').set('Authorization',token).send(payload);
+    expect(created.status).toBe(200);
+    expect(created.body.data.status).toBe('draft');
+    const duplicate=await request(app).post('/api/curriculum').set('Authorization',token).send(payload);
+    expect(duplicate.status).toBe(409);
+    const itemId=created.body.data.id;
+    expect(db.curricula.some(x=>x.id===itemId)).toBe(true);
+    db.data.curricula=db.curricula.filter(x=>x.id!==itemId);
+  });
   it('stores a track-specific assignment exactly rather than silently making it common',async()=>{
     const payload={courseId,trackId,classification:'TRACK_REQUIRED',suggestedSemester:5};
     const r=await request(app).post(`/api/curriculum/${chartId}/courses`)
