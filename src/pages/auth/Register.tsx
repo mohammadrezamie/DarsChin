@@ -4,14 +4,16 @@ import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, ShieldCheck, Loader2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
+import { GuestHumanCheck } from '../../components/GuestHumanCheck';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -24,14 +26,11 @@ export const Register: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const res = await apiRequest('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ name, mobile, password }),
-      });
+      const res = await register(mobile, password, name, undefined, captchaToken);
 
       if (res.success) {
-        // Automatically log in
-        await login(mobile, password);
+        // Registration returns an authenticated session; do not immediately
+        // submit a second password login that would require a second captcha.
         navigate('/dashboard');
       } else {
         setError(res.error || 'خطایی رخ داد.');
@@ -116,6 +115,7 @@ export const Register: React.FC = () => {
               />
             </div>
 
+            <GuestHumanCheck action="register" token={captchaToken} onToken={setCaptchaToken} />
             <button
               type="submit"
               disabled={isLoading}
