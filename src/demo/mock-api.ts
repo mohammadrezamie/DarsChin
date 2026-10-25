@@ -169,7 +169,7 @@ function initialStore(): DemoStore {
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
       entryYearIds:[entryYear.id],trackIds:[],courseIds:demo1403CommonCourseIds,
       recommendedMinimumByCourse:Object.fromEntries(demo1403CommonCourseIds.map(id=>[id,3])),
-      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+      status:'DRAFT',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     },{
       id:'demo-demand-1403-power',title:'نیازسنجی گرایش قدرت ورودی ۱۴۰۳',
       description:'در این آزمایش، الکترومغناطیس درس اختصاصی گرایش قدرت فرض شده است؛ این نسبت واقعی دانشگاه نیست.',
@@ -177,7 +177,7 @@ function initialStore(): DemoStore {
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
       entryYearIds:[entryYear.id],trackIds:['demo-power'],courseIds:['math2','em'],
       recommendedMinimumByCourse:{math2:3,em:3},
-      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+      status:'DRAFT',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     },{
       id:'demo-demand-1403-control',title:'نیازسنجی گرایش کنترل ورودی ۱۴۰۳',
       description:'در این آزمایش، سیگنال‌ها درس اختصاصی گرایش کنترل فرض شده است؛ این نسبت واقعی دانشگاه نیست.',
@@ -185,7 +185,7 @@ function initialStore(): DemoStore {
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
       entryYearIds:[entryYear.id],trackIds:['demo-control'],courseIds:['math2','signals'],
       recommendedMinimumByCourse:{math2:3,signals:3},
-      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+      status:'DRAFT',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     },{
       id:'demo-demand-1402',title:'نیازسنجی آزمایشی برق ورودی ۱۴۰۲',
       description:'فهرست درس‌های ورودی ۱۴۰۲ عمداً با ۱۴۰۳ فرق می‌کند تا تفکیک چارت‌ها تست شود.',
@@ -193,7 +193,7 @@ function initialStore(): DemoStore {
       degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum1402.id,
       entryYearIds:[entryYear1402.id],trackIds:[],courseIds:demo1402CourseIds,
       recommendedMinimumByCourse:Object.fromEntries(demo1402CourseIds.map(id=>[id,3])),
-      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+      status:'DRAFT',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
     }],
     demandResponses: [],
     smsSettings:{mode:'log',senderLine:'',otpTemplate:'کد تأیید درس‌چین: {code}\\nاعتبار: ۲ دقیقه'},
