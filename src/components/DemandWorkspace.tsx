@@ -164,11 +164,11 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const yearLabel=(entryId:string)=>entryYears.find(y=>y.id===entryId)?.year ?? entryId;
   const isDemoStudent = role==='student' && typeof window!=='undefined' &&
     window.location.pathname.startsWith('/demo/');
-  const switchDemoEntryYear=async(entryYearId:string)=>{
+  const switchDemoEntryYear=async(entryYearId:string, selectedTrackId:string='')=>{
     if(!isDemoStudent)return;
     setBusy(true);setError('');setSuccess('');
     const changed=await apiRequest<{profile:StudentAcademicProfile}>('/api/demo/academic-cohort',{
-      method:'PUT',body:JSON.stringify({entryYearId}),
+      method:'PUT',body:JSON.stringify({entryYearId,selectedTrackId}),
     });
     setBusy(false);
     if(!changed.success){setError(changed.error||'تغییر ورودی دمو انجام نشد.');return;}
@@ -202,14 +202,26 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <div>
             <p className="text-sm font-black text-indigo-900 dark:text-indigo-100">آزمایش تفکیک ورودی‌ها</p>
             <p className="mt-1 text-xs leading-6 text-indigo-700 dark:text-indigo-200">
-              فقط در محیط دمو؛ ورودی ۱۴۰۲ و ۱۴۰۳ دو چارت و فهرست نیازسنجی مستقل دارند.
+              فقط در محیط دمو؛ دو ورودی دارای چارت‌های متفاوت هستند و برای ۱۴۰۳ نیازسنجی مشترک و گرایش‌های جداگانه هم وجود دارد.
             </p>
           </div>
-          <select aria-label="انتخاب ورودی آزمایشی" value={profile?.entryYearId || ''}
-            disabled={busy} onChange={e=>void switchDemoEntryYear(e.target.value)}
-            className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
-            {entryYears.map(y=><option key={y.id} value={y.id}>ورودی {y.year}</option>)}
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <select aria-label="انتخاب ورودی آزمایشی" value={profile?.entryYearId || ''}
+              disabled={busy} onChange={e=>void switchDemoEntryYear(e.target.value)}
+              className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
+              {entryYears.map(y=><option key={y.id} value={y.id}>ورودی {y.year}</option>)}
+            </select>
+            {entryYears.find(y=>y.id===profile?.entryYearId)?.year===1403 && (
+              <select aria-label="انتخاب گرایش آزمایشی" value={profile?.selectedTrackId || ''}
+                disabled={busy} onChange={e=>void switchDemoEntryYear(profile!.entryYearId,e.target.value)}
+                className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
+                <option value="">بدون انتخاب رسمی گرایش</option>
+                {tracks.filter(t=>t.majorId===profile?.majorId).map(t=>
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                )}
+              </select>
+            )}
+          </div>
         </section>
       )}
 
