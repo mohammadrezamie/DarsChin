@@ -130,34 +130,34 @@ export function parseRawInput(rawContent: any): RawExtractedOffering[] {
         if (row.length < 2) return null;
         let code = '';
         let name = '';
-        let group = '01';
-        let instructor = 'اساتید گروه';
-        let day = 'شنبه';
-        let startTime = '08:00';
-        let endTime = '10:00';
+        let group = '';
+        let instructor = '';
+        let day = '';
+        const startTime = '';
+        const endTime = '';
 
         if (hasHeader && headerIndexMap['name'] !== undefined) {
           name = row[headerIndexMap['name']] || '';
           code = headerIndexMap['code'] !== undefined ? row[headerIndexMap['code']] || '' : '';
-          group = headerIndexMap['group'] !== undefined ? row[headerIndexMap['group']] || '01' : '01';
-          instructor = headerIndexMap['instructor'] !== undefined ? row[headerIndexMap['instructor']] || 'اساتید گروه' : 'اساتید گروه';
-          day = headerIndexMap['day'] !== undefined ? row[headerIndexMap['day']] || 'شنبه' : 'شنبه';
+          group = headerIndexMap['group'] !== undefined ? row[headerIndexMap['group']] || '' : '';
+          instructor = headerIndexMap['instructor'] !== undefined ? row[headerIndexMap['instructor']] || '' : '';
+          day = headerIndexMap['day'] !== undefined ? row[headerIndexMap['day']] || '' : '';
         } else {
           // Assume columns: Code, Name, Group, Instructor, Day, Time
           code = row[0] || '';
           name = row[1] || '';
-          group = row[2] || '01';
-          instructor = row[3] || 'اساتید گروه';
-          day = row[4] || 'شنبه';
+          group = row[2] || '';
+          instructor = row[3] || '';
+          day = row[4] || '';
         }
 
         if (!name && !code) return null;
         return {
           courseCode: code,
           courseName: name || code,
-          group: group || '01',
-          instructor: instructor || 'اساتید گروه',
-          day: day || 'شنبه',
+          group,
+          instructor,
+          day,
           startTime,
           endTime,
         } as RawExtractedOffering;
@@ -196,7 +196,7 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['گروه ارائه'] ||
     raw['گروه ارایه'] ||
     raw.group_code ||
-    '01';
+    '';
 
   const instructor =
     raw.instructor ||
@@ -204,7 +204,7 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['استاد'] ||
     raw['نام استاد'] ||
     raw['مدرس'] ||
-    'اساتید گروه';
+    '';
 
   const day =
     raw.day ||
@@ -212,26 +212,26 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['روز'] ||
     raw['روز برگزاری'] ||
     raw['روز هفته'] ||
-    'شنبه';
+    '';
 
   const startTime =
     raw.startTime ||
     raw.start ||
     raw['ساعت شروع'] ||
     raw['شروع'] ||
-    '08:00';
+    '';
 
   const endTime =
     raw.endTime ||
     raw.end ||
     raw['ساعت پایان'] ||
     raw['پایان'] ||
-    '10:00';
+    '';
 
-  const units = raw.units || raw.unit || raw['واحد'] || raw['تعداد واحد'] || 3;
-  const capacity = raw.capacity || raw['ظرفیت'] || 35;
-  const availableCapacity = raw.availableCapacity || raw['ظرفیت باقیمانده'] || raw['مانده'] || 10;
-  const location = raw.location || raw['مکان'] || raw['کلاس'] || raw['محل'] || 'دانشکده فنی و مهندسی';
+  const units = raw.units ?? raw.unit ?? raw['واحد'] ?? raw['تعداد واحد'];
+  const capacity = raw.capacity ?? raw['ظرفیت'];
+  const availableCapacity = raw.availableCapacity ?? raw['ظرفیت باقیمانده'] ?? raw['مانده'];
+  const location = raw.location || raw['مکان'] || raw['کلاس'] || raw['محل'] || undefined;
   const examDate = raw.examDate || raw['تاریخ امتحان'] || raw['امتحان'] || undefined;
 
   return {
