@@ -96,11 +96,14 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       if (profileRes.success && profileRes.data?.profile) {
         const p = profileRes.data.profile;
         setUniversityId(p.universityId || '');
+        setProvinceId(p.provinceId || '');
         setCampusId(p.campusId || '');
         setDegreeLevelId(p.degreeLevelId || '');
         setMajorId(p.majorId || '');
         setEntryYearId(p.entryYearId || '');
         setCurrentTermId(p.currentTermId || '');
+        setPreviousTermGpa(p.previousTermGpa === null || p.previousTermGpa === undefined
+          ? '' : String(p.previousTermGpa));
         setIsTrackSelected(Boolean(p.isTrackSelected));
         setSelectedTrackId(p.selectedTrackId || '');
         setDesiredTrackIds(p.desiredTrackIds || []);
@@ -115,9 +118,13 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
   if (!isOpen) return null;
 
   // Filtered lists based on parent selection
-  const filteredCampuses = campuses.filter((c) => !universityId || c.universityId === universityId);
-  const filteredMajors = majors.filter((m) => !degreeLevelId || m.degreeLevelId === degreeLevelId);
-  const filteredTracks = tracks.filter((t) => !majorId || t.majorId === majorId);
+  const filteredCampuses = campuses.filter(c => c.active !== false &&
+    (!universityId || c.universityId === universityId) &&
+    (!provinceId || !c.provinceId || c.provinceId === provinceId));
+  const filteredMajors = majors.filter(m => m.active !== false &&
+    (!degreeLevelId || m.degreeLevelId === degreeLevelId));
+  const filteredTracks = tracks.filter(t => t.active !== false &&
+    (!majorId || t.majorId === majorId));
 
   const toggleDesiredTrack = (trackId: string) => {
     setDesiredTrackIds((prev) =>
@@ -147,7 +154,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       return;
     }
 
-    if (!isTrackSelected && desiredTrackIds.length === 0) {
+    if (!isTrackSelected && desiredTrackIds.length === 0 && filteredTracks.length > 0) {
       setMessage({ type: 'error', text: 'لطفاً حداقل یک گرایش مدنظر جهت بررسی وضعیت چارت انتخاب نمایید.' });
       setSaving(false);
       return;
@@ -255,7 +262,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileProvince"
                   value={provinceId}
-                  onChange={(e) => setProvinceId(e.target.value)}
+                  onChange={(e) => {setProvinceId(e.target.value);setCampusId('');}}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
                   <option value="">-- همه واحدها / واحدهای مستقل --</option>
@@ -296,7 +303,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileDegree"
                   value={degreeLevelId}
-                  onChange={(e) => setDegreeLevelId(e.target.value)}
+                  onChange={(e) => {setDegreeLevelId(e.target.value);setMajorId('');setSelectedTrackId('');setDesiredTrackIds([]);setIsTrackSelected(false);}}
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
@@ -317,7 +324,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileMajor"
                   value={majorId}
-                  onChange={(e) => setMajorId(e.target.value)}
+                  onChange={(e) => {setMajorId(e.target.value);setSelectedTrackId('');setDesiredTrackIds([]);setIsTrackSelected(false);}}
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
