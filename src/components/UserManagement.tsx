@@ -97,7 +97,7 @@ export const UserManagement: React.FC = () => {
             {users.map(u => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
                 <td data-label="نام مدیر" className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
-                <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers" dir="ltr">{u.mobile}</td>
+                <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers"><span dir="ltr" className="inline-block text-left">{u.mobile}</span></td>
                 <td data-label="نقش" className="px-4 py-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
                     getHighestRole(u.roles) === 'super-admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
