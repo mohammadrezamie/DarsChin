@@ -1,4 +1,5 @@
 import { DEMO_COURSES } from './course-planner';
+import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
@@ -25,6 +26,8 @@ interface DemoStore {
   messages: Row[];
   bugs: Row[];
   teacherRatings: TeacherRating[];
+  importBatches: Row[];
+  importRecords: Row[];
   academicSettings: AcademicPolicySettings;
 }
 const semester = { id: 'demo-term', name: 'نیمسال فرضی برای تست', year: 1405, termNumber: 1, isCurrent: true, active: true };
@@ -108,6 +111,8 @@ function initialStore(): DemoStore {
       pageContext: '/demo/student', status: 'OPEN', createdAt: '2026-10-25T00:00:00.000Z',
     }],
     teacherRatings: sampleRatings,
+    importBatches: [],
+    importRecords: [],
     academicSettings: { ...defaults },
   }) as DemoStore;
 }
@@ -123,6 +128,8 @@ function readStore(): DemoStore {
         // Upgrade older browser-only demo sessions without touching real users.
         if (!Array.isArray(obj.teacherRatings)) obj.teacherRatings = structuredClone(sampleRatings);
         if (!Array.isArray(obj.collections['/api/curriculum-courses'])) obj.collections['/api/curriculum-courses'] = [];
+        if (!Array.isArray(obj.importBatches)) obj.importBatches = [];
+        if (!Array.isArray(obj.importRecords)) obj.importRecords = [];
         return obj as DemoStore;
       }
     }
@@ -352,7 +359,36 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   if (path === '/api/admin/diagnostics' && method === 'GET') return fail('سرور واقعی در محیط دمو وجود ندارد؛ عیب‌یابی سرور شبیه‌سازی نشده است.');
   if ((path === '/api/admin/audit-logs' || path === '/api/admin/error-logs') && method === 'GET') return good([]) as ApiResponse<T>;
   if (path === '/api/sync/jobs' && method === 'GET') return good([]) as ApiResponse<T>;
-  if (path === '/api/imports/batches' && method === 'GET') return good([]) as ApiResponse<T>;
+  // Browser-only upload preview: never modifies canonical offerings.
+  if (path === '/api/imports/process' && method === 'POST') {
+    const batchId = id();
+    const review = processImportPayload(data.payload, batchId, semester.id, campus.id, currentCourses(s));
+    if (!review.totalRecords) return fail(review.errors.join(' | ') || 'هیچ داده‌ای در فایل نمونه پیدا نشد.');
+    const batch = {
+      id: batchId, userId: 'demo-student', termId: semester.id, source: 'extension',
+      schemaVersion: '1.0', totalRecords: review.totalRecords, matchedRecords: review.matchedCount,
+      reviewRecords: review.reviewCount, invalidRecords: review.invalidCount, createdAt: now(),
+    };
+    s.importBatches ||= [];
+    s.importRecords ||= [];
+    s.importBatches.unshift(batch);
+    s.importRecords.push(...review.importRecords);
+    saveStore(s);
+    return good({
+      batch, records: review.importRecords,
+      summary: { total: review.totalRecords, matched: review.matchedCount, review: review.reviewCount,
+        invalid: review.invalidCount },
+      createdOfferingsCount: 0, requiresReview: true,
+      message: 'بسته نمونه ذخیره شد؛ هیچ گروه درسی واقعی یا ساختگی به فهرست ارائه‌های اصلی افزوده نشد.',
+    }) as ApiResponse<T>;
+  }
+  if (path === '/api/imports/batches' && method === 'GET') return good(s.importBatches || []) as ApiResponse<T>;
+  if (path.startsWith('/api/imports/batches/') && method === 'GET') {
+    const id = path.split('/').at(-1);
+    const batch = (s.importBatches || []).find(row => row.id === id);
+    if (!batch) return fail('بسته آزمایشی یافت نشد.');
+    return good({ batch, records: (s.importRecords || []).filter(row => row.batchId === id) }) as ApiResponse<T>;
+  }
   if (path === '/api/support/tickets') {
     if(method==='GET') return good(s.tickets) as ApiResponse<T>;
     if(method==='POST'){const t={id:id(),userId:'demo-student',subject:String(data.subject||'درخواست دمو'),status:'OPEN',createdAt:now(),updatedAt:now()};s.tickets.push(t);saveStore(s);return good(t) as ApiResponse<T>;}
