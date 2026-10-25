@@ -151,6 +151,20 @@ export const StudentDashboard: React.FC = () => {
     return () => { mounted = false; };
   }, [user?.id, activeTab]);
 
+  useEffect(() => {
+    if (!user?.id || !user.roles.includes('student')) return;
+    const checkActivation = async () => {
+      const list = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
+      setDemandSurveyAvailable(Boolean(list.success && list.data?.some(s => s.status === 'OPEN')));
+    };
+    window.addEventListener('focus', checkActivation);
+    return () => window.removeEventListener('focus', checkActivation);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!demandSurveyAvailable && activeTab === 'demand') setActiveTab('offerings');
+  }, [demandSurveyAvailable, activeTab]);
+
   // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
   const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
     if (planMutationRef.current) {
@@ -564,7 +578,7 @@ export const StudentDashboard: React.FC = () => {
               >
                 <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
                 <span>{tab.short}</span>
-                {tab.id === 'demand' && !demandSurveyAvailable && <span className="sr-only">فعلاً غیرفعال است</span>}
+                {tab.id === 'demand' && !demandSurveyAvailable && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">بسته</span>}
               </button>
             );
           })}
