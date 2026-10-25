@@ -51,8 +51,20 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [copyState, setCopyState] = useState('');
-  const [doneIds, setDoneIds] = useState<string[]>([]);
+  // Session-only, per student/term/chart: switching between planning and quick
+  // registration must not silently erase the student's manual progress.
+  const progressKey = `darschin-reg-progress-${profile?.userId || 'unknown'}-${profile?.currentTermId || 'term'}-${curriculumId || 'missing-chart'}`;
+  const [doneIds, setDoneIds] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(progressKey) || '[]');
+      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+    } catch { return []; }
+  });
   const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    try { window.sessionStorage.setItem(progressKey, JSON.stringify(doneIds)); }
+    catch { /* In private browsing, progress remains available in React state only. */ }
+  }, [doneIds, progressKey]);
 
   useEffect(() => {
     let alive = true;
@@ -119,7 +131,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         <div className="flex items-start gap-2 font-black"><LockKeyhole className="mt-1 h-4 w-4 shrink-0" />
           <span>این صفحه به آموزشیار وصل نیست و ثبت‌نام انجام نمی‌دهد.</span>
         </div>
-        <p className="mt-1">علامت «ثبت شد» فقط چک‌لیست شخصی همین صفحه است؛ ظرفیت‌ها و تأیید نهایی را در خود آموزشیار کنترل کن.
+        <p className="mt-1">علامت «ثبت شد» فقط چک‌لیست شخصی این تب مرورگر است و تا بستن تب نگه داشته می‌شود؛ ظرفیت‌ها و تأیید نهایی را در خود آموزشیار کنترل کن.
           ترتیب همنیازها بر اساس قوانینِ واردشده در چارت است، نه تضمین رسمی پذیرش توسط آموزشیار.</p>
       </div>
 
@@ -193,6 +205,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                   className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-sm font-black text-white disabled:opacity-50">
                   <ClipboardCopy className="h-4 w-4" /> کپی کد درس
                 </button>
+                {step.copyCode?.startsWith('DEMO-') && <p className="mt-2 rounded-lg bg-rose-50 p-2 text-xs font-black leading-6 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">کد کاملاً ساختگی است؛ در آموزشیار واقعی استفاده نکن.</p>}
                 <p className="mt-2 text-xs leading-6 text-amber-700 dark:text-amber-300">{step.codeFromOffering
                   ? 'کد از اطلاعات ارائه دریافت شده، ولی پذیرش آن در آموزشیار تضمین نشده است.'
                   : 'کد فقط از کاتالوگ درس آمده؛ با کد جست‌وجوی آموزشیار تطبیق بده.'}</p>
