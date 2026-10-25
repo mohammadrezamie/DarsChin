@@ -225,6 +225,7 @@ studentRouter.delete('/passed-courses/:id', authenticate, (req: AuthenticatedReq
 
 // Get current saved plan
 studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   const userId = req.user!.id;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
@@ -250,7 +251,8 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
 // Update whole plan (e.g. sync priorities or offerings)
 studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const { selectedOfferingIds, coursePriorities, offeringPriorities } = req.body;
+  const { selectedOfferingIds, offeringPriorities } = req.body;
+  const coursePriorities = normalizeCoursePriorities(req.body.coursePriorities);
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
 
@@ -353,6 +355,7 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
       success: true,
       action: 'removed',
       selectedOfferingIds: plan.selectedOfferingIds,
+      data: { selectedOfferingIds: plan.selectedOfferingIds, plan },
     });
   }
 
@@ -481,6 +484,7 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     action: 'added',
     selectedOfferingIds: plan.selectedOfferingIds,
     plan,
+    data: { selectedOfferingIds: plan.selectedOfferingIds, plan },
   });
 });
 
