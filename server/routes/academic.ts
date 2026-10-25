@@ -195,11 +195,14 @@ academicRouter.post('/tracks', authenticate, requirePermission('system.settings.
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.tracks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
-  if (db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
+  if (db.demandSurveys.some(s => s.trackIds?.includes(req.params.id)) ||
       db.curriculumCourses.some(cc => cc.trackId === req.params.id) ||
-      db.studentProfiles.some(p => p.selectedTrackId === req.params.id)) {
+      db.academicRules.some(rule => rule.trackId === req.params.id) ||
+      db.studentProfiles.some(p =>
+        p.selectedTrackId === req.params.id ||
+        p.desiredTrackIds?.includes(req.params.id))) {
     return res.status(409).json({
-      success: false, error: 'گرایش در چارت، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
+      success: false, error: 'گرایش در چارت، قانون اخذ، انتخاب دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
     });
   }
   db.tracks.splice(idx, 1);
