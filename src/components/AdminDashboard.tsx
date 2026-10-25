@@ -613,6 +613,7 @@ export const AdminDashboard: React.FC = () => {
             endpoint="/api/academic/campuses"
             columns={[
               { key: 'name', label: 'نام واحد دانشگاهی' },
+              { key: 'universityId', label: 'دانشگاه', type: 'select', lookupEndpoint: '/api/academic/universities' },
               { key: 'code', label: 'کد رسمی واحد (اختیاری)' },
               {
                 key: 'type',
