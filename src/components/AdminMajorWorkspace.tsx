@@ -62,11 +62,16 @@ export const AdminMajorWorkspace:React.FC=()=>{
       const yearB=meta.entryYears.find(y=>y.id===b.entryYearId)?.year||0;
       return yearB-yearA || a.version.localeCompare(b.version,'fa');
     });
-  const filtered=groups.filter(g=>g.label.includes(search.trim()) || !search.trim());
-  const selectedCampus=meta.campuses.find(c=>c.id===campusId)||
+  const normalizedSearch=search.trim().normalize('NFKC')
+    .replace(/ي/g,'ی').replace(/ك/g,'ک');
+  const filtered=groups.filter(g=>!normalizedSearch || g.label.normalize('NFKC')
+    .replace(/ي/g,'ی').replace(/ك/g,'ک').includes(normalizedSearch));
+  const selectedCampus=meta.campuses.find(c=>c.id===campusId && c.active!==false)||
     meta.campuses.find(c=>c.active!==false);
+  // Newest entry year should be the visibly selected default, rather than
+  // the first unsorted database row (which could be an old cohort).
   const selectedYear=meta.entryYears.find(y=>y.id===yearId && y.active!==false)||
-    meta.entryYears.find(y=>y.active!==false);
+    meta.entryYears.filter(y=>y.active!==false).sort((a,b)=>b.year-a.year)[0];
   const degreeChoices=meta.degreeLevels.filter(d=>d.active!==false && !majors.some(m=>m.degreeLevelId===d.id));
 
   const refresh=async()=>{
