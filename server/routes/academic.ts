@@ -167,6 +167,13 @@ academicRouter.post('/tracks', authenticate, requirePermission('system.settings.
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.tracks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
+  if (db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
+      db.curriculumCourses.some(cc => cc.trackId === req.params.id) ||
+      db.studentProfiles.some(p => p.selectedTrackId === req.params.id)) {
+    return res.status(409).json({
+      success: false, error: 'گرایش در چارت، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
+    });
+  }
   db.tracks.splice(idx, 1);
   db.save();
   res.json({ success: true, message: 'گرایش حذف شد.' });
@@ -249,6 +256,16 @@ academicRouter.put('/courses/:id', authenticate, requirePermission('course.updat
 academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
+  if (db.curriculumCourses.some(c => c.courseId === req.params.id) ||
+      db.demandSurveys.some(s => s.courseIds.includes(req.params.id)) ||
+      db.studentPassedCourses.some(p => p.courseId === req.params.id) ||
+      db.courseOfferings.some(o => o.courseId === req.params.id) ||
+      db.academicRules.some(r => r.targetCourseId === req.params.id)) {
+    return res.status(409).json({
+      success: false,
+      error: 'این درس به چارت، سوابق دانشجو، ارائه یا نیازسنجی وابسته است؛ برای حفظ سوابق قابل حذف مستقیم نیست.',
+    });
+  }
   db.courses.splice(idx, 1);
   db.save();
   res.json({ success: true, message: 'درس با موفقیت حذف شد.' });
