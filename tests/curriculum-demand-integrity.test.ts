@@ -3,6 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import { db } from '../server/db/database';
 import { curriculumRouter } from '../server/routes/curriculum';
+import { academicRouter } from '../server/routes/academic';
 import { studentRouter } from '../server/routes/student';
 import { generateToken } from '../server/middleware/auth';
 import type { Curriculum, DemandSurvey, StudentAcademicProfile, Track, User } from '../src/types';
@@ -11,6 +12,7 @@ const app=express();
 app.use(express.json());
 app.use('/api/curriculum',curriculumRouter);
 app.use('/api/student',studentRouter);
+app.use('/api/academic',academicRouter);
 const id='demand-curriculum-safety-fixture';
 const userId=id+'-manager', studentId=id+'-student';
 const chartId=id+'-1403', wrongChartId=id+'-wrong-campus', trackId=id+'-power';
@@ -107,5 +109,13 @@ describe('separation of cohorts, campuses and major tracks',()=>{
     expect(move.status).toBe(409);
     expect(db.curricula.find(c=>c.id===chartId)?.entryYearId).toBe(entryYearId);
     expect(db.curriculumCourses.some(c=>c.curriculumId===chartId&&c.courseId===courseId)).toBe(true);
+    const deleteCourse=await request(app).delete(`/api/academic/courses/${courseId}`)
+      .set('Authorization',token);
+    expect(deleteCourse.status).toBe(409);
+    expect(db.courses.some(c=>c.id===courseId)).toBe(true);
+    const deleteTrack=await request(app).delete(`/api/academic/tracks/${trackId}`)
+      .set('Authorization',token);
+    expect(deleteTrack.status).toBe(409);
+    expect(db.tracks.some(t=>t.id===trackId)).toBe(true);
   });
 });
