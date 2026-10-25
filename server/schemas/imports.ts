@@ -11,3 +11,15 @@ export const processImportSchema = z.object({
   termId: z.string().optional(),
   campusId: z.string().optional(),
 });
+
+export const reviewImportRecordSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('CONFIRM_MATCH'),
+    courseId: z.string().min(1).max(128),
+    reason: z.string().trim().min(10).max(500),
+  }).strict(),
+  z.object({
+    action: z.literal('REJECT_MATCH'),
+    reason: z.string().trim().min(10).max(500),
+  }).strict(),
+]);
