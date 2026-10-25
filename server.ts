@@ -155,6 +155,11 @@ app.use('/api/admin-management', adminManagementRouter);
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
+startServer().catch((err: unknown) => {
+  // A failed startup must never look like a clean service shutdown to systemd.
+  // Print the error category/message only; do not dump env, request bodies or
+  // complete objects potentially containing private configuration.
+  const reason = err instanceof Error ? err.message : 'unknown startup error';
+  console.error('DarsChin startup failed:', reason);
+  process.exitCode = 1;
 });
