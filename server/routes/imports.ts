@@ -3,12 +3,13 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, AuthenticatedRequest, requirePermission } from '../middleware/auth';
 import { processImportPayload } from '../../src/domain/import-validator';
-import { ImportBatch, CourseOffering } from '../../src/types';
+import { ImportBatch } from '../../src/types';
 import { validate } from '../middleware/validate';
-import { processImportSchema } from '../schemas/imports';
+import { processImportSchema, reviewImportRecordSchema } from '../schemas/imports';
 
 export const importsRouter = Router();
 
@@ -19,10 +20,24 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
     const { payload, termId, campusId } = req.body;
 
     const studentProfile = db.studentProfiles.find((p) => p.userId === userId);
-    const activeTermId = termId || studentProfile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-    const activeCampusId = campusId || studentProfile?.campusId || db.campuses[0]?.id || 'camp-srbiau';
+    const isCatalogEditor = req.user!.roles?.includes('super-admin') ||
+      req.user!.permissions?.includes('offering.manage');
+    if (!studentProfile && !isCatalogEditor) {
+      return res.status(403).json({ success: false, error: 'برای واردکردن فایل، پرونده تحصیلی معتبر لازم است.' });
+    }
+    const activeTermId = termId || studentProfile?.currentTermId || db.academicTerms.find(t => t.isCurrent)?.id;
+    const activeCampusId = campusId || studentProfile?.campusId;
+    if (!activeTermId || !activeCampusId ||
+        !db.academicTerms.some(term => term.id === activeTermId) ||
+        !db.campuses.some(campus => campus.id === activeCampusId)) {
+      return res.status(400).json({ success: false, error: 'نیمسال یا واحد دانشگاهی معتبر برای این فایل مشخص نشده است.' });
+    }
+    if (!isCatalogEditor && (activeCampusId !== studentProfile?.campusId ||
+        (studentProfile?.currentTermId && activeTermId !== studentProfile.currentTermId))) {
+      return res.status(403).json({ success: false, error: 'ورود داده فقط برای واحد و نیمسال پرونده تحصیلی خودتان مجاز است.' });
+    }
 
-    const batchId = `batch-${Date.now()}`;
+    const batchId = `batch-${randomUUID()}`;
 
     // Execute matching engine
     const validationResult = processImportPayload(
@@ -33,7 +48,7 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
       db.courses
     );
 
-    if (!validationResult.isValid && validationResult.matchedCount === 0) {
+    if (validationResult.totalRecords === 0) {
       return res.status(400).json({
         success: false,
         error: validationResult.errors.join(' | ') || 'هیچ درسی قابل تطبیق یافت نشد.',
@@ -52,20 +67,13 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
       matchedRecords: validationResult.matchedCount,
       reviewRecords: validationResult.reviewCount,
       invalidRecords: validationResult.invalidCount,
-      rawJson: typeof payload === 'string' ? payload : JSON.stringify(payload),
+      // Do not store an unrestricted raw extension blob: only normalized
+      // review records are kept to minimize accidental personal-data retention.
       createdAt: new Date().toISOString(),
     };
 
     db.importBatches.unshift(newBatch);
     db.importRecords.push(...validationResult.importRecords);
-
-    // Add matched offerings to database
-    const newOfferings: CourseOffering[] = validationResult.preparedOfferings.map((po, idx) => ({
-      ...po,
-      id: `off-imp-${batchId}-${idx + 1}`,
-    }));
-
-    db.courseOfferings.push(...newOfferings);
     db.save();
 
     return res.json({
@@ -79,7 +87,9 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
           invalid: validationResult.invalidCount,
         },
         records: validationResult.importRecords,
-        createdOfferingsCount: newOfferings.length,
+        createdOfferingsCount: 0,
+        requiresReview: true,
+        message: 'فایل تنها در صف تطبیق ثبت شد. هیچ گروهی بدون تأیید مدیر به بانک ارائه‌های اصلی اضافه نشده است.',
       },
     });
   } catch (err: any) {
@@ -90,7 +100,8 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
 // Get import batches history
 importsRouter.get('/batches', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const isSuperAdmin = req.user!.roles?.includes('admin');
+  const isSuperAdmin = req.user!.roles?.includes('super-admin') ||
+    req.user!.permissions?.includes('admin.panel.access');
   const list = isSuperAdmin
     ? db.importBatches
     : db.importBatches.filter((b) => b.userId === userId);
@@ -103,7 +114,8 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
   const batch = db.importBatches.find((b) => b.id === req.params.id);
   if (!batch) return res.status(404).json({ success: false, error: 'شناسه بسته واردشده یافت نشد.' });
 
-  const isSuperAdmin = req.user!.roles?.includes('admin') || req.user!.roles?.includes('super-admin');
+  const isSuperAdmin = req.user!.roles?.includes('super-admin') ||
+    req.user!.permissions?.includes('admin.panel.access');
   if (batch.userId !== req.user!.id && !isSuperAdmin) {
     return res.status(403).json({ success: false, error: 'عدم دسترسی' });
   }
@@ -118,3 +130,56 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
     },
   });
 });
+
+
+/**
+ * This operation records an operator's course-id mapping decision ONLY.
+ * Publication of an offering is intentionally a separate, unavailable flow.
+ * A course match does not verify term, group, teacher, capacity or regulations.
+ */
+importsRouter.put(
+  '/batches/:batchId/records/:recordId/review',
+  authenticate,
+  requirePermission('offering.manage'),
+  validate(reviewImportRecordSchema),
+  (req: AuthenticatedRequest, res) => {
+    const batch = db.importBatches.find(item => item.id === req.params.batchId);
+    if (!batch) return res.status(404).json({ success: false, error: 'بسته واردات پیدا نشد.' });
+    const record = db.importRecords.find(item => item.id === req.params.recordId && item.batchId === batch.id);
+    if (!record) return res.status(404).json({ success: false, error: 'ردیف موردنظر در این بسته پیدا نشد.' });
+
+    const { action, reason } = req.body as { action: 'CONFIRM_MATCH' | 'REJECT_MATCH'; reason: string; courseId?: string };
+    if (action === 'CONFIRM_MATCH' && !db.courses.some(course => course.id === req.body.courseId && course.active)) {
+      return res.status(400).json({ success: false, error: 'درس مقصد در کاتالوگ فعال وجود ندارد.' });
+    }
+    const before = {
+      decision: record.reviewDecision ?? null,
+      matchedCourseId: record.matchedCourseId ?? null,
+    };
+    record.reviewDecision = action === 'CONFIRM_MATCH' ? 'COURSE_MATCH_CONFIRMED' : 'REJECTED';
+    record.matchedCourseId = action === 'CONFIRM_MATCH' ? req.body.courseId : null;
+    record.reviewNotes = reason.trim();
+    record.reviewedBy = req.user!.id;
+    record.reviewedAt = new Date().toISOString();
+
+    db.auditLogs.push({
+      id: 'audit-' + randomUUID(),
+      adminId: req.user!.id,
+      action: 'IMPORT_COURSE_MAPPING_REVIEW',
+      entityType: 'import-record',
+      entityId: record.id,
+      details: JSON.stringify({
+        batchId: batch.id,
+        before,
+        after: { decision: record.reviewDecision, matchedCourseId: record.matchedCourseId },
+      }),
+      createdAt: record.reviewedAt,
+    });
+    db.save();
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({ success: true, data: record,
+      publicationStatus: 'NOT_PUBLISHED',
+      message: 'تصمیم نگاشت ذخیره شد؛ هیچ گروه درسی منتشر نشده است.',
+    });
+  },
+);
