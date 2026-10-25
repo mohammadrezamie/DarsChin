@@ -66,7 +66,17 @@ demandRouter.get('/surveys', (req: AuthenticatedRequest, res) => {
       // after the manager closes/archives the survey; editing stays disabled.
       db.demandResponses.some(r => r.surveyId === s.id && r.userId === req.user!.id)
     )));
-  return res.json({ success: true, data: list });
+  // Student-facing list never contains unrelated cohort courses, even in API JSON.
+  const visible = list.map(survey => {
+    if (managerCanAccessDemand(req.user!, survey)) return survey;
+    const profile = db.studentProfiles.find(p=>p.userId===req.user!.id);
+    const relevantCharts = db.curricula.filter(c=>c.entryYearId===profile?.entryYearId &&
+      (survey.curriculumIds?.length ? survey.curriculumIds.includes(c.id) : c.id===survey.curriculumId));
+    const allowed = new Set(db.curriculumCourses.filter(cc=>relevantCharts.some(c=>c.id===cc.curriculumId) &&
+      cc.active!==false).map(cc=>cc.courseId));
+    return {...survey,courseIds:survey.courseIds.filter(id=>allowed.has(id))};
+  });
+  return res.json({ success: true, data: visible });
 });
 
 demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
@@ -84,7 +94,7 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     c.universityId===x.universityId && c.campusId===x.campusId &&
     c.degreeLevelId===x.degreeLevelId && c.majorId===x.majorId &&
     c.status!=='archived'));
-  if (!validScope || !charts.length || charts.some(c=>!c) ||
+  if (!validScope || !charts.length || !chosenChartIds.includes(x.curriculumId) || charts.some(c=>!c) ||
     new Set(chosenChartIds).size!==chosenChartIds.length ||
     new Set(x.entryYearIds).size!==x.entryYearIds.length ||
     charts.length!==x.entryYearIds.length ||
