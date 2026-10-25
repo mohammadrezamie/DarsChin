@@ -115,4 +115,19 @@ describe('Persian-first responsive UI guardrails',()=>{
     expect(code).not.toContain('absolute inset-2');
     expect(code).not.toContain('left-full');
   });
+
+  it('keeps other landing panels readable on small RTL screens', () => {
+    const recommendation = read('src/pages/landing-sections/RecommendationSection.tsx');
+    const eligibility = read('src/pages/landing-sections/EligibilitySection.tsx');
+    const hero = read('src/pages/landing-sections/HeroSection.tsx');
+
+    expect(recommendation).toContain('flex-wrap items-start justify-between gap-3');
+    expect(recommendation).toContain('[overflow-wrap:anywhere]');
+    expect(recommendation).toContain('text-3xl');
+    expect(eligibility).toContain('min-h-[300px]');
+    expect(eligibility).toContain('text-3xl');
+    expect(hero).toContain('min-w-0 max-w-2xl');
+    expect(hero).toContain('break-words text-sm font-extrabold');
+    expect(hero).not.toContain('block truncate text-sm font-extrabold');
+  });
 });
