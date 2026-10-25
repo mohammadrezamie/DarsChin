@@ -287,6 +287,8 @@ export interface CourseOffering {
   location?: string;
   capacity: number;
   enrolledCount: number;
+  /** false means provider did not report enrollment; 0 is only a structural placeholder. */
+  enrolledCountKnown?: boolean;
   examDate?: string;
   notes?: string;
   /** Stable identity supplied by the source adapter for idempotent reconciliation. */
@@ -387,6 +389,8 @@ export interface CourseEligibilityResult {
   endTime: string;
   capacity: number;
   enrolledCount: number;
+  /** false means provider did not report enrollment; 0 is only a structural placeholder. */
+  enrolledCountKnown?: boolean;
   examDate?: string;
   overallStatus: EligibilityStatus;
   isEligible: boolean;
