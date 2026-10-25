@@ -42,6 +42,10 @@ describe('compatibility credit policy avoids false completed units',()=>{
   });
   it('never infers final semester for missing curriculum or undeclared required track',()=>{
     expect(calculateAcademicLimits(profile,courses,[],[],settings).isFinalSemester).toBe(false);
+    const emptyOverride=calculateAcademicLimits(
+      {...profile,isFinalSemesterOverride:true},courses,[],[],settings);
+    expect(emptyOverride.isFinalSemester).toBe(false);
+    expect(emptyOverride.effectiveMaxUnits).toBe(settings.normalMaxUnits);
     expect(calculateAcademicLimits(profile,courses,links,[],settings).isFinalSemester).toBe(false);
     const override=calculateAcademicLimits(
       {...profile,isFinalSemesterOverride:true},courses,links,[],settings);
