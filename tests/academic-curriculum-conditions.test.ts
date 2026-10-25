@@ -78,6 +78,16 @@ describe('per-curriculum editable conditions (all numbers are synthetic)',()=>{
     expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
     expect(result.allReasons.join(' ')).toMatch(/خالی|ناقص/);
   });
+  it('does not interpret an unsupported imported rule operator as AND',()=>{
+    const legacy:AcademicRule={
+      id:'unsupported-legacy-operator',curriculumId:'chart-1403',
+      targetCourseId:'internship',relationshipType:'PREREQUISITE',
+      expression:{type:'GROUP',operator:'XOR' as 'AND',operands:[
+        {type:'COURSE',courseId:'general-1'},
+      ]},
+    };
+    expect(status('1403',[legacy]).overallStatus).toBe('BLOCKED_PREREQUISITE');
+  });
   it('does not inherit the other entry year internship threshold',()=>{
     const rules=[rule('chart-1402',5),rule('chart-1403',3)];
     expect(status('1402',rules).overallStatus).toBe('BLOCKED_PREREQUISITE');
