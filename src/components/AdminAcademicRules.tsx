@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, Trash2, BookOpen, GraduationCap } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import type { AcademicRule, AcademicRuleNode, Course, Curriculum, RelationshipType } from '../types';
+import type { AcademicRule, AcademicRuleNode, Course, Curriculum, RelationshipType, Track } from '../types';
 
 type ListedRule = AcademicRule & { targetCourseName?: string; curriculumName?: string };
 type Condition = { key: string; type: 'COURSE' | 'MIN_PASSED_UNITS'; courseId: string; minUnits: number };
@@ -37,9 +37,11 @@ export const AdminAcademicRules: React.FC = () => {
   const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [curriculumId, setCurriculumId] = useState(initialChart);
   const [targetCourseId, setTargetCourseId] = useState(initialTarget);
   const [relationshipType, setRelationshipType] = useState<RelationshipType>('PREREQUISITE');
+  const [trackId, setTrackId] = useState('');
   const [conditions, setConditions] = useState<Condition[]>([empty()]);
   const [operator, setOperator] = useState<'AND'|'OR'>('AND');
   const [notes, setNotes] = useState('');
@@ -61,14 +63,16 @@ export const AdminAcademicRules: React.FC = () => {
 
   const refresh = async () => {
     setLoading(true);
-    const [r, c, charts] = await Promise.all([
+    const [r, c, charts, allTracks] = await Promise.all([
       apiRequest<ListedRule[]>('/api/curriculum/rules'),
       apiRequest<Course[]>('/api/academic/courses'),
       apiRequest<Curriculum[]>('/api/curriculum'),
+      apiRequest<Track[]>('/api/academic/tracks'),
     ]);
     if (r.success) setRules(r.data || []);
     if (c.success) setCourses(c.data || []);
     if (charts.success) setCurricula(charts.data || []);
+    if (allTracks.success) setTracks(allTracks.data || []);
     if (!r.success || !c.success || !charts.success) setMessage('بارگذاری همه اطلاعات آموزشی کامل نشد.');
     setLoading(false);
   };
@@ -93,14 +97,14 @@ export const AdminAcademicRules: React.FC = () => {
 
 
   const resetForm = () => {
-    setEditId('');setTargetCourseId('');setRelationshipType('PREREQUISITE');
+    setEditId('');setTargetCourseId('');setRelationshipType('PREREQUISITE');setTrackId('');
     setConditions([empty()]);setOperator('AND');setNotes('');setFormOpen(false);setShowAllCatalog(false);
   };
   const startEdit = (rule: ListedRule) => {
     const editable = asSimpleEditor(rule.expression);
     if (!editable) { setMessage('این قانون قدیمی دارای گروه‌های تو در تو است؛ ویرایش سادهٔ آن بدون حذف ساختارش امکان‌پذیر نیست.');return; }
     setCurriculumId(rule.curriculumId);setTargetCourseId(rule.targetCourseId);
-    setRelationshipType(rule.relationshipType);setConditions(editable.conditions);
+    setRelationshipType(rule.relationshipType);setTrackId(rule.trackId || '');setConditions(editable.conditions);
     setOperator(editable.operator);setNotes(rule.notes || '');setEditId(rule.id);
     setFormOpen(true);setMessage('');setShowAllCatalog(false);
   };
@@ -121,6 +125,7 @@ export const AdminAcademicRules: React.FC = () => {
     const body = {
       curriculumId: selectedChart.id, targetCourseId, relationshipType, expression, notes,
       majorId: selectedChart.majorId, entryYearId: selectedChart.entryYearId,
+      trackId: trackId || null,
     };
     setSaving(true);setMessage('');
     const result = await apiRequest(editId?`/api/curriculum/rules/${editId}`:'/api/curriculum/rules',
@@ -177,6 +182,13 @@ export const AdminAcademicRules: React.FC = () => {
             <option value="PREREQUISITE">پیش‌نیاز</option>
             <option value="COREQUISITE">هم‌نیاز</option>
             <option value="CONTEXTUAL_RETAKE_RULE">شرط اخذ مجدد (پس از مردودی؛ نیازمند تأیید ضوابط)</option>
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-bold">دامنهٔ گرایش (اختیاری)
+          <select className={field} value={trackId} onChange={e=>setTrackId(e.target.value)}>
+            <option value="">بدون محدودیت گرایش · تمام دانشجویان این چارت</option>
+            {tracks.filter(t=>t.majorId===selectedChart?.majorId && t.active!==false)
+              .map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </label>
         <label className="min-w-0 text-xs font-bold">ارتباط بین شروط
@@ -249,6 +261,7 @@ export const AdminAcademicRules: React.FC = () => {
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">چارت: {rule.curriculumName||rule.curriculumId}</p>
+          {rule.trackId&&<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">فقط گرایش: {tracks.find(t=>t.id===rule.trackId)?.name || rule.trackId}</p>}
           <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm leading-7 dark:bg-slate-800">
             <BookOpen className="mt-1 h-4 w-4 shrink-0 text-blue-600"/>
             <p className="min-w-0 break-words">{describeCondition(rule.expression,courseNames)}</p>
