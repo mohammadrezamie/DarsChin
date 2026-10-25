@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, GraduationCap } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Menu, X } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { HeroSection } from './landing-sections/HeroSection';
 import { EligibilitySection } from './landing-sections/EligibilitySection';
 import { RecommendationSection } from './landing-sections/RecommendationSection';
@@ -9,16 +10,44 @@ import { SyncSection } from './landing-sections/SyncSection';
 import { DashboardShowcaseSection } from './landing-sections/DashboardShowcaseSection';
 
 const Landing: React.FC = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeMenu = () => setMenuOpen(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+        triggerRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
+
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/85">
-        <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center justify-between gap-2 px-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              ref={triggerRef}
+              type="button"
+              aria-label="بازکردن منوی اصلی"
+              aria-expanded={menuOpen}
+              aria-controls="landing-mobile-navigation"
+              onClick={() => setMenuOpen(true)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 xl:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            >
+              <Menu aria-hidden="true" className="h-5 w-5" />
+            </button>
           <Link to="/" aria-label="صفحه اصلی درس‌چین" className="flex shrink-0 items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><GraduationCap className="h-5 w-5" /></span>
             <span><span className="block text-lg font-black leading-tight text-slate-950 dark:text-white">درس‌چین</span><span className="hidden text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:block">دستیار برنامه‌ریزی تحصیلی</span></span>
           </Link>
+          </div>
 
-          <nav aria-label="ناوبری صفحه" className="hidden items-center gap-1 lg:flex">
+          <nav aria-label="ناوبری صفحه" className="hidden items-center gap-1 xl:flex">
             <a href="#eligibility" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300">قوانین آموزشی</a>
             <a href="#recommendations" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300">پیشنهاد درس</a>
             <a href="#schedule" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300">برنامه هفتگی</a>
@@ -26,14 +55,52 @@ const Landing: React.FC = () => {
             <a href="#workspaces" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300">امکانات سامانه</a>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Link to="/login" className="rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">ورود</Link>
-            <Link to="/register" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-extrabold text-white shadow-md shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 sm:px-4">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <Link to="/login" className="hidden sm:inline-flex rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">ورود</Link>
+            <Link to="/register" className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-extrabold text-white shadow-md shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 sm:px-4">
               ثبت‌نام <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </header>
+      {menuOpen && (
+        <div className="fixed inset-0 z-[80] xl:hidden" dir="rtl">
+          <div role="presentation" className="absolute inset-0 bg-slate-950/60"
+            onClick={() => { closeMenu(); triggerRef.current?.focus(); }} />
+          <nav
+            id="landing-mobile-navigation"
+            aria-label="منوی اصلی صفحه"
+            className="absolute inset-y-0 right-0 flex w-[min(86vw,350px)] max-w-full flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
+              <strong className="text-lg font-black text-slate-950 dark:text-white">منوی درس‌چین</strong>
+              <button type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800">
+                <X aria-hidden="true" className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-1 text-sm font-bold">
+              {[
+                { href: '#eligibility', label: 'قوانین آموزشی' },
+                { href: '#recommendations', label: 'پیشنهاد درس' },
+                { href: '#schedule', label: 'برنامه هفتگی' },
+                { href: '#data-flow', label: 'ورود داده' },
+                { href: '#workspaces', label: 'امکانات سامانه' },
+              ].map(item => (
+                <a key={item.href} href={item.href} onClick={closeMenu}
+                  className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-slate-100 dark:hover:bg-slate-800">
+                  {item.label}
+                </a>
+              ))}
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+                <Link to="/login" onClick={closeMenu} className="flex min-h-12 items-center justify-center rounded-xl border border-slate-300 text-slate-900 dark:border-slate-700 dark:text-white">ورود</Link>
+                <Link to="/register" onClick={closeMenu} className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 text-white">ثبت‌نام</Link>
+              </div>
+            </div>
+          </nav>
+        </div>
+      )}
 
       <main>
         <HeroSection />
