@@ -26,6 +26,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const isEditableChart = curriculumFull?.curriculum?.status === 'draft';
 
   const [addCourseForm, setAddCourseForm] = useState({
     courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED'
@@ -72,6 +74,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   useEffect(() => {
     if (selectedCurriculumId) {
+      setMutationError(null);
       loadCurriculumDetails(selectedCurriculumId);
       setActiveCourseId(null);
     }
@@ -106,7 +109,9 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   const handleAddCourse = async () => {
-    if (!addCourseForm.courseId) return alert('شناسه درس الزامی است');
+    setMutationError(null);
+    if (!isEditableChart) return setMutationError('چارت فعال قابل ویرایش نیست؛ پیش‌نویس جدید بسازید.');
+    if (!addCourseForm.courseId) return setMutationError('شناسه درس الزامی است.');
     const res = await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses`, {
       method: 'POST',
       body: JSON.stringify(addCourseForm)
@@ -115,19 +120,24 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddCourseForm({ courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' });
     } else {
-      alert(res.error || 'خطا در افزودن درس');
+      setMutationError(res.error || 'خطا در افزودن درس');
     }
   };
 
   const handleRemoveCourse = async (courseId: string) => {
-    if (!confirm('حذف درس و تمامی قوانین مرتبط از چارت؟')) return;
-    await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}`, { method: 'DELETE' });
-    loadCurriculumDetails(selectedCurriculumId!);
+    setMutationError(null);
+    if (!isEditableChart) return setMutationError('ویرایش چارت فعال مجاز نیست.');
+    if (!confirm('حذف درس و تمامی قوانین مرتبط از پیش‌نویس چارت؟')) return;
+    const res = await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}`, { method: 'DELETE' });
+    if (!res.success) return setMutationError(res.error || 'حذف درس انجام نشد.');
+    await loadCurriculumDetails(selectedCurriculumId!);
     if (activeCourseId === courseId) setActiveCourseId(null);
   };
 
   const handleAddRule = async () => {
-    if (!addRuleForm.sourceCourseId) return alert('درس پیش‌نیاز/هم‌نیاز را انتخاب کنید');
+    setMutationError(null);
+    if (!isEditableChart) return setMutationError('ویرایش قوانین چارت فعال مجاز نیست.');
+    if (!addRuleForm.sourceCourseId) return setMutationError('درس مبدا را انتخاب کنید.');
     const res = await apiRequest(`/api/curriculum/rules`, {
       method: 'POST',
       body: JSON.stringify({
@@ -141,13 +151,16 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE' });
     } else {
-      alert(res.error || 'خطا در افزودن قانون');
+      setMutationError(res.error || 'خطا در افزودن قانون');
     }
   };
   
   const handleRemoveRule = async (ruleId: string) => {
-    await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
-    loadCurriculumDetails(selectedCurriculumId!);
+    setMutationError(null);
+    if (!isEditableChart) return setMutationError('ویرایش قانون چارت فعال مجاز نیست.');
+    const res = await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
+    if (!res.success) return setMutationError(res.error || 'حذف رابطه انجام نشد.');
+    await loadCurriculumDetails(selectedCurriculumId!);
   };
 
   if (loading && !curricula.length) return <div className="p-8 text-center">در حال بارگذاری...</div>;
