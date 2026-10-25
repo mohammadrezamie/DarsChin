@@ -12,17 +12,36 @@ import { DashboardShowcaseSection } from './landing-sections/DashboardShowcaseSe
 const Landing: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
   const closeMenu = () => setMenuOpen(false);
   useEffect(() => {
     if (!menuOpen) return;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         closeMenu();
         triggerRef.current?.focus();
       }
+      if (event.key !== 'Tab') return;
+      const elements = menuRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!elements?.length) return;
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [menuOpen]);
 
   return (
@@ -70,13 +89,16 @@ const Landing: React.FC = () => {
           <div role="presentation" className="absolute inset-0 bg-slate-950/60"
             onClick={() => { closeMenu(); triggerRef.current?.focus(); }} />
           <nav
+            ref={menuRef}
             id="landing-mobile-navigation"
+            role="dialog"
+            aria-modal="true"
             aria-label="منوی اصلی صفحه"
-            className="absolute inset-y-0 right-0 flex w-[min(86vw,350px)] max-w-full flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            className="darschin-drawer absolute inset-y-0 right-0 flex w-[min(90vw,360px)] max-w-full flex-col overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
               <strong className="text-lg font-black text-slate-950 dark:text-white">منوی درس‌چین</strong>
-              <button type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
+              <button ref={closeRef} type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
