@@ -2,6 +2,10 @@
 
 This is currently a demo. Preserve a clean `main` and use short-lived branches and PRs for changes. Development is not blocked by GitHub Actions quota, but **missing automated test evidence must be disclosed**.
 
+## Persistent owner directives and development decisions
+
+Before each coding session, read [AGENTS.md](../AGENTS.md) and [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md). Every owner instruction/plan/change must be recorded there with a dated, non-sensitive note and its true status, whether or not code can be written immediately. Link corresponding technical docs and PRs. A feature PR should include its owner-decision IDs; it is not enough to summarize the requirement only in a chat.
+
 ## Local work
 
 Install Node.js 22+ and Bun. Run:
