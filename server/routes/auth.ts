@@ -2,6 +2,7 @@
 // DARSCHYN (درس‌چین) - Mobile Number + Password Authentication Routes
 // ============================================================================
 import { Router } from 'express';
+import { requireGuestChallenge } from '../security/turnstile';
 import bcrypt from 'bcryptjs';
 import { db } from '../db/database';
 import { generateToken, AuthenticatedRequest, authenticate } from '../middleware/auth';
@@ -49,7 +50,7 @@ function normalizeMobile(mobile: string): string {
 // ----------------------------------------------------------------------------
 // 1. REGISTER: Mobile + Password (+ Name & Optional Recovery Key)
 // ----------------------------------------------------------------------------
-authRouter.post('/register', validate(registerSchema), (req, res) => {
+authRouter.post('/register', requireGuestChallenge('register'), validate(registerSchema), (req, res) => {
   
   let { mobile, password, name, recoveryKey } = req.body;
   mobile = normalizeMobile(mobile);
@@ -155,7 +156,7 @@ authRouter.post('/register', validate(registerSchema), (req, res) => {
 // ----------------------------------------------------------------------------
 // 2. LOGIN: Mobile + Password with Brute-Force Rate Limiting
 // ----------------------------------------------------------------------------
-authRouter.post('/login', validate(loginSchema), (req, res) => {
+authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema), (req, res) => {
   
   let { mobile, password } = req.body;
   mobile = normalizeMobile(mobile);
