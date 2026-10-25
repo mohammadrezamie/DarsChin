@@ -76,7 +76,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   }),[evaluations,selectedOfferingIds,coursePriorities,rules,passed,profile?.majorId,profile?.entryYearId,profile?.selectedTrackId]);
 
   const stepIds=queue.steps.map(s=>s.courseId);
-  const next=queue.steps.find(s=>!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id)));
+  const next=queue.steps.find(s=>!doneIds.includes(s.courseId)&&s.ready&&s.copyCode&&
+    !s.dependencyCourseIds.some(id=>!doneIds.includes(id)));
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyToClipboard(value);
@@ -150,7 +151,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
               <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
-              <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
+              <button type="button" disabled={!step.copyCode||locked||!step.ready} onClick={()=>void copy(step.copyCode,step.courseName)}
                 aria-label={`کپی کد ${step.courseName}`}
                 className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-45">
                 <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی کد</span>
@@ -161,6 +162,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                 {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
               </button>
             </div>
+            {!step.ready&&<p className="w-full text-xs font-bold text-amber-800 dark:text-amber-300">
+              نیازمند بررسی شرایط یا کد · جزئیات پایین همین ردیف
+            </p>}
           </div>
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-'))&&
             <details className="w-full text-xs text-amber-800 dark:text-amber-300">
