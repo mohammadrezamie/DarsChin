@@ -16,13 +16,19 @@ export const updateProfileSchema = z.object({
 });
 
 export const addPassedCourseSchema = z.object({
-  courseId: z.string().min(1, 'شناسه درس الزامی است'),
-  grade: z.union([z.string(), z.number()]).optional(),
-  termId: z.string().optional(),
+  courseId: academicId,
+  grade: z.union([
+    z.number().finite().min(0).max(20),
+    z.string().trim().refine(value=>
+      value==='' || (/^\\d{1,2}(?:\\.\\d{1,2})?$/.test(value) &&
+        Number(value)>=0 && Number(value)<=20),
+      'نمره باید عددی بین صفر تا بیست باشد.'),
+  ]).optional(),
+  termId: academicId.optional(),
 });
 
 export const batchPassedCoursesSchema = z.object({
-  courseIds: z.array(z.string()),
+  courseIds: z.array(academicId).max(250),
   replaceAll: z.boolean().optional(),
 });
 
