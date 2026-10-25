@@ -266,7 +266,7 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
             'prerequisite.manage', 'corequisite.manage', 'curriculum.manage', 'offering.manage',
             'academic-policy.manage', 'student-management.read', 'support.manage', 'import.manage',
             'admin.create', 'admin.manage', 'admin.remove', 'admin.permission.manage',
-            'system.settings.manage', 'backup.manage', 'demand.manage', 'demand.export'
+            'system.settings.manage', 'backup.manage', 'demand.manage', 'demand.export', 'sms.manage'
         ];
 
         if (!superAdmin && rootMobile && rootPassword) {
