@@ -262,9 +262,14 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   // Exercise exactly the status workflows shown by the real admin component.
   // This is an in-browser simulation, never a privileged server operation.
-  const statusRoute = path.match(/^\\/api\\/support\\/admin\\/(tickets|bugs)\\/([^/]+)\\/status$/);
+  const statusParts = path.split('/');
+  const statusRoute = statusParts.length === 7 &&
+    statusParts[1] === 'api' && statusParts[2] === 'support' &&
+    statusParts[3] === 'admin' && ['tickets', 'bugs'].includes(statusParts[4]) &&
+    statusParts[6] === 'status';
   if (statusRoute && method === 'PUT') {
-    const [, kind, recordId] = statusRoute;
+    const kind = statusParts[4];
+    const recordId = statusParts[5];
     const allowed = kind === 'tickets'
       ? ['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED']
       : ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
