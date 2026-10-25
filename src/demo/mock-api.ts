@@ -1,6 +1,7 @@
 import { DEMO_COURSES } from './course-planner';
 import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
+import { evaluateScheduleQuality } from '../domain/schedule-quality';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
 import { summarizeDemand, summarizeDemandByCohort, listDemandStudents, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
@@ -546,6 +547,19 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       if (data.selectedOfferingIds !== undefined &&
         (!Array.isArray(data.selectedOfferingIds) || data.selectedOfferingIds.some((id: unknown) => !isUsableOffering(s, id)))) {
         return fail('یکی از گروه‌های انتخاب‌شده دیگر در دمو فعال یا موجود نیست.');
+      }
+      if(data.qualitySuggestion===true){
+        const before=s.plan.selectedOfferingIds.map(id=>
+          s.collections['/api/offerings'].find(row=>row.id===id)?.courseId);
+        const next=data.selectedOfferingIds?.map((id:string)=>
+          s.collections['/api/offerings'].find(row=>row.id===id)?.courseId);
+        if(!Array.isArray(next)||!before.length||next.length!==before.length||
+          before.some(id=>!id)||next.some((id:unknown)=>!id||!before.includes(id))||
+          new Set(next).size!==next.length||new Set(before).size!==before.length){
+          return fail('پیشنهاد باید دقیقاً همین درس‌ها را با گروه‌های دیگر بچیند.');
+        }
+        const validation=evaluateScheduleQuality(demoEvaluation(s).report.results,data.selectedOfferingIds);
+        if(validation.activeDays===null)return fail('پیشنهاد زمان نامعتبر یا تداخل دارد؛ برنامهٔ قبلی حفظ شد.');
       }
       s.plan = {
         ...s.plan, ...data,
