@@ -113,53 +113,52 @@ export function parseRawInput(rawContent: any): RawExtractedOffering[] {
     const headerIndexMap: Record<string, number> = {};
     if (hasHeader) {
       firstRow.forEach((col, idx) => {
-        const norm = col.replace(/\s+/g, '').toLowerCase();
-        if (norm.includes('کد') || norm.includes('code')) headerIndexMap['code'] = idx;
-        if (norm.includes('نام') || norm.includes('عنوان') || norm.includes('name')) headerIndexMap['name'] = idx;
-        if (norm.includes('گروه') || norm.includes('group')) headerIndexMap['group'] = idx;
-        if (norm.includes('استاد') || norm.includes('مدرس') || norm.includes('teacher')) headerIndexMap['instructor'] = idx;
-        if (norm.includes('روز') || norm.includes('day')) headerIndexMap['day'] = idx;
-        if (norm.includes('ساعت') || norm.includes('زمان') || norm.includes('time')) headerIndexMap['time'] = idx;
-        if (norm.includes('ظرفیت') || norm.includes('capacity')) headerIndexMap['capacity'] = idx;
+        const norm = normalizePersianText(col).replace(/\s+/g, '');
+        // Specific labels must take precedence over generic "name"/"capacity".
+        if (/ظرفیت(باقیمانده|باقی|مانده)|availablecapacity|remaining/.test(norm)) headerIndexMap.available = idx;
+        else if (/ظرفیت|capacity/.test(norm)) headerIndexMap.capacity = idx;
+        else if (/ساعتشروع|زمانشروع|starttime|start/.test(norm)) headerIndexMap.start = idx;
+        else if (/ساعتپایان|زمانپایان|endtime|end/.test(norm)) headerIndexMap.end = idx;
+        else if (/ساعت|زمان|time/.test(norm)) headerIndexMap.time = idx;
+        else if (/استاد|مدرس|teacher|instructor/.test(norm)) headerIndexMap.instructor = idx;
+        else if (/گروه|group/.test(norm)) headerIndexMap.group = idx;
+        else if (/روز|day/.test(norm)) headerIndexMap.day = idx;
+        else if (/کد|code/.test(norm)) headerIndexMap.code = idx;
+        else if (/نام|عنوان|درس|name|course/.test(norm)) headerIndexMap.name = idx;
       });
     }
+    const normalizeNumeral = (value: string): string => value
+      .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    const optionalNumber = (value: string | undefined): number | undefined => {
+      if (!value?.trim()) return undefined;
+      const parsed = Number(normalizeNumeral(value.trim()));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
 
     const dataRows = hasHeader ? rows.slice(1) : rows;
     return dataRows
       .map((row) => {
         if (row.length < 2) return null;
-        let code = '';
-        let name = '';
-        let group = '';
-        let instructor = '';
-        let day = '';
-        const startTime = '';
-        const endTime = '';
-
-        if (hasHeader && headerIndexMap['name'] !== undefined) {
-          name = row[headerIndexMap['name']] || '';
-          code = headerIndexMap['code'] !== undefined ? row[headerIndexMap['code']] || '' : '';
-          group = headerIndexMap['group'] !== undefined ? row[headerIndexMap['group']] || '' : '';
-          instructor = headerIndexMap['instructor'] !== undefined ? row[headerIndexMap['instructor']] || '' : '';
-          day = headerIndexMap['day'] !== undefined ? row[headerIndexMap['day']] || '' : '';
-        } else {
-          // Assume columns: Code, Name, Group, Instructor, Day, Time
-          code = row[0] || '';
-          name = row[1] || '';
-          group = row[2] || '';
-          instructor = row[3] || '';
-          day = row[4] || '';
-        }
-
-        if (!name && !code) return null;
+        const field = (key: string): string => {
+          const index = headerIndexMap[key];
+          return index === undefined ? '' : (row[index] || '');
+        };
+        const code = hasHeader ? field('code') : (row[0] || '');
+        const name = hasHeader ? field('name') : (row[1] || '');
+        if (!code && !name) return null;
+        const timeRange = normalizeNumeral(hasHeader ? field('time') : (row[5] || ''));
+        const range = /(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/.exec(timeRange);
         return {
           courseCode: code,
           courseName: name || code,
-          group,
-          instructor,
-          day,
-          startTime,
-          endTime,
+          group: hasHeader ? field('group') : (row[2] || ''),
+          instructor: hasHeader ? field('instructor') : (row[3] || ''),
+          day: hasHeader ? field('day') : (row[4] || ''),
+          startTime: hasHeader ? (field('start') || range?.[1] || '') : (range?.[1] || ''),
+          endTime: hasHeader ? (field('end') || range?.[2] || '') : (range?.[2] || ''),
+          capacity: hasHeader ? optionalNumber(field('capacity')) : optionalNumber(row[6]),
+          availableCapacity: hasHeader ? optionalNumber(field('available')) : optionalNumber(row[7]),
         } as RawExtractedOffering;
       })
       .filter(Boolean) as RawExtractedOffering[];
