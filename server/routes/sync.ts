@@ -190,6 +190,12 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   // Completed jobs do not retain raw chunks; accept an idempotent retry
   // without ever re-opening publication or creating a duplicate batch.
   if (job.status === 'AWAITING_REVIEW') {
+    if (isFinal !== true || chunkIndex !== job.totalSnapshots - 1) {
+      return res.status(409).json({
+        success: false,
+        error: 'این همگام‌سازی پایان یافته است؛ فقط تکرار همان بخش نهایی پذیرفته می‌شود.',
+      });
+    }
     return res.json({ success: true, data: {
       jobStatus: job.status, duplicate: true, requiresReview: true,
       reconciledOfferings: 0, reviewCandidates: job.reviewCandidates ?? 0,
