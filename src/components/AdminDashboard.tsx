@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { AdminCrudTable, Column } from './AdminCrudTable';
 import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
+import { AdminMajorWorkspace } from './AdminMajorWorkspace';
 import { UserManagement } from './UserManagement';
 import { AdminSyncStatus } from './AdminSyncStatus';
 import { AdminLogs } from './AdminLogs';
@@ -69,6 +70,9 @@ export const AdminDashboard: React.FC = () => {
   const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
   const [searchParams, setSearchParams] = useSearchParams();
   const [navigationSearch, setNavigationSearch] = useState('');
+  const [showAdvancedStructure, setShowAdvancedStructure] = useState(
+    ['provinces','degrees','tracks','entry-years','curricula'].includes(searchParams.get('tab') || ''),
+  );
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
@@ -166,18 +170,20 @@ export const AdminDashboard: React.FC = () => {
     {
       title: 'سازمان و واحدها',
       items: [
-        { id: 'provinces' as AdminTab, label: 'استان‌ها', icon: MapPin },
         { id: 'campuses' as AdminTab, label: 'واحدهای دانشگاهی', icon: School },
+        ...(showAdvancedStructure ? [{ id: 'provinces' as AdminTab, label: 'استان‌ها (پیشرفته)', icon: MapPin }] : []),
       ],
     },
     {
       title: 'ساختار تحصیلی',
       items: [
-        { id: 'degrees' as AdminTab, label: 'مقاطع تحصیلی', icon: GraduationCap },
-        { id: 'majors' as AdminTab, label: 'رشته‌های تحصیلی', icon: Settings },
-        { id: 'tracks' as AdminTab, label: 'گرایش‌ها', icon: GitFork },
-        { id: 'entry-years' as AdminTab, label: 'سال‌های ورود', icon: Calendar },
-        { id: 'curricula' as AdminTab, label: 'چارت‌های تحصیلی', icon: FileSpreadsheet },
+        { id: 'majors' as AdminTab, label: 'رشته‌ها، مقاطع و چارت‌ها', icon: GraduationCap },
+        ...(showAdvancedStructure ? [
+          { id: 'degrees' as AdminTab, label: 'فهرست سراسری مقاطع', icon: GraduationCap },
+          { id: 'tracks' as AdminTab, label: 'فهرست سراسری گرایش‌ها', icon: GitFork },
+          { id: 'entry-years' as AdminTab, label: 'فهرست سراسری سال‌های ورود', icon: Calendar },
+          { id: 'curricula' as AdminTab, label: 'ویرایشگر کامل چارت', icon: FileSpreadsheet },
+        ] : []),
       ],
     },
     {
@@ -247,6 +253,12 @@ export const AdminDashboard: React.FC = () => {
       {filteredNavGroups.length === 0 && (
         <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">بخشی با این عبارت پیدا نشد.</p>
       )}
+      {!demandOnly && <button type="button"
+        aria-expanded={showAdvancedStructure}
+        onClick={()=>setShowAdvancedStructure(value=>!value)}
+        className="min-h-11 w-full rounded-xl border border-dashed border-slate-300 px-3 text-right text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">
+        {showAdvancedStructure?'پنهان‌کردن تنظیمات ساختار پیشرفته':'تنظیمات پیشرفتهٔ ساختار (اختیاری)'}
+      </button>}
       {filteredNavGroups.map(group => (
         <div key={group.title}>
           <h3 className="mb-2 px-3 text-[11px] font-extrabold tracking-wide text-slate-500 dark:text-slate-400">{group.title}</h3>
@@ -578,22 +590,22 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'campuses' && (
           <AdminCrudTable
             title="مدیریت واحدهای دانشگاهی (Campuses & Units)"
-            description="واحدهای جامع، استانی، بین‌الملل و مستقل"
+            description="استان را از فهرست انتخاب کن؛ شناسهٔ فنی لازم نیست."
             endpoint="/api/academic/campuses"
             columns={[
               { key: 'name', label: 'نام واحد دانشگاهی' },
-              { key: 'code', label: 'کد واحد' },
+              { key: 'code', label: 'کد رسمی واحد (اختیاری)' },
               {
                 key: 'type',
                 label: 'نوع واحد',
                 type: 'select',
                 options: [
-                  { label: 'واحد استان (PROVINCE_UNIT)', value: 'PROVINCE_UNIT' },
-                  { label: 'واحد جامع مستقل (COMPREHENSIVE_INDEPENDENT)', value: 'COMPREHENSIVE_INDEPENDENT' },
-                  { label: 'واحد بین‌الملل (INTERNATIONAL)', value: 'INTERNATIONAL' },
+                  { label: 'واحد استانی', value: 'PROVINCE_UNIT' },
+                  { label: 'واحد مستقل', value: 'INDEPENDENT_UNIT' },
+                  { label: 'واحد ویژه', value: 'SPECIAL_UNIT' },
                 ],
               },
-              { key: 'provinceId', label: 'شناسه استان' },
+              { key: 'provinceId', label: 'استان', type: 'select', lookupEndpoint: '/api/academic/provinces' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
@@ -607,26 +619,13 @@ export const AdminDashboard: React.FC = () => {
             endpoint="/api/academic/degrees"
             columns={[
               { key: 'name', label: 'عنوان مقطع' },
-              { key: 'code', label: 'کد اختصاری' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
         )}
 
         {/* 5. MAJORS */}
-        {activeTab === 'majors' && (
-          <AdminCrudTable
-            title="مدیریت رشته‌های تحصیلی"
-            description="رشته‌های مصوب وزارت علوم و دانشگاه آزاد اسلامی"
-            endpoint="/api/academic/majors"
-            columns={[
-              { key: 'name', label: 'عنوان رشته' },
-              { key: 'code', label: 'کد رشته' },
-              { key: 'degreeLevelId', label: 'شناسه مقطع' },
-              { key: 'active', label: 'وضعیت', type: 'boolean' },
-            ]}
-          />
-        )}
+        {activeTab === 'majors' && <AdminMajorWorkspace />}
 
         {/* 6. TRACKS */}
         {activeTab === 'tracks' && (
@@ -636,8 +635,7 @@ export const AdminDashboard: React.FC = () => {
             endpoint="/api/academic/tracks"
             columns={[
               { key: 'name', label: 'عنوان گرایش' },
-              { key: 'code', label: 'کد گرایش' },
-              { key: 'majorId', label: 'شناسه رشته' },
+              { key: 'majorId', label: 'رشته', type: 'select', lookupEndpoint: '/api/academic/majors' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
