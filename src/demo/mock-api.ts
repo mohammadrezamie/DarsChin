@@ -16,7 +16,8 @@ import type {
  * It must never be used to authorize users or declare university eligibility.
  * Unsupported operations fail explicitly instead of pretending to succeed.
  */
-export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v3';
+// New isolated demo generation: old browser records contained always-open surveys.
+export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v4';
 const now = () => new Date().toISOString();
 type Row = Record<string, any>;
 interface DemoStore {
