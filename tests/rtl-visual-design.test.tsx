@@ -53,7 +53,7 @@ describe('Persian-first responsive UI guardrails',()=>{
       expect(s).toContain('aria-modal="true"');
       expect(s).toContain("document.body.style.overflow = 'hidden'");
       // Either guarding a Tab branch or early-returning for non-Tab keys is valid.
-      expect(s).toMatch(/event\\.key\\s*(?:===|!==)\\s*'Tab'/);
+      expect(s).toMatch(/event\.key\s*(?:===|!==)\s*'Tab'/);
       expect(s).toContain('event.shiftKey');
       expect(s).toContain('event.preventDefault()');
       expect(s).toContain('right-0');
