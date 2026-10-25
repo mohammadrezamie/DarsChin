@@ -103,8 +103,8 @@ academicRouter.post('/campuses', authenticate, requirePermission('system.setting
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 120 ||
       (code != null && (typeof code !== 'string' || code.trim().length > 50)) ||
       !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type) ||
-      !db.universities.some(u=>u.id===universityId&&u.active) ||
-      (provinceId && !db.provinces.some(p=>p.id===provinceId&&p.active))) {
+      !db.universities.some(u=>u.id===universityId&&u.active!==false) ||
+      (provinceId && !db.provinces.some(p=>p.id===provinceId&&p.active!==false))) {
     return res.status(400).json({ success:false,
       error:'نام واحد و دانشگاه معتبر را انتخاب کن؛ درج شناسه یا کد ساختگی لازم نیست.' });
   }
@@ -152,7 +152,7 @@ const internalReference = () => 'INTERNAL-' + randomUUID().slice(0, 12).toUpperC
 const safeAcademicName = (v: unknown): v is string =>
   typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 120;
 const safeOptionalCode = (v: unknown): v is string | undefined =>
-  v === undefined || (typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 50);
+  v === undefined || (typeof v === 'string' && v.trim().length <= 50);
 
 academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, code, active = true } = req.body || {};
@@ -169,7 +169,7 @@ academicRouter.post('/degrees', authenticate, requirePermission('system.settings
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { degreeLevelId, name, code, active = true } = req.body || {};
   if (!safeAcademicName(name) || !safeOptionalCode(code) ||
-    !db.degreeLevels.some(d=>d.id===degreeLevelId && d.active))
+    !db.degreeLevels.some(d=>d.id===degreeLevelId && d.active!==false))
     return res.status(400).json({success:false,error:'نام رشته و مقطع معتبر لازم است.'});
   if (db.majors.some(m=>m.name.trim()===name.trim() && m.degreeLevelId===degreeLevelId))
     return res.status(409).json({success:false,error:'این رشته در این مقطع قبلاً وجود دارد.'});
@@ -182,7 +182,7 @@ academicRouter.post('/majors', authenticate, requirePermission('system.settings.
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { majorId, name, code, active = true } = req.body || {};
   if (!safeAcademicName(name) || !safeOptionalCode(code) ||
-    !db.majors.some(m=>m.id===majorId && m.active))
+    !db.majors.some(m=>m.id===majorId && m.active!==false))
     return res.status(400).json({success:false,error:'عنوان گرایش و رشتهٔ مرتبط معتبر لازم است.'});
   if (db.tracks.some(t=>t.majorId===majorId && t.name.trim()===name.trim()))
     return res.status(409).json({success:false,error:'این گرایش برای رشته و مقطع انتخاب‌شده تکراری است.'});
