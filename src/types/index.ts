@@ -438,6 +438,8 @@ export interface CourseEligibilityResult {
   offeringId: string;
   courseId: string;
   courseCode: string;
+  /** Raw code actually supplied with the offering (may be absent). Never silently conflate it with catalog code. */
+  rawCourseCode?: string;
   courseName: string;
   units: number;
   category: CourseCategory;
