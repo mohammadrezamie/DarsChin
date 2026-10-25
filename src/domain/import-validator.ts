@@ -113,53 +113,52 @@ export function parseRawInput(rawContent: any): RawExtractedOffering[] {
     const headerIndexMap: Record<string, number> = {};
     if (hasHeader) {
       firstRow.forEach((col, idx) => {
-        const norm = col.replace(/\s+/g, '').toLowerCase();
-        if (norm.includes('کد') || norm.includes('code')) headerIndexMap['code'] = idx;
-        if (norm.includes('نام') || norm.includes('عنوان') || norm.includes('name')) headerIndexMap['name'] = idx;
-        if (norm.includes('گروه') || norm.includes('group')) headerIndexMap['group'] = idx;
-        if (norm.includes('استاد') || norm.includes('مدرس') || norm.includes('teacher')) headerIndexMap['instructor'] = idx;
-        if (norm.includes('روز') || norm.includes('day')) headerIndexMap['day'] = idx;
-        if (norm.includes('ساعت') || norm.includes('زمان') || norm.includes('time')) headerIndexMap['time'] = idx;
-        if (norm.includes('ظرفیت') || norm.includes('capacity')) headerIndexMap['capacity'] = idx;
+        const norm = normalizePersianText(col).replace(/\s+/g, '');
+        // Specific labels must take precedence over generic "name"/"capacity".
+        if (/ظرفیت(باقیمانده|باقی|مانده)|availablecapacity|remaining/.test(norm)) headerIndexMap.available = idx;
+        else if (/ظرفیت|capacity/.test(norm)) headerIndexMap.capacity = idx;
+        else if (/ساعتشروع|زمانشروع|starttime|start/.test(norm)) headerIndexMap.start = idx;
+        else if (/ساعتپایان|زمانپایان|endtime|end/.test(norm)) headerIndexMap.end = idx;
+        else if (/ساعت|زمان|time/.test(norm)) headerIndexMap.time = idx;
+        else if (/استاد|مدرس|teacher|instructor/.test(norm)) headerIndexMap.instructor = idx;
+        else if (/گروه|group/.test(norm)) headerIndexMap.group = idx;
+        else if (/روز|day/.test(norm)) headerIndexMap.day = idx;
+        else if (/کد|code/.test(norm)) headerIndexMap.code = idx;
+        else if (/نام|عنوان|درس|name|course/.test(norm)) headerIndexMap.name = idx;
       });
     }
+    const normalizeNumeral = (value: string): string => value
+      .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    const optionalNumber = (value: string | undefined): number | undefined => {
+      if (!value?.trim()) return undefined;
+      const parsed = Number(normalizeNumeral(value.trim()));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
 
     const dataRows = hasHeader ? rows.slice(1) : rows;
     return dataRows
       .map((row) => {
         if (row.length < 2) return null;
-        let code = '';
-        let name = '';
-        let group = '01';
-        let instructor = 'اساتید گروه';
-        let day = 'شنبه';
-        let startTime = '08:00';
-        let endTime = '10:00';
-
-        if (hasHeader && headerIndexMap['name'] !== undefined) {
-          name = row[headerIndexMap['name']] || '';
-          code = headerIndexMap['code'] !== undefined ? row[headerIndexMap['code']] || '' : '';
-          group = headerIndexMap['group'] !== undefined ? row[headerIndexMap['group']] || '01' : '01';
-          instructor = headerIndexMap['instructor'] !== undefined ? row[headerIndexMap['instructor']] || 'اساتید گروه' : 'اساتید گروه';
-          day = headerIndexMap['day'] !== undefined ? row[headerIndexMap['day']] || 'شنبه' : 'شنبه';
-        } else {
-          // Assume columns: Code, Name, Group, Instructor, Day, Time
-          code = row[0] || '';
-          name = row[1] || '';
-          group = row[2] || '01';
-          instructor = row[3] || 'اساتید گروه';
-          day = row[4] || 'شنبه';
-        }
-
-        if (!name && !code) return null;
+        const field = (key: string): string => {
+          const index = headerIndexMap[key];
+          return index === undefined ? '' : (row[index] || '');
+        };
+        const code = hasHeader ? field('code') : (row[0] || '');
+        const name = hasHeader ? field('name') : (row[1] || '');
+        if (!code && !name) return null;
+        const timeRange = normalizeNumeral(hasHeader ? field('time') : (row[5] || ''));
+        const range = /(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/.exec(timeRange);
         return {
           courseCode: code,
           courseName: name || code,
-          group: group || '01',
-          instructor: instructor || 'اساتید گروه',
-          day: day || 'شنبه',
-          startTime,
-          endTime,
+          group: hasHeader ? field('group') : (row[2] || ''),
+          instructor: hasHeader ? field('instructor') : (row[3] || ''),
+          day: hasHeader ? field('day') : (row[4] || ''),
+          startTime: hasHeader ? (field('start') || range?.[1] || '') : (range?.[1] || ''),
+          endTime: hasHeader ? (field('end') || range?.[2] || '') : (range?.[2] || ''),
+          capacity: hasHeader ? optionalNumber(field('capacity')) : optionalNumber(row[6]),
+          availableCapacity: hasHeader ? optionalNumber(field('available')) : optionalNumber(row[7]),
         } as RawExtractedOffering;
       })
       .filter(Boolean) as RawExtractedOffering[];
@@ -196,7 +195,7 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['گروه ارائه'] ||
     raw['گروه ارایه'] ||
     raw.group_code ||
-    '01';
+    '';
 
   const instructor =
     raw.instructor ||
@@ -204,7 +203,7 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['استاد'] ||
     raw['نام استاد'] ||
     raw['مدرس'] ||
-    'اساتید گروه';
+    '';
 
   const day =
     raw.day ||
@@ -212,41 +211,49 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
     raw['روز'] ||
     raw['روز برگزاری'] ||
     raw['روز هفته'] ||
-    'شنبه';
+    '';
 
   const startTime =
     raw.startTime ||
     raw.start ||
     raw['ساعت شروع'] ||
     raw['شروع'] ||
-    '08:00';
+    '';
 
   const endTime =
     raw.endTime ||
     raw.end ||
     raw['ساعت پایان'] ||
     raw['پایان'] ||
-    '10:00';
+    '';
 
-  const units = raw.units || raw.unit || raw['واحد'] || raw['تعداد واحد'] || 3;
-  const capacity = raw.capacity || raw['ظرفیت'] || 35;
-  const availableCapacity = raw.availableCapacity || raw['ظرفیت باقیمانده'] || raw['مانده'] || 10;
-  const location = raw.location || raw['مکان'] || raw['کلاس'] || raw['محل'] || 'دانشکده فنی و مهندسی';
+  const units = raw.units ?? raw.unit ?? raw['واحد'] ?? raw['تعداد واحد'];
+  const capacity = raw.capacity ?? raw['ظرفیت'];
+  const availableCapacity = raw.availableCapacity ?? raw['ظرفیت باقیمانده'] ?? raw['مانده'];
+  const location = raw.location || raw['مکان'] || raw['کلاس'] || raw['محل'] || undefined;
   const examDate = raw.examDate || raw['تاریخ امتحان'] || raw['امتحان'] || undefined;
 
+  const explicitNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || String(value).trim() === '') return undefined;
+    const normalized = String(value)
+      .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    const num = Number(normalized);
+    return Number.isFinite(num) ? num : undefined;
+  };
   return {
-    courseCode: code.toString().trim(),
-    courseName: name.toString().trim(),
-    group: group.toString().trim(),
-    instructor: instructor.toString().trim(),
-    units: Number(units) || 3,
-    day: day.toString().trim(),
-    startTime: startTime.toString().trim(),
-    endTime: endTime.toString().trim(),
-    capacity: Number(capacity) || 35,
-    availableCapacity: Number(availableCapacity) || 10,
-    location: location.toString().trim(),
-    examDate: examDate ? examDate.toString().trim() : undefined,
+    courseCode: String(code).trim(),
+    courseName: String(name).trim(),
+    group: String(group).trim(),
+    instructor: String(instructor).trim(),
+    units: explicitNumber(units),
+    day: String(day).trim(),
+    startTime: String(startTime).trim(),
+    endTime: String(endTime).trim(),
+    capacity: explicitNumber(capacity),
+    availableCapacity: explicitNumber(availableCapacity),
+    location: location === undefined ? undefined : String(location).trim(),
+    examDate: examDate === undefined ? undefined : String(examDate).trim(),
   };
 }
 
@@ -278,39 +285,51 @@ export function processImportPayload(
     };
   }
 
-  // Build lookup maps for fast matching (including multi-code support)
-  const exactCodeMap = new Map<string, Course>();
-  const normalizedCodeMap = new Map<string, Course>();
-  const normalizedNameMap = new Map<string, Course>();
-
-  for (const c of existingCourses) {
-    if (c.code) {
-      exactCodeMap.set(c.code.trim(), c);
-      normalizedCodeMap.set(normalizeCode(c.code), c);
+  // A course code may be reused or collide across curricula. Never let the
+  // last catalog record silently overwrite an earlier code or name.
+  const codeMap = new Map<string, Set<string>>();
+  const nameMap = new Map<string, Set<string>>();
+  const byId = new Map(existingCourses.map(course => [course.id, course]));
+  for (const course of existingCourses) {
+    if (course.active === false) continue;
+    const codes = [course.code, ...(course.alternateCodes ?? []), ...(course.courseCodes ?? [])
+      // Cohort/major/track aliases cannot be trusted without the verified
+      // program context. They remain review candidates, not automatic links.
+      .filter(item => item.active !== false &&
+        item.entryYear === undefined && !item.majorId && !item.trackId)
+      .map(item => item.code)];
+    for (const code of codes) {
+      const key = normalizeCode(code);
+      if (!key) continue;
+      const ids = codeMap.get(key) ?? new Set<string>();
+      ids.add(course.id);
+      codeMap.set(key, ids);
     }
-    // Register alternate codes
-    if (c.alternateCodes && Array.isArray(c.alternateCodes)) {
-      for (const alt of c.alternateCodes) {
-        if (alt && alt.trim()) {
-          exactCodeMap.set(alt.trim(), c);
-          normalizedCodeMap.set(normalizeCode(alt), c);
-        }
-      }
-    }
-    // Register structured courseCodes
-    if (c.courseCodes && Array.isArray(c.courseCodes)) {
-      for (const cc of c.courseCodes) {
-        if (cc.code && cc.code.trim()) {
-          exactCodeMap.set(cc.code.trim(), c);
-          normalizedCodeMap.set(normalizeCode(cc.code), c);
-        }
-      }
-    }
-    if (c.name) {
-      normalizedNameMap.set(normalizePersianText(c.name), c);
+    const normalizedName = normalizePersianText(course.name);
+    if (normalizedName) {
+      const ids = nameMap.get(normalizedName) ?? new Set<string>();
+      ids.add(course.id);
+      nameMap.set(normalizedName, ids);
     }
   }
 
+  const normalizedTime = (value: string | null | undefined): string | undefined => {
+    if (!value) return undefined;
+    const ascii = value.trim()
+      .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    const match = /^(\d{1,2}):(\d{2})$/.exec(ascii);
+    if (!match) return undefined;
+    const hours = Number(match[1]), minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return undefined;
+    return String(hours).padStart(2, '0') + ':' + match[2];
+  };
+  const validDays = new Set(['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه']);
+  const canonicalDay = (value: string | null | undefined): string | undefined => {
+    const plain = normalizePersianText(value).replace(/\s+/g, '');
+    return [...validDays].find(day => normalizePersianText(day).replace(/\s+/g, '') === plain);
+  };
+  
   const importRecords: ImportRecord[] = [];
   const preparedOfferings: Omit<CourseOffering, 'id'>[] = [];
 
@@ -337,55 +356,61 @@ export function processImportPayload(
       return;
     }
 
-    // 2. Matching logic priority
-    let matchedCourse: Course | undefined;
-    let matchMethod = '';
-
-    // Priority 1: Exact code match
-    if (raw.courseCode && exactCodeMap.has(raw.courseCode.trim())) {
-      matchedCourse = exactCodeMap.get(raw.courseCode.trim());
-      matchMethod = 'تطبیق دقیق بر اساس کد درس';
-    }
-    // Priority 2: Normalized code match
-    else if (raw.courseCode && normalizedCodeMap.has(normalizeCode(raw.courseCode))) {
-      matchedCourse = normalizedCodeMap.get(normalizeCode(raw.courseCode));
-      matchMethod = 'تطبیق بر اساس کد استانداردسازی‌شده';
-    }
-    // Priority 3: Normalized course name match
-    else if (raw.courseName && normalizedNameMap.has(normalizePersianText(raw.courseName))) {
-      matchedCourse = normalizedNameMap.get(normalizePersianText(raw.courseName));
-      matchMethod = 'تطبیق بر اساس عنوان درس';
-    } else {
-      // Priority 4: Fuzzy partial name match
-      const normInput = normalizePersianText(raw.courseName);
-      matchedCourse = existingCourses.find((c) => {
-        const normExisting = normalizePersianText(c.name);
-        return (
-          normExisting.includes(normInput) ||
-          normInput.includes(normExisting) ||
-          (normInput.length > 5 && normExisting.slice(0, 5) === normInput.slice(0, 5))
-        );
-      });
-      if (matchedCourse) {
-        matchMethod = 'تطبیق تقریبی بر اساس نام درس چارت';
-      }
-    }
-
-    if (!matchedCourse) {
+    // Exact, unambiguous normalized code is the only automatic link.
+    // A unique title without a code is a suggestion for manual review, not a match.
+    const code = normalizeCode(raw.courseCode);
+    const potentialIds = code ? codeMap.get(code) : nameMap.get(normalizePersianText(raw.courseName));
+    const matchingIds = potentialIds ? [...potentialIds] : [];
+    const matchedCourse = matchingIds.length === 1 ? byId.get(matchingIds[0]) : undefined;
+    const markReview = (reason: string, suggestedCourseId?: string) => {
       importRecords.push({
         id: recordId,
         batchId,
         rawData: raw,
-        matchedCourseId: null,
+        matchedCourseId: suggestedCourseId ?? null,
         status: 'NEEDS_REVIEW',
-        reviewReason: `درسی با کد «${raw.courseCode || 'ندارد'}» و نام «${raw.courseName}» در چارت دروس سامانه یافت نشد.`,
+        reviewReason: reason,
       });
       reviewCount++;
+    };
+
+    if (matchingIds.length > 1) {
+      markReview('چند درس با همین کد یا نام وجود دارند؛ انتخاب خودکار ممنوع است.');
+      return;
+    }
+    if (!matchedCourse) {
+      markReview(`برای کد «${raw.courseCode || 'نامشخص'}» تطبیق یکتا وجود ندارد؛ شباهت نام مجوز انتخاب خودکار نیست.`);
+      return;
+    }
+    if (!code) {
+      markReview('کد درس در فایل نیست؛ تطبیق بر اساس عنوان نیازمند تأیید مدیر است.', matchedCourse.id);
+      return;
+    }
+    if (normalizePersianText(raw.courseName) !== normalizePersianText(matchedCourse.name)) {
+      markReview('کد درس پیدا شد اما نام منبع با نام ثبت‌شده یکسان نیست؛ تطبیق را بررسی کنید.', matchedCourse.id);
       return;
     }
 
+    const day = canonicalDay(raw.day);
+    const startTime = normalizedTime(raw.startTime);
+    const endTime = normalizedTime(raw.endTime);
+    const capacity = raw.capacity;
+    const available = raw.availableCapacity;
+    if (!raw.group?.trim() || !raw.instructor?.trim() || !day || !startTime || !endTime ||
+        startTime >= endTime || typeof capacity !== 'number' ||
+        !Number.isSafeInteger(capacity) || capacity < 1) {
+      markReview('گروه، نام استاد، روز، زمان معتبر کلاس یا ظرفیت واقعی در داده منبع موجود نیست.', matchedCourse.id);
+      return;
+    }
+    if (available !== undefined && available !== null &&
+        (!Number.isSafeInteger(available) || available < 0 || available > capacity)) {
+      markReview('ظرفیت باقیمانده با ظرفیت کل سازگار نیست.', matchedCourse.id);
+      return;
+    }
+    const hasAvailable = typeof available === 'number';
+
     // Check duplicate in same batch (same course + group)
-    const groupKey = `${matchedCourse.id}-${raw.group || '01'}`;
+    const groupKey = `${matchedCourse.id}-${raw.group.trim()}`;
     if (seenGroupSet.has(groupKey)) {
       importRecords.push({
         id: recordId,
@@ -406,7 +431,7 @@ export function processImportPayload(
       rawData: raw,
       matchedCourseId: matchedCourse.id,
       status: 'MATCHED',
-      reviewReason: matchMethod,
+      reviewReason: 'کد یکتا، عنوان یکسان و اطلاعات واقعی گروه تأیید اولیه شدند؛ هنوز منتشر نشده است.',
     });
     matchedCount++;
 
@@ -416,16 +441,17 @@ export function processImportPayload(
       courseId: matchedCourse.id,
       rawCourseCode: raw.courseCode || matchedCourse.code,
       rawCourseName: raw.courseName,
-      groupCode: raw.group || '01',
-      instructor: raw.instructor || 'اساتید گروه آموزشی',
-      dayOfWeek: raw.day || 'شنبه',
-      startTime: raw.startTime || '۰۸:۰۰',
-      endTime: raw.endTime || '۱۰:۰۰',
-      location: raw.location || 'دانشکده فنی و مهندسی',
-      capacity: raw.capacity || 35,
-      enrolledCount: raw.capacity ? Math.max(0, (raw.capacity || 35) - (raw.availableCapacity || 0)) : 10,
+      groupCode: raw.group.trim(),
+      instructor: raw.instructor!.trim(),
+      dayOfWeek: day,
+      startTime,
+      endTime,
+      location: raw.location || undefined,
+      capacity,
+      enrolledCount: hasAvailable ? capacity - available! : 0,
+      enrolledCountKnown: hasAvailable,
       examDate: raw.examDate || undefined,
-      notes: raw.status || undefined,
+      notes: hasAvailable ? (raw.status || undefined) : 'ظرفیت باقیمانده در فایل منبع مشخص نشده است؛ تعداد ثبت‌نام‌شدگان نامعلوم است.',
       source: 'extension',
       active: true,
     });
