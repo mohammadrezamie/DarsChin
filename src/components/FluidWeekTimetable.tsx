@@ -123,7 +123,7 @@ export const FluidWeekTimetable: React.FC<{
             {mobileDay} · ساعت ۰۷:۰۰ تا ۲۰:۰۰
           </div>
           <div className="flex">
-            <div className="w-14 shrink-0 border-l border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
+            <div className="w-14 shrink-0 bg-slate-50/60 dark:bg-slate-800/20">
               <div className="relative" style={{height:canvasHeight}}>
                 {Array.from({length:14},(_,i)=>(
                   <span key={i} dir="ltr" className="absolute right-1 -translate-y-1/2 font-mono text-[10px] text-slate-600 dark:text-slate-300"
@@ -167,8 +167,8 @@ export const FluidWeekTimetable: React.FC<{
       {/* Desktop: all seven days on a continuous exact-minute ruler. */}
       <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 md:block"
         aria-label="برنامهٔ پیوستهٔ هفتگی از ساعت ۷ تا ۲۰">
-        <div className="flex min-w-[1120px]">
-          <div className="w-[72px] shrink-0 border-l border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
+        <div className="flex min-w-[1120px] gap-1.5">
+          <div className="w-[72px] shrink-0 bg-slate-50/60 dark:bg-slate-800/20">
             <div className="flex h-12 items-center justify-start border-b border-slate-200 pr-2 text-xs font-bold dark:border-slate-700">ساعت</div>
             <div className="relative" style={{ height: canvasHeight }}>
               {Array.from({ length: 14 }, (_, i) => (
@@ -180,8 +180,8 @@ export const FluidWeekTimetable: React.FC<{
             </div>
           </div>
           {CLASS_DAYS.map(day => (
-            <section key={day} aria-label={day} className="min-w-0 flex-1 border-l border-slate-200 last:border-l-0 dark:border-slate-700">
-              <div className="flex h-12 items-center justify-start border-b border-slate-200 bg-slate-50 pr-2 text-xs font-black dark:border-slate-700 dark:bg-slate-800/60">{day}</div>
+            <section key={day} aria-label={day} className="min-w-0 flex-1 rounded-xl bg-slate-50/35 dark:bg-slate-800/10">
+              <div className="flex h-12 items-center justify-start bg-slate-50/70 pr-2 text-xs font-black dark:bg-slate-800/25">{day}</div>
               <div className="relative" style={{ height: canvasHeight }}>
                 {placed.filter(item => normalizeClassDay(item.day) === day).map(item => (
                   <div key={item.id}
