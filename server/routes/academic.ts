@@ -243,17 +243,24 @@ academicRouter.post('/terms', authenticate, requirePermission('system.settings.m
   res.json({ success: true, data: newTerm });
 });
 
+const knownCourseCategories = new Set([
+  'عمومی','پایه','اصلی','تخصصی','اختیاری','آزمایشگاه','پروژه','کارآموزی','سایر',
+]);
+
 // --- Courses CRUD ---
 academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.courses }));
 
 academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
   const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit = false } = req.body || {};
-  if (typeof code !== 'string' || !code.trim() || typeof name !== 'string' || !name.trim() ||
-      typeof category !== 'string' || !category.trim() ||
+  if (typeof code !== 'string' || !code.trim() || code.length>80 ||
+      typeof name !== 'string' || !name.trim() || name.length>160 ||
+      !knownCourseCategories.has(category) ||
+      units === undefined || units === '' ||
       !Number.isInteger(Number(units)) || Number(units)<0 || Number(units)>20 ||
       !Number.isInteger(Number(practicalUnits)) || Number(practicalUnits)<0 ||
       Number(practicalUnits)>Number(units) ||
-      typeof isExtraUnit !== 'boolean') {
+      typeof isExtraUnit !== 'boolean' ||
+      (description !== undefined && (typeof description !== 'string' || description.length>2000))) {
     return res.status(400).json({ success: false, error: 'کد، نام، واحدهای معتبر، دسته‌بندی و وضعیت واحد مازاد الزامی یا باید معتبر باشند.' });
   }
 
@@ -263,7 +270,7 @@ academicRouter.post('/courses', authenticate, requirePermission('course.create')
   }
 
   const newCourse: Course = {
-    id: `crs-${Date.now()}`,
+    id: `crs-${randomUUID()}`,
     code: code.trim(),
     name: name.trim(),
     units: Number(units),
@@ -279,19 +286,43 @@ academicRouter.post('/courses', authenticate, requirePermission('course.create')
 });
 
 academicRouter.put('/courses/:id', authenticate, requirePermission('course.update'), (req, res) => {
-  const idx = db.courses.findIndex((c) => c.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
-  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body;
-  if (code) db.courses[idx].code = code.trim();
-  if (name) db.courses[idx].name = name.trim();
-  if (units !== undefined) db.courses[idx].units = Number(units);
-  if (practicalUnits !== undefined) db.courses[idx].practicalUnits = Number(practicalUnits);
-  if (category) db.courses[idx].category = category;
-  if (description !== undefined) db.courses[idx].description = description;
-  if (typeof active === 'boolean') db.courses[idx].active = active;
-  if (typeof isExtraUnit === 'boolean') db.courses[idx].isExtraUnit = isExtraUnit;
+  const current = db.courses.find(c => c.id === req.params.id);
+  if (!current) return res.status(404).json({success:false,error:'درس یافت نشد.'});
+  const {code,name,units,practicalUnits,category,description,active,isExtraUnit} = req.body || {};
+
+  if ((code !== undefined && (typeof code !== 'string' || !code.trim() || code.length > 80)) ||
+      (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 160)) ||
+      (units !== undefined && (typeof units !== 'number' || !Number.isInteger(units) || units < 0 || units > 20)) ||
+      (practicalUnits !== undefined && (typeof practicalUnits !== 'number' ||
+        !Number.isInteger(practicalUnits) || practicalUnits < 0 || practicalUnits > 20)) ||
+      (category !== undefined && !knownCourseCategories.has(category)) ||
+      (description !== undefined && description !== null &&
+        (typeof description !== 'string' || description.length > 2000)) ||
+      (active !== undefined && typeof active !== 'boolean') ||
+      (isExtraUnit !== undefined && typeof isExtraUnit !== 'boolean')) {
+    return res.status(400).json({success:false,error:'کد، نام، واحدها، دسته‌بندی یا وضعیت درس معتبر نیست.'});
+  }
+  const nextUnits = units ?? current.units;
+  const nextPractical = practicalUnits ?? current.practicalUnits ?? 0;
+  if (nextPractical > nextUnits) {
+    return res.status(400).json({success:false,error:'واحد عملی نمی‌تواند بیشتر از کل واحدهای درس باشد.'});
+  }
+  const nextCode = (code ?? current.code).trim();
+  if (db.courses.some(c=>c.id!==current.id && c.code.trim().toLowerCase()===nextCode.toLowerCase())) {
+    return res.status(409).json({success:false,error:'این کد درس قبلاً برای درس دیگری ثبت شده است.'});
+  }
+
+  // Validate the entire incoming edit before mutating a persisted academic record.
+  if(code!==undefined)current.code=nextCode;
+  if(name!==undefined)current.name=name.trim();
+  if(units!==undefined)current.units=nextUnits;
+  if(practicalUnits!==undefined)current.practicalUnits=nextPractical;
+  if(category!==undefined)current.category=category;
+  if(description!==undefined)current.description=description?.trim() || undefined;
+  if(active!==undefined)current.active=active;
+  if(isExtraUnit!==undefined)current.isExtraUnit=isExtraUnit;
   db.save();
-  res.json({ success: true, data: db.courses[idx] });
+  return res.json({success:true,data:current});
 });
 
 academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
