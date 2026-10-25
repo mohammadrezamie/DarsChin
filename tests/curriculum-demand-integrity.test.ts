@@ -121,6 +121,52 @@ describe('separation of cohorts, campuses and major tracks',()=>{
     expect(noChart.body.data.curriculum).toBeNull();
     profile.campusId=campusId;
   });
+  it('does not delete an active chart used by students even before any survey is published',async()=>{
+    const result=await request(app).delete(`/api/curriculum/${chartId}`)
+      .set('Authorization',token);
+    expect(result.status).toBe(409);
+    expect(db.curricula.some(c=>c.id===chartId)).toBe(true);
+  });
+  it('rejects malformed status, empty version and inconsistent academic major on update',async()=>{
+    for(const payload of [
+      {status:'COMPLETELY_APPROVED'},
+      {version:'  '},
+      {majorId:'foreign-major'},
+      {entryYearId:'missing-year'},
+    ]){
+      const result=await request(app).put(`/api/curriculum/${chartId}`)
+        .set('Authorization',token).send(payload);
+      expect(result.status).toBe(400);
+    }
+    expect(db.curricula.find(c=>c.id===chartId)?.status).toBe('active');
+    expect(db.curricula.find(c=>c.id===chartId)?.version).toBe('test');
+  });
+  it('deletes only a truly unused draft and its local chart assignments',async()=>{
+    const newYearId='test-standalone-unused-year';
+    const draftId='test-standalone-unused-chart';
+    db.entryYears.push({id:newYearId,year:1398,active:true});
+    db.curricula.push({
+      id:draftId,universityId,campusId,degreeLevelId:degreeId,majorId,
+      entryYearId:newYearId,version:'unused',name:'چارت آزمایشی بدون دانشجو',
+      status:'draft',createdAt:new Date().toISOString(),
+    });
+    db.curriculumCourses.push({
+      id:'test-standalone-course',curriculumId:draftId,courseId,
+      classification:'MAJOR_REQUIRED',suggestedSemester:1,active:true,
+    });
+    try{
+      const result=await request(app).delete(`/api/curriculum/${draftId}`)
+        .set('Authorization',token);
+      expect(result.status).toBe(200);
+      expect(db.curricula.some(c=>c.id===draftId)).toBe(false);
+      expect(db.curriculumCourses.some(cc=>cc.curriculumId===draftId)).toBe(false);
+      expect(db.courses.some(c=>c.id===courseId)).toBe(true);
+    }finally{
+      db.data.curricula=db.curricula.filter(c=>c.id!==draftId);
+      db.data.curriculumCourses=db.curriculumCourses.filter(cc=>cc.curriculumId!==draftId);
+      db.data.entryYears=db.entryYears.filter(y=>y.id!==newYearId);
+    }
+  });
   it('rejects deletion or moving a curriculum with demand history to another cohort',async()=>{
     const survey:DemandSurvey={
       id:surveyId,title:'نیازسنجی حفظ تاریخچه',description:'',
@@ -148,5 +194,27 @@ describe('separation of cohorts, campuses and major tracks',()=>{
       .set('Authorization',token);
     expect(deleteTrack.status).toBe(409);
     expect(db.tracks.some(t=>t.id===trackId)).toBe(true);
+  });
+  it('recognizes multi-cohort survey links even when the old singular field points elsewhere',async()=>{
+    const survey=db.demandSurveys.find(s=>s.id===surveyId)!;
+    const savedSingular=survey.curriculumId;
+    const savedMultiple=survey.curriculumIds;
+    survey.curriculumId='unrelated-legacy-chart';
+    survey.curriculumIds=[chartId];
+    try{
+      const del=await request(app).delete(`/api/curriculum/${chartId}`)
+        .set('Authorization',token);
+      expect(del.status).toBe(409);
+      const edit=await request(app).put(`/api/curriculum/${chartId}`)
+        .set('Authorization',token).send({version:'v2'});
+      expect(edit.status).toBe(409);
+      const archive=await request(app).put(`/api/curriculum/${chartId}`)
+        .set('Authorization',token).send({status:'archived'});
+      expect(archive.status).toBe(409);
+      expect(db.curricula.find(c=>c.id===chartId)?.version).toBe('test');
+    }finally{
+      survey.curriculumId=savedSingular;
+      survey.curriculumIds=savedMultiple;
+    }
   });
 });
