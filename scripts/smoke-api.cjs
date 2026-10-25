@@ -111,6 +111,34 @@ async function main() {
   const token = login.body?.data?.token;
   if (login.status !== 200 || typeof token !== 'string') throw new Error('Synthetic root login failed');
 
+  // Production services must never permit the old "reset to sample data"
+  // endpoint: that would overwrite real students and reintroduce known logins.
+  const resetDenied = await requestJson('/api/admin/reset-seed', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (resetDenied.status !== 403) {
+    throw new Error('DANGEROUS: sample-database reset was not disabled in production');
+  }
+
+  const demandUnauth = await requestJson('/api/demand/surveys');
+  if (demandUnauth.status !== 401) throw new Error('Demand data must require authentication');
+  const demandManager = await requestJson('/api/demand/surveys', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (demandManager.status !== 200 || !Array.isArray(demandManager.body?.data)) {
+    throw new Error('Authenticated demand survey endpoint was not available');
+  }
+
+  for (const previewPath of ['/demo/student', '/demo/admin']) {
+    const response = await fetch(`${baseUrl}${previewPath}`, { signal: AbortSignal.timeout(2500) });
+    const page = await response.text();
+    if (!response.ok || !response.headers.get('content-type')?.includes('text/html') ||
+        !page.includes('id="root"')) {
+      throw new Error(`Browser demo shell did not load: ${previewPath}`);
+    }
+  }
+
   const sync = await requestJson('/api/sync/jobs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -134,7 +162,7 @@ async function main() {
     throw new Error('Sync job state did not survive a process restart');
   }
 
-  console.log('PASS: Express health, JSON API 404, synthetic login and sync persistence across restart.');
+  console.log('PASS: health, JSON 404, synthetic login, private demand API, disabled production reset, demo pages, and sync persistence.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
