@@ -20,7 +20,7 @@ export const addPassedCourseSchema = z.object({
   grade: z.union([
     z.number().finite().min(0).max(20),
     z.string().trim().refine(value=>
-      value==='' || (/^\\d{1,2}(?:\\.\\d{1,2})?$/.test(value) &&
+      value==='' || (/^\d{1,2}(?:\.\d{1,2})?$/.test(value) &&
         Number(value)>=0 && Number(value)<=20),
       'نمره باید عددی بین صفر تا بیست باشد.'),
   ]).optional(),
