@@ -32,6 +32,8 @@ export const updatePlanSchema = z.object({
     z.record(z.string(), z.number().int().nonnegative()),
   ]).optional(),
   offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
+  /** Only for atomic, verified, same-course group rearrangements. */
+  qualitySuggestion: z.boolean().optional(),
 });
 
 export const planSelectSchema = z.object({
