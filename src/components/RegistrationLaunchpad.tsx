@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDownUp, Check, CheckCheck, ClipboardCopy, GraduationCap, LockKeyhole, RefreshCw, Zap } from 'lucide-react';
-import type {
-  AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse,
-} from '../types';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap } from 'lucide-react';
+import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
 
@@ -11,7 +9,6 @@ interface ChartRules {
   prerequisites: AcademicRule[];
   corequisites: AcademicRule[];
 }
-interface PassedResponse { passedCourses: StudentPassedCourse[] }
 interface Props {
   evaluations: CourseEligibilityResult[];
   selectedOfferingIds: string[];
@@ -19,215 +16,156 @@ interface Props {
   profile: StudentAcademicProfile | null;
   curriculumId: string | null;
   onEditPriorities: () => void;
+  onReorderCourses: (orderedCourseIds: string[]) => void | Promise<void>;
 }
 
 async function copyToClipboard(value: string): Promise<boolean> {
+  try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(value); return true; } }
+  catch { /* Unsupported or denied in embedded/HTTP demos. */ }
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch { /* HTTPS permission denied; try legacy copy. */ }
-  // On local http://IP VPS deployments clipboard APIs may be unavailable.
-  try {
-    const field = document.createElement('textarea');
-    field.value = value;
-    field.style.position = 'fixed';
-    field.style.opacity = '0';
-    field.dir = 'ltr';
-    document.body.appendChild(field);
-    field.select();
-    const copied = document.execCommand('copy');
-    field.remove();
-    return copied;
+    const input=document.createElement('textarea');
+    input.value=value; input.dir='ltr'; input.style.position='fixed'; input.style.opacity='0';
+    document.body.appendChild(input); input.select();
+    const ok=document.execCommand('copy');input.remove();return ok;
   } catch { return false; }
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
-  evaluations, selectedOfferingIds, coursePriorities, profile, curriculumId, onEditPriorities,
+  evaluations,selectedOfferingIds,coursePriorities,profile,curriculumId,onEditPriorities,onReorderCourses,
 }) => {
-  const [rules, setRules] = useState<AcademicRule[]>([]);
-  const [passed, setPassed] = useState<StudentPassedCourse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dataError, setDataError] = useState('');
-  const [copyState, setCopyState] = useState('');
-  // Session-only, per student/term/chart: switching between planning and quick
-  // registration must not silently erase the student's manual progress.
-  const progressKey = `darschin-reg-progress-${profile?.userId || 'unknown'}-${profile?.currentTermId || 'term'}-${curriculumId || 'missing-chart'}`;
-  const [doneIds, setDoneIds] = useState<string[]>(() => {
-    try {
-      const saved = JSON.parse(window.sessionStorage.getItem(progressKey) || '[]');
-      return Array.isArray(saved) ? saved.filter((id: unknown): id is string => typeof id === 'string') : [];
-    } catch { return []; }
-  });
-  const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    try { window.sessionStorage.setItem(progressKey, JSON.stringify(doneIds)); }
-    catch { /* In private browsing, progress remains available in React state only. */ }
-  }, [doneIds, progressKey]);
+  const [rules,setRules]=useState<AcademicRule[]>([]);
+  const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [copyState,setCopyState]=useState('');
+  const [revision,setRevision]=useState(0);
+  const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
+  const [doneIds,setDoneIds]=useState<string[]>([]);
 
-  useEffect(() => {
-    let alive = true;
-    if (!curriculumId) { setLoading(false); setDataError('برای محاسبهٔ وابستگی‌ها ابتدا چارت دقیق ورودی خودت را در پرونده تحصیلی مشخص کن.'); setRules([]); return; }
-    setLoading(true); setDataError(''); setRules([]); setPassed([]);
+  useEffect(()=>{
+    try {
+      const parsed=JSON.parse(window.sessionStorage.getItem(progressKey)||'[]');
+      setDoneIds(Array.isArray(parsed)?parsed.filter((id:unknown):id is string=>typeof id==='string'):[]);
+    }catch{setDoneIds([]);}
+  },[progressKey]);
+  useEffect(()=>{try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}},[doneIds,progressKey]);
+
+  useEffect(()=>{
+    let alive=true;
+    if(!curriculumId){setLoading(false);setError('چارت ورودی مشخص نیست؛ اولویت‌ها صرفاً دستی هستند.');setRules([]);return;}
+    setLoading(true);setError('');setRules([]);setPassed([]);
     void Promise.all([
       apiRequest<ChartRules>(`/api/curriculum/${encodeURIComponent(curriculumId)}/full`),
-      apiRequest<PassedResponse>('/api/student/passed-courses'),
-    ]).then(([chart, history]) => {
-      if (!alive) return;
-      if (!chart.success || !history.success || !chart.data || !history.data ||
-          chart.data.curriculum?.id !== curriculumId) {
-        setDataError('قوانین چارت یا سوابق قبولی به‌طور کامل دریافت نشد؛ ترتیب خودکار معتبر نیست. دوباره تلاش کن.');
-        return;
+      apiRequest<{passedCourses:StudentPassedCourse[]}>('/api/student/passed-courses'),
+    ]).then(([chart,history])=>{
+      if(!alive)return;
+      if(!chart.success||!history.success||!chart.data||!history.data||chart.data.curriculum?.id!==curriculumId){
+        setError('دریافت قوانین و سوابق کامل نبود؛ اولویت‌های دستی نمایش داده می‌شوند.');return;
       }
-      setRules([...(chart.data.prerequisites || []), ...(chart.data.corequisites || [])]);
-      setPassed(history.data.passedCourses || []);
-    }).catch(() => { if (alive) setDataError('ارتباط برای دریافت قوانین قطع شد؛ ترتیب وابستگی‌ها تأیید نشده است.'); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [curriculumId, revision]);
+      setRules([...(chart.data.prerequisites||[]),...(chart.data.corequisites||[])]);
+      setPassed(history.data.passedCourses||[]);
+    }).catch(()=>{if(alive)setError('ارتباط برای دریافت سوابق یا قوانین برقرار نشد.');})
+      .finally(()=>{if(alive)setLoading(false);});
+    return ()=>{alive=false};
+  },[curriculumId,revision]);
 
-  const queue = useMemo(() => buildRegistrationQueue({
-    evaluations, selectedOfferingIds, preferredCourseIds: coursePriorities,
-    rules, passedCourses: passed,
-    profile: { majorId: profile?.majorId || '', entryYearId: profile?.entryYearId || '',
-      selectedTrackId: profile?.selectedTrackId || null },
-  }), [evaluations, selectedOfferingIds, coursePriorities, rules, passed, profile?.majorId, profile?.entryYearId, profile?.selectedTrackId]);
+  const queue=useMemo(()=>buildRegistrationQueue({
+    evaluations,selectedOfferingIds,preferredCourseIds:coursePriorities,rules,passedCourses:passed,
+    profile:{majorId:profile?.majorId||'',entryYearId:profile?.entryYearId||'',
+      selectedTrackId:profile?.selectedTrackId||null},
+  }),[evaluations,selectedOfferingIds,coursePriorities,rules,passed,profile?.majorId,profile?.entryYearId,profile?.selectedTrackId]);
 
-  const todo = queue.steps.filter(step => !doneIds.includes(step.courseId));
-  const nextReady = todo.find(step => step.ready && step.copyCode &&
-    step.dependencyCourseIds.every(id => doneIds.includes(id)));
-  const copied = useCallback(async (value: string | null, label: string) => {
-    if (!value) { setCopyState('کد قابل اطمینان موجود نیست.'); return; }
-    const ok = await copyToClipboard(value);
-    setCopyState(ok ? `کد ${label} کپی شد: ${value}` : 'کپی خودکار انجام نشد. کد را انتخاب و دستی کپی کن.');
-  }, []);
+  const stepIds=queue.steps.map(s=>s.courseId);
+  const next=queue.steps.find(s=>!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id)));
+  const copy=useCallback(async(value:string|null,courseName:string)=>{
+    if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
+    const ok=await copyToClipboard(value);
+    setCopyState(ok?`کد «${courseName}» کپی شد.`:'کپی خودکار ممکن نیست؛ کد را انتخاب و دستی کپی کن.');
+  },[]);
+  const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const move=(index:number,direction:-1|1)=>{
+    const target=index+direction;
+    if(target<0||target>=stepIds.length)return;
+    const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
+    // Persist the actual student's requested order. The dependency engine will
+    // still enforce confirmed corequisite-before-target relations at render.
+    void onReorderCourses(order);
+    setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.');
+  };
 
-  const confirmed = (courseId: string) => setDoneIds(old =>
-    old.includes(courseId) ? old.filter(id => id !== courseId) : [...old, courseId]);
-
-  return (
-    <section dir="rtl" className="darschin-page space-y-4" aria-label="آماده‌باش انتخاب واحد در آموزشیار">
-      <div className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-l from-blue-900 to-slate-950 p-4 text-white shadow-lg sm:p-6 dark:border-blue-800">
-        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-blue-100">
-          <Zap className="h-4 w-4" /> حالت سریع زمان انتخاب واحد
-        </span>
-        <h2 className="mt-3 text-xl font-black leading-relaxed sm:text-2xl">صف آمادهٔ ثبت درس در آموزشیار</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-8 text-blue-100">
-          درس‌ها بر اساس اولویت تو چیده می‌شوند؛ همنیازهای لازم در صورت امکان جلوتر می‌آیند.
-          کد درس یا گروه را لمس کن، در آموزشیار پیست کن و پس از ثبت موفق، مورد را دستی علامت بزن.
+  return <section dir="rtl" aria-label="صف سریع ثبت دروس" className="darschin-page space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 dark:border-blue-900 dark:bg-blue-950/40">
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 text-base font-bold text-blue-950 dark:text-blue-100">
+          <Zap className="h-4 w-4"/> صف سریع ثبت دروس
+        </h2>
+        <p className="mt-0.5 text-xs leading-6 text-blue-800 dark:text-blue-300">
+          {queue.steps.length} درس · {doneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">{queue.steps.length} درس در صف</span>
-          <span className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">{doneIds.filter(id => queue.steps.some(s=>s.courseId===id)).length} مورد علامت‌خورده</span>
-          <button type="button" onClick={onEditPriorities}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-3 text-xs font-bold hover:bg-white/10">
-            <ArrowDownUp className="h-4 w-4" /> ویرایش اولویت‌ها
-          </button>
-        </div>
       </div>
-
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-7 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-        <div className="flex items-start gap-2 font-black"><LockKeyhole className="mt-1 h-4 w-4 shrink-0" />
-          <span>این صفحه به آموزشیار وصل نیست و ثبت‌نام انجام نمی‌دهد.</span>
-        </div>
-        <p className="mt-1">علامت «ثبت شد» فقط چک‌لیست شخصی این تب مرورگر است و تا بستن تب نگه داشته می‌شود؛ ظرفیت‌ها و تأیید نهایی را در خود آموزشیار کنترل کن.
-          ترتیب همنیازها بر اساس قوانینِ واردشده در چارت است، نه تضمین رسمی پذیرش توسط آموزشیار.</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
+          disabled={!next?.copyCode} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+          <ClipboardCopy className="h-4 w-4"/> کپی بعدی
+        </button>
+        <button type="button" onClick={onEditPriorities} className="min-h-10 rounded-lg border border-blue-300 px-3 text-xs font-bold text-blue-900 dark:text-blue-100">برنامه</button>
       </div>
-
-      {loading && <p role="status" className="flex items-center gap-2 rounded-2xl bg-white p-4 text-sm dark:bg-slate-900">
-        <RefreshCw className="h-4 w-4 animate-spin" /> در حال دریافت چارت و دروس پاس‌شده…</p>}
-      {!loading && (dataError || rules.length === 0) && (
-        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100">
-          <AlertTriangle className="ml-2 inline h-4 w-4" />
-          {dataError || 'برای این چارت قانون پیش‌نیاز/همنیاز ثبت نشده است؛ ترتیب نمایش فقط مطابق اولویت دستی است و از نظر قوانین دانشگاه تأیید نشده.'}
-          <button type="button" onClick={()=>setRevision(x=>x+1)}
-            className="mr-3 min-h-10 rounded-xl border border-rose-300 px-3 font-bold dark:border-rose-800">دریافت دوباره</button>
-        </div>
-      )}
-      {!loading && !dataError && rules.length > 0 && queue.hasUnresolvedRules && (
-        <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-7 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-          تعدادی وابستگی ناقص یا مبهم‌اند؛ هشدار هر درس را بخوان. برای این موارد ترتیب بی‌خطر را نمی‌توان قطعی دانست.
-        </p>
-      )}
-      {queue.steps.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-          <button type="button"
-            disabled={loading || Boolean(dataError) || rules.length===0 || !nextReady}
-            onClick={()=>void copied(nextReady?.copyCode || null,'درس بعدی')}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-black text-white disabled:opacity-50 sm:flex-none">
-            <ClipboardCopy className="h-4 w-4" /> کپی کد درس بعدی
-          </button>
-          <button type="button" onClick={()=>setDoneIds([])}
-            className="min-h-11 rounded-xl border border-slate-300 px-4 text-xs font-bold dark:border-slate-700">پاک‌کردن تیک‌ها</button>
-          <span className="text-xs text-slate-500 dark:text-slate-300">برای سرعت بیشتر این صفحه را کنار آموزشیار باز نگه دار.</span>
-        </div>
-      )}
-      {copyState && <p role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-bold text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">{copyState}</p>}
-
-      {queue.steps.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 p-7 text-right text-sm leading-7 dark:border-slate-700">
-        هنوز درس انتخاب‌شده‌ای در برنامه نیست. ابتدا از «دروس ارائه‌شده» درس و گروه مدنظرت را اضافه کن.
-      </div>}
-
-      <ol className="space-y-3">
-        {queue.steps.map(step=>{
-          const done=doneIds.includes(step.courseId);
-          const alternatives=evaluations.filter(e=>e.courseId===step.courseId && e.offeringId!==step.offeringId);
-          const pendingDependencies=step.dependencyCourseIds.filter(id => !doneIds.includes(id));
-          const locked=pendingDependencies.length>0;
-          return <li key={step.courseId} className={`darschin-surface min-w-0 p-4 sm:p-5 ${done?'opacity-65':''}`}>
-            <div className="flex flex-wrap items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 font-black text-white">{step.effectiveRank}</span>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-black leading-8 text-slate-950 dark:text-white">{step.courseName}</h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                  گروه انتخابی {step.groupCode || 'نامشخص'} · اولویت دلخواه {step.requestedRank}
-                </p>
-                {step.advancedForCorequisite && <p className="mt-2 inline-flex items-start gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                  <ArrowDownUp className="h-4 w-4 shrink-0" /> جایگاه ثبت به‌خاطر وابستگی همنیاز تنظیم شد.
-                </p>}
+    </div>
+    <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+      <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
+      این فهرست ثبت خودکار در آموزشیار نیست؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
+    </p>
+    {loading&&<p role="status" className="text-xs text-slate-500"><RefreshCw className="ml-1 inline h-4 w-4 animate-spin"/>در حال تطبیق قوانین…</p>}
+    {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      <AlertTriangle className="ml-1 inline h-4 w-4"/>{error||'قانون معتبری برای ترتیب خودکار این چارت ثبت نشده؛ ترتیب فعلاً دستی است.'}
+      <button type="button" onClick={()=>setRevision(x=>x+1)} className="mr-2 underline">بررسی مجدد</button>
+    </p>}
+    {copyState&&<p role="status" aria-live="polite" className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-200">{copyState}</p>}
+    {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
+    <ol className="space-y-1.5" aria-label="ترتیب ثبت دروس">
+      {queue.steps.map((step,index)=>{
+        const done=doneIds.includes(step.courseId);
+        const offering=evaluations.find(o=>o.offeringId===step.offeringId);
+        const locked=step.dependencyCourseIds.some(id=>!doneIds.includes(id));
+        const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
+        return <li key={step.courseId} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border px-2 py-2 sm:flex-nowrap ${done
+          ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
+          : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+          <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
+          <div className="min-w-[9rem] flex-1 text-right">
+            <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
+            <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
+              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <button type="button" disabled={index===0} onClick={()=>move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
+            <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
+            <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
+              aria-label={`کپی کد ${step.courseName}`}
+              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2.5 text-xs font-bold text-white disabled:opacity-45">
+              <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
+            </button>
+            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
+              aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
+              {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
+            </button>
+          </div>
+          {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-'))&&
+            <details className="w-full text-xs text-amber-800 dark:text-amber-300">
+              <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>
+              <div className="space-y-1 px-8 pb-2 leading-6">
+                <p>کد: <code dir="ltr">{step.copyCode||'نامشخص'}</code> · گروه: <code dir="ltr">{step.groupCode||'نامشخص'}</code></p>
+                {step.copyCode?.startsWith('DEMO-')&&<p>کد آزمایشی است، برای ثبت واقعی استفاده نکن.</p>}
+                {step.dependencyNames.length>0&&<p>ابتدا همنیاز: {step.dependencyNames.join('، ')}</p>}
+                {step.warnings.map((text,i)=><p key={i}>{text}</p>)}
               </div>
-              <button type="button" onClick={()=>confirmed(step.courseId)} aria-pressed={done} disabled={locked && !done}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-black ${done
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-                  : 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
-                {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}{done?'علامت‌خورده':locked?'در انتظار همنیاز':'ثبت شد (دستی)'}
-              </button>
-            </div>
-            {step.dependencyNames.length>0 && <p className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-xs leading-6 text-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
-              <GraduationCap className="mt-1 h-4 w-4 shrink-0" /> اول این همنیازها را در آموزشیار ثبت کن و اینجا علامت بزن: {step.dependencyNames.join('، ')}
-            </p>}
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <span className="block text-xs font-bold text-slate-600 dark:text-slate-300">کد درس برای جست‌وجوی آموزشیار</span>
-                <code dir="ltr" className="my-2 block break-all text-left text-lg font-black text-slate-950 dark:text-white">{step.copyCode || 'نامشخص'}</code>
-                <button type="button" disabled={!step.copyCode || locked} onClick={()=>void copied(step.copyCode,'درس')}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-sm font-black text-white disabled:opacity-50">
-                  <ClipboardCopy className="h-4 w-4" /> کپی کد درس
-                </button>
-                {step.copyCode?.startsWith('DEMO-') && <p className="mt-2 rounded-lg bg-rose-50 p-2 text-xs font-black leading-6 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">کد کاملاً ساختگی است؛ در آموزشیار واقعی استفاده نکن.</p>}
-                <p className="mt-2 text-xs leading-6 text-amber-700 dark:text-amber-300">{step.codeFromOffering
-                  ? 'کد از اطلاعات ارائه دریافت شده، ولی پذیرش آن در آموزشیار تضمین نشده است.'
-                  : 'کد فقط از کاتالوگ درس آمده؛ با کد جست‌وجوی آموزشیار تطبیق بده.'}</p>
-              </div>
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <span className="block text-xs font-bold text-slate-600 dark:text-slate-300">گروه موردنظر</span>
-                <code dir="ltr" className="my-2 block text-left text-lg font-black text-slate-950 dark:text-white">{step.groupCode||'نامشخص'}</code>
-                <button type="button" disabled={!step.groupCode || locked} onClick={()=>void copied(step.groupCode,'گروه')}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-blue-300 px-3 text-sm font-black text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:text-blue-200">
-                  <ClipboardCopy className="h-4 w-4" /> کپی شماره گروه
-                </button>
-                {alternatives.length>0 && <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">
-                  جایگزین‌ها: {alternatives.map(x=>x.groupCode).filter(Boolean).join('، ')} (قبل از انتخاب تطبیق بده)
-                </p>}
-              </div>
-            </div>
-            {step.warnings.length>0 && <ul className="mt-3 space-y-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-              {step.warnings.map((message,i)=><li key={i} className="flex gap-2"><AlertTriangle className="mt-1 h-4 w-4 shrink-0"/>{message}</li>)}
-            </ul>}
-          </li>;
-        })}
-      </ol>
-    </section>
-  );
+            </details>}
+        </li>
+      })}
+    </ol>
+  </section>;
 };
