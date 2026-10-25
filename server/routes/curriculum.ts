@@ -65,11 +65,28 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
     version,
     name,
     notes,
-    status = 'active',
-  } = req.body;
+    status = 'draft',
+  } = req.body ?? {};
 
-  if (!universityId || !campusId || !degreeLevelId || !majorId || !entryYearId || !name) {
+  if (![universityId, campusId, degreeLevelId, majorId, entryYearId, name]
+      .every(value => typeof value === 'string' && value.trim())) {
     return res.status(400).json({ success: false, error: 'لطفاً تمام اطلاعات اصلی چارت را وارد کنید.' });
+  }
+  if (status !== 'draft') {
+    return res.status(400).json({ success: false, error: 'چارت جدید فقط به صورت پیش‌نویس قابل ثبت است؛ انتشار نیازمند گردش تأیید رسمی است.' });
+  }
+  const validUniversity = db.universities.some(u => u.id === universityId);
+  const validCampus = db.campuses.some(c => c.id === campusId && c.universityId === universityId);
+  const validDegree = db.degreeLevels.some(d => d.id === degreeLevelId);
+  const validMajor = db.majors.some(m => m.id === majorId && m.degreeLevelId === degreeLevelId);
+  const validEntryYear = db.entryYears.some(y => y.id === entryYearId);
+  if (!validUniversity || !validCampus || !validDegree || !validMajor || !validEntryYear) {
+    return res.status(400).json({ success: false, error: 'ترکیب دانشگاه، واحد، رشته، مقطع یا سال ورود معتبر نیست.' });
+  }
+  const targetVersion = typeof version === 'string' && version.trim() ? version.trim() : 'draft-1';
+  if (db.curricula.some(c => c.campusId === campusId && c.degreeLevelId === degreeLevelId &&
+      c.majorId === majorId && c.entryYearId === entryYearId && c.version === targetVersion)) {
+    return res.status(409).json({ success: false, error: 'این نسخه چارت برای همین واحد، رشته، مقطع و ورودی قبلاً ثبت شده است.' });
   }
 
   const newCurriculum: Curriculum = {
@@ -79,7 +96,7 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
     degreeLevelId,
     majorId,
     entryYearId,
-    version: version || '1.0',
+    version: targetVersion,
     name: name.trim(),
     notes: notes?.trim() || undefined,
     status,
@@ -99,6 +116,9 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
   const { name, version, status, majorId, entryYearId } = req.body;
   if (name) db.curricula[idx].name = name.trim();
   if (version) db.curricula[idx].version = version.trim();
+  if (status && status !== 'draft' && status !== 'archived') {
+    return res.status(400).json({ success: false, error: 'انتشار چارت به عنوان مصوب تا تکمیل گردش تأیید منبع رسمی غیرفعال است.' });
+  }
   if (status) db.curricula[idx].status = status;
   if (majorId) db.curricula[idx].majorId = majorId;
   if (entryYearId) db.curricula[idx].entryYearId = entryYearId;
