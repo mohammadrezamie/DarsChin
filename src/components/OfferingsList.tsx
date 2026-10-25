@@ -165,8 +165,8 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   return (
     <div className="space-y-4">
       {/* Search & Filter Controls */}
-      <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-4">
+        <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
           {/* Search Box */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -176,17 +176,17 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="جستجو بر اساس عنوان درس، کد درس، یا نام استاد..."
-              className="w-full pr-9 pl-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="darschin-field w-full min-h-11 pr-9 pl-3 py-2 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
             />
           </div>
 
           {/* Educationalyar Copy & Category Dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <select
               id="selectOfferingsCategoryFilter"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white font-medium"
+              className="min-h-11 min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white font-medium"
             >
               <option value="ALL">همه دسته‌بندی‌ها</option>
               <option value="پایه">دروس پایه</option>
@@ -205,7 +205,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
       alert('کد دروس کپی شد.');
     });
   }}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0"
+                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>کپی برای آموزشیار ({selectedOfferingIds.length})</span>
@@ -221,7 +221,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
           </span>
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+            className={`min-h-9 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               statusFilter === 'ALL'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -231,7 +231,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
           </button>
           <button
             onClick={() => setStatusFilter('AVAILABLE')}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+            className={`min-h-9 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               statusFilter === 'AVAILABLE'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
@@ -241,7 +241,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
           </button>
           <button
             onClick={() => setStatusFilter('BLOCKED')}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+            className={`min-h-9 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               statusFilter === 'BLOCKED'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100'
@@ -251,7 +251,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
           </button>
           <button
             onClick={() => setStatusFilter('ALREADY_PASSED')}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+            className={`min-h-9 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               statusFilter === 'ALREADY_PASSED'
                 ? 'bg-slate-700 text-white shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
