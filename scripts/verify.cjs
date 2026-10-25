@@ -26,7 +26,18 @@ const steps = [
 ];
 
 try {
+  // Dependency-free tests for the shared-VPS readiness gate, before any Bun
+  // installation or mutable application fixtures. Never touches systemd.
+  const readiness=spawnSync(process.execPath,
+    ['--test','scripts/check-vps-readiness.test.cjs'],{
+      cwd:root,env:environment,stdio:'inherit',shell:false,
+    });
+  if(readiness.error || readiness.status!==0){
+    console.error('P0 readiness gate unit tests failed');
+    process.exitCode=readiness.status || 1;
+  }
   for (const [title, args] of steps) {
+    if(process.exitCode)break;
     console.log(`\n=== ${title} ===`);
     const outcome = spawnSync('bun', args, {
       cwd: root,
