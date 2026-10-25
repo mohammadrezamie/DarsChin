@@ -338,7 +338,10 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   if (path === '/api/demand/surveys' && method === 'GET') {
     const studentView = typeof window !== 'undefined' && window.location.pathname === '/demo/student';
     return good(studentView ? s.demandSurveys.filter(survey =>
-      survey.status === 'OPEN' && surveyAppliesToProfile(survey, s.profile)) : s.demandSurveys) as ApiResponse<T>;
+      surveyAppliesToProfile(survey, s.profile) && (
+        survey.status === 'OPEN' ||
+        s.demandResponses.some(response => response.userId === 'demo-student' && response.surveyId === survey.id)
+      )) : s.demandSurveys) as ApiResponse<T>;
   }
   if (path === '/api/demand/surveys' && method === 'POST') {
     const chart=s.collections['/api/curriculum'].find(row=>row.id===data.curriculumId);
