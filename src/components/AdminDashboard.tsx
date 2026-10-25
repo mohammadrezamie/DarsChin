@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Core Admin & Educational Management Dashboard
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -29,6 +29,10 @@ import {
   Workflow,
   CheckCircle2,
   SlidersHorizontal,
+  Menu,
+  X,
+  ChevronLeft,
+  PanelRightClose,
 } from 'lucide-react';
 import { AdminCrudTable, Column } from './AdminCrudTable';
 import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
@@ -85,6 +89,20 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
   const isSuperAdmin = user?.roles?.includes('super-admin');
   const isAdmin = user?.roles?.includes('admin') || isSuperAdmin;
@@ -168,72 +186,134 @@ export const AdminDashboard: React.FC = () => {
     },
   ];
 
+  const activeNavigation = navGroups.flatMap(group => group.items).find(item => item.id === activeTab);
+  const selectTab = (id: AdminTab) => {
+    setActiveTab(id);
+    setMobileMenuOpen(false);
+  };
+
+  const navigation = (
+    <nav aria-label="بخش‌های پنل مدیریت" className="space-y-6">
+      {navGroups.map(group => (
+        <div key={group.title}>
+          <h3 className="mb-2 px-3 text-[11px] font-extrabold tracking-wide text-slate-500 dark:text-slate-400">{group.title}</h3>
+          <div className="space-y-1">
+            {group.items.map(item => {
+              const ItemIcon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectTab(item.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
+                    ? 'bg-blue-700 text-white shadow-sm shadow-blue-900/20'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`}
+                >
+                  <ItemIcon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {active && <ChevronLeft aria-hidden="true" className="h-4 w-4" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-liquid-glass rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-            <Shield className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                پنل مدیریت و راهبری جامع درس‌چین
-              </h2>
-              {isSuperAdmin && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                  مدیر ارشد (Super Admin)
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مدیریت یکپارچه ساختار آکادمیک، قوانین پیش‌نیازی و هم‌نیازی، ارائه‌های ترمی و کاربران
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={fetchStats}
-          disabled={loadingStats}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all self-end sm:self-center"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingStats ? 'animate-spin' : ''}`} />
-          <span>بروزرسانی آمار</span>
-        </button>
-      </div>
-
-      {/* Navigation Grouped Bar */}
-      <div className="bg-liquid-glass rounded-2xl p-2 shadow-xs space-y-2 sticky top-[72px] z-30">
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
-          {navGroups.map((grp) => (
-            <div key={grp.title} className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl">
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-1.5 hidden xl:inline">
-                {grp.title}:
+    <div className="darschin-admin space-y-5">
+      <header className="relative overflow-hidden rounded-[26px] bg-[#101c33] px-5 py-6 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-blue-200">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+                <Shield aria-hidden="true" className="h-4 w-4" />
               </span>
-              {grp.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+              DARSCHIN / CONTROL CENTER
             </div>
-          ))}
+            <h1 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
+            <p className="mt-2 max-w-xl text-sm leading-7 text-slate-300">
+              داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.
+            </p>
+            <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-blue-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
+              {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : 'پنل مدیریتی'}
+              {isSuperAdmin ? ' · مدیر ارشد' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              ref={menuTriggerRef}
+              type="button"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:hidden"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="admin-mobile-navigation"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              بخش‌های مدیریت
+            </button>
+            <button
+              type="button"
+              onClick={fetchStats}
+              disabled={loadingStats}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:opacity-50"
+            >
+              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
+              <span>به‌روزرسانی</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
+      <div className="grid items-start gap-5 lg:grid-cols-[252px_minmax(0,1fr)]">
+        <aside className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
+          <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
+            بخش‌های مدیریت
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">انتخاب سریع بخش مورد نظر</p>
+          </div>
+          {navigation}
+        </aside>
+
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-[90] bg-slate-950/65 lg:hidden" onClick={() => setMobileMenuOpen(false)} role="presentation">
+            <div
+              id="admin-mobile-navigation"
+              role="dialog"
+              aria-modal="true"
+              aria-label="فهرست بخش‌های مدیریت"
+              onClick={event => event.stopPropagation()}
+              className="absolute inset-y-0 right-0 flex w-[min(88vw,350px)] flex-col bg-white shadow-2xl dark:bg-slate-900"
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+                <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-blue-600" aria-hidden="true" /> بخش‌های مدیریت</span>
+                <button
+                  type="button"
+                  aria-label="بستن فهرست مدیریت"
+                  onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800"
+                ><X aria-hidden="true" className="h-5 w-5" /></button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">{navigation}</div>
+              <div className="border-t border-slate-200 p-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                {isBrowserDemo ? 'تغییرات فقط در همین مرورگر ذخیره می‌شوند.' : 'تغییرات داده‌ها ممکن است روی کاربران اثر بگذارند.'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section aria-label="محتوای مدیریت" className="min-w-0 space-y-4">
+          <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">{activeNavigation?.label}</h2>
+            </div>
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
+          </div>
       {/* Main Tab Content Area */}
       <div className="pt-1">
         {/* 1. OVERVIEW TAB */}
@@ -621,6 +701,8 @@ export const AdminDashboard: React.FC = () => {
 
         {/* 17. LOGS */}
         {activeTab === 'logs' && isSuperAdmin && <AdminLogs />}
+          </div>
+        </section>
       </div>
     </div>
   );

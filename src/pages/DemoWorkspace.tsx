@@ -5,6 +5,7 @@ import { DemoAuthProvider } from '../context/AuthContext';
 import { resetBrowserDemo } from '../demo/mock-api';
 import { StudentDashboard } from '../components/StudentDashboard';
 import { DemoFeedback } from '../components/DemoFeedback';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { AdminDashboard } from '../components/AdminDashboard';
 
 export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
@@ -12,8 +13,8 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
   return (
     <DemoAuthProvider role={role}>
       <div dir="rtl" className="min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <div className="sticky top-0 z-50 border-b border-amber-300 bg-amber-50/95 px-4 py-3 shadow-sm backdrop-blur dark:border-amber-900 dark:bg-amber-950/95">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <div className="relative z-50 border-b border-amber-200 bg-amber-50 px-3 py-3 dark:border-amber-900 dark:bg-amber-950 md:sticky md:top-0 md:px-5">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-2 text-amber-950 dark:text-amber-100">
               <FlaskConical className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div>
@@ -24,6 +25,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <ThemeToggle />
               <Link to="/demo/student" aria-current={role==='student'?'page':undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-blue-500 ${role==='student'?'bg-blue-700 text-white':'bg-white text-blue-800 dark:bg-slate-900 dark:text-blue-200'}`}>
                 <GraduationCap aria-hidden="true" className="h-4 w-4" /> دانشجو
               </Link>
@@ -50,7 +52,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
           )}
         </div>
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <main className="mx-auto max-w-7xl min-w-0 px-3 py-5 sm:px-6 sm:py-7">
           {role === 'student' ? <StudentDashboard /> : <AdminDashboard />}
         </main>
         <footer className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-6 text-xs text-slate-500 dark:border-slate-800">

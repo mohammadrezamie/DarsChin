@@ -26,11 +26,17 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode;
-    return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
+    try {
+      const saved = window.localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode;
+      return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
+    } catch {
+      return 'system';
+    }
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -60,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
-    localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, newTheme); } catch { /* Storage disabled */ }
   };
 
   const toggleTheme = () => {

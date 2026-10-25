@@ -1,44 +1,33 @@
-// ============================================================================
-// DARSCHYN (درس‌چین) - Theme Toggle Component
-// ============================================================================
-
 import React from 'react';
-import { Sun, Moon, Laptop } from 'lucide-react';
-import { useTheme, ThemeMode } from '../context/ThemeContext';
+import { Sun, Moon, Monitor } from 'lucide-react';
+import { useTheme, type ThemeMode } from '../context/ThemeContext';
 
 export const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useTheme();
-
   const options: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
-    { mode: 'light', label: 'روشن', icon: <Sun className="w-4 h-4" /> },
-    { mode: 'system', label: 'سیستم', icon: <Laptop className="w-4 h-4" /> },
-    { mode: 'dark', label: 'تاریک', icon: <Moon className="w-4 h-4" /> },
+    { mode: 'light', label: 'روز', icon: <Sun aria-hidden="true" className="h-4 w-4" /> },
+    { mode: 'system', label: 'خودکار', icon: <Monitor aria-hidden="true" className="h-4 w-4" /> },
+    { mode: 'dark', label: 'شب', icon: <Moon aria-hidden="true" className="h-4 w-4" /> },
   ];
-
   return (
-    <div
-      id="themeToggleGroup"
-      className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg border border-slate-300/60 dark:border-slate-700"
-    >
-      {options.map((opt) => {
-        const isActive = theme === opt.mode;
-        return (
-          <button
-            key={opt.mode}
-            id={`themeBtn-${opt.mode}`}
-            onClick={() => setTheme(opt.mode)}
-            title={`حالت ${opt.label}`}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-              isActive
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            {opt.icon}
-            <span className="hidden sm:inline">{opt.label}</span>
-          </button>
-        );
-      })}
+    <div role="group" aria-label="انتخاب حالت نمایش" className="inline-flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
+      {options.map(option => (
+        <button
+          key={option.mode}
+          type="button"
+          id={`themeBtn-${option.mode}`}
+          title={`حالت ${option.label}`}
+          aria-label={`حالت ${option.label}`}
+          aria-pressed={theme === option.mode}
+          onClick={() => setTheme(option.mode)}
+          className={`inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:px-2.5 ${theme === option.mode
+            ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300'
+            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
+        >
+          {option.icon}
+          <span className="hidden lg:inline">{option.label}</span>
+        </button>
+      ))}
     </div>
   );
 };
