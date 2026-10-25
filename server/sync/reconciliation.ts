@@ -183,6 +183,7 @@ function normalizedRecord(
       // The current extension export does not expose a trustworthy enrolled count.
       // Keep the required legacy field at its neutral initial value and make the limitation explicit.
       enrolledCount: 0,
+      enrolledCountKnown: false,
       examDate: sourceExam || undefined,
       notes: 'تعداد ثبت‌نام‌شدگان در خروجی منبع موجود نبود؛ این مقدار از آموزشیار تأیید نشده است.',
       source: 'extension',
