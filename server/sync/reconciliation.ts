@@ -89,18 +89,25 @@ function findCourse(courseCode: string, courseName: string, courses: Course[]): 
       const candidates = [
         course.code,
         ...(course.alternateCodes ?? []),
-        ...(course.courseCodes ?? []).map((item) => item.code),
+        ...(course.courseCodes ?? [])
+          .filter(item => item.active !== false &&
+            item.entryYear === undefined && !item.majorId && !item.trackId)
+          .map(item => item.code),
       ];
       return candidates.some((candidate) => normalizeCode(candidate) === code);
     });
-    if (matches.length === 1) return matches[0];
-    if (matches.length > 1) return undefined;
+    if (matches.length !== 1) return undefined;
+    // Codes are explicit identifiers. If their title disagrees with the catalog,
+    // refuse publication until a human verifies the actual code/alias.
+    if (courseName && normalizePersianText(matches[0].name) !== normalizePersianText(courseName)) {
+      return undefined;
+    }
+    return matches[0];
   }
 
-  if (!courseName) return undefined;
-  const name = normalizePersianText(courseName);
-  const matches = courses.filter((course) => normalizePersianText(course.name) === name);
-  return matches.length === 1 ? matches[0] : undefined;
+  // A title by itself cannot prove an Educationalyar-to-catalog mapping:
+  // even an identical name can exist in multiple degrees/curricula.
+  return undefined;
 }
 
 function strictInteger(value: unknown): number | undefined {
