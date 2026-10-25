@@ -5,6 +5,7 @@
 | Topic | Reference |
 | --- | --- |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
+| ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | پرونده جمع‌آوری و تأیید قوانین دانشگاه آزاد (در انتظار) | [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md) |
 | نقشه عملیاتی‌کردن کامل Vercel | [VERCEL_FULLSTACK_PLAN_FA.md](VERCEL_FULLSTACK_PLAN_FA.md) |
 | روند همکاری چندنفره و استقرار خودکار | [TEAM_WORKFLOW_FA.md](TEAM_WORKFLOW_FA.md) |
