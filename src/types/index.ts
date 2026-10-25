@@ -174,8 +174,10 @@ export type RelationshipType = 'PREREQUISITE' | 'COREQUISITE' | 'CONTEXTUAL_RETA
 export type RuleLogicalOperator = 'AND' | 'OR';
 
 export interface AcademicRuleNode {
-  type: 'COURSE' | 'GROUP';
+  /** COURSE requires a passed/planned course; MIN_PASSED_UNITS checks passed units only. */
+  type: 'COURSE' | 'MIN_PASSED_UNITS' | 'GROUP';
   courseId?: string; // If type === 'COURSE'
+  minUnits?: number; // If type === 'MIN_PASSED_UNITS'; count unique passed courses
   operator?: RuleLogicalOperator; // If type === 'GROUP'
   operands?: AcademicRuleNode[]; // If type === 'GROUP'
 }
