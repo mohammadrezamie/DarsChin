@@ -3,6 +3,7 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield,
@@ -80,6 +81,7 @@ interface AdminStats {
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -400,14 +402,15 @@ export const AdminDashboard: React.FC = () => {
                     وضعیت سرویس پایگاه داده و تطبیق چارت
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                    موتور تصمیم‌یار هوشمند درس‌چین بر اساس تحلیل گراف وابستگی دروس (DAG)، پیش‌نیازها و هم‌نیازها را به‌صورت بلادرنگ ارزیابی می‌نماید.
+                    {isBrowserDemo
+                      ? 'این پنل فقط داده‌های آزمایشی ذخیره‌شده در مرورگر را نشان می‌دهد؛ موتور رسمی قوانین و دیتابیس مرکزی اجرا نمی‌شوند.'
+                      : 'نمایش داشبورد به‌تنهایی سلامت اتصال به دیتابیس یا صحت موتور قوانین را تأیید نمی‌کند.'}
                   </p>
                 </div>
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
-                  <span className="font-semibold">وضعیت پایگاه داده مرکزی:</span>
-                  <span className="font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    برخط و فعال (Ready)
+                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 text-xs flex items-center justify-between gap-3">
+                  <span className="font-semibold">{isBrowserDemo ? 'نوع ذخیره‌سازی:' : 'وضعیت اتصال:'}</span>
+                  <span className="font-bold">
+                    {isBrowserDemo ? 'شبیه‌ساز محلی — بدون سرور' : 'تأییدنشده — نیازمند آزمون سلامت API'}
                   </span>
                 </div>
               </div>
@@ -588,6 +591,7 @@ export const AdminDashboard: React.FC = () => {
             description="گروه‌ها و اساتید ارائه‌دهنده دروس در نیمسال جاری"
             endpoint="/api/offerings"
             columns={[
+              { key: 'courseId', label: 'درس مرتبط', type: 'select', lookupEndpoint: '/api/academic/courses' },
               { key: 'rawCourseName', label: 'عنوان درس' },
               { key: 'groupCode', label: 'کد گروه' },
               { key: 'instructor', label: 'استاد درس' },
