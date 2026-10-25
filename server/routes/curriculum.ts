@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
@@ -96,6 +97,15 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
   const { name, version, status, majorId, entryYearId } = req.body;
+  // Existing surveys are historical records tied to a specific chart and cohort.
+  // Never silently reassign that chart to another cohort or major.
+  if (db.demandSurveys.some(s => s.curriculumId === req.params.id) &&
+      ((majorId && majorId !== db.curricula[idx].majorId) ||
+       (entryYearId && entryYearId !== db.curricula[idx].entryYearId) ||
+       (status === 'archived' && db.demandSurveys.some(s =>
+         s.curriculumId === req.params.id && (s.status === 'OPEN' || s.status === 'DRAFT'))))) {
+    return res.status(409).json({ success: false, error: 'این چارت در نیازسنجی استفاده شده؛ تغییر حوزه یا آرشیو پیش از بستن نیازسنجی‌ها مجاز نیست.' });
+  }
   if (name) db.curricula[idx].name = name.trim();
   if (version) db.curricula[idx].version = version.trim();
   if (status) db.curricula[idx].status = status;
@@ -111,7 +121,13 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
-  // Soft delete or hard delete? Let's hard delete for MVP.
+  if (db.demandSurveys.some(s => s.curriculumId === req.params.id)) {
+    return res.status(409).json({
+      success: false,
+      error: 'چارت دارای نیازسنجی و سابقهٔ تقاضاست. به‌جای حذف، بعد از بستن نیازسنجی آن را آرشیو کنید.',
+    });
+  }
+  // Only unused charts can be removed; never cascade through survey history.
   db.curricula.splice(idx, 1);
   
   // Cascade delete curriculum courses and rules
@@ -127,21 +143,38 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
 curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const curriculumId = req.params.id;
   const { courseId, trackId, suggestedSemester = 1, classification = 'MAJOR_REQUIRED', categoryOverride } = req.body;
-
-  if (!courseId) return res.status(400).json({ success: false, error: 'شناسه درس الزامی است.' });
+  const curriculum = db.curricula.find(c => c.id === curriculumId);
+  if (!curriculum || curriculum.status === 'archived') {
+    return res.status(404).json({ success: false, error: 'چارت معتبر و فعال یافت نشد.' });
+  }
+  if (typeof courseId !== 'string' || !db.courses.some(c => c.id === courseId && c.active)) {
+    return res.status(400).json({ success: false, error: 'درس فعال و معتبر انتخاب کنید.' });
+  }
+  if (trackId != null && (typeof trackId !== 'string' ||
+      !db.tracks.some(t => t.id === trackId && t.majorId === curriculum.majorId && t.active))) {
+    return res.status(400).json({ success: false, error: 'گرایش انتخابی متعلق به رشتهٔ این چارت نیست.' });
+  }
+  const semester = Number(suggestedSemester);
+  if (!Number.isInteger(semester) || semester < 1 || semester > 16) {
+    return res.status(400).json({ success: false, error: 'ترم پیشنهادی باید یک عدد معتبر باشد.' });
+  }
+  if (!['MAJOR_REQUIRED','MAJOR_ELECTIVE','TRACK_REQUIRED','TRACK_ELECTIVE'].includes(classification)) {
+    return res.status(400).json({ success: false, error: 'نوع درس در چارت معتبر نیست.' });
+  }
 
   const existing = db.curriculumCourses.find(
-    (cc) => cc.curriculumId === curriculumId && cc.courseId === courseId && cc.trackId === (trackId || null)
+    (cc) => cc.curriculumId === curriculumId && cc.courseId === courseId && (cc.trackId || null) === (trackId || null)
   );
   if (existing) {
     return res.status(400).json({ success: false, error: 'این درس قبلاً به این چارت/گرایش اضافه شده است.' });
   }
 
   const newEntry: CurriculumCourse = {
-    id: `cc-${Date.now()}`,
+    id: 'cc-' + randomUUID(),
     curriculumId,
     courseId,
-    suggestedSemester: Number(suggestedSemester),
+    trackId: trackId || null,
+    suggestedSemester: semester,
     classification,
     categoryOverride,
     active: true,
@@ -159,6 +192,12 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
   );
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
 
+  if (db.demandSurveys.some(s => s.curriculumId === req.params.id && s.courseIds.includes(req.params.courseId))) {
+    return res.status(409).json({
+      success: false,
+      error: 'این درس در نیازسنجی ثبت شده است و حذف آن می‌تواند گزارش تاریخی مدیر گروه را تخریب کند.',
+    });
+  }
   db.curriculumCourses.splice(idx, 1);
   // Also clean up rules pointing to or from this course in this curriculum
   db.data.academicRules = db.data.academicRules.filter(
