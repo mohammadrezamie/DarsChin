@@ -77,6 +77,7 @@ app.use('/api/auth/otp', otpRouter);
   app.use('/api/sync', syncRouter);
   app.use('/api/eligibility', eligibilityRouter);
   app.use('/api/demand', demandRouter);
+  app.use('/api/sms-center', smsCenterRouter);
   app.use('/api/admin', adminRouter);
 app.use('/api/admin-management', adminManagementRouter);
   app.use('/api/support', supportRouter);
