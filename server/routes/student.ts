@@ -300,7 +300,10 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       academicRules: db.academicRules,
       passedCourses,
       currentOfferings: relevantOfferings,
-      plannedOfferingIdsInSameTerm: [], // Evaluate independently
+      // Validate the requested plan as one atomic semester selection. Both
+      // halves of a co-requisite pair must be present; priority-only edits
+      // cannot fabricate an enrolled/selected group.
+      plannedOfferingIdsInSameTerm: selectedOfferingIds,
     });
 
     const invalidOfferings = selectedOfferingIds.filter(id => {
