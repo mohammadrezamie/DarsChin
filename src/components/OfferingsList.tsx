@@ -26,6 +26,7 @@ import {
   Bookmark,
 } from 'lucide-react';
 import { CourseCategory, EligibilityStatus, CourseEligibilityResult } from '../types';
+import { CourseTeacherRatings } from './CourseTeacherRatings';
 
 interface OfferingsListProps {
   evaluations: CourseEligibilityResult[];
@@ -351,6 +352,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                       انتخاب گروه و استاد مورد نظر (بدون تحمیل گروه خاص):
                     </span>
 
+                    <CourseTeacherRatings courseId={grp.courseId} instructors={grp.sections.map(section => section.instructor)} />
                     <div className="grid grid-cols-1 gap-2">
                       {grp.sections.map((section, sIdx) => {
                         const isSelected = selectedOfferingIds.includes(section.offeringId);
