@@ -71,6 +71,19 @@ describe('separation of cohorts, campuses and major tracks',()=>{
       .set('Authorization',token).send(payload);
     expect(duplicate.status).toBe(400);
   });
+  it('requires an explicit track for ambiguous duplicate course assignments',async()=>{
+    const shared=await request(app).post(`/api/curriculum/${chartId}/courses`)
+      .set('Authorization',token).send({
+        courseId,classification:'MAJOR_REQUIRED',suggestedSemester:3,
+      });
+    expect(shared.status).toBe(200);
+    expect(shared.body.data.trackId).toBeNull();
+    const ambiguous=await request(app).delete(`/api/curriculum/${chartId}/courses/${courseId}`)
+      .set('Authorization',token);
+    expect(ambiguous.status).toBe(409);
+    const matching=db.curriculumCourses.filter(c=>c.curriculumId===chartId&&c.courseId===courseId);
+    expect(matching).toHaveLength(2);
+  });
   it('rejects a foreign track or an invalid chart/course instead of storing a misleading assignment',async()=>{
     const wrong=await request(app).post(`/api/curriculum/${chartId}/courses`)
       .set('Authorization',token)
