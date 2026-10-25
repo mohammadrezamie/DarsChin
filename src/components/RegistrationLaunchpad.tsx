@@ -57,7 +57,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [doneIds, setDoneIds] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(window.sessionStorage.getItem(progressKey) || '[]');
-      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+      return Array.isArray(saved) ? saved.filter((id: unknown): id is string => typeof id === 'string') : [];
     } catch { return []; }
   });
   const [revision, setRevision] = useState(0);
