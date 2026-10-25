@@ -16,7 +16,7 @@ interface Props {
   profile: StudentAcademicProfile | null;
   curriculumId: string | null;
   onEditPriorities: () => void;
-  onReorderCourses: (orderedCourseIds: string[]) => void | Promise<void>;
+  onReorderCourses: (orderedCourseIds: string[]) => boolean | Promise<boolean>;
 }
 
 async function copyToClipboard(value: string): Promise<boolean> {
@@ -41,14 +41,23 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [revision,setRevision]=useState(0);
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
+  const [hydratedProgressKey,setHydratedProgressKey]=useState('');
 
   useEffect(()=>{
+    // Do not overwrite the new cohort's saved progress with the OLD cohort's
+    // in-memory checklist during the first effect pass after a scope switch.
+    setHydratedProgressKey('');
     try {
       const parsed=JSON.parse(window.sessionStorage.getItem(progressKey)||'[]');
       setDoneIds(Array.isArray(parsed)?parsed.filter((id:unknown):id is string=>typeof id==='string'):[]);
     }catch{setDoneIds([]);}
+    setHydratedProgressKey(progressKey);
   },[progressKey]);
-  useEffect(()=>{try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}},[doneIds,progressKey]);
+  useEffect(()=>{
+    if(hydratedProgressKey!==progressKey)return;
+    try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}
+    catch{/* private browsing */}
+  },[doneIds,progressKey,hydratedProgressKey]);
 
   useEffect(()=>{
     let alive=true;
@@ -84,14 +93,19 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     setCopyState(ok?`کد «${courseName}» کپی شد.`:'کپی خودکار ممکن نیست؛ کد را انتخاب و دستی کپی کن.');
   },[]);
   const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-  const move=(index:number,direction:-1|1)=>{
+  const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
     if(target<0||target>=stepIds.length)return;
     const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
-    // Persist the actual student's requested order. The dependency engine will
-    // still enforce confirmed corequisite-before-target relations at render.
-    void onReorderCourses(order);
-    setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.');
+    // The server may reject a save; never display an optimistic success.
+    try {
+      const saved=await onReorderCourses(order);
+      setCopyState(saved
+        ? 'ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.'
+        : 'ذخیرهٔ ترتیب انجام نشد؛ ترتیب قبلی حفظ شده است.');
+    } catch {
+      setCopyState('خطا در ذخیرهٔ اولویت؛ ترتیب قبلی حفظ شده است.');
+    }
   };
 
   return <section dir="rtl" aria-label="صف سریع ثبت دروس" className="darschin-page space-y-3">
