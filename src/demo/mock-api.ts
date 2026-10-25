@@ -440,7 +440,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       createdAt:now(),updatedAt:now()};
     s.demandSurveys.push(record);saveStore(s);return good(record) as ApiResponse<T>;
   }
-  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|export\.csv))?$/);
+  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|students|status|export\.csv))?$/);
   if (demandRoute) {
     const survey = s.demandSurveys.find(row=>row.id===demandRoute[1]);
     if(!survey)return fail('نیازسنجی نمونه یافت نشد.');
