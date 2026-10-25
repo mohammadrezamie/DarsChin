@@ -94,12 +94,20 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     c.universityId===x.universityId && c.campusId===x.campusId &&
     c.degreeLevelId===x.degreeLevelId && c.majorId===x.majorId &&
     c.status!=='archived'));
+  // A chosen chart must correspond to precisely one chosen cohort, and EVERY
+  // chosen cohort needs its own chart. Count equality + membership alone misses
+  // [chart-1403-v1, chart-1403-v2] with entryYearIds [1402, 1403].
+  const chartYears=charts.map(c=>c?.entryYearId);
+  const requestedYears=new Set(x.entryYearIds);
   if (!validScope || !charts.length || !chosenChartIds.includes(x.curriculumId) || charts.some(c=>!c) ||
     new Set(chosenChartIds).size!==chosenChartIds.length ||
-    new Set(x.entryYearIds).size!==x.entryYearIds.length ||
+    requestedYears.size!==x.entryYearIds.length ||
     charts.length!==x.entryYearIds.length ||
-    charts.some(c=>!x.entryYearIds.includes(c!.entryYearId)) ||
+    new Set(chartYears).size!==chartYears.length ||
+    chartYears.some(yearId=>!yearId || !requestedYears.has(yearId)) ||
+    x.entryYearIds.some(yearId=>!chartYears.includes(yearId)) ||
     charts.some(c=>!db.entryYears.some(year=>year.id===c!.entryYearId && year.active)) ||
+    new Set(x.trackIds).size!==x.trackIds.length ||
     x.trackIds.some(id=>!db.tracks.some(t=>t.id===id && t.majorId===x.majorId && t.active))) {
     return failure(res,400,'ورودی‌ها و چارت‌های هر ورودی باید یکتا و متعلق به یک رشته و مقطع باشند.');
   }
