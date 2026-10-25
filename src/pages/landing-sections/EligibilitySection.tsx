@@ -18,13 +18,13 @@ export const EligibilitySection: React.FC = () => {
   const lineProgress = useTransform(scrollYProgress, [0.4, 0.6], [0, 100]);
 
   return (
-    <section id="eligibility" ref={containerRef} className="scroll-mt-24 py-32 px-4 sm:px-6 lg:px-8 relative bg-slate-50 dark:bg-slate-950/50 overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-        <div className="flex-1 space-y-8">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight">
+    <section id="eligibility" ref={containerRef} className="scroll-mt-24 relative overflow-hidden bg-slate-50 px-3 py-16 dark:bg-slate-950/50 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col items-stretch gap-8 md:flex-row md:items-center md:gap-16">
+        <div className="min-w-0 flex-1 space-y-5 sm:space-y-8">
+          <h2 className="break-words text-3xl font-black leading-snug text-slate-900 dark:text-white sm:text-4xl md:text-5xl">
             موتور بررسی قوانین آموزشی
           </h2>
-          <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-base leading-8 text-slate-600 dark:text-slate-400 sm:text-xl">
             درس‌چین قبل از اینکه شما خطایی در سامانه دانشگاه دریافت کنید، تمام پیش‌نیازها، هم‌نیازها و سقف واحدهای شما را به‌صورت زنده تحلیل می‌کند.
           </p>
           
@@ -34,20 +34,20 @@ export const EligibilitySection: React.FC = () => {
               "محاسبه دروس مازاد بر سقف مجاز",
               "جلوگیری از انتخاب دروس تکراری یا پاس‌شده"
             ].map((text, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex min-w-0 items-start gap-3">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{text}</span>
+                <span className="min-w-0 break-words font-medium leading-7 text-slate-700 dark:text-slate-300">{text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 w-full max-w-md relative min-h-[400px] flex flex-col items-center justify-center">
+        <div className="relative flex min-h-[300px] w-full min-w-0 max-w-md flex-1 flex-col items-center justify-center sm:min-h-[400px]">
           <motion.div style={{ opacity: node1Opacity, y: node1Y }} className="w-full">
-            <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 shadow-lg flex justify-between items-center z-10 relative">
+            <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 relative z-10 flex min-w-0 items-center justify-between rounded-2xl p-4 shadow-lg sm:p-6">
               <div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-bold mb-1 text-sm">پاس شده</div>
-                <div className="text-xl font-bold">ریاضی ۱</div>
+                <div className="break-words text-lg font-bold sm:text-xl">ریاضی ۱</div>
               </div>
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
@@ -61,10 +61,10 @@ export const EligibilitySection: React.FC = () => {
           </div>
 
           <motion.div style={{ opacity: node2Opacity, y: node2Y }} className="w-full">
-            <div className="bg-white dark:bg-slate-900 border-2 border-blue-500 rounded-2xl p-6 shadow-lg flex justify-between items-center z-10 relative">
+            <div className="bg-white dark:bg-slate-900 border-2 border-blue-500 relative z-10 flex min-w-0 items-center justify-between rounded-2xl p-4 shadow-lg sm:p-6">
               <div>
                 <div className="text-blue-600 dark:text-blue-400 font-bold mb-1 text-sm">مجاز برای اخذ</div>
-                <div className="text-xl font-bold">ریاضی ۲</div>
+                <div className="break-words text-lg font-bold sm:text-xl">ریاضی ۲</div>
               </div>
               <Lock className="w-8 h-8 text-slate-300 dark:text-slate-600 absolute left-6 opacity-0" />
             </div>
