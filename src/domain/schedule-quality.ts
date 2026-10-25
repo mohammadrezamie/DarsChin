@@ -90,6 +90,8 @@ export function evaluateScheduleQuality(
     recommendedTeachers:[],suggestedDays:null,suggestedProfessorScore:null,
   });
   if(!courses.length)return fail('برای محاسبهٔ روزهای حضور، ابتدا چند درس را در برنامه قرار بده.');
+  if(selected.length!==selectedIds.length)
+    return fail('یک یا چند گروه انتخاب‌شده در دادهٔ فعلی وجود ندارد؛ برنامه را دوباره بارگذاری کن.');
   if(selected.length!==courses.length)
     return fail('برای محاسبهٔ دقیق، از هر درس تنها یک گروه اصلی باید انتخاب شود.');
   if(selected.some(o=>!clock(o)))
@@ -101,7 +103,14 @@ export function evaluateScheduleQuality(
 
   const allOptions=courses.map(id=>all.filter(o=>o.courseId===id&&valid(o)&&!!clock(o))
     .sort((a,b)=>a.offeringId.localeCompare(b.offeringId)));
-  const options=allOptions.map(items=>items.slice(0,12));
+  const options=allOptions.map((items,index)=>{
+    const chosen=selected.find(o=>o.courseId===courses[index]);
+    const preview=items.slice(0,12);
+    // When options are bounded, always retain the student's own known-valid
+    // selection so a feasible current plan is never omitted from discovery.
+    return chosen && !preview.some(o=>o.offeringId===chosen.offeringId)
+      ? [...preview.slice(0,11),chosen] : preview;
+  });
   const optionsLimited=allOptions.some(items=>items.length>12);
   if(options.some(group=>group.length===0))
     return fail('برای یک یا چند درس هیچ گروه دارای ساعت معتبر و وضعیت قابل‌اخذ وجود ندارد.');
