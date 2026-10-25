@@ -98,6 +98,21 @@ describe('per-curriculum editable conditions (all numbers are synthetic)',()=>{
     expect(status('1403',[{...base,entryYearId:'1403',majorId:'electrical'}]).overallStatus)
       .toBe('BLOCKED_PREREQUISITE');
   });
+  it('does not declare inactive catalogue courses or inactive chart assignments eligible',()=>{
+    const evaluate=(catalog:Course[],assignments:CurriculumCourse[],groups:CourseOffering[]=[offering])=>
+      evaluateStudentEligibility({
+        studentProfile:profile('1403'),curriculum:curriculum('chart-1403','1403'),
+        curriculumCourses:assignments,allCourses:catalog,tracks:[],academicRules:[],
+        passedCourses:passed,currentOfferings:groups,
+      }).results[0];
+    const inactiveCatalog=courses.map(c=>c.id==='internship'?{...c,active:false}:c);
+    expect(evaluate(inactiveCatalog,courseLinks).overallStatus).toBe('NEEDS_REVIEW');
+    expect(evaluate(inactiveCatalog,courseLinks).canSelect).toBe(false);
+    const inactiveLinks=courseLinks.map(cc=>cc.curriculumId==='chart-1403'&&cc.courseId==='internship'
+      ? {...cc,active:false}:cc);
+    expect(evaluate(courses,inactiveLinks).overallStatus).toBe('NOT_IN_CURRICULUM');
+    expect(evaluate(courses,courseLinks,[{...offering,active:false}]).canSelect).toBe(false);
+  });
   it('does not inherit the other entry year internship threshold',()=>{
     const rules=[rule('chart-1402',5),rule('chart-1403',3)];
     expect(status('1402',rules).overallStatus).toBe('BLOCKED_PREREQUISITE');
