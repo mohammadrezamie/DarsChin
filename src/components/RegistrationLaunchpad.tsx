@@ -135,7 +135,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <div className="min-w-0 flex-1 text-right">
             <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'} · کد <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
+              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'} · کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
