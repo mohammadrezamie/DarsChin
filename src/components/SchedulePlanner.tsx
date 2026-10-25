@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { CourseEligibilityResult, AcademicLimitInfo } from '../types';
 import { ExamCalendar } from './ExamCalendar';
+import { FluidWeekTimetable } from './FluidWeekTimetable';
 import { generateExamsICS, downloadICSFile } from '../utils/calendar';
 
 export interface PlannedCourseCardData {
@@ -65,16 +66,6 @@ interface SchedulePlannerProps {
   onReorderCourses?: (newCourseOrder: string[]) => void;
   onClearSchedule: () => void;
 }
-
-const WEEK_DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه'];
-const TIME_SLOTS = [
-  { label: '۰۷:۳۰ - ۰۹:۳۰', start: '07:30', end: '09:30' },
-  { label: '۰۹:۳۰ - ۱۱:۳۰', start: '09:30', end: '11:30' },
-  { label: '۱۱:۳۰ - ۱۳:۳۰', start: '11:30', end: '13:30' },
-  { label: '۱۳:۳۰ - ۱۵:۳۰', start: '13:30', end: '15:30' },
-  { label: '۱۵:۳۰ - ۱۷:۳۰', start: '15:30', end: '17:30' },
-  { label: '۱۷:۳۰ - ۱۹:۳۰', start: '17:30', end: '19:30' },
-];
 
 export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   evaluations,
@@ -853,133 +844,29 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         </div>
       )}
 
-      {/* VIEW 2: WEEKLY TIMETABLE MATRIX */}
-      
+      {/* VIEW 2: FLUID WEEKLY TIMETABLE (07:00–20:00, exact minute positions) */}
       {activePlannerTab === 'timetable' && (
         <div className="space-y-4">
-
-          <div className="bg-liquid-glass rounded-3xl overflow-hidden shadow-xs print:overflow-visible print:bg-white print:border-none print:shadow-none border border-slate-200/80 dark:border-slate-800">
-            <div className="overflow-x-auto print:overflow-visible">
-              <table className="w-full text-xs text-center border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-b border-slate-200/80 dark:border-slate-700/80">
-                    <th className="py-3 px-4 font-bold border-l border-slate-200/80 dark:border-slate-700/80 w-28">
-                      ساعت / روز
-                    </th>
-                    {WEEK_DAYS.map((day) => (
-                      <th
-                        key={day}
-                        className="py-3 px-3 font-bold border-l last:border-l-0 border-slate-200/80 dark:border-slate-700/80 min-w-[150px]"
-                      >
-                        {day}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {TIME_SLOTS.map((slot) => (
-                    <tr key={slot.start} className="min-h-[90px]">
-                      {/* Time slot label column */}
-                      <td className="py-4 px-2 font-mono font-semibold bg-slate-50 dark:bg-slate-850/60 text-slate-600 dark:text-slate-400 border-l border-slate-200/80 dark:border-slate-700/80 text-[11px]">
-                        {slot.label}
-                      </td>
-
-                      {/* Day cells */}
-                      {WEEK_DAYS.map((day) => {
-                        const matchingOfferings = selectedOfferings.filter((item) => {
-                          if (item.dayOfWeek !== day || !item.startTime || !item.endTime) return false;
-                          const parseTime = (t) => {
-                            const [h, m] = t.split(':').map(Number);
-                            return h * 60 + (m || 0);
-                          };
-                          const itemStart = parseTime(item.startTime);
-                          const itemEnd = parseTime(item.endTime);
-                          const slotStart = parseTime(slot.start);
-                          const slotEnd = parseTime(slot.end);
-                          
-                          // overlap exists if item starts before slot ends AND item ends after slot starts
-                          return itemStart < slotEnd && itemEnd > slotStart;
-                        });
-
-                        const hasCollision = matchingOfferings.length > 1;
-
-                        return (
-                          <td
-                            key={day}
-                            className={`p-2 border-l last:border-l-0 border-slate-200 dark:border-slate-800 align-top transition-colors ${
-                              hasCollision
-                                ? 'bg-rose-50/70 dark:bg-rose-950/30'
-                                : matchingOfferings.length > 0
-                                ? 'bg-blue-50/50 dark:bg-blue-950/20'
-                                : ''
-                            }`}
-                          >
-                            {matchingOfferings.map((item) => {
-                              const offId = item.offeringId;
-                              return (
-                                <div
-                                  key={offId}
-                                  className={`p-2.5 rounded-xl text-right mb-1.5 shadow-xs border relative group transition-all ${
-                                    hasCollision
-                                      ? 'bg-rose-100 dark:bg-rose-900/60 border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100'
-                                      : 'bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-700 text-slate-900 dark:text-white'
-                                  }`}
-                                >
-                                  <div className="font-bold text-xs line-clamp-1">{item.courseName}</div>
-                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
-                                    <span>گروه {item.groupCode}</span>
-                                    <span>{item.units || 3} واحد</span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                                    {item.instructor || 'استاد نامشخص'}
-                                  </div>
-
-                                  <button
-                                    onClick={() => onToggleScheduleOffering(offId)}
-                                    title="حذف از برنامه"
-                                    className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xs print:hidden"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div></div>
-          {/* Unscheduled Courses */}
-          {(() => {
-            const unscheduled = selectedOfferings.filter(o => !o.dayOfWeek || !o.startTime || o.dayOfWeek === 'نامشخص');
-            if (unscheduled.length === 0) return null;
-            return (
-              <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  دروس بدون زمان‌بندی (نامشخص)
-                </h4>
-                <div className="flex flex-wrap gap-3">
-                  {unscheduled.map(item => (
-                    <div key={item.offeringId} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 relative group pr-8">
-                      <div className="font-bold text-xs">{item.courseName}</div>
-                      <div className="text-[10px] text-slate-500 mt-1">گروه {item.groupCode} • {item.instructor || 'استاد نامشخص'}</div>
-                      <button
-                        onClick={() => onToggleScheduleOffering(item.offeringId)}
-                        title="حذف از برنامه"
-                        className="absolute top-1/2 -translate-y-1/2 right-2 w-5 h-5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-colors shadow-xs"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-</div>)}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">جدول پیوسته هفتگی</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              ساعت‌ها آزادند، نه بازه‌های ثابت دو ساعته. برای نمایش همه روزها در موبایل جدول را افقی حرکت بده.
+            </p>
+          </div>
+          <FluidWeekTimetable
+            entries={selectedOfferings.map(item => ({
+              id: item.offeringId,
+              title: item.courseName,
+              day: item.dayOfWeek,
+              start: item.startTime,
+              end: item.endTime,
+              subtitle: `گروه ${item.groupCode} · ${item.instructor || 'استاد نامشخص'}`,
+              conflict: (conflictMap.get(item.offeringId) || []).some(message => message.includes('کلاسی')),
+            }))}
+            onRemove={onToggleScheduleOffering}
+          />
+        </div>
+      )}
 
       {/* VIEW 3: EXAM CALENDAR */}
       {activePlannerTab === 'exams' && (
