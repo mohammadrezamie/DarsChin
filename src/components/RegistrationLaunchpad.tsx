@@ -41,14 +41,21 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [revision,setRevision]=useState(0);
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
+  // Wait for hydration of this exact term/chart before persisting; otherwise the
+  // initial [] state could overwrite a student's previously checked progress.
+  const [progressLoadedKey,setProgressLoadedKey]=useState<string|null>(null);
 
   useEffect(()=>{
     try {
       const parsed=JSON.parse(window.sessionStorage.getItem(progressKey)||'[]');
       setDoneIds(Array.isArray(parsed)?parsed.filter((id:unknown):id is string=>typeof id==='string'):[]);
     }catch{setDoneIds([]);}
+    setProgressLoadedKey(progressKey);
   },[progressKey]);
-  useEffect(()=>{try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}},[doneIds,progressKey]);
+  useEffect(()=>{
+    if(progressLoadedKey!==progressKey)return;
+    try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}
+  },[doneIds,progressKey,progressLoadedKey]);
 
   useEffect(()=>{
     let alive=true;
@@ -128,9 +135,10 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
         const locked=step.dependencyCourseIds.some(id=>!doneIds.includes(id));
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
-        return <li key={step.courseId} className={`flex min-w-0 flex-nowrap items-center gap-1.5 rounded-xl border px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2 ${done
+        return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+          <div className="flex min-w-0 items-center gap-1.5 px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2">
           <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
           <div className="min-w-0 flex-1 text-right">
             <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
@@ -154,8 +162,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
             </button>
           </div>
+          </div>
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-'))&&
-            <details className="w-full text-xs text-amber-800 dark:text-amber-300">
+            <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
               <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>
               <div className="space-y-1 px-8 pb-2 leading-6">
                 <p>کد: <code dir="ltr">{step.copyCode||'نامشخص'}</code> · گروه: <code dir="ltr">{step.groupCode||'نامشخص'}</code></p>
