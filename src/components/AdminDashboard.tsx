@@ -48,6 +48,7 @@ import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
 import { AdminImportCenter } from './AdminImportCenter';
 import { DemandWorkspace } from './DemandWorkspace';
+import { AdminSmsCenter } from './AdminSmsCenter';
 import { apiRequest } from '../utils/api';
 
 interface AdminStats {
