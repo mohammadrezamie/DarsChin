@@ -70,14 +70,15 @@ export function evaluateStudentEligibility(
   }, 0);
   const tracksMap = new Map<string, Track>(tracks.map((t) => [t.id, t]));
 
-  // Resolve planned course IDs from either course IDs or offering IDs in the current semester
+  // Only actual selected offering IDs from the current evaluated semester may
+  // satisfy same-term corequisites. A caller-supplied course ID is not proof
+  // that any section has been selected.
+  const offeredCoursesById = new Map(currentOfferings.filter(o=>o.active!==false)
+    .map(o=>[o.id,o.courseId]));
   const plannedCourseIdsSet = new Set<string>();
-  for (const id of plannedOfferingIdsInSameTerm) {
-    plannedCourseIdsSet.add(id); // might be a direct course ID
-    const matchedOffering = currentOfferings.find((o) => o.id === id);
-    if (matchedOffering) {
-      plannedCourseIdsSet.add(matchedOffering.courseId);
-    }
+  for (const offeringId of plannedOfferingIdsInSameTerm) {
+    const courseId = offeredCoursesById.get(offeringId);
+    if(courseId)plannedCourseIdsSet.add(courseId);
   }
 
   // Find curriculum courses
@@ -281,13 +282,16 @@ export function evaluateStudentEligibility(
             return { passed: false, missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }], reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید در همین ترم اخذ شود یا قبلاً پاس شده باشد.`] };
           }
           
-          if (isContextualRetake || wasFailed) {
-            // IAU Failed Prerequisite Exception (acts as corequisite)
+          // A failed prerequisite alone is NOT an authorization to retake it
+          // concurrently. Require a scope-matched, explicit contextual retake
+          // rule AND an actual recorded failure. Institutions must configure
+          // this exception deliberately for each curriculum.
+          if (isContextualRetake && wasFailed) {
             if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
             return {
               passed: false,
               missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }],
-              reasons: [`برای درس ${course.name}، چون پیش‌نیاز (${reqCourse.name}) قبلاً مردود شده، مجاز به اخذ همزمان می‌باشید اما در برنامه شما انتخاب نشده است.`],
+              reasons: [`برای درس ${course.name}، استثنای اخذ همزمان پیش‌نیاز مردودی (${reqCourse.name}) ثبت شده اما گروه آن در برنامهٔ همین نیمسال انتخاب نشده است.`],
             };
           }
 
