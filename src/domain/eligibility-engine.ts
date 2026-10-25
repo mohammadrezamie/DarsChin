@@ -444,6 +444,7 @@ export function evaluateStudentEligibility(
       endTime: offering.endTime,
       capacity: offering.capacity,
       enrolledCount: offering.enrolledCount,
+      enrolledCountKnown: offering.enrolledCountKnown,
       examDate: offering.examDate,
       overallStatus,
       isEligible: canSelect,
