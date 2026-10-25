@@ -36,6 +36,28 @@ describe('no-account demand testing in isolated browser demo',()=>{
     expect(csv.data?.csv).toContain('1403123456');
     expect(csv.data?.csv).toContain('ریاضی عمومی ۲');
   });
+  it('retains submitted demand in the student demo when the manager closes it',async()=>{
+    const surveyId=(await browserDemoRequest<any[]>('/api/demand/surveys')).data![0].id;
+    const endpoint=`/api/demand/surveys/${surveyId}/response`;
+    await browserDemoRequest(endpoint,{method:'PUT',body:JSON.stringify({
+      studentNumber:'1403123456',anticipatedGraduation:'UNKNOWN',courseIds:['math2'],
+    })});
+    await browserDemoRequest(`/api/demand/surveys/${surveyId}/status`,{
+      method:'PUT',body:JSON.stringify({status:'CLOSED'}),
+    });
+    const oldWindow=(globalThis as {window?:unknown}).window;
+    try {
+      Object.assign(globalThis,{window:{location:{pathname:'/demo/student'}}});
+      const history=await browserDemoRequest<any[]>('/api/demand/surveys');
+      expect(history.data?.some(item=>item.id===surveyId&&item.status==='CLOSED')).toBe(true);
+      const own=await browserDemoRequest<any>(endpoint);
+      expect(own.data?.courseIds).toEqual(['math2']);
+    } finally {
+      if(oldWindow===undefined) delete (globalThis as {window?:unknown}).window;
+      else Object.assign(globalThis,{window:oldWindow});
+    }
+  });
+
   it('rejects unknown courses and closes the survey without removing history',async()=>{
     const surveyId=(await browserDemoRequest<any[]>('/api/demand/surveys')).data![0].id;
     const path=`/api/demand/surveys/${surveyId}/response`;
