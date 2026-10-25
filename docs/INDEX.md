@@ -8,6 +8,7 @@
 | **دفتر تاریخ‌دار همهٔ درخواست‌ها، برنامه‌ها، اولویت‌ها و تغییر تصمیم مالک** | [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md) |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
 | طراحی جدید پنل مدیریت: رشته ← مقطع ← گرایش/ورودی ← چارت، بدون شناسه‌های فنی | [ADMIN_MAJOR_WORKSPACE_FA.md](ADMIN_MAJOR_WORKSPACE_FA.md) |
+| فوتر سازمانی درس‌چین و قواعد وسط‌چین/راست‌چین فارسی | [BRAND_FOOTER_RTL_FA.md](BRAND_FOOTER_RTL_FA.md) |
 | صف سریع ثبت: نمایش کامل عنوان درس، استاد و ساعت کنار اولویت‌ها | [REGISTRATION_QUEUE_UX_FA.md](REGISTRATION_QUEUE_UX_FA.md) |
 | کیفیت برنامهٔ انتخاب واحد: امتیاز روزهای حضور، استادها و پیشنهاد بدون تداخل | [PLAN_QUALITY_SCORING_FA.md](PLAN_QUALITY_SCORING_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
