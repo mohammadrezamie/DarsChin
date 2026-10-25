@@ -19,6 +19,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GuestHumanCheck } from './GuestHumanCheck';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -45,6 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
   const [createdRecoveryKey, setCreatedRecoveryKey] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -56,6 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     setPassword('');
     setConfirmPassword('');
     setCreatedRecoveryKey(null);
+    setCaptchaToken('');
   };
 
   // 1. Handle Login
@@ -76,7 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     }
 
     setLoading(true);
-    const res = await login(m, password);
+    const res = await login(m, password, captchaToken);
     setLoading(false);
 
     if (res.success) {
@@ -118,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     }
 
     setLoading(true);
-    const res = await register(m, password, name.trim(), recoveryKey.trim() || undefined);
+    const res = await register(m, password, name.trim(), recoveryKey.trim() || undefined, captchaToken);
     setLoading(false);
 
     if (res.success) {
@@ -293,6 +296,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                     </div>
                   </div>
 
+                  <GuestHumanCheck action="login" token={captchaToken} onToken={setCaptchaToken} />
                   {/* Submit Button */}
                   <button
                     type="submit"
@@ -424,6 +428,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
                     </div>
                   </div>
 
+                  <GuestHumanCheck action="register" token={captchaToken} onToken={setCaptchaToken} />
                   {/* Submit Button */}
                   <button
                     type="submit"
