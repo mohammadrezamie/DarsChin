@@ -82,4 +82,31 @@ describe('no-account demand testing in isolated browser demo',()=>{
     })});
     expect(after.success).toBe(false);
   });
+  it('creates a fully scoped survey draft and rejects mismatched demo scopes', async () => {
+    const input = {
+      title: 'نیازسنجی آزمایشی ترم',
+      description: 'صرفاً داده ساختگی برای آزمون',
+      targetTermId: 'demo-term',
+      universityId: 'demo-university',
+      campusId: 'demo-campus',
+      degreeLevelId: 'demo-degree',
+      majorId: 'demo-major',
+      curriculumId: 'demo-curriculum',
+      entryYearIds: ['demo-entry'],
+      trackIds: [],
+      courseIds: ['math2'],
+      recommendedMinimumByCourse: { math2: 3 },
+    };
+    const created = await browserDemoRequest<any>('/api/demand/surveys', {
+      method: 'POST', body: JSON.stringify(input),
+    });
+    expect(created.success).toBe(true);
+    expect(created.data).toMatchObject({ ...input, status: 'DRAFT', createdBy: 'demo-manager' });
+
+    const rejected = await browserDemoRequest<any>('/api/demand/surveys', {
+      method: 'POST', body: JSON.stringify({ ...input, campusId: 'another-campus' }),
+    });
+    expect(rejected.success).toBe(false);
+  });
+
 });
