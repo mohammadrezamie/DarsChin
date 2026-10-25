@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { DemoFeedback } from '../components/DemoFeedback';
 import { AlertTriangle, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock3, GraduationCap, RotateCcw } from 'lucide-react';
 import {
   DEMO_COURSES,
@@ -53,6 +54,7 @@ export const PlannerDemo: React.FC = () => {
           <Link to="/" className="inline-flex items-center gap-2 font-extrabold text-blue-700 hover:underline dark:text-blue-300">
             <GraduationCap className="h-6 w-6" aria-hidden="true" /> درس‌چین
           </Link>
+          <DemoFeedback area="planner" />
           <Link to="/" className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800">
             بازگشت به صفحهٔ اصلی <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           </Link>
