@@ -53,6 +53,17 @@ describe('per-curriculum editable conditions (all numbers are synthetic)',()=>{
     expect(status('1402',rules).overallStatus).toBe('BLOCKED_PREREQUISITE');
     expect(status('1403',rules).overallStatus).toBe('AVAILABLE');
   });
+  it('passes explicit extra-unit metadata through the eligibility report',()=>{
+    expect(status('1403',[]).isExtraUnit).toBe(false);
+    const flagged=courses.map(c=>c.id==='internship'?{...c,isExtraUnit:true}:c);
+    const report=evaluateStudentEligibility({
+      studentProfile:profile('1403'),curriculum:curriculum('chart-1403','1403'),
+      curriculumCourses:courseLinks,allCourses:flagged,tracks:[],academicRules:[],
+      passedCourses:passed,currentOfferings:[offering],
+    });
+    expect(report.results[0].isExtraUnit).toBe(true);
+    expect(report.results[0].courseName).toBe('کارآموزی (آزمایشی)');
+  });
   it('supports a course with no prerequisites or credit minimum',()=>{
     expect(status('1402',[]).overallStatus).toBe('AVAILABLE');
   });
