@@ -13,13 +13,13 @@ describe('legacy JSON migration for Educationalyar review queues', () => {
   });
 
   it('preserves existing decisions and sync history references', () => {
-    const batches = [{ id: 'historical-batch' }] as DatabaseSchema['importBatches'];
+    const batches = [{ id: 'historical-batch' }] as unknown as DatabaseSchema['importBatches'];
     const records = [{
       id: 'historic-record', batchId: 'historical-batch',
       reviewDecision: 'REJECTED', reviewNotes: 'رد شده توسط مدیر',
     }] as unknown as DatabaseSchema['importRecords'];
-    const jobs = [{ id: 'historical-job', status: 'AWAITING_REVIEW' }];
-    const snapshots = [{ id: 'partial-snapshot' }];
+    const jobs = [{ id: 'historical-job', status: 'AWAITING_REVIEW' }] as unknown as NonNullable<DatabaseSchema['syncJobs']>;
+    const snapshots = [{ id: 'partial-snapshot' }] as unknown as NonNullable<DatabaseSchema['syncSnapshots']>;
     const data: Partial<DatabaseSchema> = {
       importBatches: batches, importRecords: records,
       syncJobs: jobs, syncSnapshots: snapshots,
