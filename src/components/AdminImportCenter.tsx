@@ -17,6 +17,9 @@ interface ReviewRecord {
   status: 'MATCHED' | 'NEEDS_REVIEW' | 'INVALID';
   reviewReason?: string;
   matchedCourseId?: string | null;
+  reviewDecision?: 'COURSE_MATCH_CONFIRMED' | 'REJECTED';
+  reviewNotes?: string;
+  reviewedAt?: string;
   rawData?: {
     courseCode?: string;
     courseName?: string;
@@ -24,6 +27,8 @@ interface ReviewRecord {
     instructor?: string;
   };
 }
+interface CatalogCourse { id: string; name: string; code: string; active?: boolean }
+interface ReviewDraft { courseId: string; reason: string }
 const badge = (status: ReviewRecord['status']) => status === 'MATCHED'
   ? { text: 'تطبیق اولیه', style: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' }
   : status === 'NEEDS_REVIEW'
@@ -45,6 +50,11 @@ export const AdminImportCenter: React.FC = () => {
   const [records, setRecords] = useState<ReviewRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [recordsError, setRecordsError] = useState<string | null>(null);
+  const [courses, setCourses] = useState<CatalogCourse[]>([]);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const detailsSequence = useRef(0);
 
   const fetchBatches = async () => {
@@ -61,7 +71,13 @@ export const AdminImportCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => { void fetchBatches(); return () => { detailsSequence.current++; }; }, []);
+  useEffect(() => {
+    void fetchBatches();
+    void apiRequest<CatalogCourse[]>('/api/academic/courses').then(response => {
+      if (response.success && Array.isArray(response.data)) setCourses(response.data);
+    });
+    return () => { detailsSequence.current++; };
+  }, []);
 
   const handleExpand = async (batchId: string, forceReload = false) => {
     if (expandedBatchId === batchId && !forceReload) {
@@ -73,6 +89,8 @@ export const AdminImportCenter: React.FC = () => {
     setExpandedBatchId(batchId);
     setRecords([]);
     setRecordsError(null);
+    setReviewError(null);
+    setReviewMessage(null);
     setRecordsLoading(true);
     try {
       const response = await apiRequest<{ records: ReviewRecord[] }>(`/api/imports/batches/${encodeURIComponent(batchId)}`);
@@ -84,6 +102,49 @@ export const AdminImportCenter: React.FC = () => {
       if (currentSequence === detailsSequence.current) setRecordsError('ارتباط با سرور هنگام دریافت جزئیات قطع شد.');
     } finally {
       if (currentSequence === detailsSequence.current) setRecordsLoading(false);
+    }
+  };
+
+  const updateDraft = (record: ReviewRecord, changes: Partial<ReviewDraft>) => {
+    setReviewDrafts(prev => ({
+      ...prev,
+      [record.id]: {
+        courseId: prev[record.id]?.courseId ?? record.matchedCourseId ?? '',
+        reason: prev[record.id]?.reason ?? '',
+        ...changes,
+      },
+    }));
+  };
+
+  const reviewRecord = async (record: ReviewRecord, action: 'CONFIRM_MATCH' | 'REJECT_MATCH') => {
+    if (!expandedBatchId || reviewBusyId) return;
+    const draft = reviewDrafts[record.id] ?? { courseId: record.matchedCourseId || '', reason: '' };
+    if (draft.reason.trim().length < 10 || (action === 'CONFIRM_MATCH' && !draft.courseId)) {
+      setReviewError('برای هر تصمیم، درس مقصد و توضیح حداقل ده نویسه‌ای متناسب با تصمیم را وارد کنید.');
+      return;
+    }
+    setReviewError(null);
+    setReviewMessage(null);
+    setReviewBusyId(record.id);
+    try {
+      const payload = action === 'CONFIRM_MATCH'
+        ? { action, courseId: draft.courseId, reason: draft.reason.trim() }
+        : { action, reason: draft.reason.trim() };
+      const response = await apiRequest<ReviewRecord>(
+        `/api/imports/batches/${encodeURIComponent(expandedBatchId)}/records/${encodeURIComponent(record.id)}/review`,
+        { method: 'PUT', body: JSON.stringify(payload) },
+      );
+      if (!response.success || !response.data) {
+        setReviewError(response.error || 'ثبت تصمیم بررسی امکان‌پذیر نشد.');
+        return;
+      }
+      setRecords(current => current.map(item => item.id === record.id ? response.data! : item));
+      setReviewMessage('تصمیم نگاشت ذخیره شد. هیچ گروه درسی منتشر نشده است.');
+      setReviewDrafts(prev => ({ ...prev, [record.id]: { courseId: response.data!.matchedCourseId || '', reason: '' } }));
+    } catch {
+      setReviewError('ارتباط با سامانه در هنگام ثبت تصمیم قطع شد.');
+    } finally {
+      setReviewBusyId(null);
     }
   };
 
