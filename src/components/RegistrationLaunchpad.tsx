@@ -104,7 +104,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
+        <button type="button" aria-label="کپی کد درس بعدی" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
           disabled={!next?.copyCode} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
           <ClipboardCopy className="h-4 w-4"/> کپی بعدی
         </button>
@@ -113,7 +113,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-      این فهرست ثبت خودکار در آموزشیار نیست؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
+      این فهرست به آموزشیار وصل نیست و ثبت خودکار انجام نمی‌دهد؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
     </p>
     {loading&&<p role="status" className="text-xs text-slate-500"><RefreshCw className="ml-1 inline h-4 w-4 animate-spin"/>در حال تطبیق قوانین…</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -135,7 +135,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <div className="min-w-0 flex-1 text-right">
             <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
+              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'} · کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -145,10 +145,15 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
-              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
+              className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
-            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
+            <button type="button" disabled={!step.groupCode} onClick={()=>void copy(step.groupCode, `گروه ${step.courseName}`)}
+              aria-label={`کپی شماره گروه ${step.courseName}`}
+              className="flex h-8 items-center rounded-lg border border-slate-300 px-2 text-[11px] font-bold text-slate-700 disabled:opacity-45 dark:border-slate-700 dark:text-slate-200">
+              گروه
+            </button>
+            <button type="button" title="ثبت شد (دستی)" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}

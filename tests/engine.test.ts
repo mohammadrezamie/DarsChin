@@ -1,42 +1,38 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateStudentEligibility } from '../src/domain/eligibility-engine';
-import { db } from '../server/db/database';
-import assert from 'assert';
+import { getInitialSeedData } from '../server/db/seed';
+import type { StudentAcademicProfile } from '../src/types';
 
-describe("Engine Legacy Test", () => { 
-  it("should run successfully", async () => {
-    await db.init(true);
-    // Get a sample student
-    const student = db.users.find((u) => u.roles?.includes('student')) || db.users[0];
-    if (!student) throw new Error('Student user not found in database');
-    let profile = db.studentProfiles.find((p) => p.userId === student.id);
-    if (!profile) {
-      profile = db.studentProfiles[0];
-    }
-    if (!profile) throw new Error('Student profile not found');
-    const curriculum =
-      db.curricula.find((c) => c.majorId === profile.majorId && c.entryYearId === profile.entryYearId) ||
-      db.curricula[0];
-    if (!curriculum) throw new Error('Curriculum not found');
-    const curriculumCourses = db.curriculumCourses.filter((cc) => cc.curriculumId === curriculum.id);
-    const prereqRules = db.academicRules.filter((pr) => pr.curriculumId === curriculum.id);
-    const passedCourses = db.studentPassedCourses.filter((pc) => pc.userId === profile.userId);
-    const allCourses = db.courses;
-    const currentOfferings = db.courseOfferings;
+describe('eligibility engine with isolated synthetic academic fixtures', () => {
+  it('evaluates the seeded catalog without assuming any real student account exists', () => {
+    const data = getInitialSeedData();
+    const curriculum = data.curricula[0];
+    expect(curriculum).toBeDefined();
+    const profile: StudentAcademicProfile = {
+      userId: 'synthetic-engine-student',
+      universityId: curriculum.universityId,
+      campusId: curriculum.campusId,
+      degreeLevelId: curriculum.degreeLevelId,
+      majorId: curriculum.majorId,
+      entryYearId: curriculum.entryYearId,
+      isTrackSelected: false,
+      desiredTrackIds: [],
+      updatedAt: new Date().toISOString(),
+    };
+
     const result = evaluateStudentEligibility({
-      studentProfile: profile as any,
-      curriculum: curriculum as any,
-      curriculumCourses: curriculumCourses as any,
-      allCourses: allCourses as any,
-      tracks: db.tracks as any,
-      academicRules: prereqRules as any,
-      passedCourses: passedCourses as any,
-      currentOfferings: currentOfferings as any,
+      studentProfile: profile,
+      curriculum,
+      curriculumCourses: data.curriculumCourses.filter(cc => cc.curriculumId === curriculum.id),
+      allCourses: data.courses,
+      tracks: data.tracks,
+      academicRules: data.academicRules.filter(rule => rule.curriculumId === curriculum.id),
+      passedCourses: [],
+      currentOfferings: data.courseOfferings,
     });
-    console.log(`Total offerings evaluated: ${result.totalOfferingsEvaluated}`);
-    console.log(`Eligible: ${result.eligibleCount}`);
-    console.log(`Blocked: ${result.blockedCount}`);
-    console.log(`Already Passed: ${result.alreadyPassedCount}`);
-    console.log('✅ Eligibility Engine test passed successfully!');
+
+    expect(result.totalOfferingsEvaluated).toBeGreaterThan(0);
+    expect(result.eligibleCount + result.blockedCount + result.alreadyPassedCount)
+      .toBeGreaterThanOrEqual(result.totalOfferingsEvaluated);
   });
 });

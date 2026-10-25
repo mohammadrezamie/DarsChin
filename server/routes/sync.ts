@@ -36,6 +36,12 @@ export interface SyncSnapshot {
   createdAt: string;
 }
 
+// Reconciliation updates the mutable job status. Checking through this helper
+// prevents incorrect control-flow narrowing after reconcileJob() has run.
+function requiresSyncReview(job: SyncJob): boolean {
+  return job.status === 'AWAITING_REVIEW';
+}
+
 function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
   const snapshots = (db.syncSnapshots as SyncSnapshot[])
     .filter((snapshot) => snapshot.jobId === job.id)
@@ -265,7 +271,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
           reconciledOfferings: job.reconciledOfferings ?? 0,
           reviewCandidates: job.reviewCandidates ?? 0,
           importBatchId: job.importBatchId,
-          requiresReview: job.status === 'AWAITING_REVIEW',
+          requiresReview: requiresSyncReview(job),
           duplicateRecords: job.duplicateRecords ?? 0,
           errors: result.errors,
         },
@@ -282,7 +288,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
         reconciledOfferings: job.reconciledOfferings ?? 0,
         reviewCandidates: job.reviewCandidates ?? 0,
         importBatchId: job.importBatchId,
-        requiresReview: job.status === 'AWAITING_REVIEW',
+        requiresReview: requiresSyncReview(job),
         duplicateRecords: job.duplicateRecords ?? 0,
       },
       ...(job.status === 'FAILED' ? { error: job.error, errors: job.reconciliationErrors ?? [] } : {}),
@@ -335,7 +341,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
       reconciledOfferings: job.reconciledOfferings ?? 0,
       reviewCandidates: job.reviewCandidates ?? 0,
       importBatchId: job.importBatchId,
-      requiresReview: job.status === 'AWAITING_REVIEW',
+      requiresReview: requiresSyncReview(job),
       duplicateRecords: job.duplicateRecords ?? 0,
       errors: result.errors,
     },
@@ -363,7 +369,7 @@ syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (
       reconciledOfferings: job.reconciledOfferings ?? 0,
       reviewCandidates: job.reviewCandidates ?? 0,
       importBatchId: job.importBatchId,
-      requiresReview: job.status === 'AWAITING_REVIEW',
+      requiresReview: requiresSyncReview(job),
       duplicateRecords: job.duplicateRecords ?? 0,
       reconciliationErrors: job.reconciliationErrors ?? [],
       error: job.error,

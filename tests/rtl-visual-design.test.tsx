@@ -52,7 +52,10 @@ describe('Persian-first responsive UI guardrails',()=>{
       expect(s).toContain('darschin-drawer');
       expect(s).toContain('aria-modal="true"');
       expect(s).toContain("document.body.style.overflow = 'hidden'");
-      expect(s).toContain("event.key === 'Tab'");
+      // Either guarding a Tab branch or early-returning for non-Tab keys is valid.
+      expect(s).toMatch(/event\.key\s*(?:===|!==)\s*'Tab'/);
+      expect(s).toContain('event.shiftKey');
+      expect(s).toContain('event.preventDefault()');
       expect(s).toContain('right-0');
     }
     expect(read('src/index.css')).toContain('@media (prefers-reduced-motion: reduce)');
