@@ -4,6 +4,7 @@ import { ArrowRight, FlaskConical, RotateCcw, ShieldCheck, GraduationCap, AlertT
 import { DemoAuthProvider } from '../context/AuthContext';
 import { resetBrowserDemo } from '../demo/mock-api';
 import { StudentDashboard } from '../components/StudentDashboard';
+import { DemoFeedback } from '../components/DemoFeedback';
 import { AdminDashboard } from '../components/AdminDashboard';
 
 export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
@@ -32,6 +33,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
               <Link to="/demo" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-100">
                 <ArrowRight aria-hidden="true" className="h-4 w-4" /> برنامه‌ریز ساده
               </Link>
+              <DemoFeedback area={role} />
               <button type="button" onClick={() => setResetConfirm(true)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-100">
                 <RotateCcw aria-hidden="true" className="h-4 w-4" /> بازنشانی دمو
               </button>
