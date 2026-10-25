@@ -8,6 +8,7 @@
 | پرونده جمع‌آوری و تأیید قوانین دانشگاه آزاد (در انتظار) | [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md) |
 | پژوهش منابع آیین‌نامه و معماری نسخه‌بندی چارت | [ACADEMIC_GOVERNANCE_RESEARCH_FA.md](ACADEMIC_GOVERNANCE_RESEARCH_FA.md) |
 | طراحی ارزشیابی عددی و رتبه‌بندی محدود اساتید | [TEACHER_RATING_POLICY_FA.md](TEACHER_RATING_POLICY_FA.md) |
+| تطبیق سخت‌گیرانه فایل آموزشیار، صف بررسی و مرز انتشار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | نقشه عملیاتی‌کردن کامل Vercel | [VERCEL_FULLSTACK_PLAN_FA.md](VERCEL_FULLSTACK_PLAN_FA.md) |
 | روند همکاری چندنفره و استقرار خودکار | [TEAM_WORKFLOW_FA.md](TEAM_WORKFLOW_FA.md) |
 | Local setup | [README](../README.md) |
