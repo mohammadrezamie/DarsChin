@@ -559,7 +559,7 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
-      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-2 z-30 min-w-0 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
+      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-[68px] z-30 min-w-0 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
         <div className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
