@@ -300,7 +300,40 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 </fieldset>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="grid gap-3 sm:hidden" aria-label="دروس چارت تحصیلی">
+                {curriculumFull.courses.map((cc: any) => (
+                  <article key={cc.id} className={`rounded-xl border p-3 ${activeCourseId === cc.courseId
+                    ? 'border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30'
+                    : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <button type="button" onClick={() => setActiveCourseId(cc.courseId)}
+                        aria-pressed={activeCourseId === cc.courseId}
+                        className="min-h-11 min-w-0 flex-1 text-right focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                        <span className="block break-words text-sm font-bold text-slate-900 dark:text-white">{cc.course?.name || 'عنوان نامشخص'}</span>
+                        <span dir="ltr" className="mt-1 inline-block text-xs font-mono text-slate-500 dark:text-slate-400">{cc.course?.code || '—'}</span>
+                      </button>
+                      <button type="button" disabled={!isEditableChart}
+                        onClick={() => void handleRemoveCourse(cc.courseId)}
+                        aria-label={`حذف ${cc.course?.name || 'درس'} از پیش‌نویس`}
+                        className="min-h-11 min-w-11 rounded-lg border border-rose-200 text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 dark:border-rose-900 dark:text-rose-300">
+                        <Trash2 aria-hidden="true" className="mx-auto h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <span className="rounded-lg bg-slate-100 px-2 py-1 dark:bg-slate-800">{cc.classification === 'MAJOR_REQUIRED' ? 'اجباری رشته' :
+                        cc.classification === 'MAJOR_ELECTIVE' ? 'اختیاری رشته' :
+                        cc.classification === 'TRACK_REQUIRED' ? 'اجباری گرایش' : 'اختیاری گرایش'}</span>
+                      {cc.trackId && <span className="rounded-lg bg-slate-100 px-2 py-1 dark:bg-slate-800">
+                        {tracks.find(t => t.id === cc.trackId)?.name || 'گرایش ناشناخته'}
+                      </span>}
+                    </div>
+                    <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">برای مشاهده روابط این درس، روی عنوان بزنید.</p>
+                  </article>
+                ))}
+                {curriculumFull.courses.length === 0 && <p className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">هنوز درسی در این چارت ثبت نشده است.</p>}
+              </div>
+
+              <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-sm text-right">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
