@@ -99,7 +99,9 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   const handleAdd = () => {
     const initialForm: any = {};
     columns.forEach(c => {
-      if (c.type === 'boolean') initialForm[c.key] = true;
+      // An academic credit exemption must always require explicit approval.
+      // Other existing boolean defaults (e.g. active) remain unchanged.
+      if (c.type === 'boolean') initialForm[c.key] = c.key === 'isExtraUnit' ? false : true;
       else if (c.type === 'select') initialForm[c.key] = getOptions(c)[0]?.value || '';
       else initialForm[c.key] = '';
     });
