@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { evaluateScheduleQuality, type QualityOffering } from '../src/domain/schedule-quality';
+import { evaluateScheduleQuality, preservesSelectedCourses, type QualityOffering } from '../src/domain/schedule-quality';
 import { ScheduleQualityPanel } from '../src/components/ScheduleQualityPanel';
 import type { TeacherRatingSummary } from '../src/domain/teacher-ratings';
 import type { CourseEligibilityResult } from '../src/types';
@@ -57,6 +57,19 @@ describe('timetable day-quality scoring',()=>{
     expect(result.dayScore).toBeNull();
   });
 });
+describe('atomic suggestion safety',()=>{
+  it('preserves the exact set of chosen courses and rejects unknown, duplicate or injected IDs',()=>{
+    const refs=offered.map(o=>({offeringId:o.offeringId,courseId:o.courseId}));
+    const before=[a.offeringId,b.offeringId,c.offeringId];
+    expect(preservesSelectedCourses(before,[a.offeringId,bAlt.offeringId,cAlt.offeringId],refs)).toBe(true);
+    expect(preservesSelectedCourses(before,[a.offeringId,bAlt.offeringId],refs)).toBe(false);
+    expect(preservesSelectedCourses(before,[a.offeringId,bAlt.offeringId,'external'],refs)).toBe(false);
+    expect(preservesSelectedCourses(before,[a.offeringId,bAlt.offeringId,b.offeringId],refs)).toBe(false);
+    expect(preservesSelectedCourses(before,[a.offeringId,a.offeringId,c.offeringId],refs)).toBe(false);
+    expect(preservesSelectedCourses([],before,refs)).toBe(false);
+  });
+});
+
 describe('teacher-score integrity',()=>{
   it('uses published averages only, excludes insufficient votes and compares same course',()=>{
     const worst=evaluateScheduleQuality(offered,[a.offeringId,b.offeringId,c.offeringId],summaries);
