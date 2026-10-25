@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { extractSourceCourseIds } from '../utils/academic';
@@ -6,6 +7,7 @@ import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, 
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
 export const AdminCurriculumBuilder: React.FC = () => {
+  const [, setSearchParams] = useSearchParams();
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [majors, setMajors] = useState<Major[]>([]);
   const [entryYears, setEntryYears] = useState<EntryYear[]>([]);
@@ -139,6 +141,20 @@ export const AdminCurriculumBuilder: React.FC = () => {
         </div>
 
         {curriculumFull && (
+          <>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+            <div className="min-w-0">
+              <p className="text-sm font-black text-blue-950 dark:text-blue-100">تنظیم شرایط دروس این چارت</p>
+              <p className="mt-1 text-xs leading-6 text-slate-700 dark:text-slate-200">
+                شرایط کارآموزی، پروژه و سایر دروس مخصوص همین ورودی‌اند؛ از فهرست سادهٔ پیش‌نیاز، هم‌نیاز و حداقل واحد پاس‌شده استفاده کن.
+              </p>
+            </div>
+            <button type="button"
+              onClick={()=>setSearchParams({tab:'academic-rules',curriculumId:selectedCurriculumId!,...(activeCourseId?{targetCourseId:activeCourseId}:{})})}
+              className="min-h-11 rounded-xl bg-blue-700 px-4 text-xs font-black text-white">
+              {activeCourseId?'تنظیم شرایط درس انتخاب‌شده':'باز کردن تنظیم شرایط دروس'}
+            </button>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -286,6 +302,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
     </div>
