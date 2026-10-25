@@ -85,6 +85,26 @@ describe('department course-demand workflow',()=>{
     expect(created.status).toBe(201);id=created.body.data.id;createdSurveyIds.push(id);
     expect(created.body.data.status).toBe('DRAFT');
   });
+  it('rejects a cohort identifier that belongs to a different entry-year chart', async () => {
+    const chart = db.curricula.find(c => c.id === 'test-demand-curriculum')!;
+    const anotherYear = db.entryYears.find(y => y.id !== chart.entryYearId);
+    if (!anotherYear) throw new Error('Secondary entry-year test fixture required');
+    const requestBody = {
+      title: 'نیازسنجی ورودی اشتباه', description: 'تست تفکیک قطعی ورودی',
+      targetTermId: termId, universityId: 'test-demand-univ', campusId: campusKey,
+      degreeLevelId: chart.degreeLevelId, majorId: chart.majorId,
+      curriculumId: chart.id, entryYearIds: [anotherYear.id], trackIds: [],
+      courseIds: [courseId], recommendedMinimumByCourse: { [courseId]: 2 },
+    };
+    const wrongYear = await request(app).post('/api/demand/surveys')
+      .set('Authorization', auth.manager).send(requestBody);
+    expect(wrongYear.status).toBe(400);
+    const mixedYears = await request(app).post('/api/demand/surveys')
+      .set('Authorization', auth.manager)
+      .send({ ...requestBody, entryYearIds: [chart.entryYearId, anotherYear.id] });
+    expect(mixedYears.status).toBe(400);
+    expect(db.demandSurveys.filter(s => s.title === requestBody.title)).toHaveLength(0);
+  });
   it('keeps drafts private and only accepts responses after manager opens survey',async()=>{
     const studentList=await request(app).get('/api/demand/surveys').set('Authorization',auth.student);
     expect(studentList.body.data.some((s:{id:string})=>s.id===id)).toBe(false);
@@ -95,6 +115,22 @@ describe('department course-demand workflow',()=>{
     expect(opened.status).toBe(200);
     const list=await request(app).get('/api/demand/surveys').set('Authorization',auth.student);
     expect(list.body.data.some((s:{id:string})=>s.id===id)).toBe(true);
+  });
+  it('does not expose an otherwise valid survey to students from a different entrance year', async () => {
+    const profile = db.studentProfiles.find(p => p.userId === userIds[1])!;
+    const originalYear = profile.entryYearId;
+    const otherYear = db.entryYears.find(y => y.id !== originalYear);
+    if (!otherYear) throw new Error('Secondary entry-year fixture required');
+    try {
+      profile.entryYearId = otherYear.id;
+      const hidden = await request(app).get('/api/demand/surveys').set('Authorization', auth.student);
+      expect(hidden.status).toBe(200);
+      expect(hidden.body.data.some((s:{ id:string }) => s.id === id)).toBe(false);
+      const crossCohort = await request(app).put(`/api/demand/surveys/${id}/response`)
+        .set('Authorization', auth.student)
+        .send({ studentNumber: '1402123456', anticipatedGraduation: 'UNKNOWN', courseIds:[courseId] });
+      expect(crossCohort.status).toBe(404);
+    } finally { profile.entryYearId = originalYear; }
   });
   it('replaces one response on repeat, rejects arbitrary course ID and keeps identity server-side',async()=>{
     const endpoint=`/api/demand/surveys/${id}/response`;
