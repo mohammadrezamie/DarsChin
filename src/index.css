@@ -287,3 +287,19 @@
   .darschin-people-table td[data-label]:last-child { border-bottom: 0; }
   .darschin-people-table select { width: 100%; }
 }
+
+/* Deliberately calmer, compact academic typography instead of oversized rounded
+ * 900-weight headings. Preserves the offline-hosted Persian typeface. */
+:root {
+  --darschin-reading-size: .9375rem;
+  --darschin-reading-line-height: 1.75;
+}
+.darschin-page { font-size: var(--darschin-reading-size); line-height: var(--darschin-reading-line-height); }
+.darschin-page :where(.font-black) { font-weight: 750; }
+.darschin-page :where(.text-xs) { line-height: 1.85; }
+.darschin-page :where(h1, h2, h3, h4) { letter-spacing: 0; }
+.darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+@media (max-width: 639px) {
+  .darschin-page :where(.text-2xl) { font-size: 1.375rem; line-height: 1.65; }
+  .darschin-page :where(.text-xl) { font-size: 1.175rem; line-height: 1.65; }
+}
