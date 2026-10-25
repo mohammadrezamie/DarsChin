@@ -440,7 +440,7 @@ export const StudentDashboard: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={() => setImportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
+              className="flex min-h-11 items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
               title="راهنمای نصب و دانلود افزونه کروم"
             >
               <Download className="w-4 h-4" />
@@ -448,13 +448,13 @@ export const StudentDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setProfileModalOpen(true)}
-              className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+              className="min-h-11 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
             >
               مدیریت پرونده تحصیلی
             </button>
             <button
               onClick={() => setImportModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+              className="flex min-h-11 items-center gap-2 px-4 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
             >
               <UploadCloud className="w-4 h-4" />
               بارگذاری دروس ارائه‌شده
@@ -506,57 +506,61 @@ export const StudentDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Main Tabs */}
-      <div className="bg-liquid-glass rounded-2xl p-1.5 flex flex-wrap gap-1.5 sticky top-[72px] z-30 print:hidden overflow-x-auto sm:overflow-visible shadow-xs">
-        <button
-          onClick={() => setActiveTab('offerings')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'offerings'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          بررسی تطبیقی دروس ارائه‌شده
-        </button>
-        <button
-          onClick={() => setActiveTab('recommendations')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'recommendations'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          پیشنهاد هوشمند انتخاب واحد
-        </button>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'schedule'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          برنامه‌ریز و جدول زمانی
-        </button>
-        <button
-          onClick={() => setActiveTab('passed')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'passed'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          مدیریت کارنامه و دروس پاس‌شده
-        </button>
+      {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
+      <nav aria-label="بخش‌های میز کار دانشجو" className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {studentTabs.map(tab => {
+            const TabIcon = tab.icon;
+            const current = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                aria-current={current ? 'page' : undefined}
+                className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border px-2 py-3 text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
+                  ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
+                  : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+              >
+                <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
+                <span className="sm:hidden">{tab.short}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div aria-live="polite" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs dark:border-slate-800 dark:bg-slate-900">
+        <span className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+          {planStatus === 'saving' ? <RefreshCw aria-hidden={true} className="h-4 w-4 animate-spin text-blue-600" />
+            : planStatus === 'saved' ? <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-emerald-600" />
+            : planStatus === 'error' ? <AlertCircle aria-hidden={true} className="h-4 w-4 text-rose-600" />
+            : <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-slate-400" />}
+          {planStatus === 'saving' ? 'در حال ذخیره تغییرات…'
+            : planStatus === 'saved' ? 'تغییرات برنامه ثبت شد.'
+            : planStatus === 'error' ? 'برنامه ذخیره نشد.'
+            : 'برای ثبت تغییرات از بخش برنامه‌ریز استفاده کنید.'}
+        </span>
+        <span className="text-slate-500 dark:text-slate-400">{selectedOfferingIds.length} گروه درسی انتخاب شده</span>
       </div>
 
+      {(planError || loadError) && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <AlertCircle aria-hidden={true} className="h-5 w-5 shrink-0" />
+          <span className="flex-1">{planError || loadError}</span>
+          {loadError && (
+            <button type="button" disabled={planStatus === 'saving'} onClick={() => void fetchDashboardData()}
+              className="min-h-11 rounded-lg border border-rose-300 px-3 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:border-rose-700">
+              دریافت دوباره اطلاعات
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tab Content */}
-      <div className="min-h-[400px]">
-        {loading ? (
+      <section className="min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+        {loading && activeTab !== 'support' && activeTab !== 'bugs' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
@@ -606,7 +610,7 @@ export const StudentDashboard: React.FC = () => {
             {activeTab === 'bugs' && <BugReportPanel />}
           </>
         )}
-      </div>
+      </section>
 
       <AcademicProfileModal
         isOpen={isProfileModalOpen}
