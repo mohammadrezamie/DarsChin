@@ -285,6 +285,7 @@ function demoEvaluation(s: DemoStore) {
     const c = courses.find(course => course.id === o.courseId);
     return {
       offeringId: o.id, courseId: o.courseId, courseCode: c?.code || 'DEMO',
+      rawCourseCode: o.rawCourseCode,
       courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
       groupCode: o.groupCode, instructor: o.instructor, dayOfWeek: o.dayOfWeek,
       startTime: o.startTime, endTime: o.endTime, capacity: o.capacity,
@@ -444,7 +445,13 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     return good({profile:s.profile}) as ApiResponse<T>;
   }
   if (path === '/api/student/profile') {
-    if (method === 'GET') return good({ profile: s.profile }) as ApiResponse<T>;
+    if (method === 'GET') {
+      const chart=s.collections['/api/curriculum'].find(c =>
+        c.status==='active' && c.universityId===s.profile.universityId &&
+        c.campusId===s.profile.campusId && c.degreeLevelId===s.profile.degreeLevelId &&
+        c.majorId===s.profile.majorId && c.entryYearId===s.profile.entryYearId);
+      return good({ profile: s.profile, curriculum: chart || null }) as ApiResponse<T>;
+    }
     if (method === 'PUT') { s.profile = { ...s.profile, ...data, userId: 'demo-student', updatedAt: now() }; saveStore(s); return good(s.profile) as ApiResponse<T>; }
   }
   if (path === '/api/academic/all-meta' && method === 'GET') {
