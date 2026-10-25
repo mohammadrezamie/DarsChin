@@ -754,6 +754,7 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Department demand collection is independent from live course registration. */}
         {activeTab === 'demand' && <DemandWorkspace role="admin" />}
+        {activeTab === 'sms-center' && <AdminSmsCenter />}
 
         {/* 14. ACADEMIC POLICY & FINAL SEMESTER SETTINGS */}
         {activeTab === 'academic-settings' && isSuperAdmin && <AdminAcademicSettings />}
