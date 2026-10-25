@@ -118,11 +118,24 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
     return res.status(409).json({ success: false, error: 'چارت فعال یا بایگانی‌شده را نمی‌توان مستقیم تغییر داد؛ برای اصلاح باید نسخه پیش‌نویس جدید ساخته شود.' });
   }
   const { name, version, status, majorId, entryYearId } = req.body || {};
+  if ((status && !['draft', 'archived'].includes(status)) ||
+      (name !== undefined && (typeof name !== 'string' || !name.trim())) ||
+      (version !== undefined && (typeof version !== 'string' || !version.trim())) ||
+      (majorId && !db.majors.some(m => m.id === majorId && m.degreeLevelId === db.curricula[idx].degreeLevelId)) ||
+      (entryYearId && !db.entryYears.some(y => y.id === entryYearId))) {
+    return res.status(400).json({ success: false, error: 'درخواست ویرایش چارت نامعتبر است؛ انتشار بدون تأیید رسمی غیرفعال است.' });
+  }
+  const nextVersion = version?.trim() ?? db.curricula[idx].version;
+  const nextMajorId = majorId || db.curricula[idx].majorId;
+  const nextEntryId = entryYearId || db.curricula[idx].entryYearId;
+  if (db.curricula.some(c => c.id !== req.params.id &&
+      c.campusId === db.curricula[idx].campusId &&
+      c.degreeLevelId === db.curricula[idx].degreeLevelId &&
+      c.majorId === nextMajorId && c.entryYearId === nextEntryId && c.version === nextVersion)) {
+    return res.status(409).json({ success: false, error: 'این نسخه برای همین واحد، مقطع، رشته و ورودی قبلاً ثبت شده است.' });
+  }
   if (name) db.curricula[idx].name = name.trim();
   if (version) db.curricula[idx].version = version.trim();
-  if (status && status !== 'draft' && status !== 'archived') {
-    return res.status(400).json({ success: false, error: 'انتشار چارت به عنوان مصوب تا تکمیل گردش تأیید منبع رسمی غیرفعال است.' });
-  }
   if (status) db.curricula[idx].status = status;
   if (majorId) db.curricula[idx].majorId = majorId;
   if (entryYearId) db.curricula[idx].entryYearId = entryYearId;
@@ -263,6 +276,12 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     return res.status(400).json({ success: false, error: 'این پیش‌نیاز چرخه وابستگی ایجاد می‌کند.' });
   }
 
+  if (db.data.academicRules.some(rule => rule.curriculumId === curriculumId &&
+      rule.targetCourseId === targetCourseId && rule.relationshipType === relationshipType &&
+      JSON.stringify(rule.expression) === JSON.stringify(expression) &&
+      (rule.trackId || null) === (trackId || null))) {
+    return res.status(409).json({ success: false, error: 'این رابطه قبلاً در همین نسخه چارت تعریف شده است.' });
+  }
   const newRule = {
     id: `rule-${randomUUID()}`,
     curriculumId,
