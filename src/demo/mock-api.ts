@@ -20,6 +20,8 @@ export const DEMO_API_STORE_KEY = 'darschin_browser_mock_pilot_v3';
 const now = () => new Date().toISOString();
 type Row = Record<string, any>;
 interface DemoStore {
+  /** Browser-only scenario migration; does not touch user/server data. */
+  registrationDemoVersion?: number;
   collections: Record<string, Row[]>;
   profile: StudentAcademicProfile;
   plan: { selectedOfferingIds: string[]; coursePriorities: string[]; offeringPriorities: Record<string, string[]> };
@@ -95,6 +97,7 @@ function initialStore(): DemoStore {
   // Clone fixtures per reset; otherwise add/delete operations mutate the module-level
   // sample arrays and corrupt all subsequent demo sessions.
   return structuredClone({
+    registrationDemoVersion: 1,
     collections: {
       '/api/academic/universities': [university],
       '/api/academic/provinces': [province],
@@ -210,6 +213,24 @@ function readStore(): DemoStore {
         if (!Array.isArray(obj.importRecords)) obj.importRecords = [];
         if (!Array.isArray(obj.demandSurveys)) obj.demandSurveys = structuredClone(initialStore().demandSurveys);
         if (!Array.isArray(obj.demandResponses)) obj.demandResponses = [];
+        if (obj.registrationDemoVersion !== 1) {
+          // Introduce the fictional Math II/differential exercise once in old
+          // local demo sessions, keeping edits, passed courses and priorities.
+          const latest=initialStore();
+          for (const [key, identity] of [
+            ['/api/academic/courses','diff'],
+            ['/api/offerings','off-diff'],
+            ['/api/curriculum-courses','cc-1403-diff'],
+            ['/api/curriculum/rules','demo-1403-coreq-differential'],
+          ]) {
+            if (!Array.isArray(obj.collections[key])) obj.collections[key] = [];
+            const item=latest.collections[key].find(row=>row.id===identity);
+            if (item && !obj.collections[key].some((row:Row)=>row.id===identity)) {
+              obj.collections[key].push(structuredClone(item));
+            }
+          }
+          obj.registrationDemoVersion=1;
+        }
         return obj as DemoStore;
       }
     }
