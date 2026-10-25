@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DemoFeedback } from '../components/DemoFeedback';
+import { FluidWeekTimetable } from '../components/FluidWeekTimetable';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { AlertTriangle, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock3, GraduationCap, RotateCcw } from 'lucide-react';
 import {
   DEMO_COURSES,
@@ -54,7 +56,7 @@ export const PlannerDemo: React.FC = () => {
           <Link to="/" className="inline-flex items-center gap-2 font-extrabold text-blue-700 hover:underline dark:text-blue-300">
             <GraduationCap className="h-6 w-6" aria-hidden="true" /> درس‌چین
           </Link>
-          <DemoFeedback area="planner" />
+          <div className="flex flex-wrap items-center gap-2"><ThemeToggle /><DemoFeedback area="planner" /></div>
           <Link to="/" className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800">
             بازگشت به صفحهٔ اصلی <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           </Link>
@@ -167,25 +169,19 @@ export const PlannerDemo: React.FC = () => {
                   حذف همهٔ درس‌ها
                 </button>
               </div>
-              <div className="mt-5 grid gap-3">
-                {DEMO_DAYS.map((day) => {
-                  const dayCourses = selectedCourses.filter((course) => course.day === day).sort((a, b) => a.start.localeCompare(b.start));
-                  return (
-                    <div key={day} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
-                      <h3 className="mb-2 text-sm font-black">{day}</h3>
-                      {dayCourses.length === 0 ? <p className="text-xs text-slate-400">هنوز کلاسی انتخاب نشده است.</p> : (
-                        <div className="space-y-2">
-                          {dayCourses.map((course) => (
-                            <div key={course.id} className={`rounded-xl border-r-4 bg-white px-3 py-2 text-sm shadow-sm dark:bg-slate-900 ${conflictIds.has(course.id) ? 'border-rose-500' : 'border-blue-500'}`}>
-                              <div className="font-bold">{course.name}</div>
-                              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{course.start} – {course.end}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="mt-5">
+                <FluidWeekTimetable
+                  entries={selectedCourses.map(course => ({
+                    id: course.id,
+                    title: course.name,
+                    day: course.day,
+                    start: course.start,
+                    end: course.end,
+                    subtitle: course.instructor,
+                    conflict: conflictIds.has(course.id),
+                  }))}
+                  onRemove={toggleCourse}
+                />
               </div>
             </div>
 
