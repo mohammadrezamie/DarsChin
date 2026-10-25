@@ -12,7 +12,8 @@
 | صف سریع ثبت: نمایش کامل عنوان درس، استاد و ساعت کنار اولویت‌ها | [REGISTRATION_QUEUE_UX_FA.md](REGISTRATION_QUEUE_UX_FA.md) |
 | کیفیت برنامهٔ انتخاب واحد: امتیاز روزهای حضور، استادها و پیشنهاد بدون تداخل | [PLAN_QUALITY_SCORING_FA.md](PLAN_QUALITY_SCORING_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
-| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) |
+| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) || **P0: دو ریپو GitHub روی یک VPS، تفکیک نصب/امنیت و حادثهٔ Crash-loop درس‌چین** | [SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md) |
+
 | راهنمای ساختار پوشه‌ها، آرشیو ابزارهای قدیمی و نظافت GitHub | [REPOSITORY_STRUCTURE_FA.md](REPOSITORY_STRUCTURE_FA.md) |
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | بازخورد دموی زنده: صف ثبت فشرده، فعال‌سازی نیازسنجی و ساخت چارت توسط مدیر | [UX_LIVE_DEMO_FEEDBACK_FA.md](UX_LIVE_DEMO_FEEDBACK_FA.md) |
