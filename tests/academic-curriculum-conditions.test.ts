@@ -88,6 +88,16 @@ describe('per-curriculum editable conditions (all numbers are synthetic)',()=>{
     };
     expect(status('1403',[legacy]).overallStatus).toBe('BLOCKED_PREREQUISITE');
   });
+  it('ignores rules explicitly scoped to another cohort or major even within an imported chart',()=>{
+    const base:AcademicRule={
+      id:'year-scoped-prerequisite',curriculumId:'chart-1403',targetCourseId:'internship',
+      relationshipType:'PREREQUISITE',expression:{type:'COURSE',courseId:'general-2'},
+    };
+    expect(status('1403',[{...base,entryYearId:'1402'}]).overallStatus).toBe('AVAILABLE');
+    expect(status('1403',[{...base,majorId:'another-major'}]).overallStatus).toBe('AVAILABLE');
+    expect(status('1403',[{...base,entryYearId:'1403',majorId:'electrical'}]).overallStatus)
+      .toBe('BLOCKED_PREREQUISITE');
+  });
   it('does not inherit the other entry year internship threshold',()=>{
     const rules=[rule('chart-1402',5),rule('chart-1403',3)];
     expect(status('1402',rules).overallStatus).toBe('BLOCKED_PREREQUISITE');
