@@ -586,23 +586,62 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     return good(s.plan) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'GET') {
-    const enriched = s.passed.map(row => ({ ...row, course: s.collections['/api/academic/courses'].find(c => c.id === row.courseId) }));
-    const totalUnits = enriched.reduce((n,r) => n + (r.course?.units||0), 0);
-    const categorySummary: Record<string,number> = {};
-    enriched.forEach(r=>{if (r.course) categorySummary[r.course.category] = (categorySummary[r.course.category]||0)+r.course.units;});
-    return good({ passedCourses: enriched, totalUnits, categorySummary }) as ApiResponse<T>;
+    const enrolled=new Set<string>();
+    const categorySummary:Record<string,number>={};
+    let totalUnits=0;
+    const enriched=s.passed.map(row=>{
+      const course=currentCourses(s).find(c=>c.id===row.courseId);
+      const passed=row.status!=='FAILED' && row.status!=='ABSENT' &&
+        (row.status==='PASSED' || row.grade===undefined || (
+          Number.isFinite(Number(row.grade)) && Number(row.grade)>=10));
+      if(course && passed && !enrolled.has(row.courseId)){
+        enrolled.add(row.courseId);
+        totalUnits+=course.units;
+        categorySummary[course.category]=(categorySummary[course.category]||0)+course.units;
+      }
+      return {...row,course};
+    });
+    return good({passedCourses:enriched,totalUnits,categorySummary}) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'POST') {
-    if (!currentCourses(s).some(c=>c.id === data.courseId)) return fail('این درس در بانک فعلی دمو نیست.');
-    if (s.passed.some(p=>p.courseId===data.courseId)) return fail('این درس قبلاً اضافه شده است.');
-    s.passed.push({id:id(),userId:'demo-student',courseId:data.courseId,grade:data.grade,status:'PASSED',passedAt:now()});
-    saveStore(s);return good(s.passed.at(-1)) as ApiResponse<T>;
+    if(!currentCourses(s).some(c=>c.id===data.courseId))
+      return fail('این درس در بانک فعلی دمو نیست.');
+    if(s.passed.some(p=>p.courseId===data.courseId))
+      return fail('این درس قبلاً به سوابق آزمایشی اضافه شده است.');
+    if(data.termId && !s.collections['/api/academic/terms'].some(t=>t.id===data.termId))
+      return fail('نیمسال سابقهٔ درسی در دمو معتبر نیست.');
+    const raw=data.grade;
+    const noGrade=raw===undefined || raw===null || (typeof raw==='string' && !raw.trim());
+    const acceptable=typeof raw==='number' || (typeof raw==='string' &&
+      /^\\d{1,2}(?:\\.\\d{1,2})?$/.test(raw.trim()));
+    const score=noGrade?undefined:Number(raw);
+    if(!noGrade && (!acceptable || !Number.isFinite(score) || score!<0 || score!>20))
+      return fail('نمره باید عددی بین صفر تا بیست باشد.');
+    const record={
+      id:id(),userId:'demo-student',courseId:data.courseId,grade:score,
+      status:score!==undefined && score<10?'FAILED':'PASSED',
+      termId:data.termId||undefined,passedAt:now(),
+    };
+    s.passed.push(record);saveStore(s);return good(record) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses/batch' && method === 'POST') {
-    const ids = Array.isArray(data.courseIds) ? data.courseIds : [];
+    if(!Array.isArray(data.courseIds) || data.courseIds.length>250 ||
+      data.courseIds.some((value:unknown)=>typeof value!=='string'||!value.trim()))
+      return fail('فهرست دروس پاس‌شدهٔ دمو معتبر نیست.');
+    const ids=[...new Set(data.courseIds as string[])];
+    const validIds=new Set(currentCourses(s).map(c=>c.id));
+    if(ids.some(courseId=>!validIds.has(courseId)))
+      return fail('فهرست شامل درس ناشناخته است؛ هیچ سابقه‌ای در دمو تغییر نکرد.');
+    const next=data.replaceAll===true?[]:[...s.passed];
+    const saved=new Set(next.map(p=>p.courseId));
     let addedCount=0;
-    for(const courseId of ids){if(currentCourses(s).some(c=>c.id===courseId)&&!s.passed.some(p=>p.courseId===courseId)){s.passed.push({id:id(),userId:'demo-student',courseId,status:'PASSED',passedAt:now()});addedCount++;}}
-    saveStore(s);return good({addedCount,totalPassed:s.passed.length}) as ApiResponse<T>;
+    for(const courseId of ids){
+      if(saved.has(courseId))continue;
+      next.push({id:id(),userId:'demo-student',courseId,status:'PASSED',passedAt:now()});
+      saved.add(courseId);addedCount++;
+    }
+    s.passed=next;saveStore(s);
+    return good({addedCount,totalPassed:saved.size}) as ApiResponse<T>;
   }
   if (path.startsWith('/api/student/passed-courses/') && method === 'DELETE') {
     s.passed=s.passed.filter(p=>p.id!==path.split('/').at(-1));saveStore(s);return good({}) as ApiResponse<T>;
