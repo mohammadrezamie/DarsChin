@@ -5,7 +5,7 @@
 export const ADMIN_TABS = [
   'overview', 'provinces', 'campuses', 'degrees', 'majors', 'tracks',
   'entry-years', 'curricula', 'courses', 'academic-rules', 'terms',
-  'offerings', 'academic-settings', 'imports', 'users', 'support',
+  'offerings', 'academic-settings', 'imports', 'demand', 'users', 'support',
   'diagnostics', 'logs',
 ] as const;
 
