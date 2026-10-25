@@ -12,7 +12,7 @@ export interface SyncJob {
   userId: string;
   termId: string;
   campusId: string;
-  status: 'PENDING' | 'RUNNING' | 'RECEIVED' | 'RECONCILED' | 'FAILED';
+  status: 'PENDING' | 'RUNNING' | 'RECEIVED' | 'AWAITING_REVIEW' | 'RECONCILED' | 'FAILED';
   startedAt: string;
   receivedAt?: string;
   completedAt?: string;
@@ -20,6 +20,9 @@ export interface SyncJob {
   totalSnapshots: number;
   processedSnapshots: number;
   reconciledOfferings?: number;
+  reviewCandidates?: number;
+  importBatchId?: string;
+  finalChunkDigest?: string;
   duplicateRecords?: number;
   reconciliationErrors?: string[];
   error?: string;
@@ -54,33 +57,55 @@ function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
     job.completedAt = new Date().toISOString();
     job.error = 'داده دریافت شد، اما تطبیق امن همه رکوردها ناموفق بود؛ هیچ ارائه‌ای تغییر نکرد.';
     job.reconciliationErrors = result.errors.slice(0, 50);
+    db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
+      .filter(snapshot => snapshot.jobId !== job.id);
     db.save();
     return { ok: false, errors: result.errors };
   }
 
-  // Apply only after every record has passed validation. Missing source records never
-  // deactivate existing offerings because an incomplete extract cannot prove removal.
-  for (const incoming of result.offerings) {
-    const index = db.courseOfferings.findIndex(
-      (existing) =>
-        existing.sourceIdentity === incoming.sourceIdentity || existing.id === incoming.id,
-    );
-
-    if (index >= 0) {
-      const existing = db.courseOfferings[index];
-      db.courseOfferings[index] = { ...existing, ...incoming, id: existing.id };
-    } else {
-      db.courseOfferings.push(incoming);
-    }
+  // Validate and stage student-provided data only. A source snapshot is
+  // not an authorized university publication feed.
+  const batchId = `batch-sync-${job.id}`;
+  if (!db.importBatches.some(batch => batch.id === batchId)) {
+    const createdAt = new Date().toISOString();
+    db.importBatches.unshift({
+      id: batchId, userId: job.userId, termId: job.termId, source: 'extension',
+      schemaVersion: '1.0',
+      totalRecords: result.acceptedRecords + result.duplicateRecords,
+      matchedRecords: result.acceptedRecords,
+      reviewRecords: 0, invalidRecords: 0, createdAt,
+    });
+    db.importRecords.push(...result.offerings.map((offering, index) => ({
+      id: `rec-${batchId}-${index + 1}`,
+      batchId,
+      rawData: {
+        courseCode: offering.rawCourseCode ?? '',
+        courseName: offering.rawCourseName ?? '',
+        group: offering.groupCode,
+        instructor: offering.instructor,
+        day: offering.dayOfWeek,
+        startTime: offering.startTime,
+        endTime: offering.endTime,
+        capacity: offering.capacity,
+        examDate: offering.examDate,
+      },
+      matchedCourseId: offering.courseId,
+      status: 'MATCHED' as const,
+      reviewReason: 'پیشنهاد تطبیق افزونه، بدون تأیید ارائه یا مجوز انتشار عمومی.',
+    })));
   }
 
-  job.status = 'RECONCILED';
+  job.status = 'AWAITING_REVIEW';
   job.completedAt = new Date().toISOString();
-  job.reconciledAt = job.completedAt;
-  job.reconciledOfferings = result.acceptedRecords;
+  job.reviewCandidates = result.acceptedRecords;
+  job.importBatchId = batchId;
+  job.reconciledOfferings = 0;
   job.duplicateRecords = result.duplicateRecords;
   job.reconciliationErrors = [];
   job.error = undefined;
+  // Drop nested student-provided payloads once a normalized queue exists.
+  db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
+    .filter(snapshot => snapshot.jobId !== job.id);
   db.save();
 
   return { ok: true, errors: [] };
@@ -163,6 +188,33 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
     return res.status(404).json({ success: false, error: 'عملیات همگام‌سازی یافت نشد.' });
   }
 
+  // Completed jobs do not retain raw chunks; accept an idempotent retry
+  // without ever re-opening publication or creating a duplicate batch.
+  if (job.status === 'AWAITING_REVIEW') {
+    if (isFinal !== true || chunkIndex !== job.totalSnapshots - 1) {
+      return res.status(409).json({
+        success: false,
+        error: 'این همگام‌سازی پایان یافته است؛ فقط تکرار همان بخش نهایی پذیرفته می‌شود.',
+      });
+    }
+    const retry = validateSyncChunk({ chunkIndex, data, isFinal });
+    if ('error' in retry) {
+      return res.status(400).json({ success: false, error: retry.error });
+    }
+    const retryDigest = crypto.createHash('sha256').update(retry.serialized).digest('hex');
+    if (!job.finalChunkDigest || retryDigest !== job.finalChunkDigest) {
+      return res.status(409).json({
+        success: false,
+        error: 'داده درخواست تکراری با آخرین بخش ثبت‌شده یکسان نیست.',
+      });
+    }
+    return res.json({ success: true, data: {
+      jobStatus: job.status, duplicate: true, requiresReview: true,
+      reconciledOfferings: 0, reviewCandidates: job.reviewCandidates ?? 0,
+      importBatchId: job.importBatchId,
+    } });
+  }
+
   const validation = validateSyncChunk({ chunkIndex, data, isFinal });
   if ('error' in validation) {
     return res.status(400).json({ success: false, error: validation.error });
@@ -186,6 +238,7 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
       job.status = 'RECEIVED';
       job.receivedAt = job.receivedAt || new Date().toISOString();
       job.totalSnapshots = chunkIndex as number + 1;
+      job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
       const result = reconcileJob(job);
       return res.status(result.ok ? 200 : 422).json({
         success: result.ok,
@@ -194,6 +247,9 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
           jobStatus: job.status,
           duplicate: true,
           reconciledOfferings: job.reconciledOfferings ?? 0,
+          reviewCandidates: job.reviewCandidates ?? 0,
+          importBatchId: job.importBatchId,
+          requiresReview: job.status === 'AWAITING_REVIEW',
           duplicateRecords: job.duplicateRecords ?? 0,
           errors: result.errors,
         },
@@ -208,6 +264,9 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
         jobStatus: job.status,
         duplicate: true,
         reconciledOfferings: job.reconciledOfferings ?? 0,
+        reviewCandidates: job.reviewCandidates ?? 0,
+        importBatchId: job.importBatchId,
+        requiresReview: job.status === 'AWAITING_REVIEW',
         duplicateRecords: job.duplicateRecords ?? 0,
       },
       ...(job.status === 'FAILED' ? { error: job.error, errors: job.reconciliationErrors ?? [] } : {}),
@@ -246,6 +305,8 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   job.status = 'RECEIVED';
   job.receivedAt = new Date().toISOString();
   job.totalSnapshots = (chunkIndex as number) + 1;
+  // Only the final-chunk fingerprint survives successful reconciliation.
+  job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
   db.save();
 
   const result = reconcileJob(job);
@@ -256,6 +317,9 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
       jobStatus: job.status,
       duplicate: false,
       reconciledOfferings: job.reconciledOfferings ?? 0,
+      reviewCandidates: job.reviewCandidates ?? 0,
+      importBatchId: job.importBatchId,
+      requiresReview: job.status === 'AWAITING_REVIEW',
       duplicateRecords: job.duplicateRecords ?? 0,
       errors: result.errors,
     },
@@ -281,6 +345,9 @@ syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (
       totalSnapshots: job.totalSnapshots,
       processedSnapshots: job.processedSnapshots,
       reconciledOfferings: job.reconciledOfferings ?? 0,
+      reviewCandidates: job.reviewCandidates ?? 0,
+      importBatchId: job.importBatchId,
+      requiresReview: job.status === 'AWAITING_REVIEW',
       duplicateRecords: job.duplicateRecords ?? 0,
       reconciliationErrors: job.reconciliationErrors ?? [],
       error: job.error,
@@ -304,6 +371,9 @@ syncRouter.get('/state', authenticate, (req: AuthenticatedRequest, res) => {
       lastSyncStatus: lastJob?.status || null,
       totalSyncs: jobs.length,
       reconciledOfferings: lastJob?.reconciledOfferings ?? 0,
+      reviewCandidates: lastJob?.reviewCandidates ?? 0,
+      importBatchId: lastJob?.importBatchId,
+      requiresReview: lastJob?.status === 'AWAITING_REVIEW',
       reconciliationErrors: lastJob?.reconciliationErrors ?? [],
     },
   });
