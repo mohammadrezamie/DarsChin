@@ -69,7 +69,7 @@ const userIds=['major-admin-demo-test','major-guest-demo-test'];
 beforeAll(async()=>{
   await db.init(true);
   const admin:User={id:userIds[0],name:'مدیر آزمایشی',mobile:'09120000641',
-    roles:['admin'],permissions:['system.settings.manage','course.create'],
+    roles:['admin'],permissions:['system.settings.manage','course.create','course.update'],
     createdAt:new Date().toISOString()};
   const guest:User={id:userIds[1],name:'کاربر آزمایشی',mobile:'09120000642',
     roles:['student'],createdAt:new Date().toISOString()};
@@ -103,6 +103,27 @@ describe('catalogued extra-unit field integrity',()=>{
     generatedIds.courses.push(created.body.data.id);
     expect(created.body.data.isExtraUnit).toBe(true);
     expect(db.courses.find(c=>c.id===created.body.data.id)?.isExtraUnit).toBe(true);
+    const oldCourse={...db.courses.find(c=>c.id===created.body.data.id)!};
+    const updateUrl=`/api/academic/courses/${created.body.data.id}`;
+    const invalidUnits=await request(app).put(updateUrl)
+      .set('Authorization',adminToken).send({units:-3,isExtraUnit:false});
+    expect(invalidUnits.status).toBe(400);
+    expect(db.courses.find(c=>c.id===created.body.data.id)?.isExtraUnit).toBe(true);
+    const invalidPractical=await request(app).put(updateUrl)
+      .set('Authorization',adminToken).send({practicalUnits:9});
+    expect(invalidPractical.status).toBe(400);
+    const invalidType=await request(app).put(updateUrl)
+      .set('Authorization',adminToken).send({isExtraUnit:'false'});
+    expect(invalidType.status).toBe(400);
+    const unauthorizedUpdate=await request(app).put(updateUrl)
+      .set('Authorization',studentToken).send({isExtraUnit:false});
+    expect(unauthorizedUpdate.status).toBe(403);
+    const edited=await request(app).put(updateUrl)
+      .set('Authorization',adminToken).send({isExtraUnit:false,units:3});
+    expect(edited.status).toBe(200);
+    expect(edited.body.data.isExtraUnit).toBe(false);
+    expect(edited.body.data.units).toBe(3);
+    expect(db.courses.find(c=>c.id===created.body.data.id)?.code).toBe(oldCourse.code);
   });
 });
 
