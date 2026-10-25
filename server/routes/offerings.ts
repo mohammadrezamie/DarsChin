@@ -1,125 +1,116 @@
-// ============================================================================
-// DARSCHYN (درس‌چین) - Course Offerings CRUD & Offerings Provider Routes
-// ============================================================================
-
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
-import { CourseOffering } from '../../src/types';
+import { authenticate, requirePermission } from '../middleware/auth';
+import type { CourseOffering } from '../../src/types';
 
 export const offeringsRouter = Router();
 
-// List Offerings
+const latinDigits = (value: string) => value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+  .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+const asText = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
+function optionalClock(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') return null;
+  const normalized = latinDigits(value.trim());
+  const match = /^(\d{1,2}):(\d{2})$/.exec(normalized);
+  if (!match) return null;
+  const hh = Number(match[1]), mm = Number(match[2]);
+  if (hh > 23 || mm > 59) return null;
+  return String(hh).padStart(2, '0') + ':' + match[2];
+}
+function clockMinutes(value: string) {
+  const [h, m] = value.split(':').map(Number);
+  return h * 60 + m;
+}
+
+interface SaveOfferingResult { offering?: CourseOffering; error?: string; }
+function prepareOffering(input: Record<string, unknown>, existing?: CourseOffering): SaveOfferingResult {
+  const termId = existing?.termId || asText(input.termId);
+  const campusId = existing?.campusId || asText(input.campusId);
+  const courseId = input.courseId === undefined ? existing?.courseId || '' : asText(input.courseId);
+  const groupCode = input.groupCode === undefined ? existing?.groupCode || '01' : asText(input.groupCode);
+  const instructor = input.instructor === undefined ? existing?.instructor || '' : asText(input.instructor);
+  const dayOfWeek = input.dayOfWeek === undefined ? existing?.dayOfWeek || '' : asText(input.dayOfWeek);
+  const rawStart = input.startTime === undefined ? existing?.startTime || '' : input.startTime;
+  const rawEnd = input.endTime === undefined ? existing?.endTime || '' : input.endTime;
+  const startTime = optionalClock(rawStart);
+  const endTime = optionalClock(rawEnd);
+  if (!termId || !campusId || !courseId || !groupCode || !instructor) {
+    return { error: 'نیمسال، واحد، درس، شماره گروه و مدرس الزامی هستند؛ زمان کلاس می‌تواند اعلام‌نشده باشد.' };
+  }
+  const course = db.courses.find(row => row.id === courseId && row.active);
+  if (!course || !db.academicTerms.some(row => row.id === termId) ||
+      !db.campuses.some(row => row.id === campusId)) {
+    return { error: 'درس فعال، واحد دانشگاهی یا نیمسال انتخابی معتبر نیست.' };
+  }
+  if (startTime === null || endTime === null ||
+      Boolean(startTime) !== Boolean(endTime) ||
+      (startTime !== '' && endTime !== '' && clockMinutes(startTime) >= clockMinutes(endTime))) {
+    return { error: 'ساعت شروع و پایان باید هر دو معتبر باشند یا هر دو خالی؛ پایان باید بعد از شروع باشد.' };
+  }
+
+  const capacity = input.capacity === undefined ? existing?.capacity ?? 30 : Number(input.capacity);
+  const enrolledCount = input.enrolledCount === undefined ? existing?.enrolledCount ?? 0 : Number(input.enrolledCount);
+  if (!Number.isSafeInteger(capacity) || capacity < 1 || capacity > 10000 ||
+      !Number.isSafeInteger(enrolledCount) || enrolledCount < 0 || enrolledCount > capacity) {
+    return { error: 'ظرفیت یا تعداد ثبت‌نامی نامعتبر است.' };
+  }
+  const enrolledCountKnown = input.enrolledCountKnown === false ? false
+    : input.enrolledCount !== undefined ? true : existing?.enrolledCountKnown ?? false;
+  const optionalString = (key: string, old?: string) =>
+    input[key] === undefined ? old : asText(input[key]) || undefined;
+
+  return { offering: {
+    id: existing?.id || `off-manual-${randomUUID()}`,
+    termId, campusId, courseId,
+    rawCourseCode: course.code, rawCourseName: course.name,
+    groupCode, instructor, dayOfWeek,
+    startTime: startTime || '', endTime: endTime || '',
+    location: optionalString('location', existing?.location),
+    capacity, enrolledCount, enrolledCountKnown,
+    examDate: optionalString('examDate', existing?.examDate),
+    notes: optionalString('notes', existing?.notes),
+    source: existing?.source || 'manual',
+    active: typeof input.active === 'boolean' ? input.active : existing?.active ?? true,
+    ...(existing?.sourceIdentity ? { sourceIdentity: existing.sourceIdentity } : {}),
+  } };
+}
+
+// Public catalog; student-submitted extension batches do not enter this list.
 offeringsRouter.get('/', (req, res) => {
   const { termId, campusId } = req.query;
   let list = db.courseOfferings;
-  if (termId) list = list.filter((o) => o.termId === termId);
-  if (campusId) list = list.filter((o) => o.campusId === campusId);
-
-  // Populate course metadata
-  const enriched = list.map((o) => {
-    const course = db.courses.find((c) => c.id === o.courseId);
-    return {
-      ...o,
-      course,
-    };
-  });
-
-  res.json({ success: true, data: enriched });
+  if (termId) list = list.filter(row => row.termId === termId);
+  if (campusId) list = list.filter(row => row.campusId === campusId);
+  res.json({ success: true, data: list.map(offering => ({
+    ...offering,
+    course: db.courses.find(course => course.id === offering.courseId),
+  })) });
 });
 
-// Admin: Create Manual Offering
 offeringsRouter.post('/', authenticate, requirePermission('offering.manage'), (req, res) => {
-  const {
-    termId,
-    campusId,
-    courseId,
-    groupCode = '01',
-    instructor,
-    dayOfWeek,
-    startTime,
-    endTime,
-    location,
-    capacity = 30,
-    enrolledCount = 0,
-    examDate,
-    notes,
-  } = req.body;
-
-  if (!termId || !campusId || !courseId || !instructor || !dayOfWeek || !startTime || !endTime) {
-    return res.status(400).json({ success: false, error: 'لطفاً تمامی مشخصات اصلی ارائه درس را وارد فرمایید.' });
-  }
-
-  const course = db.courses.find((c) => c.id === courseId);
-
-  const newOffering: CourseOffering = {
-    id: `off-${Date.now()}`,
-    termId,
-    campusId,
-    courseId,
-    rawCourseCode: course?.code,
-    rawCourseName: course?.name,
-    groupCode: groupCode.trim(),
-    instructor: instructor.trim(),
-    dayOfWeek: dayOfWeek.trim(),
-    startTime: startTime.trim(),
-    endTime: endTime.trim(),
-    location: location?.trim() || undefined,
-    capacity: Number(capacity),
-    enrolledCount: Number(enrolledCount),
-    examDate: examDate?.trim() || undefined,
-    notes: notes?.trim() || undefined,
-    source: 'manual',
-    active: true,
-  };
-
-  db.courseOfferings.push(newOffering);
+  const result = prepareOffering(req.body || {});
+  if (!result.offering) return res.status(400).json({ success: false, error: result.error });
+  db.courseOfferings.push(result.offering);
   db.save();
-  res.json({ success: true, data: { ...newOffering, course } });
+  return res.json({ success: true, data: { ...result.offering, course: db.courses.find(c => c.id === result.offering!.courseId) } });
 });
 
-// Admin: Update Offering
 offeringsRouter.put('/:id', authenticate, requirePermission('offering.manage'), (req, res) => {
-  const idx = db.courseOfferings.findIndex((o) => o.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
-
-  const {
-    courseId,
-    groupCode,
-    instructor,
-    dayOfWeek,
-    startTime,
-    endTime,
-    location,
-    capacity,
-    enrolledCount,
-    examDate,
-    notes,
-    active,
-  } = req.body;
-
-  if (courseId) db.courseOfferings[idx].courseId = courseId;
-  if (groupCode) db.courseOfferings[idx].groupCode = groupCode.trim();
-  if (instructor) db.courseOfferings[idx].instructor = instructor.trim();
-  if (dayOfWeek) db.courseOfferings[idx].dayOfWeek = dayOfWeek.trim();
-  if (startTime) db.courseOfferings[idx].startTime = startTime.trim();
-  if (endTime) db.courseOfferings[idx].endTime = endTime.trim();
-  if (location !== undefined) db.courseOfferings[idx].location = location.trim();
-  if (capacity !== undefined) db.courseOfferings[idx].capacity = Number(capacity);
-  if (enrolledCount !== undefined) db.courseOfferings[idx].enrolledCount = Number(enrolledCount);
-  if (examDate !== undefined) db.courseOfferings[idx].examDate = examDate;
-  if (notes !== undefined) db.courseOfferings[idx].notes = notes;
-  if (typeof active === 'boolean') db.courseOfferings[idx].active = active;
-
+  const index = db.courseOfferings.findIndex(row => row.id === req.params.id);
+  if (index < 0) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
+  const result = prepareOffering(req.body || {}, db.courseOfferings[index]);
+  if (!result.offering) return res.status(400).json({ success: false, error: result.error });
+  db.courseOfferings[index] = result.offering;
   db.save();
-  res.json({ success: true, data: db.courseOfferings[idx] });
+  return res.json({ success: true, data: result.offering });
 });
 
-// Admin: Delete Offering
 offeringsRouter.delete('/:id', authenticate, requirePermission('offering.manage'), (req, res) => {
-  const idx = db.courseOfferings.findIndex((o) => o.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
+  const idx = db.courseOfferings.findIndex(row => row.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
   db.courseOfferings.splice(idx, 1);
   db.save();
-  res.json({ success: true, message: 'ارائه درس با موفقیت حذف شد.' });
+  return res.json({ success: true, message: 'ارائه درس با موفقیت حذف شد.' });
 });
