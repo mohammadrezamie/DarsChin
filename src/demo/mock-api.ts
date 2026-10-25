@@ -1006,9 +1006,11 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       if (!rows.some(row => row.id === route.id)) return fail('رکورد دمو برای حذف پیدا نشد.');
       if(route.key==='/api/academic/tracks' &&
         ((s.collections['/api/curriculum-courses']||[]).some(cc=>cc.trackId===route.id) ||
-         s.demandSurveys.some(survey=>survey.trackIds.includes(route.id!)) ||
-         s.profile.selectedTrackId===route.id)) {
-        return fail('این گرایش در چارت یا پروندهٔ دانشجو سابقه دارد و نمی‌توان آن را حذف کرد.');
+         (s.collections['/api/curriculum/rules']||[]).some(rule=>rule.trackId===route.id) ||
+         s.demandSurveys.some(survey=>survey.trackIds?.includes(route.id!)) ||
+         s.profile.selectedTrackId===route.id ||
+         s.profile.desiredTrackIds?.includes(route.id))) {
+        return fail('این گرایش در چارت، قانون آموزشی یا پروندهٔ دانشجو سابقه دارد و نمی‌توان آن را حذف کرد.');
       }
       if (isCourse && (currentOfferings(s).some(o => o.courseId === route.id) || s.passed.some(p => p.courseId === route.id))) {
         return fail('این درس در گروه‌های ارائه یا سوابق نمونه استفاده شده است؛ ابتدا وابستگی‌ها را بررسی کن.');
