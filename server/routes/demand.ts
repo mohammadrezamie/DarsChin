@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db } from '../db/database';
 import { authenticate, type AuthenticatedRequest } from '../middleware/auth';
-import { exportDemandCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
+import { exportDemandCsv, listDemandStudents, managerCanAccessDemand, summarizeDemand, summarizeDemandByCohort, surveyAppliesToProfile } from '../../src/domain/course-demand';
 import type { DemandResponse, DemandSurvey } from '../../src/types';
 
 export const demandRouter = Router();
@@ -179,7 +179,24 @@ demandRouter.get('/surveys/:id/report', (req: AuthenticatedRequest, res) => {
   const survey = getSurvey(req.params.id);
   if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
   if (!managerCanAccessDemand(req.user!, survey)) return failure(res, 403, 'گزارش این رشته در دسترسی شما نیست.');
-  return res.json({ success: true, data: summarizeDemand(survey, db.demandResponses) });
+  return res.json({ success: true, data: {
+    ...summarizeDemand(survey, db.demandResponses),
+    byCohort: summarizeDemandByCohort(survey, db.demandResponses),
+  } });
+});
+
+// Identifiable data is available ONLY with separate export permission and scope.
+// No student names, phone numbers or student IDs in the ordinary aggregate report.
+demandRouter.get('/surveys/:id/students', (req: AuthenticatedRequest, res) => {
+  const survey = getSurvey(req.params.id);
+  if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
+  if (!managerCanAccessDemand(req.user!, survey, true)) {
+    return failure(res, 403, 'مجوز جداگانه برای مشاهدهٔ پاسخ‌های فردی دانشجویان لازم است.');
+  }
+  const rows = listDemandStudents(survey, db.demandResponses);
+  audit(req.user!.id, 'DEMAND_PERSONAL_REPORT_VIEWED', survey.id);
+  db.save();
+  return res.json({success:true,data:{surveyId:survey.id,students:rows}});
 });
 
 demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => {
