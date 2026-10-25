@@ -5,4 +5,4 @@
 services:
   darschin:
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${DARSCHYN_LOCAL_PORT:-3000}:3000"
