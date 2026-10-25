@@ -7,6 +7,10 @@ export interface Column {
   label: string;
   type?: 'text' | 'number' | 'boolean' | 'select';
   options?: { label: string; value: string }[];
+  /** Resolve select choices from an API collection, e.g. live course catalog. */
+  lookupEndpoint?: string;
+  lookupLabelKey?: string;
+  lookupValueKey?: string;
 }
 
 interface AdminCrudTableProps {
@@ -23,6 +27,35 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [lookupOptions, setLookupOptions] = useState<Record<string, { label: string; value: string }[]>>({});
+
+  useEffect(() => {
+    let current = true;
+    const lookupCols = columns.filter(c => c.type === 'select' && c.lookupEndpoint);
+    if (lookupCols.length === 0) return;
+
+    Promise.all(lookupCols.map(async (col) => {
+      const response = await apiRequest<Record<string, unknown>[]>(col.lookupEndpoint!);
+      const values = response.success && Array.isArray(response.data) ? response.data : [];
+      return [col.key, values.filter(item =>
+        item[col.lookupValueKey || 'id'] !== undefined &&
+        typeof item[col.lookupLabelKey || 'name'] === 'string',
+      ).map(item => ({
+        value: String(item[col.lookupValueKey || 'id']),
+        label: String(item[col.lookupLabelKey || 'name']),
+      }))] as const;
+    })).then(entries => {
+      if (current) setLookupOptions(Object.fromEntries(entries));
+    }).catch(() => {
+      if (current) setLookupOptions({});
+    });
+    return () => { current = false; };
+  }, [endpoint]);
+
+  const columnOptions = (col: Column) => col.lookupEndpoint
+    ? (lookupOptions[col.key] || [])
+    : (col.options || []);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,7 +111,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
     const initialForm: any = {};
     columns.forEach(c => {
       if (c.type === 'boolean') initialForm[c.key] = true;
-      else if (c.type === 'select' && c.options && c.options.length > 0) initialForm[c.key] = c.options[0].value;
+      else if (c.type === 'select' && columnOptions(c).length > 0) initialForm[c.key] = columnOptions(c)[0].value;
       else initialForm[c.key] = '';
     });
     setEditingId('new');
@@ -174,13 +207,13 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                           {editForm[c.key] ? 'فعال' : 'غیرفعال'}
                         </span>
                       </label>
-                    ) : c.type === 'select' && c.options ? (
+                    ) : c.type === 'select' && (c.options || c.lookupEndpoint) ? (
                       <select
                         className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
                         value={editForm[c.key] || ''}
                         onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                       >
-                        {c.options.map((opt) => (
+                        {columnOptions(c).map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
@@ -252,13 +285,13 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             />
                             <span className="text-xs">{editForm[c.key] ? 'فعال' : 'غیرفعال'}</span>
                           </label>
-                        ) : c.type === 'select' && c.options ? (
+                        ) : c.type === 'select' && (c.options || c.lookupEndpoint) ? (
                           <select
                             className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs"
                             value={editForm[c.key] || ''}
                             onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                           >
-                            {c.options.map((opt) => (
+                            {columnOptions(c).map((opt) => (
                               <option key={opt.value} value={opt.value}>
                                 {opt.label}
                               </option>
