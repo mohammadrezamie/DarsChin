@@ -2,6 +2,12 @@
 
 Thanks for contributing to the DarsChin demo platform. For full procedures, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
+## Non-negotiable owner-request documentation
+
+Before editing, read [AGENTS.md](AGENTS.md) and [the owner decisions register](docs/OWNER_DECISIONS_FA.md). **Every new instruction, plan, reported bug or changed priority from the project owner must be persisted in GitHub** with a dated register entry and relevant linked document, even if implementation is deferred. Keep superseded decisions with cross-references; never confuse a PR branch with merged `main`. Do not store student personal data or secrets.
+
+**Delivery priority:** reliable and independently tested course-demand management for the EE Science and Research pilot. The product is intended for sale; quality, data protection and maintainability are more important than speed.
+
 ## Branch and PR process
 
 1. Keep short, reviewed changes on current `main` when explicitly authorized. For large/high-risk changes use one short-lived `feat/` or `fix/` branch; remove it once the work is merged and verified. Never accumulate abandoned branches.
