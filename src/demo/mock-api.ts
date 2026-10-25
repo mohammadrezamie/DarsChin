@@ -592,8 +592,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     const enriched=s.passed.map(row=>{
       const course=currentCourses(s).find(c=>c.id===row.courseId);
       const passed=row.status!=='FAILED' && row.status!=='ABSENT' &&
-        (row.status==='PASSED' || row.grade===undefined || (
-          Number.isFinite(Number(row.grade)) && Number(row.grade)>=10));
+        (row.grade===undefined || (Number.isFinite(Number(row.grade)) && Number(row.grade)>=10));
       if(course && passed && !enrolled.has(row.courseId)){
         enrolled.add(row.courseId);
         totalUnits+=course.units;
