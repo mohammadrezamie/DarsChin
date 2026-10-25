@@ -95,7 +95,9 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
     ['نام دانشجو','شماره دانشجویی','ورودی','رشته','انتخاب رسمی گرایش','گرایش','اظهار ترم آخر','نام درس','کد/شناسه درس','آخرین ویرایش'].map(safeCell).join(','),
   ];
   for (const r of responses.filter(x => x.surveyId === survey.id)) {
-    for (const courseId of r.courseIds) {
+    // Preserve participating students who submitted zero courses; they must not
+    // disappear from the manager's identity-protected CSV export.
+    for (const courseId of r.courseIds.length ? r.courseIds : ['']) {
       rows.push([
         r.snapshot.studentName, r.studentNumber,
         entryYears.get(r.snapshot.entryYearId) || r.snapshot.entryYearId,
@@ -103,7 +105,7 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
         r.snapshot.isTrackSelected ? 'بله' : 'خیر',
         r.snapshot.selectedTrackId ? (tracks.get(r.snapshot.selectedTrackId) || r.snapshot.selectedTrackId) : 'انتخاب نشده',
         r.anticipatedGraduation === 'YES' ? 'بله (اظهار دانشجو)' : r.anticipatedGraduation === 'NO' ? 'خیر (اظهار دانشجو)' : 'نامشخص',
-        courseNames.get(courseId) || courseId, courseId, r.updatedAt,
+        courseId ? (courseNames.get(courseId) || courseId) : 'بدون درخواست درس', courseId, r.updatedAt,
       ].map(safeCell).join(','));
     }
   }
