@@ -12,6 +12,7 @@ export const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -39,6 +40,9 @@ export const Register: React.FC = () => {
       setError(err.message || 'ارتباط با سرور برقرار نشد.');
     } finally {
       setIsLoading(false);
+      // Provider tokens are one-use; a failed password attempt needs a new challenge.
+      setCaptchaToken('');
+      setCaptchaAttempt(value => value + 1);
     }
   };
 
@@ -115,7 +119,7 @@ export const Register: React.FC = () => {
               />
             </div>
 
-            <GuestHumanCheck action="register" token={captchaToken} onToken={setCaptchaToken} />
+            <GuestHumanCheck key={captchaAttempt} action="register" token={captchaToken} onToken={setCaptchaToken} />
             <button
               type="submit"
               disabled={isLoading}
