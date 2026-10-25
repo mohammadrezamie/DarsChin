@@ -1,4 +1,8 @@
 # Replace darschyn.example with the real domain before enabling this file.
+# TEMPLATE ONLY: do not install/reload on the live shared VPS until the
+# independent DarsChin service passes scripts/check-vps-readiness.cjs,
+# ownership/permission checks, domain/TLS approval and nginx -t.
+# Never modify an existing TNA Nginx server block or bind a second proxy.
 # Keep the Node service bound to its current internal port; do not expose it publicly.
 server {
     listen 80;
@@ -8,7 +12,7 @@ server {
     client_max_body_size 2m;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -20,7 +24,7 @@ server {
     }
 
     location = /api/health {
-        proxy_pass http://127.0.0.1:3000/api/health;
+        proxy_pass http://127.0.0.1:3001/api/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         access_log off;
