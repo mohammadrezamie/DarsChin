@@ -31,6 +31,10 @@ describe('isolated admin curriculum draft editor', () => {
       courseId: 'math2', classification: 'MAJOR_REQUIRED', suggestedSemester: 2,
     });
     expect(link.success).toBe(true);
+    const prerequisite = await create(`/api/curriculum/${chart.id}/courses`, {
+      courseId: 'physics', classification: 'MAJOR_REQUIRED', suggestedSemester: 1,
+    });
+    expect(prerequisite.success).toBe(true);
     const source = await create('/api/curriculum/rules', {
       curriculumId: chart.id, targetCourseId: 'math2',
       relationshipType: 'PREREQUISITE', expression: { type: 'COURSE', courseId: 'physics' },
@@ -41,7 +45,7 @@ describe('isolated admin curriculum draft editor', () => {
       relationshipType: 'PREREQUISITE', expression: { type: 'COURSE', courseId: 'math2' },
     })).success).toBe(false);
     const full = await browserDemoRequest<any>(`/api/curriculum/${chart.id}/full`);
-    expect(full.data?.courses).toHaveLength(1);
+    expect(full.data?.courses).toHaveLength(2);
     expect(full.data?.prerequisites).toHaveLength(1);
     expect(full.data?.corequisites).toHaveLength(0);
     const simulation = await browserDemoRequest<any>('/api/eligibility/evaluate', {
