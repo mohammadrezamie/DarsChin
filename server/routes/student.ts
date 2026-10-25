@@ -71,48 +71,78 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
   });
 });
 
-// Update student academic profile
+// Update student academic profile. Preserve private and administrator-managed
+// fields; PUT from a partial student form is NOT a replacement for the whole record.
 studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const {
-    universityId,
-    campusId,
-    degreeLevelId,
-    majorId,
-    entryYearId,
-    isTrackSelected,
-    selectedTrackId,
-    desiredTrackIds,
-    currentTermId,
-    previousTermGpa,
-  } = req.body;
+  const patch = req.body as Partial<StudentAcademicProfile>;
+  const index = db.studentProfiles.findIndex(p=>p.userId===userId);
+  const existing=index>=0?db.studentProfiles[index]:null;
 
-  let idx = db.studentProfiles.findIndex((p) => p.userId === userId);
-  const updatedProfile: StudentAcademicProfile = {
-    userId,
-    universityId: universityId || db.universities[0]?.id || '',
-    campusId: campusId || db.campuses[0]?.id || '',
-    degreeLevelId: degreeLevelId || db.degreeLevels[0]?.id || '',
-    majorId: majorId || db.majors[0]?.id || '',
-    entryYearId: entryYearId || db.entryYears[0]?.id || '',
-    isTrackSelected: Boolean(isTrackSelected),
-    selectedTrackId: isTrackSelected ? selectedTrackId : null,
-    desiredTrackIds: Array.isArray(desiredTrackIds) ? desiredTrackIds : [],
-    currentTermId: currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || '',
-    // Student identifier was collected for demand planning; profile edits must preserve it.
-    studentNumber: idx !== -1 ? db.studentProfiles[idx].studentNumber : undefined,
-    previousTermGpa: previousTermGpa !== undefined ? Number(previousTermGpa) : null,
-    updatedAt: new Date().toISOString(),
-  };
+  const universityId=patch.universityId ?? existing?.universityId ?? db.universities.find(u=>u.active!==false)?.id ?? '';
+  const campusId=patch.campusId ?? existing?.campusId ?? db.campuses.find(c=>c.universityId===universityId && c.active!==false)?.id ?? '';
+  const degreeLevelId=patch.degreeLevelId ?? existing?.degreeLevelId ?? db.degreeLevels.find(d=>d.active!==false)?.id ?? '';
+  const majorId=patch.majorId ?? existing?.majorId ?? db.majors.find(m=>m.degreeLevelId===degreeLevelId && m.active!==false)?.id ?? '';
+  const entryYearId=patch.entryYearId ?? existing?.entryYearId ?? db.entryYears.find(y=>y.active!==false)?.id ?? '';
+  const currentTermId=patch.currentTermId ?? existing?.currentTermId ??
+    db.academicTerms.find(t=>t.isCurrent && t.active!==false)?.id ?? '';
+  const isTrackSelected=patch.isTrackSelected ?? existing?.isTrackSelected ?? false;
+  const selectedTrackId=isTrackSelected
+    ? patch.selectedTrackId ?? existing?.selectedTrackId ?? null : null;
+  const desiredTrackIds=isTrackSelected ? [] : patch.desiredTrackIds ?? existing?.desiredTrackIds ?? [];
+  const provinceId=patch.provinceId!==undefined
+    ? patch.provinceId || null : existing?.provinceId ?? null;
 
-  if (idx !== -1) {
-    db.studentProfiles[idx] = updatedProfile;
-  } else {
-    db.studentProfiles.push(updatedProfile);
+  const campus=db.campuses.find(c=>c.id===campusId && c.universityId===universityId && c.active!==false);
+  const major=db.majors.find(m=>m.id===majorId && m.degreeLevelId===degreeLevelId && m.active!==false);
+  if (!db.universities.some(u=>u.id===universityId && u.active!==false) ||
+      !campus || !db.degreeLevels.some(d=>d.id===degreeLevelId && d.active!==false) ||
+      !major || !db.entryYears.some(y=>y.id===entryYearId && y.active!==false) ||
+      !db.academicTerms.some(t=>t.id===currentTermId) ||
+      (provinceId && !db.provinces.some(p=>p.id===provinceId && p.active!==false))) {
+    return res.status(400).json({success:false,
+      error:'واحد دانشگاهی، مقطع، رشته، ورودی، نیمسال یا استان با اطلاعات آموزشی ثبت‌شده سازگار نیست.'});
+  }
+  if ((isTrackSelected && !db.tracks.some(t=>
+        t.id===selectedTrackId && t.majorId===majorId && t.active!==false)) ||
+      !Array.isArray(desiredTrackIds) ||
+      new Set(desiredTrackIds).size!==desiredTrackIds.length ||
+      desiredTrackIds.some(id=>!db.tracks.some(t=>t.id===id && t.majorId===majorId && t.active!==false))) {
+    return res.status(400).json({success:false,
+      error:'گرایش رسمی یا گرایش‌های مدنظر باید متعلق به رشتهٔ انتخاب‌شده باشند.'});
   }
 
+  // Existing semester plans cannot be silently reinterpreted for a different
+  // campus/degree/major/cohort. Students must explicitly clear their CURRENT
+  // plan before making a fundamental academic identity change.
+  const moved=Boolean(existing && (
+    existing.universityId!==universityId || existing.campusId!==campusId ||
+    existing.degreeLevelId!==degreeLevelId || existing.majorId!==majorId ||
+    existing.entryYearId!==entryYearId));
+  if(moved && db.studentPlans.some(p=>p.userId===userId &&
+    p.termId===(existing?.currentTermId || currentTermId) &&
+    p.selectedOfferingIds.length>0)) {
+    return res.status(409).json({success:false,
+      error:'برای تغییر واحد، مقطع، رشته یا ورودی ابتدا برنامهٔ انتخابی همین نیمسال را خالی کنید؛ هیچ درسی خودکار پاک نشد.'});
+  }
+
+  const updatedProfile:StudentAcademicProfile={
+    ...(existing || {}),userId,universityId,provinceId,campusId,degreeLevelId,
+    majorId,entryYearId,currentTermId,isTrackSelected,selectedTrackId,
+    desiredTrackIds:[...desiredTrackIds],
+    previousTermGpa:patch.previousTermGpa!==undefined
+      ? patch.previousTermGpa : existing?.previousTermGpa ?? null,
+    // Preserve student number, manual final-semester authorization and its
+    // approval notes; they are not writable by this student-facing endpoint.
+    studentNumber:existing?.studentNumber,
+    isFinalSemesterOverride:existing?.isFinalSemesterOverride,
+    finalSemesterNotes:existing?.finalSemesterNotes,
+    updatedAt:new Date().toISOString(),
+  };
+  if(index>=0)db.studentProfiles[index]=updatedProfile;
+  else db.studentProfiles.push(updatedProfile);
   db.save();
-  res.json({ success: true, data: updatedProfile });
+  return res.json({success:true,data:updatedProfile});
 });
 
 // --- Passed Courses ---
