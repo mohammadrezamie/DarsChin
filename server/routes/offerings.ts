@@ -26,8 +26,8 @@ function clockMinutes(value: string) {
 
 interface SaveOfferingResult { offering?: CourseOffering; error?: string; }
 function prepareOffering(input: Record<string, unknown>, existing?: CourseOffering): SaveOfferingResult {
-  const termId = existing?.termId || asText(input.termId);
-  const campusId = existing?.campusId || asText(input.campusId);
+  const termId = input.termId === undefined ? existing?.termId || '' : asText(input.termId);
+  const campusId = input.campusId === undefined ? existing?.campusId || '' : asText(input.campusId);
   const courseId = input.courseId === undefined ? existing?.courseId || '' : asText(input.courseId);
   const groupCode = input.groupCode === undefined ? existing?.groupCode || '01' : asText(input.groupCode);
   const instructor = input.instructor === undefined ? existing?.instructor || '' : asText(input.instructor);
