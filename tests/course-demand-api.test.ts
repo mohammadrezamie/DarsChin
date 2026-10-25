@@ -178,4 +178,94 @@ describe('department course-demand workflow',()=>{
     expect(own.status).toBe(200);
     expect(own.body.data?.anticipatedGraduation).toBe('NO');
   });
+  it('supports two entry years with different charts, blocks foreign courses and protects identity',async()=>{
+    const base=db.curricula.find(c=>c.id==='test-demand-curriculum')!;
+    const otherYear=db.entryYears.find(e=>e.id!==base.entryYearId && e.active);
+    const otherCourse=db.courses.find(c=>c.id!==courseId && c.active);
+    if(!otherYear||!otherCourse)throw Error('Secondary cohort/course test fixtures required');
+    const chartId='test-demand-second-chart';
+    const ccId='test-demand-second-course-map';
+    const newStudentId='test-demand-second-student';
+    const surveyIds:string[]=[];
+    const baseStudent=db.studentProfiles.find(p=>p.userId===userIds[1])!;
+    db.curricula.push({...base,id:chartId,entryYearId:otherYear.id});
+    db.curriculumCourses.push({id:ccId,curriculumId:chartId,courseId:otherCourse.id,
+      classification:'MAJOR_REQUIRED',suggestedSemester:3,active:true});
+    const otherUser:User={id:newStudentId,name:'دانشجوی ورودی دوم',mobile:'09120000188',
+      roles:['student'],createdAt:new Date().toISOString()};
+    db.users.push(otherUser);
+    db.studentProfiles.push({...baseStudent,userId:newStudentId,entryYearId:otherYear.id,
+      studentNumber:'1402123499'});
+    const secondAuth='Bearer '+generateToken(otherUser);
+    try {
+      const payload={
+        title:'نیازسنجی مشترک دو ورودی',description:'تست با چارت‌های جدا',
+        targetTermId:termId,universityId:'test-demand-univ',campusId:campusKey,
+        degreeLevelId:base.degreeLevelId,majorId:base.majorId,
+        curriculumId:base.id,curriculumIds:[base.id,chartId],
+        entryYearIds:[base.entryYearId,otherYear.id],trackIds:[],
+        courseIds:[courseId,otherCourse.id],recommendedMinimumByCourse:{},
+      };
+      const created=await request(app).post('/api/demand/surveys')
+        .set('Authorization',auth.manager).send(payload);
+      expect(created.status).toBe(201);
+      const surveyId=created.body.data.id;
+      surveyIds.push(surveyId);createdSurveyIds.push(surveyId);
+      expect((await request(app).put(`/api/demand/surveys/${surveyId}/status`)
+        .set('Authorization',auth.manager).send({status:'OPEN'})).status).toBe(200);
+      const ownList=await request(app).get('/api/demand/surveys')
+        .set('Authorization',auth.student);
+      expect(ownList.body.data.some((row:{id:string})=>row.id===surveyId)).toBe(true);
+      const badFirst=await request(app).put(`/api/demand/surveys/${surveyId}/response`)
+        .set('Authorization',auth.student)
+        .send({studentNumber:'1403123456',anticipatedGraduation:'NO',courseIds:[otherCourse.id]});
+      expect(badFirst.status).toBe(400);
+      const first=await request(app).put(`/api/demand/surveys/${surveyId}/response`)
+        .set('Authorization',auth.student)
+        .send({studentNumber:'1403123456',anticipatedGraduation:'NO',courseIds:[courseId]});
+      expect(first.status).toBe(200);
+      const badSecond=await request(app).put(`/api/demand/surveys/${surveyId}/response`)
+        .set('Authorization',secondAuth)
+        .send({studentNumber:'1402123499',anticipatedGraduation:'YES',courseIds:[courseId]});
+      expect(badSecond.status).toBe(400);
+      const second=await request(app).put(`/api/demand/surveys/${surveyId}/response`)
+        .set('Authorization',secondAuth)
+        .send({studentNumber:'1402123499',anticipatedGraduation:'YES',courseIds:[otherCourse.id]});
+      expect(second.status).toBe(200);
+      const aggregate=await request(app).get(`/api/demand/surveys/${surveyId}/report`)
+        .set('Authorization',auth.manager);
+      expect(aggregate.status).toBe(200);
+      expect(aggregate.body.data.participantCount).toBe(2);
+      expect(aggregate.body.data.byCohort).toHaveLength(2);
+      expect(aggregate.body.data.byCohort.find((row:{entryYearId:string})=>row.entryYearId===otherYear.id).declaredGraduationCount).toBe(1);
+      expect(JSON.stringify(aggregate.body.data)).not.toContain('1402123499');
+      const denied=await request(app).get(`/api/demand/surveys/${surveyId}/students`)
+        .set('Authorization',auth.student);
+      expect(denied.status).toBe(403);
+      const scoped=await request(app).get(`/api/demand/surveys/${surveyId}/students`)
+        .set('Authorization',auth.manager);
+      expect(scoped.status).toBe(200);
+      expect(scoped.body.data.students).toHaveLength(2);
+      expect(scoped.body.data.students.find((row:{entryYearId:string})=>row.entryYearId===otherYear.id).courseIds).toEqual([otherCourse.id]);
+      const manager=db.users.find(u=>u.id===userIds[0])!;
+      const previousPermissions=manager.permissions;
+      try{
+        manager.permissions=['demand.manage'];
+        const forbidden=await request(app).get(`/api/demand/surveys/${surveyId}/students`)
+          .set('Authorization',auth.manager);
+        expect(forbidden.status).toBe(403);
+        expect((await request(app).get(`/api/demand/surveys/${surveyId}/report`)
+          .set('Authorization',auth.manager)).status).toBe(200);
+      }finally{manager.permissions=previousPermissions;}
+    }finally{
+      db.data.demandSurveys=db.demandSurveys.filter(x=>!surveyIds.includes(x.id));
+      db.data.demandResponses=db.demandResponses.filter(x=>!surveyIds.includes(x.surveyId));
+      db.data.studentProfiles=db.studentProfiles.filter(x=>x.userId!==newStudentId);
+      db.data.users=db.users.filter(x=>x.id!==newStudentId);
+      db.data.curricula=db.curricula.filter(x=>x.id!==chartId);
+      db.data.curriculumCourses=db.curriculumCourses.filter(x=>x.id!==ccId);
+      db.save();
+    }
+  });
+
 });
