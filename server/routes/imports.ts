@@ -74,6 +74,7 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
 
     db.importBatches.unshift(newBatch);
     db.importRecords.push(...validationResult.importRecords);
+    db.save();
 
     return res.json({
       success: true,
@@ -113,7 +114,8 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
   const batch = db.importBatches.find((b) => b.id === req.params.id);
   if (!batch) return res.status(404).json({ success: false, error: 'شناسه بسته واردشده یافت نشد.' });
 
-  const isSuperAdmin = req.user!.roles?.includes('admin') || req.user!.roles?.includes('super-admin');
+  const isSuperAdmin = req.user!.roles?.includes('super-admin') ||
+    req.user!.permissions?.includes('admin.panel.access');
   if (batch.userId !== req.user!.id && !isSuperAdmin) {
     return res.status(403).json({ success: false, error: 'عدم دسترسی' });
   }
