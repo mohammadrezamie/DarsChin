@@ -287,6 +287,8 @@ export interface CourseOffering {
   location?: string;
   capacity: number;
   enrolledCount: number;
+  /** false when no verified enrollment count was provided by the source. */
+  enrolledCountKnown?: boolean;
   examDate?: string;
   notes?: string;
   /** Stable identity supplied by the source adapter for idempotent reconciliation. */
@@ -334,6 +336,11 @@ export interface ImportRecord {
   matchedCourseId?: string | null;
   status: ImportRecordStatus;
   reviewReason?: string;
+  /** An audited mapping decision is not permission to publish an offering. */
+  reviewDecision?: 'COURSE_MATCH_CONFIRMED' | 'REJECTED';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 }
 
 export interface ImportBatch {
@@ -387,6 +394,8 @@ export interface CourseEligibilityResult {
   endTime: string;
   capacity: number;
   enrolledCount: number;
+  /** false when no verified enrollment count was provided by the source. */
+  enrolledCountKnown?: boolean;
   examDate?: string;
   overallStatus: EligibilityStatus;
   isEligible: boolean;
