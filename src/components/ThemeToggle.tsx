@@ -10,7 +10,19 @@ export const ThemeToggle: React.FC = () => {
     { mode: 'dark', label: 'شب', icon: <Moon aria-hidden="true" className="h-4 w-4" /> },
   ];
   return (
-    <div role="group" aria-label="انتخاب حالت نمایش" className="inline-flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
+    <>
+      <select
+        aria-label="انتخاب حالت نمایش"
+        title="حالت نمایش صفحه"
+        value={theme}
+        onChange={event => setTheme(event.target.value as ThemeMode)}
+        className="min-h-11 w-[104px] rounded-xl border border-slate-300 bg-white px-2.5 text-sm font-bold text-slate-800 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:hidden"
+      >
+        <option value="light">روز</option>
+        <option value="system">خودکار</option>
+        <option value="dark">شب</option>
+      </select>
+      <div role="group" aria-label="انتخاب حالت نمایش" className="hidden items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:inline-flex">
       {options.map(option => (
         <button
           key={option.mode}
@@ -28,6 +40,7 @@ export const ThemeToggle: React.FC = () => {
           <span className="hidden lg:inline">{option.label}</span>
         </button>
       ))}
-    </div>
+      </div>
+    </>
   );
 };

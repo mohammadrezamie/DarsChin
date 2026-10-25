@@ -43,6 +43,8 @@ describe('mobile-first admin and typography redesign', () => {
     expect(html).toContain('aria-label="حالت روز"');
     expect(html).toContain('aria-label="حالت خودکار"');
     expect(html).toContain('aria-label="حالت شب"');
+    expect(html).toContain('<select aria-label="انتخاب حالت نمایش"');
+    expect(html).toContain('<option value="system" selected="">خودکار</option>');
     expect(html).toContain('aria-pressed="true"');
   });
 
@@ -51,6 +53,8 @@ describe('mobile-first admin and typography redesign', () => {
     const ext = readFileSync(resolve(process.cwd(), 'extension/fonts.css'), 'utf8');
     expect(css).toContain('@import "../extension/fonts.css"');
     expect(css).toContain("'Vazirmatn'");
+    expect(css).toContain('font-size: 16px');
+    expect(css).toContain('safe-area-inset-bottom');
     expect(ext).toContain("font-family: 'Vazirmatn'");
     expect(ext).toContain('.woff2');
     const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');

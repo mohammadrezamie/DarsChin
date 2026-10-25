@@ -3,7 +3,8 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { resolveAdminTab, type AdminTab } from '../utils/admin-navigation';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield,
@@ -33,6 +34,7 @@ import {
   X,
   ChevronLeft,
   PanelRightClose,
+  Search,
 } from 'lucide-react';
 import { AdminCrudTable, Column } from './AdminCrudTable';
 import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
@@ -45,30 +47,6 @@ import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
 import { AdminImportCenter } from './AdminImportCenter';
 import { apiRequest } from '../utils/api';
-
-type AdminTab =
-  | 'overview'
-  // Organization
-  | 'provinces'
-  | 'campuses'
-  // Academic Structure
-  | 'degrees'
-  | 'majors'
-  | 'tracks'
-  | 'entry-years'
-  | 'curricula'
-  // Academic Data
-  | 'courses'
-  | 'academic-rules'
-  | 'terms'
-  | 'offerings'
-  | 'academic-settings'
-  | 'imports'
-  // Operations
-  | 'users'
-  | 'support'
-  | 'diagnostics'
-  | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -86,34 +64,71 @@ interface AdminStats {
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [navigationSearch, setNavigationSearch] = useState('');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileCloseRef.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         setMobileMenuOpen(false);
         menuTriggerRef.current?.focus();
       }
+      if (event.key !== 'Tab') return;
+      const focusable = mobileDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [mobileMenuOpen]);
 
   const isSuperAdmin = user?.roles?.includes('super-admin');
-  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin;
+  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin || user?.permissions?.includes('admin.panel.access');
+  const activeTab = resolveAdminTab(searchParams.get('tab'), Boolean(isSuperAdmin));
 
   const fetchStats = async () => {
     setLoadingStats(true);
-    const res = await apiRequest<AdminStats>('/api/admin/stats');
-    if (res.success && res.data) {
-      setStats(res.data);
+    setStatsError(null);
+    try {
+      const res = await apiRequest<AdminStats>('/api/admin/stats');
+      if (res.success && res.data) {
+        setStats(res.data);
+      } else {
+        setStats(null);
+        setStatsError(res.error || 'دریافت آمار مدیریت امکان‌پذیر نیست.');
+      }
+    } catch {
+      setStats(null);
+      setStatsError('ارتباط با سرویس آمار برقرار نشد.');
+    } finally {
+      setLoadingStats(false);
     }
-    setLoadingStats(false);
   };
 
   useEffect(() => {
@@ -187,14 +202,44 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   const activeNavigation = navGroups.flatMap(group => group.items).find(item => item.id === activeTab);
+  const filteredNavGroups = navGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item =>
+        (group.title + ' ' + item.label).toLocaleLowerCase('fa').includes(navigationSearch.trim().toLocaleLowerCase('fa')),
+      ),
+    }))
+    .filter(group => group.items.length > 0);
+
   const selectTab = (id: AdminTab) => {
-    setActiveTab(id);
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      if (id === 'overview') next.delete('tab');
+      else next.set('tab', id);
+      return next;
+    });
     setMobileMenuOpen(false);
+    setNavigationSearch('');
+    requestAnimationFrame(() => sectionHeadingRef.current?.focus());
   };
 
   const navigation = (
-    <nav aria-label="بخش‌های پنل مدیریت" className="space-y-6">
-      {navGroups.map(group => (
+    <nav aria-label="بخش‌های پنل مدیریت" className="space-y-5">
+      <div className="relative">
+        <Search aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          aria-label="جست‌وجوی بخش‌های مدیریت"
+          placeholder="جست‌وجوی بخش‌ها…"
+          value={navigationSearch}
+          onChange={event => setNavigationSearch(event.target.value)}
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+        />
+      </div>
+      {filteredNavGroups.length === 0 && (
+        <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">بخشی با این عبارت پیدا نشد.</p>
+      )}
+      {filteredNavGroups.map(group => (
         <div key={group.title}>
           <h3 className="mb-2 px-3 text-[11px] font-extrabold tracking-wide text-slate-500 dark:text-slate-400">{group.title}</h3>
           <div className="space-y-1">
@@ -280,8 +325,9 @@ export const AdminDashboard: React.FC = () => {
         </aside>
 
         {mobileMenuOpen && (
-          <div className="fixed inset-0 z-[90] bg-slate-950/65 lg:hidden" onClick={() => setMobileMenuOpen(false)} role="presentation">
+          <div className="fixed inset-0 z-[90] bg-slate-950/65 lg:hidden" onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }} role="presentation">
             <div
+              ref={mobileDialogRef}
               id="admin-mobile-navigation"
               role="dialog"
               aria-modal="true"
@@ -292,6 +338,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
                 <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-blue-600" aria-hidden="true" /> بخش‌های مدیریت</span>
                 <button
+                  ref={mobileCloseRef}
                   type="button"
                   aria-label="بستن فهرست مدیریت"
                   onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }}
@@ -310,17 +357,23 @@ export const AdminDashboard: React.FC = () => {
           <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
-              <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">{activeNavigation?.label}</h2>
+              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white">{activeNavigation?.label}</h2>
             </div>
             <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
           </div>
+      {statsError && activeTab === 'overview' && (
+        <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <span className="font-bold">آمار در دسترس نیست: </span>{statsError}
+          <button type="button" onClick={fetchStats} className="mr-3 min-h-11 rounded-lg px-3 font-bold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>
+        </div>
+      )}
       {/* Main Tab Content Area */}
       <div className="pt-1">
         {/* 1. OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* KPI Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-liquid-glass rounded-3xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
@@ -338,7 +391,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="bg-liquid-glass rounded-3xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                    دانشجویان فعال
+                    دانشجویان ثبت‌نام‌شده
                   </span>
                   <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
                     {stats?.totalStudents ?? '...'}
@@ -443,21 +496,21 @@ export const AdminDashboard: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
-                    onClick={() => setActiveTab('courses')}
+                    onClick={() => selectTab('courses')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <BookOpen className="w-4 h-4 text-indigo-500" />
                     بانک دروس
                   </button>
                   <button
-                    onClick={() => setActiveTab('prerequisites')}
+                    onClick={() => selectTab('academic-rules')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <Workflow className="w-4 h-4 text-emerald-500" />
                     پیش‌نیازها و هم‌نیازها
                   </button>
                   <button
-                    onClick={() => setActiveTab('offerings')}
+                    onClick={() => selectTab('offerings')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
                     <Layers className="w-4 h-4 text-amber-500" />
@@ -465,7 +518,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   {isSuperAdmin && (
                     <button
-                                        onClick={() => setActiveTab('diagnostics')}
+                                        onClick={() => selectTab('diagnostics')}
                                         className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                                       >
                                         <Server className="w-4 h-4 text-purple-500" />

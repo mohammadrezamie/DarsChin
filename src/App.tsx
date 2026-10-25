@@ -27,7 +27,10 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
     const hasPermission = user.permissions?.includes('admin.panel.access');
     
     if (allowedRoles.includes('admin') && (!hasRole && !hasPermission)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={user.roles?.includes('student') ? '/dashboard' : '/'} replace />;
+    }
+    if (allowedRoles.includes('student') && !user.roles?.includes('student')) {
+      return <Navigate to={hasPermission || user.roles?.includes('admin') ? '/admin' : '/'} replace />;
     }
   }
 

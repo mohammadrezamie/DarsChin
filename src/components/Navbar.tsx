@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, LogOut, Moon, Sun, UserCheck, Shield, KeyRound, Menu } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { GraduationCap, LogOut, UserCheck, Shield, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Link, useLocation } from 'react-router-dom';
@@ -17,8 +16,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenPasswordChange,
 }) => {
-  const { isDark, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+   const { user, logout } = useAuth();
   const location = useLocation();
   const activeTab = location.pathname.includes('/admin') ? 'admin' : 'student';
   const [isExtModalOpen, setExtModalOpen] = useState(false);
@@ -34,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="w-10 h-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all dark:bg-blue-500 text-white flex items-center justify-center group-hover:scale-105">
                   <GraduationCap className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col">
+                <div className="hidden min-[431px]:flex flex-col">
                   <span className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                     درس‌چین
                   </span>
@@ -64,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">
                       {user.roles?.includes('admin') ? <Shield className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                     </div>
-                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[80px] sm:max-w-[120px] truncate">
+                    <span className="hidden text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[80px] sm:inline sm:max-w-[120px] truncate">
                       {user.name}
                     </span>
                   </Link>
@@ -88,13 +86,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           
           {user && (
-            <div className="md:hidden flex items-center justify-around py-2 border-t border-slate-200/80 dark:border-slate-800/80 text-xs">
-              <Link to="/dashboard" className={`px-3 py-1 rounded-xl transition-colors font-medium ${activeTab === 'student' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>میز کار</Link>
+            <nav aria-label="جابجایی سریع موبایل" className="md:hidden flex items-center justify-around gap-1 py-1.5 border-t border-slate-200/80 dark:border-slate-800/80 text-xs">
+              <Link to="/dashboard" aria-current={activeTab === 'student' ? 'page' : undefined} className={`flex min-h-11 items-center px-3 py-2 rounded-xl transition-colors font-medium ${activeTab === 'student' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>میز کار</Link>
               {(user?.roles?.includes('super-admin') || user?.permissions?.includes('admin.panel.access')) && (
-                <Link to="/admin" className={`px-3 py-1 rounded-xl transition-colors font-medium ${activeTab === 'admin' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>پنل مدیریت</Link>
+                <Link to="/admin" aria-current={activeTab === 'admin' ? 'page' : undefined} className={`flex min-h-11 items-center px-3 py-2 rounded-xl transition-colors font-medium ${activeTab === 'admin' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>پنل مدیریت</Link>
               )}
-              <button onClick={() => setExtModalOpen(true)} className="px-3 py-1 rounded-xl transition-colors font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">افزونه</button>
-            </div>
+              <button type="button" onClick={() => setExtModalOpen(true)} className="flex min-h-11 items-center px-3 py-2 rounded-xl transition-colors font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">افزونه</button>
+            </nav>
           )}
         </div>
       </header>

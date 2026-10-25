@@ -51,11 +51,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setResolvedTheme(isDark ? 'dark' : 'light');
       const root = document.documentElement;
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      root.classList.toggle('dark', isDark);
+      // Keep mobile browser chrome in sync with an explicit theme choice,
+      // even when it differs from the operating system preference.
+      document.querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', isDark ? '#09111e' : '#f3f6fb');
     };
 
     updateResolvedTheme();

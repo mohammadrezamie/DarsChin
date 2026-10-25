@@ -13,6 +13,7 @@ export const adminRouter = Router();
 // Get Admin Overview Metrics
 
 adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'), (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({
     success: true,
     data: {

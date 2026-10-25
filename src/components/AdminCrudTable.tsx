@@ -119,14 +119,22 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
     const url = isNew ? endpoint : `${endpoint}/${encodeURIComponent(id)}`;
 
     const payload = { ...editForm };
+    let invalidNumberLabel: string | null = null;
     columns.forEach(column => {
       if (column.type === 'number' && payload[column.key] !== undefined && payload[column.key] !== '') {
-        payload[column.key] = Number(payload[column.key]);
+        const value = Number(payload[column.key]);
+        if (!Number.isFinite(value)) invalidNumberLabel = column.label;
+        else payload[column.key] = value;
       }
       if (column.type === 'boolean') {
         payload[column.key] = Boolean(payload[column.key]);
       }
     });
+    if (invalidNumberLabel) {
+      setFeedback({ kind: 'error', text: `مقدار «${invalidNumberLabel}» باید یک عدد معتبر باشد.` });
+      setSaving(false);
+      return;
+    }
 
     try {
       const response = await apiRequest(url, { method, body: JSON.stringify(payload) });
@@ -183,6 +191,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
             <Search className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
+              aria-label={`جست‌وجو در ${title}`}
               placeholder="جستجو در سطرها..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

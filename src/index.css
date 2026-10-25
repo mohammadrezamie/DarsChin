@@ -17,10 +17,10 @@
     margin: 0;
     font-family: 'Vazirmatn', Tahoma, sans-serif;
     line-height: 1.75;
-    background: #f3f6fb;
+    background: radial-gradient(ellipse 900px 500px at 95% 0%, rgb(37 99 235 / 7%), transparent 70%), #f3f6fb;
     color: #152339;
   }
-  .dark body { background: #09111e; color: #e5edf7; }
+  .dark body { background: radial-gradient(ellipse 800px 450px at 95% 0%, rgb(59 130 246 / 11%), transparent 70%), #09111e; color: #e5edf7; }
   input, textarea, select, button { font: inherit; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
@@ -64,5 +64,19 @@
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* iOS Safari otherwise zooms the viewport when focusing 12–14px form fields. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+@media (max-width: 1023px) {
+  #admin-mobile-navigation {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
