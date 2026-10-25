@@ -1,4 +1,5 @@
 import { DEMO_COURSES } from './course-planner';
+import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import type {
   ApiResponse, AcademicLimitInfo, AcademicPolicySettings, Course, CourseEligibilityResult,
   CourseOffering, StudentAcademicProfile,
@@ -20,6 +21,7 @@ interface DemoStore {
   tickets: Row[];
   messages: Row[];
   bugs: Row[];
+  teacherRatings: TeacherRating[];
   academicSettings: AcademicPolicySettings;
 }
 const semester = { id: 'demo-term', name: 'نیمسال فرضی برای تست', year: 1405, termNumber: 1, isCurrent: true, active: true };
@@ -39,6 +41,24 @@ const sampleOfferings: CourseOffering[] = DEMO_COURSES.map((c) => ({
   courseId: c.id, groupCode: '01', instructor: c.instructor, dayOfWeek: c.day,
   startTime: c.start, endTime: c.end, capacity: 40, enrolledCount: 16, source: 'manual', active: true,
 }));
+// Second synthetic class for demonstrating comparison of teachers within one course.
+sampleOfferings.push({
+  id: 'off-math2-alt', termId: semester.id, campusId: campus.id,
+  courseId: 'math2', groupCode: '02', instructor: 'استاد نمونه جایگزین',
+  dayOfWeek: 'دوشنبه', startTime: '08:00', endTime: '10:00',
+  capacity: 35, enrolledCount: 10, source: 'manual', active: true,
+});
+const sampleRatings: TeacherRating[] = sampleOfferings.flatMap((o, idx) =>
+  [1, 2, 3].map((n) => ({
+    reviewerId: `synthetic-reviewer-${n}-${o.courseId}-${o.instructor}`,
+    courseId: o.courseId, instructor: o.instructor,
+    scores: {
+      teachingClarity: Math.min(5, 3 + ((idx + n) % 3)),
+      courseOrganization: 4, assessmentFairness: idx % 2 ? 3 : 4,
+      studentSupport: 4,
+    },
+  })),
+);
 const defaults: AcademicPolicySettings = {
   normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24,
   summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24,
@@ -83,6 +103,7 @@ function initialStore(): DemoStore {
       description: 'این مورد کاملاً ساختگی است و فقط برای آزمایش پنل مدیریت ایجاد شده است.',
       pageContext: '/demo/student', status: 'OPEN', createdAt: '2026-10-25T00:00:00.000Z',
     }],
+    teacherRatings: sampleRatings,
     academicSettings: { ...defaults },
   }) as DemoStore;
 }
@@ -211,6 +232,34 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   const path = endpoint.split('?')[0], data = bodyJson(options);
   if (!path.startsWith('/api/')) return fail('مسیر دمو نامعتبر است.');
 
+  if (path === '/api/demo/teacher-ratings') {
+    const courseId = new URL(endpoint, 'https://demo.invalid').searchParams.get('courseId');
+    if (method === 'GET') {
+      if (!courseId) return fail('شناسه درس مشخص نشده است.');
+      const instructors = (s.collections['/api/offerings'] || [])
+        .filter(o => o.courseId === courseId && o.active)
+        .map(o => String(o.instructor || ''));
+      return good(summarizeCourseTeachers(courseId, instructors, s.teacherRatings || [])) as ApiResponse<T>;
+    }
+    if (method === 'PUT') {
+      const courseId = data.courseId, instructor = data.instructor;
+      if (typeof courseId !== 'string' || typeof instructor !== 'string' || !courseId || !instructor || !validRatingScores(data.scores)
+        || Object.keys(data).some(key => !['courseId', 'instructor', 'scores'].includes(key))) {
+        return fail('فقط چهار امتیاز صحیح بین ۱ تا ۵ برای استاد و درس مجاز است؛ نظر متنی پذیرفته نمی‌شود.');
+      }
+      const offeringExists = (s.collections['/api/offerings'] || [])
+        .some(o => o.active && o.courseId === courseId && o.instructor === instructor);
+      if (!offeringExists) return fail('این استاد در گروه‌های فعال درس نمونه وجود ندارد.');
+      s.teacherRatings ||= [];
+      s.teacherRatings = s.teacherRatings.filter(r => !(r.courseId === courseId && r.instructor === instructor && r.reviewerId === 'demo-student'));
+      s.teacherRatings.push({ reviewerId: 'demo-student', courseId, instructor, scores: data.scores });
+      saveStore(s);
+      return good(summarizeCourseTeachers(courseId,
+        (s.collections['/api/offerings'] || []).filter(o => o.courseId === courseId && o.active).map(o => String(o.instructor || '')),
+        s.teacherRatings)) as ApiResponse<T>;
+    }
+    return fail('درخواست ارزشیابی دمو پشتیبانی نمی‌شود.');
+  }
   if (path === '/api/student/profile') {
     if (method === 'GET') return good({ profile: s.profile }) as ApiResponse<T>;
     if (method === 'PUT') { s.profile = { ...s.profile, ...data, userId: 'demo-student', updatedAt: now() }; saveStore(s); return good(s.profile) as ApiResponse<T>; }
