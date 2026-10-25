@@ -162,22 +162,13 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       university: 'دانشگاه آزاد اسلامی',
       campus: 'واحد علوم و تحقیقات',
       records: [
-        { courseCode: '2104102', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'دکتر صابری', units: 3, day: 'یکشنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
-        { courseCode: '2104103', courseName: 'معادلات دیفرانسیل', group: '01', instructor: 'دکتر علوی', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
-        { courseCode: '2104112', courseName: 'مدارهای الکتریکی ۲', group: '01', instructor: 'دکتر خسروی', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 5 },
-        { courseCode: '2104113', courseName: 'آزمایشگاه مدارهای الکتریکی', group: '02', instructor: 'مهندس رستمی', units: 1, day: 'چهارشنبه', startTime: '14:00', endTime: '16:00', capacity: 15, availableCapacity: 3 },
-        { courseCode: '2104115', courseName: 'الکترونیک ۱', group: '01', instructor: 'دکتر یزدانی', units: 3, day: 'یکشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 7 },
-        { courseCode: '2104131', courseName: 'معماری کامپیوتر', group: '01', instructor: 'دکتر حسینی', units: 3, day: 'سه‌شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, availableCapacity: 12 },
-        { courseCode: '2104132', courseName: 'میکروکنترلرها و ریزپردازنده‌ها', group: '01', instructor: 'دکتر تقوی', units: 3, day: 'سه‌شنبه', startTime: '13:30', endTime: '15:30', capacity: 25, availableCapacity: 5 },
-        { courseCode: '2104133', courseName: 'طراحی سیستم‌های دیجیتال با FPGA', group: '01', instructor: 'دکتر میرزایی', units: 3, day: 'دوشنبه', startTime: '13:30', endTime: '15:30', capacity: 20, availableCapacity: 6 },
-        { courseCode: '2104104', courseName: 'ریاضیات مهندسی', group: '01', instructor: 'دکتر صابری', units: 3, day: 'شنبه', startTime: '10:00', endTime: '12:00', capacity: 40, availableCapacity: 5 },
-        { courseCode: '2104114', courseName: 'سیگنال‌ها و سیستم‌ها', group: '01', instructor: 'دکتر محمودی', units: 3, day: 'چهارشنبه', startTime: '08:00', endTime: '10:00', capacity: 35, availableCapacity: 13 },
-        { courseCode: '1101003', courseName: 'اندیشه اسلامی ۱ (مبدأ و معاد)', group: '03', instructor: 'حجت‌الاسلام موسوی', units: 2, day: 'سه‌شنبه', startTime: '10:00', endTime: '12:00', capacity: 50, availableCapacity: 9 },
-        { courseCode: '1101004', courseName: 'آیین زندگی (اخلاق کاربردی)', group: '01', instructor: 'استاد کریمی', units: 2, day: 'دوشنبه', startTime: '08:00', endTime: '10:00', capacity: 45, availableCapacity: 15 },
-        { courseCode: '9999999', courseName: 'درس فرضی خارج از چارت', group: '99', instructor: 'نامشخص', units: 3, day: 'نامشخص', startTime: '00:00', endTime: '00:00', capacity: 10, availableCapacity: 0 },
+        { courseCode: 'DEMO-101', courseName: 'ریاضی عمومی ۲', group: '01', instructor: 'استاد نمونه الف', units: 3, day: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 40, availableCapacity: 8 },
+        { courseCode: 'DEMO-102', courseName: 'مدارهای الکتریکی ۱', group: '02', instructor: 'استاد نمونه ب', units: 3, day: 'دوشنبه', startTime: '10:00', endTime: '12:00', capacity: 35, availableCapacity: 15 },
+        { courseCode: 'DEMO-999', courseName: 'درس ناشناخته برای بررسی', group: '99', instructor: 'نامشخص', units: 3, day: 'نامشخص', startTime: '', endTime: '', capacity: 10 },
+
       ],
     };
-    setSelectedFileName('داده‌های آزمایشی واقعی (۱۳ عنوان درس نیمسال)');
+    setSelectedFileName('داده‌های ساختگی آموزشیار (۳ گروه؛ یکی نیازمند بررسی)');
     setJsonText(JSON.stringify(demoPayload, null, 2));
     handleProcessImport(demoPayload);
   };
