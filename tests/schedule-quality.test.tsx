@@ -87,6 +87,6 @@ describe('quality UI disclosures',()=>{
     expect(html).toContain('امتیاز استادهای منتخب');
     expect(html).toContain('دادهٔ ساختگی');
     expect(html).toContain('کمترین روز حضور');
-    expect(html).toContain('100');
+    expect(html).toContain('۱۰۰');
   });
 });
