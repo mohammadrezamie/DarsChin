@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { PasswordChangeModal } from './components/PasswordChangeModal';
 import { ExtensionModal } from './components/ExtensionModal';
+import { SiteFooter } from './components/SiteFooter';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 const Landing = lazy(() => import('./pages/Landing').then((module) => ({ default: module.Landing })));
@@ -70,6 +71,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <div dir="rtl" className="flex min-h-dvh flex-col">
 <Suspense fallback={<div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">درحال بارگذاری...</div>}>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -93,6 +95,8 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
+            <SiteFooter />
+          </div>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
