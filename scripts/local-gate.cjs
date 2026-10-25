@@ -62,7 +62,7 @@ try {
   ) : mode==='quick' ? (
     run('Repository hygiene','node',['scripts/check-repo-layout.cjs']) &&
     run('TypeScript','bun',['run','lint']) &&
-    run('Vitest','bun',['run','test',...(spec?['--',spec]:[])])
+    run('Vitest','bun',spec?['x','vitest','run',spec]:['run','test'])
   ) : (
     run('Frozen Bun install','bun',['install','--frozen-lockfile']) &&
     run('Repository hygiene','node',['scripts/check-repo-layout.cjs']) &&
