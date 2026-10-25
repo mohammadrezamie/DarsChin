@@ -57,6 +57,7 @@ const Landing: React.FC = () => {
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ThemeToggle />
+            <Link to="/demo/student" className="hidden lg:inline-flex min-h-10 items-center rounded-xl border border-blue-200 bg-blue-50 px-3 text-sm font-extrabold text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">تست رایگان دمو</Link>
             <Link to="/login" className="hidden sm:inline-flex rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">ورود</Link>
             <Link to="/register" className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-extrabold text-white shadow-md shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 sm:px-4">
               ثبت‌نام <ArrowLeft className="h-4 w-4" />
@@ -93,6 +94,11 @@ const Landing: React.FC = () => {
                   {item.label}
                 </a>
               ))}
+              <div className="mt-4 space-y-2 rounded-xl bg-blue-50 p-3 dark:bg-blue-950/40">
+                <p className="text-xs font-bold text-blue-900 dark:text-blue-200">ورود آزمایشی بدون شماره، رمز یا ثبت‌نام</p>
+                <Link to="/demo/student" onClick={closeMenu} className="flex min-h-11 items-center justify-center rounded-xl bg-blue-700 text-white">دموی دانشجو</Link>
+                <Link to="/demo/admin" onClick={closeMenu} className="flex min-h-11 items-center justify-center rounded-xl border border-blue-300 text-blue-800 dark:text-blue-200">دموی مدیریت</Link>
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
                 <Link to="/login" onClick={closeMenu} className="flex min-h-12 items-center justify-center rounded-xl border border-slate-300 text-slate-900 dark:border-slate-700 dark:text-white">ورود</Link>
                 <Link to="/register" onClick={closeMenu} className="flex min-h-12 items-center justify-center rounded-xl bg-blue-600 text-white">ثبت‌نام</Link>
@@ -104,6 +110,20 @@ const Landing: React.FC = () => {
 
       <main>
         <HeroSection />
+        <section aria-label="انتخاب دسترسی دمو" className="relative mx-auto -mt-3 mb-10 max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-4 rounded-3xl border border-blue-200 bg-white p-5 shadow-xl shadow-blue-950/5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-blue-900 dark:bg-slate-900">
+            <div>
+              <p className="text-xs font-black tracking-wide text-blue-700 dark:text-blue-300">پایلوت دانشگاه آزاد · مهندسی برق کارشناسی · علوم و تحقیقات</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl dark:text-white">بدون ساخت حساب، تمام پنل‌ها را آزمایش کن</h2>
+              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">داده‌های دمو ساختگی‌اند. تغییرات صرفاً در مرورگر تو ذخیره می‌شوند؛ هیچ اطلاعاتی در دانشگاه ثبت نمی‌شود.</p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Link to="/demo/student" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-blue-700 px-5 text-sm font-black text-white hover:bg-blue-800 sm:flex-none">ورود دمو دانشجو</Link>
+              <Link to="/demo/admin" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-blue-300 px-5 text-sm font-black text-blue-800 dark:text-blue-200 sm:flex-none">ورود دمو مدیر</Link>
+              <Link to="/demo" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300 sm:flex-none">برنامه‌ریز ساده</Link>
+            </div>
+          </div>
+        </section>
         <EligibilitySection />
         <RecommendationSection />
         <ScheduleSection />
