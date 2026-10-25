@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, Trash2, BookOpen, GraduationCap } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import type { AcademicRule, AcademicRuleNode, Course, Curriculum, RelationshipType } from '../types';
@@ -28,19 +29,22 @@ function asSimpleEditor(node: AcademicRuleNode): { conditions: Condition[]; oper
 
 /** Simple, unlimited row-based rule form. Advanced legacy rule trees remain visible rather than silently rewritten. */
 export const AdminAcademicRules: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const initialChart = searchParams.get('curriculumId') || '';
+  const initialTarget = searchParams.get('targetCourseId') || '';
   const [rules, setRules] = useState<ListedRule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
-  const [curriculumId, setCurriculumId] = useState('');
-  const [targetCourseId, setTargetCourseId] = useState('');
+  const [curriculumId, setCurriculumId] = useState(initialChart);
+  const [targetCourseId, setTargetCourseId] = useState(initialTarget);
   const [relationshipType, setRelationshipType] = useState<RelationshipType>('PREREQUISITE');
   const [conditions, setConditions] = useState<Condition[]>([empty()]);
   const [operator, setOperator] = useState<'AND'|'OR'>('AND');
   const [notes, setNotes] = useState('');
   const [editId, setEditId] = useState('');
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(Boolean(initialTarget));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
