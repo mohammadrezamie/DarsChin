@@ -176,6 +176,10 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         if (!this.data.supportMessages) this.data.supportMessages = [];
         if (!this.data.bugReports) this.data.bugReports = [];
         if (!this.data.auditLogs) this.data.auditLogs = [];
+        // Old persisted databases predate review-first Educationalyar imports.
+        // Normalize only the missing collections; never drop existing review data.
+        if (!Array.isArray(this.data.importBatches)) this.data.importBatches = [];
+        if (!Array.isArray(this.data.importRecords)) this.data.importRecords = [];
         if (!Array.isArray(this.data.syncJobs)) this.data.syncJobs = [];
         if (!Array.isArray(this.data.syncSnapshots)) this.data.syncSnapshots = [];
         if (!this.data.errorLogs) this.data.errorLogs = [];
