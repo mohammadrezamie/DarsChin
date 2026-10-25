@@ -25,6 +25,8 @@ import {
   StudentAcademicProfile,
   StudentPassedCourse,
   StudentPlan,
+  DemandSurvey,
+  DemandResponse,
   ImportBatch,
   ImportRecord,
   AcademicPolicySettings,
@@ -65,6 +67,8 @@ export interface DatabaseSchema {
   studentProfiles: StudentAcademicProfile[];
   studentPassedCourses: StudentPassedCourse[];
   studentPlans?: StudentPlan[];
+  demandSurveys: DemandSurvey[];
+  demandResponses: DemandResponse[];
   importBatches: ImportBatch[];
   importRecords: ImportRecord[];
   academicSettings: AcademicPolicySettings;
@@ -88,6 +92,8 @@ const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
  * retain valid arrays and never silently overwrite existing review decisions.
  */
 export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
+  if (!Array.isArray(data.demandSurveys)) data.demandSurveys = [];
+  if (!Array.isArray(data.demandResponses)) data.demandResponses = [];
   if (!Array.isArray(data.importBatches)) data.importBatches = [];
   if (!Array.isArray(data.importRecords)) data.importRecords = [];
   if (!Array.isArray(data.syncJobs)) data.syncJobs = [];
@@ -119,6 +125,8 @@ export class LocalDatabase {
     courseOfferings: [],
     studentProfiles: [],
     studentPassedCourses: [],
+    demandSurveys: [],
+    demandResponses: [],
     importBatches: [],
     importRecords: [],
     academicSettings: { ...DEFAULT_ACADEMIC_SETTINGS },
@@ -254,7 +262,7 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
             'prerequisite.manage', 'corequisite.manage', 'curriculum.manage', 'offering.manage',
             'academic-policy.manage', 'student-management.read', 'support.manage', 'import.manage',
             'admin.create', 'admin.manage', 'admin.remove', 'admin.permission.manage',
-            'system.settings.manage', 'backup.manage'
+            'system.settings.manage', 'backup.manage', 'demand.manage', 'demand.export'
         ];
 
         if (!superAdmin && rootMobile && rootPassword) {
@@ -341,6 +349,8 @@ this.isInitialized = true;
   get studentProfiles() { return this.data.studentProfiles; }
   get studentPassedCourses() { return this.data.studentPassedCourses; }
   get studentPlans() { return this.data.studentPlans || (this.data.studentPlans = []); }
+  get demandSurveys() { return this.data.demandSurveys || (this.data.demandSurveys = []); }
+  get demandResponses() { return this.data.demandResponses || (this.data.demandResponses = []); }
   get importBatches() { return this.data.importBatches || (this.data.importBatches = []); }
   get importRecords() { return this.data.importRecords || (this.data.importRecords = []); }
   get academicSettings(): AcademicPolicySettings {
