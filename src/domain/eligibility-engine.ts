@@ -63,6 +63,12 @@ export function evaluateStudentEligibility(
   );
 
   const coursesMap = new Map<string, Course>(allCourses.map((c) => [c.id, c]));
+  // Only unique, successfully completed catalogued courses count. A course cannot
+  // be counted twice if the student's transcript has repeated/duplicate entries.
+  const passedUnitCount = [...passedCourseIdsSet].reduce((total, id) => {
+    const units = coursesMap.get(id)?.units;
+    return total + (typeof units === 'number' && Number.isFinite(units) && units > 0 ? units : 0);
+  }, 0);
   const tracksMap = new Map<string, Track>(tracks.map((t) => [t.id, t]));
 
   // Resolve planned course IDs from either course IDs or offering IDs in the current semester
@@ -245,10 +251,21 @@ export function evaluateStudentEligibility(
         isCorequisite: boolean,
         isContextualRetake: boolean
       ): { passed: boolean; missing: Array<{ id: string; name: string; code: string }>; reasons: string[] } => {
-        if (!node) return { passed: true, missing: [], reasons: [] };
+        if (!node) return { passed: false, missing: [], reasons: ['شرط تحصیلی تعریف نشده؛ بررسی مدیر گروه لازم است.'] };
+        if (node.type === 'MIN_PASSED_UNITS') {
+          const minimum = node.minUnits;
+          if (!Number.isInteger(minimum) || minimum <= 0) {
+            return { passed: false, missing: [], reasons: ['حداقل واحد گذرانده‌شده در قانون معتبر نیست.'] };
+          }
+          return passedUnitCount >= minimum
+            ? { passed: true, missing: [], reasons: [] }
+            : { passed: false, missing: [], reasons: [
+              `برای «${course.name}» حداقل ${minimum} واحد گذرانده‌شده لازم است؛ ${passedUnitCount} واحد معتبر در پرونده ثبت شده است.`
+            ] };
+        }
         if (node.type === 'COURSE') {
           const reqCourse = coursesMap.get(node.courseId);
-          if (!reqCourse) return { passed: true, missing: [], reasons: [] };
+          if (!reqCourse) return { passed: false, missing: [], reasons: ['درسِ شرط در چارت شناسایی نشد؛ بررسی مدیر گروه لازم است.'] };
 
           const isPassed = passedCourseIdsSet.has(reqCourse.id);
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
@@ -316,7 +333,7 @@ export function evaluateStudentEligibility(
             };
           }
         }
-        return { passed: true, missing: [], reasons: [] };
+        return { passed: false, missing: [], reasons: ['نوع شرط آموزشی ناشناخته است؛ بررسی مدیر گروه لازم است.'] };
       };
 
       for (const rule of applicableRules) {
