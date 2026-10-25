@@ -418,9 +418,10 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if (path === '/api/demand/surveys' && method === 'POST') {
     const chart=s.collections['/api/curriculum'].find(row=>row.id===data.curriculumId);
+    const selectedTrackIds = Array.isArray(data.trackIds) ? data.trackIds : [];
     const validCourseIds=new Set(s.collections['/api/curriculum-courses']
       .filter(row=>row.curriculumId===data.curriculumId && row.active!==false &&
-        (!row.trackId || (data.trackIds||[]).includes(row.trackId))).map(row=>row.courseId));
+        (!row.trackId || selectedTrackIds.includes(row.trackId))).map(row=>row.courseId));
     if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
       !chart || typeof data.title !== 'string' || data.title.trim().length < 5 ||
       data.title.length > 160 || typeof data.description !== 'string' ||
@@ -457,6 +458,8 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       trackIds: [...data.trackIds],
       courseIds: [...data.courseIds],
       recommendedMinimumByCourse: { ...data.recommendedMinimumByCourse },
+      startsAt: typeof data.startsAt === 'string' ? data.startsAt : undefined,
+      endsAt: typeof data.endsAt === 'string' ? data.endsAt : undefined,
       status: 'DRAFT',
       createdBy: 'demo-manager',
       createdAt: currentTime,
