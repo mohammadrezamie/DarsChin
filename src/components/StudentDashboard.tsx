@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Student Dashboard
 // ============================================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   UploadCloud,
   FileJson,
@@ -11,6 +11,11 @@ import {
   BookOpen,
   Calendar,
   Download,
+  MessageCircle,
+  Bug,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
@@ -24,6 +29,17 @@ import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
+
+type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'passed' | 'support' | 'bugs';
+
+const studentTabs = [
+  { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
+  { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
+  { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
+  { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
+  { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
+  { id: 'bugs', label: 'گزارش خطاهای سامانه', short: 'گزارش باگ', icon: Bug },
+] as const;
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -44,80 +60,101 @@ export const StudentDashboard: React.FC = () => {
     courseName: string;
     messages: string[];
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<'offerings' | 'recommendations' | 'passed' | 'schedule'>('offerings');
-
+  const [activeTab, setActiveTab] = useState<StudentTab>('offerings');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const planMutationRef = useRef(false);
 
   const fetchDashboardData = async () => {
-    if (evaluations.length === 0) setLoading(true);
-    const [profileRes, evalRes, planRes] = await Promise.all([
-      apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
-      apiRequest<any>('/api/eligibility/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ plannedCourseIds: selectedOfferingIds }),
-      }),
-      apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: any; offeringPriorities?: any }>('/api/student/plan'),
-    ]);
+    setLoading(true);
+    setLoadError(null);
+    try {
+      // Resolve saved selections before calculating eligibility on reload.
+      const [profileRes, planRes] = await Promise.all([
+        apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
+        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
+      ]);
+      if (profileRes.success && profileRes.data) setProfile(profileRes.data.profile);
+      else setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
 
-    if (profileRes.success && profileRes.data) {
-      setProfile(profileRes.data.profile);
-    }
-    if (evalRes.success && evalRes.data) {
-      setEvaluations(evalRes.data.report?.results || []);
-      setRecommendations(evalRes.data.recommendations || []);
-      if (evalRes.data.academicLimits) {
-        setAcademicLimits(evalRes.data.academicLimits);
-      }
-      if (evalRes.data.context && evalRes.data.context.term) {
-        setCurrentTerm(evalRes.data.context.term);
-      }
-    }
-    if (planRes.success && planRes.data) {
-      if (Array.isArray(planRes.data.selectedOfferingIds) && selectedOfferingIds.length === 0) {
-        setSelectedOfferingIds(planRes.data.selectedOfferingIds);
-      }
-      if (planRes.data.coursePriorities) {
-        if (Array.isArray(planRes.data.coursePriorities)) {
-          setCoursePriorities(planRes.data.coursePriorities);
-        } else if (typeof planRes.data.coursePriorities === 'object') {
-          const sorted = Object.keys(planRes.data.coursePriorities).sort(
-            (a, b) => planRes.data.coursePriorities[a] - planRes.data.coursePriorities[b]
-          );
-          setCoursePriorities(sorted);
+      const planned = planRes.success && Array.isArray(planRes.data?.selectedOfferingIds)
+        ? planRes.data.selectedOfferingIds
+        : selectedOfferingIds;
+      if (planRes.success && planRes.data) {
+        setSelectedOfferingIds(planned);
+        const priorities = planRes.data.coursePriorities;
+        if (Array.isArray(priorities)) setCoursePriorities(priorities);
+        else if (priorities && typeof priorities === 'object') {
+          setCoursePriorities(Object.keys(priorities).sort((x, y) => priorities[x] - priorities[y]));
         }
+        if (planRes.data.offeringPriorities && typeof planRes.data.offeringPriorities === 'object') {
+          setOfferingPriorities(planRes.data.offeringPriorities);
+        }
+      } else {
+        setLoadError(planRes.error || 'برنامه ذخیره‌شده قابل دریافت نیست.');
       }
-      if (planRes.data.offeringPriorities && typeof planRes.data.offeringPriorities === 'object') {
-        setOfferingPriorities(planRes.data.offeringPriorities);
-      }
+
+      const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
+        method: 'POST', body: JSON.stringify({ plannedCourseIds: planned }),
+      });
+      if (evalRes.success && evalRes.data) {
+        setEvaluations(evalRes.data.report?.results || []);
+        setRecommendations(evalRes.data.recommendations || []);
+        if (evalRes.data.academicLimits) setAcademicLimits(evalRes.data.academicLimits);
+        if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
+      } else setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
+    } catch {
+      setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    if (user && user.roles?.includes('student')) {
-      fetchDashboardData();
-    }
+    if (user && user.roles?.includes('student')) void fetchDashboardData();
   }, [user]);
 
-  // Sync plan state changes to backend
-  const syncPlanToServer = async (
-    newSelectedIds: string[],
-    newCoursePriorities: string[],
-    newOfferingPriorities: Record<string, string[]>
-  ) => {
+  // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
+  const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
+    if (planMutationRef.current) {
+      setPlanError('تغییر قبلی هنوز در حال ثبت است. پس از پایان ذخیره‌سازی دوباره تلاش کنید.');
+      return false;
+    }
+    planMutationRef.current = true;
+    setPlanStatus('saving');
+    setPlanError(null);
     try {
-      await apiRequest('/api/student/plan', {
-        method: 'PUT',
-        body: JSON.stringify({
-          selectedOfferingIds: newSelectedIds,
-          coursePriorities: newCoursePriorities,
-          offeringPriorities: newOfferingPriorities,
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to sync plan to server:', err);
+      const response = await request();
+      if (!response.success) {
+        setPlanStatus('error');
+        setPlanError(response.error || 'تغییر برنامه ذخیره نشد. برنامه قبلی حفظ شده است.');
+        return false;
+      }
+      setPlanStatus('saved');
+      return true;
+    } catch {
+      setPlanStatus('error');
+      setPlanError('ارتباط هنگام ذخیره‌سازی برقرار نشد. برنامه قبلی حفظ شده است.');
+      return false;
+    } finally {
+      planMutationRef.current = false;
     }
   };
+
+  const syncPlanToServer = (
+    newSelectedIds: string[],
+    newCoursePriorities: string[],
+    newOfferingPriorities: Record<string, string[]>,
+  ) => runPlanMutation(() => apiRequest('/api/student/plan', {
+    method: 'PUT',
+    body: JSON.stringify({
+      selectedOfferingIds: newSelectedIds,
+      coursePriorities: newCoursePriorities,
+      offeringPriorities: newOfferingPriorities,
+    }),
+  }));
 
   // Reorder courses
   const handleReorderCourses = (newCourseOrder: string[]) => {
