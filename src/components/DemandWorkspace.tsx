@@ -6,7 +6,7 @@ import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, St
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
 type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[] };
-type CourseAssigned = { courseId: string; active?: boolean; course?: Course };
+type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
 export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
   const [surveys, setSurveys] = useState<DemandSurvey[]>([]);
@@ -19,6 +19,8 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
+  const [entryYears, setEntryYears] = useState<{id:string;year:number}[]>([]);
+  const [tracks, setTracks] = useState<Option[]>([]);
   const [assigned, setAssigned] = useState<CourseAssigned[]>([]);
   const [rules, setRules] = useState<AcademicRule[]>([]);
   const [report, setReport] = useState<SurveyStats | null>(null);
@@ -29,6 +31,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [newDescription, setNewDescription] = useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
+  const [newTrack, setNewTrack] = useState('');
   const [newCourseIds, setNewCourseIds] = useState<string[]>([]);
   const [threshold, setThreshold] = useState(15);
 
@@ -41,13 +44,15 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
       apiRequest<Course[]>('/api/academic/courses'),
-      apiRequest<{ academicTerms: Option[] }>('/api/academic/all-meta'),
+      apiRequest<{ academicTerms: Option[]; entryYears: {id:string;year:number}[]; tracks:Option[] }>('/api/academic/all-meta'),
       apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
     if (!list.success) setError(list.error || 'فهرست نیازسنجی بارگذاری نشد.');
     setSurveys(list.data || []);
     setCourses(courseResult.data || []);
     setTerms(meta.data?.academicTerms || []);
+    setEntryYears(meta.data?.entryYears || []);
+    setTracks(meta.data?.tracks || []);
     setCurricula(chart.data || []);
     setSelectedId(prev=>list.data?.some(s=>s.id===prev)?prev:list.data?.[0]?.id || '');
     if (role === 'student') {
@@ -120,7 +125,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         universityId:curriculum.universityId,campusId:curriculum.campusId,
         degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
         curriculumId:curriculum.id,entryYearIds:[curriculum.entryYearId],
-        trackIds:[],courseIds:newCourseIds,
+        trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
         recommendedMinimumByCourse:Object.fromEntries(newCourseIds.map(id=>[id,threshold])),
       }),
     });
@@ -156,6 +161,21 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
+  const yearLabel=(entryId:string)=>entryYears.find(y=>y.id===entryId)?.year ?? entryId;
+  const isDemoStudent = role==='student' && typeof window!=='undefined' &&
+    window.location.pathname.startsWith('/demo/');
+  const switchDemoEntryYear=async(entryYearId:string)=>{
+    if(!isDemoStudent)return;
+    setBusy(true);setError('');setSuccess('');
+    const changed=await apiRequest<{profile:StudentAcademicProfile}>('/api/demo/academic-cohort',{
+      method:'PUT',body:JSON.stringify({entryYearId}),
+    });
+    setBusy(false);
+    if(!changed.success){setError(changed.error||'تغییر ورودی دمو انجام نشد.');return;}
+    setProfile(changed.data?.profile || null);
+    await refresh();
+    setSuccess('ورودی آزمایشی تغییر کرد؛ اکنون فقط نیازسنجی منطبق با چارت همین ورودی نمایش داده می‌شود.');
+  };
 
   return (
     <div className="space-y-5" dir="rtl">
@@ -177,6 +197,22 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error}</div>}
       {success && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{success}</div>}
 
+      {isDemoStudent && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
+          <div>
+            <p className="text-sm font-black text-indigo-900 dark:text-indigo-100">آزمایش تفکیک ورودی‌ها</p>
+            <p className="mt-1 text-xs leading-6 text-indigo-700 dark:text-indigo-200">
+              فقط در محیط دمو؛ ورودی ۱۴۰۲ و ۱۴۰۳ دو چارت و فهرست نیازسنجی مستقل دارند.
+            </p>
+          </div>
+          <select aria-label="انتخاب ورودی آزمایشی" value={profile?.entryYearId || ''}
+            disabled={busy} onChange={e=>void switchDemoEntryYear(e.target.value)}
+            className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
+            {entryYears.map(y=><option key={y.id} value={y.id}>ورودی {y.year}</option>)}
+          </select>
+        </section>
+      )}
+
       {role==='admin' && (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
           <h3 className="text-lg font-black">تعریف نیازسنجی جدید</h3>
@@ -184,14 +220,24 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <label className="text-xs font-bold">عنوان نیازسنجی<input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="نیازسنجی ترم آینده برق" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
             <label className="text-xs font-bold">نیمسال هدف<select value={newTerm} onChange={e=>setNewTerm(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">{terms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-            <label className="text-xs font-bold">چارت و ورودی<select value={newCurriculum} onChange={e=>{setNewCurriculum(e.target.value);setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">{curricula.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label className="text-xs font-bold">چارت اختصاصی ورودی (مثلاً ۱۴۰۲ یا ۱۴۰۳)
+              <select value={newCurriculum} onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+                {curricula.map(c=><option key={c.id} value={c.id}>ورودی {yearLabel(c.entryYearId)} · {c.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-bold">محدودهٔ گرایش
+              <select value={newTrack} onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+                <option value="">تمام دانشجویان این ورودی (دروس مشترک)</option>
+                {tracks.filter(t=>t.majorId===curriculum?.majorId).map(t=><option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
+              </select>
+            </label>
             <label className="text-xs font-bold">حدنصاب پیشنهادی (نه مصوبه)<input type="number" min={1} max={500} value={threshold} onChange={e=>setThreshold(Number(e.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
             <label className="text-xs font-bold md:col-span-2">توضیحات<textarea rows={2} value={newDescription} onChange={e=>setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/></label>
           </div>
           <div className="mt-3">
             <p className="mb-2 text-sm font-black">دروس چارت مورد نیازسنجی</p>
             <div className="grid max-h-56 gap-1 overflow-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2 dark:border-slate-700">
-              {assigned.filter(c=>c.active!==false).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
+              {assigned.filter(c=>c.active!==false && (!c.trackId||c.trackId===newTrack)).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
               {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
             </div>
           </div>
@@ -202,7 +248,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 className="text-base font-black">{role==='admin'?'پایش نیازسنجی‌ها':'نیازسنجی‌های قابل پاسخ'}</h3>
         {!surveys.length && <p className="mt-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800">فعلاً نیازسنجی قابل دسترسی وجود ندارد.</p>}
-        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
       </section>
 
       {survey && role==='student' && (
@@ -218,7 +264,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             </label>
           </div>
           <p className="rounded-xl bg-slate-50 p-3 text-xs leading-6 dark:bg-slate-800">
-            مشخصات از پروفایل: ورودی {profile?.entryYearId || 'نامشخص'} · {profile?.isTrackSelected?'گرایش انتخاب شده':'گرایش رسمی انتخاب نشده'}.
+            مشخصات از پروفایل: ورودی {profile?.entryYearId ? yearLabel(profile.entryYearId) : 'نامشخص'} · {profile?.isTrackSelected?'گرایش انتخاب شده':'گرایش رسمی انتخاب نشده'}.
             این موارد برای گزارش به مدیر گروه از سمت سرور خوانده می‌شوند.
           </p>
           <h4 className="font-black">کدام درس‌ها را احتمالاً ترم آینده می‌خواهی؟</h4>
