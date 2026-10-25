@@ -117,28 +117,59 @@ function bodyJson(options: RequestInit): Record<string, any> {
   try { const obj = JSON.parse(options.body); return obj && typeof obj === 'object' ? obj : {}; }
   catch { return {}; }
 }
+function currentCourses(s: DemoStore): Course[] {
+  return (s.collections['/api/academic/courses'] || []) as Course[];
+}
+
+function currentOfferings(s: DemoStore): CourseOffering[] {
+  return (s.collections['/api/offerings'] || []) as CourseOffering[];
+}
+
+function isUsableOffering(s: DemoStore, offeringId: unknown): boolean {
+  if (typeof offeringId !== 'string') return false;
+  const offering = currentOfferings(s).find(o => o.id === offeringId && o.active !== false);
+  return Boolean(offering && currentCourses(s).some(c => c.id === offering.courseId && c.active !== false));
+}
+
+/** Keep the local student plan coherent after demo admin disables/deletes offerings. */
+function cleanDemoPlan(s: DemoStore): void {
+  const valid = (ids: unknown): string[] =>
+    Array.isArray(ids) ? [...new Set(ids.filter(id => isUsableOffering(s, id)))] : [];
+
+  s.plan.selectedOfferingIds = valid(s.plan.selectedOfferingIds);
+  s.plan.offeringPriorities = Object.fromEntries(
+    Object.entries(s.plan.offeringPriorities || {})
+      .map(([courseId, ids]) => [courseId, valid(ids)] as const)
+      .filter(([courseId, ids]) => ids.length > 0 && currentCourses(s).some(c => c.id === courseId && c.active !== false)),
+  );
+  s.plan.coursePriorities = (s.plan.coursePriorities || []).filter(
+    courseId => currentCourses(s).some(c => c.id === courseId && c.active !== false),
+  );
+}
+
 function academicLimits(s: DemoStore): AcademicLimitInfo {
-  const total = sampleCourses.reduce((n, c) => n + c.units, 0);
-  const passed = s.passed.reduce((n, p) => n + (sampleCourses.find(c => c.id === p.courseId)?.units || 0), 0);
+  const courses = currentCourses(s);
+  const total = courses.reduce((n, c) => n + c.units, 0);
+  const passed = s.passed.reduce((n, p) => n + (courses.find(c => c.id === p.courseId)?.units || 0), 0);
   return {
     ...defaults, effectiveMinUnits: 0, effectiveMaxUnits: 99,
     isFinalSemester: false, isGradeA: false, isSummer: false,
     totalCurriculumUnits: total, passedUnits: passed, remainingUnits: total - passed,
-    remainingCoursesCount: sampleCourses.length - s.passed.length,
+    remainingCoursesCount: Math.max(0, courses.length - s.passed.length),
     policySettings: { ...s.academicSettings }, majorRequiredPassed: passed,
     majorRequiredRemaining: total - passed, trackRequiredPassed: 0,
     trackRequiredRemaining: 0, electivesPassed: 0, electivesRemaining: 0,
   };
 }
 function demoEvaluation(s: DemoStore) {
-  const courses = (s.collections['/api/academic/courses'] || []) as Course[];
-  const offerings = (s.collections['/api/offerings'] || []) as CourseOffering[];
+  const courses = currentCourses(s);
+  const offerings = currentOfferings(s);
   // In demo ALL visible offerings are previewable, regardless of university rules.
-  const results: CourseEligibilityResult[] = offerings.filter(o => o.active !== false).map(o => {
+  const results: CourseEligibilityResult[] = offerings.filter(o => isUsableOffering(s, o.id)).map(o => {
     const c = courses.find(course => course.id === o.courseId);
     return {
       offeringId: o.id, courseId: o.courseId, courseCode: c?.code || 'DEMO',
-      courseName: c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
+      courseName: o.rawCourseName?.trim() || c?.name || 'درس نمونه', units: c?.units || 0, category: c?.category || 'سایر',
       groupCode: o.groupCode, instructor: o.instructor, dayOfWeek: o.dayOfWeek,
       startTime: o.startTime, endTime: o.endTime, capacity: o.capacity,
       enrolledCount: o.enrolledCount, examDate: o.examDate,
@@ -198,18 +229,37 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if (path === '/api/eligibility/evaluate' && method === 'POST') return good(demoEvaluation(s)) as ApiResponse<T>;
   if (path === '/api/student/plan') {
-    if (method === 'GET') return good(s.plan) as ApiResponse<T>;
+    if (method === 'GET') {
+      cleanDemoPlan(s);
+      return good(s.plan) as ApiResponse<T>;
+    }
     if (method === 'PUT') {
-      s.plan = { ...s.plan, ...data, selectedOfferingIds: Array.isArray(data.selectedOfferingIds) ? data.selectedOfferingIds : s.plan.selectedOfferingIds };
-      saveStore(s); return good(s.plan) as ApiResponse<T>;
+      if (data.selectedOfferingIds !== undefined &&
+        (!Array.isArray(data.selectedOfferingIds) || data.selectedOfferingIds.some((id: unknown) => !isUsableOffering(s, id)))) {
+        return fail('یکی از گروه‌های انتخاب‌شده دیگر در دمو فعال یا موجود نیست.');
+      }
+      s.plan = {
+        ...s.plan, ...data,
+        selectedOfferingIds: Array.isArray(data.selectedOfferingIds) ? [...new Set(data.selectedOfferingIds)] : s.plan.selectedOfferingIds,
+      };
+      cleanDemoPlan(s);
+      saveStore(s);
+      return good(s.plan) as ApiResponse<T>;
     }
   }
   if (path === '/api/student/plan/select' && method === 'POST') {
-    if (typeof data.offeringId !== 'string') return fail('شناسه گروه نامعتبر است.');
+    if (typeof data.offeringId !== 'string' || !['add', 'remove'].includes(data.action)) {
+      return fail('درخواست تغییر برنامهٔ دمو معتبر نیست.');
+    }
+    if (data.action === 'add' && !isUsableOffering(s, data.offeringId)) {
+      return fail('این گروه درسی در داده‌های فعلی دمو موجود یا فعال نیست.');
+    }
     const old = s.plan.selectedOfferingIds;
     s.plan.selectedOfferingIds = data.action === 'remove' ? old.filter(x=>x !== data.offeringId)
       : [...new Set([...old, data.offeringId])];
-    saveStore(s); return good(s.plan) as ApiResponse<T>;
+    cleanDemoPlan(s);
+    saveStore(s);
+    return good(s.plan) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'GET') {
     const enriched = s.passed.map(row => ({ ...row, course: s.collections['/api/academic/courses'].find(c => c.id === row.courseId) }));
@@ -219,7 +269,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     return good({ passedCourses: enriched, totalUnits, categorySummary }) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'POST') {
-    if (!sampleCourses.some(c=>c.id === data.courseId)) return fail('این درس در فهرست نمونه نیست.');
+    if (!currentCourses(s).some(c=>c.id === data.courseId)) return fail('این درس در بانک فعلی دمو نیست.');
     if (s.passed.some(p=>p.courseId===data.courseId)) return fail('این درس قبلاً اضافه شده است.');
     s.passed.push({id:id(),userId:'demo-student',courseId:data.courseId,grade:data.grade,status:'PASSED',passedAt:now()});
     saveStore(s);return good(s.passed.at(-1)) as ApiResponse<T>;
@@ -227,7 +277,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   if (path === '/api/student/passed-courses/batch' && method === 'POST') {
     const ids = Array.isArray(data.courseIds) ? data.courseIds : [];
     let addedCount=0;
-    for(const courseId of ids){if(sampleCourses.some(c=>c.id===courseId)&&!s.passed.some(p=>p.courseId===courseId)){s.passed.push({id:id(),userId:'demo-student',courseId,status:'PASSED',passedAt:now()});addedCount++;}}
+    for(const courseId of ids){if(currentCourses(s).some(c=>c.id===courseId)&&!s.passed.some(p=>p.courseId===courseId)){s.passed.push({id:id(),userId:'demo-student',courseId,status:'PASSED',passedAt:now()});addedCount++;}}
     saveStore(s);return good({addedCount,totalPassed:s.passed.length}) as ApiResponse<T>;
   }
   if (path.startsWith('/api/student/passed-courses/') && method === 'DELETE') {
@@ -297,11 +347,65 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(route.key === '/api/curriculum/rules' || route.key === '/api/curriculum') {
       return fail('ویرایش چارت و قوانین دانشگاهی در دمو غیرفعال است.');
     }
-    if(method==='POST'){
-      const row={...data,id:id(),active:data.active!==false};rows.push(row);s.collections[route.key]=rows;saveStore(s);return good(row) as ApiResponse<T>;
+    // Referential checks are intentionally scoped to the academic demo records.
+    // Real authorization and official eligibility policy remain server responsibilities.
+    const isCourse = route.key === '/api/academic/courses';
+    const isOffering = route.key === '/api/offerings';
+    if (method === 'POST' || method === 'PUT') {
+      if (isCourse) {
+        const name = data.name ?? (route.id ? rows.find(row => row.id === route.id)?.name : undefined);
+        const code = data.code ?? (route.id ? rows.find(row => row.id === route.id)?.code : undefined);
+        const units = data.units ?? (route.id ? rows.find(row => row.id === route.id)?.units : undefined);
+        if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim() ||
+          typeof units !== 'number' || !Number.isFinite(units) || units < 0) {
+          return fail('عنوان، کد و تعداد واحد معتبر برای درس نمونه الزامی‌اند.');
+        }
+        if (rows.some(row => row.code === code && row.id !== route.id)) return fail('کد درس نمونه تکراری است.');
+      }
+      if (isOffering) {
+        const previous = route.id ? rows.find(row => row.id === route.id) : null;
+        const linkedCourseId = data.courseId ?? previous?.courseId;
+        if (!currentCourses(s).some(course => course.id === linkedCourseId)) {
+          return fail('گروه نمونه باید به یک شناسهٔ درس موجود در بانک دروس متصل شود.');
+        }
+        if (data.startTime && data.endTime && data.startTime >= data.endTime) {
+          return fail('زمان پایان گروه نمونه باید بعد از شروع کلاس باشد.');
+        }
+      }
     }
-    if(method==='PUT' && route.id){const idx=rows.findIndex(row=>row.id===route.id);if(idx<0)return fail('رکورد دمو یافت نشد.');rows[idx]={...rows[idx],...data,id:route.id};saveStore(s);return good(rows[idx]) as ApiResponse<T>;}
-    if(method==='DELETE' && route.id){s.collections[route.key]=rows.filter(row=>row.id!==route.id);saveStore(s);return good({}) as ApiResponse<T>;}
+    if(method==='POST'){
+      const row={...data,id:id(),active:data.active!==false};
+      if(isOffering){
+        row.termId ??= semester.id;
+        row.campusId ??= campus.id;
+        row.source ??= 'manual';
+        row.enrolledCount ??= 0;
+        row.capacity ??= 40;
+      }
+      rows.push(row);s.collections[route.key]=rows;saveStore(s);return good(row) as ApiResponse<T>;
+    }
+    if(method==='PUT' && route.id){
+      const idx=rows.findIndex(row=>row.id===route.id);
+      if(idx<0)return fail('رکورد دمو یافت نشد.');
+      const updated={...rows[idx],...data,id:route.id};
+      if (isOffering && updated.startTime && updated.endTime && updated.startTime >= updated.endTime) {
+        return fail('زمان پایان گروه نمونه باید بعد از شروع کلاس باشد.');
+      }
+      rows[idx]=updated;
+      if (isCourse || isOffering) cleanDemoPlan(s);
+      saveStore(s);
+      return good(rows[idx]) as ApiResponse<T>;
+    }
+    if(method==='DELETE' && route.id){
+      if (!rows.some(row => row.id === route.id)) return fail('رکورد دمو برای حذف پیدا نشد.');
+      if (isCourse && (currentOfferings(s).some(o => o.courseId === route.id) || s.passed.some(p => p.courseId === route.id))) {
+        return fail('این درس در گروه‌های ارائه یا سوابق نمونه استفاده شده است؛ ابتدا وابستگی‌ها را بررسی کن.');
+      }
+      s.collections[route.key]=rows.filter(row=>row.id!==route.id);
+      if (isCourse || isOffering) cleanDemoPlan(s);
+      saveStore(s);
+      return good({}) as ApiResponse<T>;
+    }
   }
   return fail('این مسیر در شبیه‌ساز مرورگر هنوز پیاده‌سازی نشده است: '+path+'. برای تست واقعی آن Backend لازم است.');
 }
