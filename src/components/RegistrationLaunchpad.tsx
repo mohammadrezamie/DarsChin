@@ -128,11 +128,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
         const locked=step.dependencyCourseIds.some(id=>!doneIds.includes(id));
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
-        return <li key={step.courseId} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-xl border px-2 py-2 sm:flex-nowrap ${done
+        return <li key={step.courseId} className={`flex min-w-0 flex-nowrap items-center gap-1.5 rounded-xl border px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2 ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
           <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
-          <div className="min-w-[9rem] flex-1 text-right">
+          <div className="min-w-0 flex-1 text-right">
             <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
               {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
@@ -140,17 +140,17 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" disabled={index===0} onClick={()=>move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
             <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
-              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2.5 text-xs font-bold text-white disabled:opacity-45">
+              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
             <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg border disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
             </button>
           </div>
