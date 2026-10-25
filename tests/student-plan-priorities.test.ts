@@ -13,6 +13,17 @@ describe('persisted student registration priority formats',()=>{
     const parsed=updatePlanSchema.safeParse({coursePriorities:{diff:1,math2:2}});
     expect(parsed.success).toBe(true);
   });
+  it('marks optimizer saves for strict server validation without changing manual edits',()=>{
+    const proposed=updatePlanSchema.safeParse({
+      selectedOfferingIds:['off-1','off-2'],
+      offeringPriorities:{A:['off-1'],B:['off-2']},
+      qualitySuggestion:true,
+    });
+    expect(proposed.success).toBe(true);
+    if(proposed.success)expect(proposed.data.qualitySuggestion).toBe(true);
+    expect(updatePlanSchema.safeParse({qualitySuggestion:'yes'}).success).toBe(false);
+    expect(updatePlanSchema.safeParse({selectedOfferingIds:['off-1']}).success).toBe(true);
+  });
   it('rejects malformed priority maps and arrays',()=>{
     expect(updatePlanSchema.safeParse({coursePriorities:{diff:['off-diff']}}).success).toBe(false);
     expect(updatePlanSchema.safeParse({coursePriorities:[42,null]}).success).toBe(false);
