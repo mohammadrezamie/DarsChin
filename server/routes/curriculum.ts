@@ -166,7 +166,7 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
   if (typeof courseId !== 'string' || !db.courses.some(c => c.id === courseId && c.active)) {
     return res.status(400).json({ success: false, error: 'درس فعال و معتبر انتخاب کنید.' });
   }
-  if (trackId != null && (typeof trackId !== 'string' ||
+  if (trackId && (typeof trackId !== 'string' ||
       !db.tracks.some(t => t.id === trackId && t.majorId === curriculum.majorId && t.active))) {
     return res.status(400).json({ success: false, error: 'گرایش انتخابی متعلق به رشتهٔ این چارت نیست.' });
   }
