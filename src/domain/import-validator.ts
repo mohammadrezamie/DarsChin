@@ -314,7 +314,7 @@ export function processImportPayload(
     const ascii = value.trim()
       .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
       .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
-    const match = /^(\\d{1,2}):(\\d{2})$/.exec(ascii);
+    const match = /^(\d{1,2}):(\d{2})$/.exec(ascii);
     if (!match) return undefined;
     const hours = Number(match[1]), minutes = Number(match[2]);
     if (hours > 23 || minutes > 59) return undefined;
@@ -322,8 +322,8 @@ export function processImportPayload(
   };
   const validDays = new Set(['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه']);
   const canonicalDay = (value: string | null | undefined): string | undefined => {
-    const plain = normalizePersianText(value).replace(/\\s+/g, '');
-    return [...validDays].find(day => normalizePersianText(day).replace(/\\s+/g, '') === plain);
+    const plain = normalizePersianText(value).replace(/\s+/g, '');
+    return [...validDays].find(day => normalizePersianText(day).replace(/\s+/g, '') === plain);
   };
   
   const importRecords: ImportRecord[] = [];
