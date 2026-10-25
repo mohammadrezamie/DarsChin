@@ -301,6 +301,11 @@ this.isInitialized = true;
   }
 
   public resetToSeed() {
+    // Sample accounts have known credentials and sample university data.
+    // This operation can never be used against a VPS holding real students.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Reset to demo seed data is disabled in production.');
+    }
     this.data = getInitialSeedData();
     this.save();
     return this.data;
