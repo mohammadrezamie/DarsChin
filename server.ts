@@ -17,6 +17,7 @@ import { importsRouter } from './server/routes/imports';
 import { syncRouter } from './server/routes/sync';
 import { eligibilityRouter } from './server/routes/eligibility';
 import { demandRouter } from './server/routes/demand';
+import { smsCenterRouter } from './server/routes/sms-center';
 import { assertTurnstileConfiguration, turnstilePublicConfiguration } from './server/security/turnstile';
 import { adminRouter } from './server/routes/admin';
 import { adminManagementRouter } from './server/routes/admin-management';
