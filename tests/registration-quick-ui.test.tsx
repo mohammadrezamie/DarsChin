@@ -20,7 +20,7 @@ describe('compact manual registration priority rows in Persian RTL',()=>{
       coursePriorities={['test-course']}
       profile={{userId:'student',majorId:'ee',entryYearId:'1403',currentTermId:'fall'} as StudentAcademicProfile}
       curriculumId="chart-example" onEditPriorities={()=>{}}
-      onReorderCourses={()=>{}} />);
+      onReorderCourses={()=>true} />);
     expect(html).toContain('dir="rtl"');
     expect(html).toContain('صف سریع ثبت دروس');
     expect(html).toContain('مدارهای الکتریکی و سیستم‌های الکترونیکی پیشرفته');
