@@ -57,6 +57,24 @@ describe('Persian-first responsive UI guardrails',()=>{
     expect(read('src/index.css')).toContain('@media (prefers-reduced-motion: reduce)');
     expect(read('src/pages/landing-sections/HeroSection.tsx')).toContain('useReducedMotion()');
   });
+  it('constrains long RTL modals within small device height and exposes accessible close controls',()=>{
+    const css=read('src/index.css');
+    expect(css).toContain('.darschin-dialog');
+    expect(css).toContain('92dvh');
+    for (const file of [
+      'src/components/AcademicProfileModal.tsx',
+      'src/components/ImportOfferingsModal.tsx',
+      'src/components/ExtensionModal.tsx',
+      'src/components/PasswordChangeModal.tsx',
+    ]) {
+      const component=read(file);
+      expect(component).toContain('darschin-dialog');
+      expect(component).toContain('aria-modal="true"');
+    }
+    expect(read('src/components/AcademicProfileModal.tsx')).toContain('aria-label="بستن تنظیمات پروندهٔ تحصیلی"');
+    expect(read('src/components/ExtensionModal.tsx')).toContain('aria-label="بستن پنجرهٔ افزونه"');
+  });
+
   it('renders 07–20 timetable with an accessible day-by-day mobile panel and desktop all-days grid',()=>{
     const html=renderToStaticMarkup(<FluidWeekTimetable entries={[
       {id:'m',title:'مدارهای الکتریکی',day:'شنبه',start:'07:25',end:'09:10'},
