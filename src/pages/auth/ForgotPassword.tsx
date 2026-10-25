@@ -156,7 +156,8 @@ export const ForgotPassword: React.FC = () => {
                 <input type="tel" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="09123456789" />
               </div>
               
-              {captchaSvg && (
+              {turnstileEnabled && <GuestHumanCheck action="otp" token={captchaToken} onToken={setCaptchaToken} />}
+              {!turnstileEnabled && captchaSvg && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد امنیتی</label>
                   <div className="flex gap-4 items-center">
