@@ -50,6 +50,37 @@ describe('isolated browser-only Educationalyar import preview', () => {
     expect((await browserDemoRequest<any[]>('/api/imports/batches')).data).toHaveLength(0);
   });
 
+  it('lets the synthetic manager review a mapping without changing the visible course catalog', async () => {
+    const upload = await browserDemoRequest<any>('/api/imports/process', {
+      method: 'POST', body: JSON.stringify({ payload: data }),
+    });
+    const batchId = upload.data.batch.id;
+    const recordId = upload.data.records[0].id;
+    const before = (await browserDemoRequest<any[]>('/api/offerings')).data;
+    const endpoint = `/api/imports/batches/${batchId}/records/${recordId}/review`;
+    const confirm = await browserDemoRequest<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'CONFIRM_MATCH', courseId: 'math2',
+        reason: 'این شناسه فقط برای بازبینی داده نمونه تأیید می‌شود.' }),
+    });
+    expect(confirm.success).toBe(true);
+    expect(confirm.data.reviewDecision).toBe('COURSE_MATCH_CONFIRMED');
+    const reject = await browserDemoRequest<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'REJECT_MATCH',
+        reason: 'این رکورد برای تطبیق خودکار مورد تأیید قرار نگرفت.' }),
+    });
+    expect(reject.success).toBe(true);
+    expect(reject.data.reviewDecision).toBe('REJECTED');
+    expect((await browserDemoRequest<any[]>('/api/offerings')).data).toEqual(before);
+    const invalid = await browserDemoRequest<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'CONFIRM_MATCH', courseId: 'no-such-course',
+        reason: 'درس انتخاب‌شده در کاتالوگ وجود ندارد.' }),
+    });
+    expect(invalid.success).toBe(false);
+  });
+
   it('keeps the display contract explicitly pending approval', async () => {
     const result = await browserDemoRequest<any>('/api/imports/process', {
       method: 'POST', body: JSON.stringify({ payload: data }),
