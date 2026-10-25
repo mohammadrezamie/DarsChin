@@ -17,7 +17,7 @@ describe('legacy JSON migration for Educationalyar review queues', () => {
     const records = [{
       id: 'historic-record', batchId: 'historical-batch',
       reviewDecision: 'REJECTED', reviewNotes: 'رد شده توسط مدیر',
-    }] as DatabaseSchema['importRecords'];
+    }] as unknown as DatabaseSchema['importRecords'];
     const jobs = [{ id: 'historical-job', status: 'AWAITING_REVIEW' }];
     const snapshots = [{ id: 'partial-snapshot' }];
     const data: Partial<DatabaseSchema> = {
