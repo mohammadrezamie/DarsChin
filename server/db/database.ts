@@ -3,6 +3,7 @@
 // ============================================================================
 
 import fs from 'fs';
+import type { SmsConfiguration, SmsDelivery } from '../sms/service';
 import bcrypt from 'bcryptjs';
 import { getInitialSeedData } from './seed';
 import path from 'path';
@@ -79,6 +80,8 @@ export interface DatabaseSchema {
   errorLogs: ErrorLog[];
   otpChallenges: OtpChallenge[];
   captchaChallenges: CaptchaChallenge[];
+  smsSettings?: SmsConfiguration;
+  smsHistory?: SmsDelivery[];
 }
 
 const DATA_DIR = process.env.DARSCHYN_DATA_DIR
@@ -93,6 +96,7 @@ const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
  */
 export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
   if (!Array.isArray(data.demandSurveys)) data.demandSurveys = [];
+  if (!Array.isArray(data.smsHistory)) data.smsHistory = [];
   if (!Array.isArray(data.demandResponses)) data.demandResponses = [];
   if (!Array.isArray(data.importBatches)) data.importBatches = [];
   if (!Array.isArray(data.importRecords)) data.importRecords = [];
