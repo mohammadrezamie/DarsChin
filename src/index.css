@@ -250,3 +250,38 @@
     vertical-align: middle;
   }
 }
+
+/* Administrator permissions remain operable on 320px screens. */
+@media (max-width: 767px) {
+  .darschin-people-table { display: block; width: 100%; min-width: 0; }
+  .darschin-people-table thead { display: none; }
+  .darschin-people-table tbody { display: grid; gap: .75rem; padding-block: .75rem; }
+  .darschin-people-table tbody tr {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+    border: 1px solid var(--darschin-stroke);
+    border-radius: .875rem;
+    background: var(--darschin-surface);
+    overflow: hidden;
+  }
+  .darschin-people-table td[data-label] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-bottom: 1px solid var(--darschin-stroke);
+    padding: .75rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .darschin-people-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: .4rem;
+    font-size: .75rem;
+    font-weight: 800;
+    color: var(--darschin-muted);
+  }
+  .darschin-people-table td[data-label]:last-child { border-bottom: 0; }
+  .darschin-people-table select { width: 100%; }
+}
