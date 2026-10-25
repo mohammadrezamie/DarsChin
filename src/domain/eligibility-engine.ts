@@ -73,7 +73,8 @@ export function evaluateStudentEligibility(
   // Only actual selected offering IDs from the current evaluated semester may
   // satisfy same-term corequisites. A caller-supplied course ID is not proof
   // that any section has been selected.
-  const offeredCoursesById = new Map(currentOfferings.filter(o=>o.active!==false)
+  const offeredCoursesById = new Map(currentOfferings.filter(o=>
+    o.active!==false && coursesMap.get(o.courseId)?.active===true)
     .map(o=>[o.id,o.courseId]));
   const plannedCourseIdsSet = new Set<string>();
   for (const offeringId of plannedOfferingIdsInSameTerm) {
@@ -84,7 +85,7 @@ export function evaluateStudentEligibility(
   // Find curriculum courses
   const curriculumCourseMap = new Map<string, CurriculumCourse[]>();
   for (const cc of curriculumCourses) {
-    if (cc.curriculumId === curriculum.id) {
+    if (cc.curriculumId === curriculum.id && cc.active !== false) {
       const existing = curriculumCourseMap.get(cc.courseId) || [];
       existing.push(cc);
       curriculumCourseMap.set(cc.courseId, existing);
@@ -111,7 +112,10 @@ export function evaluateStudentEligibility(
 
   for (const offering of currentOfferings) {
     const course = coursesMap.get(offering.courseId);
-    if (!course) {
+    if (!course || course.active === false || offering.active === false) {
+      const unavailableReason = !course
+        ? 'شناسهٔ درس در بانک دروس تعریف نشده است.'
+        : 'این درس یا گروه ارائهٔ آن غیرفعال شده است؛ برای انتخاب باید اطلاعات جدید دریافت شود.';
       results.push({
         offeringId: offering.id,
         courseId: offering.courseId,
@@ -132,8 +136,8 @@ export function evaluateStudentEligibility(
         overallStatus: 'NEEDS_REVIEW',
         isEligible: false,
         canSelect: false,
-        primaryReason: 'شناسه این درس در پایگاه داده دروس تعریف نشده است.',
-        allReasons: ['شناسه این درس در پایگاه داده دروس تعریف نشده است.'],
+        primaryReason: unavailableReason,
+        allReasons: [unavailableReason],
         missingPrerequisites: [],
         missingCorequisites: [],
       });
@@ -269,7 +273,7 @@ export function evaluateStudentEligibility(
         }
         if (node.type === 'COURSE') {
           const reqCourse = coursesMap.get(node.courseId);
-          if (!reqCourse) return { passed: false, missing: [], reasons: ['درسِ شرط در چارت شناسایی نشد؛ بررسی مدیر گروه لازم است.'] };
+          if (!reqCourse || reqCourse.active===false) return { passed: false, missing: [], reasons: ['درسِ شرط موجود یا فعال نیست؛ بررسی مدیر گروه لازم است.'] };
 
           const isPassed = passedCourseIdsSet.has(reqCourse.id);
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
