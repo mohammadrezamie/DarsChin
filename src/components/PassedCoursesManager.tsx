@@ -27,7 +27,7 @@ interface EnrichedPassedCourse extends StudentPassedCourse {
 
 const isCompletedCourse=(row:StudentPassedCourse):boolean=>
   row.status!=='FAILED' && row.status!=='ABSENT' &&
-  (row.status==='PASSED' || row.grade===undefined ||
+  (row.grade===undefined ||
     (typeof row.grade==='number' && Number.isFinite(row.grade) && row.grade>=10));
 
 interface PassedCoursesManagerProps {
