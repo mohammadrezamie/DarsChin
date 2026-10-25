@@ -303,6 +303,9 @@ export function evaluateStudentEligibility(
             passed: false, missing: [], reasons: ['گروه شروط این درس خالی یا ناقص است؛ بررسی مدیر آموزش لازم است.'],
           };
           
+          if (node.operator !== 'OR' && node.operator !== 'AND') return {
+            passed: false, missing: [], reasons: ['عملگر شرط ترکیبی نامعتبر است؛ بررسی مدیر آموزش لازم است.'],
+          };
           if (node.operator === 'OR') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
             if (results.some((r: any) => r.passed)) return { passed: true, missing: [], reasons: [] };
