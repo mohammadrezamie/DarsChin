@@ -190,7 +190,10 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <div
         id="academicProfileModalContainer"
-        className="bg-liquid-glass rounded-3xl max-w-2xl w-full p-6 relative my-8"
+        role="dialog"
+        aria-modal="true"
+        aria-label="تنظیمات پروندهٔ تحصیلی"
+        className="darschin-dialog darschin-page bg-liquid-glass w-full max-w-2xl rounded-3xl p-4 shadow-xl sm:p-6 relative my-4"
       >
         <button
           id="btnCloseProfileModal"
