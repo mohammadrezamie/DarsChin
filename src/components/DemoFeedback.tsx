@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bug, Check, ClipboardCopy, X } from 'lucide-react';
+import { Bug, Check, ClipboardCopy, Download, X } from 'lucide-react';
 import {
   formatDemoBugReport,
   validateDemoBugReport,
@@ -58,6 +58,19 @@ export const DemoFeedback: React.FC<Props> = ({ area }) => {
       pathname: window.location.pathname,
       recordedAt: new Date().toISOString(),
     }));
+  };
+
+  const downloadReport = () => {
+    if (!report) return;
+    const file = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(file);
+    const element = document.createElement('a');
+    element.href = url;
+    element.download = `darschin-demo-${area}-feedback.txt`;
+    document.body.appendChild(element);
+    element.click();
+    element.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const copy = async () => {
@@ -142,6 +155,9 @@ export const DemoFeedback: React.FC<Props> = ({ area }) => {
                   <button type="button" onClick={copy} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-700">
                     {copyStatus === 'success' ? <Check aria-hidden="true" className="h-4 w-4" /> : <ClipboardCopy aria-hidden="true" className="h-4 w-4" />}
                     {copyStatus === 'success' ? 'متن کپی شد' : 'کپی متن گزارش'}
+                  </button>
+                  <button type="button" onClick={downloadReport} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300 px-5 text-sm font-bold text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:text-blue-200">
+                    <Download aria-hidden="true" className="h-4 w-4" /> دریافت گزارش متنی
                   </button>
                   {copyStatus === 'manual' && <p role="status" className="text-xs text-amber-700 dark:text-amber-300">کپی خودکار مجاز نیست؛ متن بالایی را انتخاب و دستی کپی کن.</p>}
                 </div>
