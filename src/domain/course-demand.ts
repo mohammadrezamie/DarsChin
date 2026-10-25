@@ -42,7 +42,7 @@ function safeCell(value: string | number | boolean | null | undefined) {
   const guarded = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? "'" + text : text;
   return '"' + guarded.replace(/"/g, '""') + '"';
 }
-export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[], courseNames: Map<string,string>, entryYears: Map<string,string>, tracks: Map<string,string>) {
+export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[], courseNames: Map<string,string>, entryYears: Map<string,string>, tracks: Map<string,string>, majors: Map<string,string> = new Map()) {
   const rows = [
     ['نام دانشجو','شماره دانشجویی','ورودی','رشته','انتخاب رسمی گرایش','گرایش','اظهار ترم آخر','نام درس','کد/شناسه درس','آخرین ویرایش'].map(safeCell).join(','),
   ];
@@ -51,7 +51,7 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
       rows.push([
         r.snapshot.studentName, r.studentNumber,
         entryYears.get(r.snapshot.entryYearId) || r.snapshot.entryYearId,
-        survey.majorId,
+        majors.get(survey.majorId) || survey.majorId,
         r.snapshot.isTrackSelected ? 'بله' : 'خیر',
         r.snapshot.selectedTrackId ? (tracks.get(r.snapshot.selectedTrackId) || r.snapshot.selectedTrackId) : 'انتخاب نشده',
         r.anticipatedGraduation === 'YES' ? 'بله (اظهار دانشجو)' : r.anticipatedGraduation === 'NO' ? 'خیر (اظهار دانشجو)' : 'نامشخص',
