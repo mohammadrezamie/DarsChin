@@ -22,6 +22,13 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
+  // The browser-only demo must never transmit requests, tokens or personal data
+  // to the real API. Route interception is limited strictly to /demo/* pages.
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/')) {
+    const { browserDemoRequest } = await import('../demo/mock-api');
+    return browserDemoRequest<T>(endpoint, options);
+  }
+
   const token = getStoredToken();
   const headers = new Headers(options.headers || {});
 
