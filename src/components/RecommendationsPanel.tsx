@@ -20,6 +20,10 @@ interface RecommendationsPanelProps {
   evaluations: CourseEligibilityResult[];
   selectedOfferingIds: string[];
   onToggleScheduleOffering: (offeringId: string) => void;
+  /** Non-binding demand history: never blocks course selection. */
+  demandCourseIds?: string[];
+  demandSurveyAvailable?: boolean;
+  onOpenDemand?: () => void;
 }
 
 export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
@@ -27,6 +31,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   evaluations,
   selectedOfferingIds,
   onToggleScheduleOffering,
+  demandCourseIds = [],
+  demandSurveyAvailable = false,
+  onOpenDemand,
 }) => {
   const getPriorityBadge = (priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW') => {
     switch (priority) {
@@ -78,6 +85,12 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         </div>
       </div>
 
+      {demandSurveyAvailable && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+          <span>نشانگر نیازسنجی فقط یادآوری است؛ حتی درسی که درخواست ندادی را می‌توانی طبق قوانین انتخاب واحد بررسی و انتخاب کنی.</span>
+          {onOpenDemand && <button type="button" onClick={onOpenDemand} className="min-h-10 rounded-xl border border-blue-400 px-3 font-bold">رفتن به نیازسنجی</button>}
+        </div>
+      )}
       {recommendations.length === 0 ? (
         <div className="p-12 text-center bg-liquid-glass rounded-3xl">
           <p className="text-xs text-slate-500">
@@ -103,6 +116,13 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
                   <div>
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       {getPriorityBadge(rec.priority)}
+                      {demandSurveyAvailable && (
+                        <span className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold ${demandCourseIds.includes(rec.courseId)
+                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+                          {demandCourseIds.includes(rec.courseId) ? 'در نیازسنجی درخواست داده بودی' : 'در نیازسنجی درخواست نداده بودی'}
+                        </span>
+                      )}
                       <h4 className="text-base font-bold text-slate-900 dark:text-white">
                         {rec.courseName}
                       </h4>
