@@ -39,6 +39,29 @@ describe('Educationalyar import: strict matching and human review', () => {
     });
   });
 
+  it('reads explicit Persian CSV columns without confusing course and instructor names', () => {
+    const csv = [
+      'کد درس,نام درس,گروه,نام استاد,روز,ساعت,ظرفیت,ظرفیت باقیمانده',
+      'M-102,ریاضی عمومی ۲,03,مدرس آزمایشی,سه‌شنبه,۰۹:۰۰ - ۱۱:۰۰,۳۵,۱۲',
+    ].join('\n');
+    const parsed = parseRawInput(csv);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({
+      courseCode: 'M-102', courseName: 'ریاضی عمومی ۲',
+      instructor: 'مدرس آزمایشی', day: 'سه‌شنبه',
+      startTime: '۰۹:۰۰', endTime: '۱۱:۰۰',
+      capacity: 35, availableCapacity: 12,
+    });
+    const result = processImportPayload(csv, 'csv-batch', 'term-1', 'campus-1', [course]);
+    expect(result.matchedCount).toBe(1);
+    expect(result.preparedOfferings[0]).toMatchObject({
+      groupCode: '03', instructor: 'مدرس آزمایشی',
+      dayOfWeek: 'سه‌شنبه', startTime: '09:00',
+      endTime: '11:00', capacity: 35,
+      enrolledCountKnown: true, enrolledCount: 23,
+    });
+  });
+
   it('does not silently map unknown, ambiguous, or absent codes to the first similar title', () => {
     const unknown = process([row({ courseCode: 'NOT-EXISTING' })]);
     expect(unknown.preparedOfferings).toHaveLength(0);
