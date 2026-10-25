@@ -644,7 +644,7 @@ export const StudentDashboard: React.FC = () => {
             </div>
             
             <p className="text-slate-600 dark:text-slate-300 text-sm mb-4 leading-relaxed">
-              افزودن درس <strong>{conflictWarning.courseName}</strong> باعث تداخل‌های زیر خواهد شد:
+              درخواست افزودن درس <strong>{conflictWarning.courseName}</strong> نیازمند بررسی موارد زیر است. تأیید شما قوانین سرور را دور نمی‌زند:
             </p>
             
             <ul className="space-y-2 mb-6">
@@ -667,7 +667,7 @@ export const StudentDashboard: React.FC = () => {
                 onClick={() => confirmToggleScheduleOffering(conflictWarning.offeringId)}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/30 transition-colors"
               >
-                با علم به تداخل، اضافه کن
+                درخواست ثبت با بررسی سرور
               </button>
             </div>
           </div>
