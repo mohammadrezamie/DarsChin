@@ -234,19 +234,27 @@ function normalizeRawRecord(raw: any): RawExtractedOffering | null {
   const location = raw.location || raw['مکان'] || raw['کلاس'] || raw['محل'] || undefined;
   const examDate = raw.examDate || raw['تاریخ امتحان'] || raw['امتحان'] || undefined;
 
+  const explicitNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || String(value).trim() === '') return undefined;
+    const normalized = String(value)
+      .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    const num = Number(normalized);
+    return Number.isFinite(num) ? num : undefined;
+  };
   return {
-    courseCode: code.toString().trim(),
-    courseName: name.toString().trim(),
-    group: group.toString().trim(),
-    instructor: instructor.toString().trim(),
-    units: Number(units) || 3,
-    day: day.toString().trim(),
-    startTime: startTime.toString().trim(),
-    endTime: endTime.toString().trim(),
-    capacity: Number(capacity) || 35,
-    availableCapacity: Number(availableCapacity) || 10,
-    location: location.toString().trim(),
-    examDate: examDate ? examDate.toString().trim() : undefined,
+    courseCode: String(code).trim(),
+    courseName: String(name).trim(),
+    group: String(group).trim(),
+    instructor: String(instructor).trim(),
+    units: explicitNumber(units),
+    day: String(day).trim(),
+    startTime: String(startTime).trim(),
+    endTime: String(endTime).trim(),
+    capacity: explicitNumber(capacity),
+    availableCapacity: explicitNumber(availableCapacity),
+    location: location === undefined ? undefined : String(location).trim(),
+    examDate: examDate === undefined ? undefined : String(examDate).trim(),
   };
 }
 
