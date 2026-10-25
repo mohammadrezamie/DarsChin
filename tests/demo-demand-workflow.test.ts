@@ -1,10 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browserDemoRequest, resetBrowserDemo } from '../src/demo/mock-api';
 
-beforeEach(()=>resetBrowserDemo());
+beforeEach(async()=>{
+  resetBrowserDemo();
+  const list=await browserDemoRequest<any[]>('/api/demand/surveys');
+  for(const survey of list.data||[]){
+    const result=await browserDemoRequest(`/api/demand/surveys/${survey.id}/status`,{method:'PUT',body:JSON.stringify({status:'OPEN'})});
+    if(!result.success)throw new Error('Cannot activate synthetic survey fixture');
+  }
+});
 
 describe('no-account demand testing in isolated browser demo',()=>{
-  it('starts with an OPEN pilot survey and a real demo curriculum course list',async()=>{
+  it('starts with a manager-activated OPEN survey and actual demo curriculum courses',async()=>{
     const list=await browserDemoRequest<any[]>('/api/demand/surveys');
     expect(list.success).toBe(true);
     expect(list.data?.length).toBeGreaterThan(0);
