@@ -295,7 +295,10 @@ function cleanDemoPlan(s: DemoStore): void {
 function academicLimits(s: DemoStore): AcademicLimitInfo {
   const courses = currentCourses(s);
   const total = courses.reduce((n, c) => n + c.units, 0);
-  const passed = s.passed.reduce((n, p) => n + (courses.find(c => c.id === p.courseId)?.units || 0), 0);
+  const passedIds=new Set(s.passed.filter(p=>p.status!=='FAILED' && p.status!=='ABSENT' &&
+    (p.grade===undefined || (Number.isFinite(Number(p.grade)) && Number(p.grade)>=10)))
+    .map(p=>p.courseId));
+  const passed=courses.filter(c=>passedIds.has(c.id)).reduce((sum,c)=>sum+c.units,0);
   return {
     ...defaults, effectiveMinUnits: 0, effectiveMaxUnits: 99,
     isFinalSemester: s.profile.isFinalSemesterOverride === true,
