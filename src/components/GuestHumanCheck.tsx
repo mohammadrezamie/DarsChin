@@ -130,7 +130,7 @@ export const GuestHumanCheck: React.FC<{
           کد داخل تصویر را بنویس
           <input dir="ltr" type="text" autoComplete="off" maxLength={12} value={localAnswer}
             onChange={event => {
-              const value = event.target.value.replace(/\\s/g, '');
+              const value = event.target.value.replace(/\s/g, '');
               setLocalAnswer(value);
               onToken(value ? `local:${localCaptcha.id}:${value}` : '');
             }}
