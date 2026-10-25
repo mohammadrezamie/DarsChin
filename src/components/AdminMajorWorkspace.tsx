@@ -97,7 +97,13 @@ export const AdminMajorWorkspace:React.FC=()=>{
   };
   const addMajor=async()=>{
     const name=majorName.trim();
-    const chosen=majorDegree||meta.degreeLevels.find(x=>x.active!==false)?.id;
+    let chosen=majorDegree||meta.degreeLevels.find(x=>x.active!==false)?.id;
+    if(!chosen && newDegreeName.trim()){
+      const createdDegree=await write<DegreeLevel>('degree','/api/academic/degrees',
+        {name:newDegreeName.trim()},'مقطع اولیه ساخته شد.');
+      if(!createdDegree)return;
+      chosen=createdDegree.id;setNewDegreeName('');
+    }
     if(!name||!chosen){setError('نام رشته و مقطع تحصیلی را انتخاب کن.');return;}
     if(meta.majors.some(m=>m.name.trim()===name && m.degreeLevelId===chosen)){
       setError('این رشته برای این مقطع قبلاً ثبت شده است.');return;
@@ -231,12 +237,16 @@ export const AdminMajorWorkspace:React.FC=()=>{
             <input className={field} value={majorName} onChange={e=>setMajorName(e.target.value)}
               maxLength={120} required placeholder="مثلاً مهندسی برق"/>
           </label>
-          <label className="block text-xs font-bold">مقطع اولیه
+          {meta.degreeLevels.some(d=>d.active!==false)?<label className="block text-xs font-bold">مقطع اولیه
             <select className={field} value={majorDegree||meta.degreeLevels.find(d=>d.active)?.id||''}
               onChange={e=>setMajorDegree(e.target.value)}>
               {meta.degreeLevels.filter(d=>d.active!==false).map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
-          </label>
+          </label>:<label className="block text-xs font-bold">نام مقطع اولیه
+            <input className={field} value={newDegreeName} maxLength={120}
+              onChange={e=>setNewDegreeName(e.target.value)}
+              placeholder="مثلاً کارشناسی پیوسته" required/>
+          </label>}
           <button type="submit" disabled={busy!==null} className={action+' w-full bg-blue-700 text-white hover:bg-blue-800'}>
             ثبت رشته
           </button>
@@ -338,6 +348,11 @@ export const AdminMajorWorkspace:React.FC=()=>{
             {addingChart&&<form className="mt-4 space-y-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/20"
               onSubmit={e=>{e.preventDefault();void createChart()}}>
               <strong className="text-sm">ساخت چارت برای {group.label}، {degree.name}</strong>
+              {!meta.campuses.some(c=>c.active!==false)&&<p role="note" className="rounded-lg bg-amber-50 p-3 text-xs leading-6 text-amber-950 dark:bg-amber-950/40 dark:text-amber-200">
+                هنوز واحد دانشگاهی تعریف نشده است.
+                <button type="button" onClick={()=>setSearchParams({tab:'campuses'})}
+                  className="mx-2 font-bold underline underline-offset-4">رفتن به تعریف واحد دانشگاهی</button>
+              </p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-xs font-bold">واحد دانشگاهی
                   <select className={field} value={selectedCampus?.id||''} onChange={e=>setCampusId(e.target.value)}>
