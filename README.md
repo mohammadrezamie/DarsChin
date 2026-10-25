@@ -2,7 +2,31 @@
 
 DarsChin is a student-focused helper for course planning and workflows around Educationalyar. The web application includes a React/Vite frontend and a Node.js/Express backend, with an accompanying browser-extension codebase.
 
-Project homepage: https://dars-chin.vercel.app
+Project homepage (frontend demo only, subject to deployment status): https://dars-chin.vercel.app
+
+## Pilot demo — no account needed
+
+The first scope is **B.E. Electrical Engineering at Islamic Azad University, Science and Research Branch**. All demo courses, lecturers, capacity and eligibility results are **synthetic, not official**.
+
+- `/demo/student` — full browser-only student workspace.
+- `/demo/admin` — browser-only administrator workspace; no server authorization is granted.
+- `/demo` — interactive course-planning playground.
+
+Links are provided on the homepage and `/login`. Browser-only demo state lives in the visitor's own storage. The continuous timetable spans **07:00–20:00** with arbitrary start/end times and a separate list for unscheduled/out-of-range classes. Theme controls (day/system/night) and right-edge RTL hamburger menus are visible in demo screens. Read the [pilot and quick VPS launch guide](docs/PILOT_LAUNCH_FA.md).
+
+## VPS quick start
+
+An initial **single-process** Node.js + HTTPS Caddy Docker Compose stack lives in `Dockerfile`, `compose.yaml` and `deploy/`. The example uses a persistent Docker volume and private root secrets and does not create known-password demo users in production.
+
+```bash
+cp deploy/.env.vps.example deploy/.env.vps
+chmod 600 deploy/.env.vps
+# Set secrets and DNS/domain inside deploy/.env.vps before running:
+docker compose --env-file deploy/.env.vps config -q
+docker compose --env-file deploy/.env.vps up -d --build
+```
+
+Do not deploy publicly until tests, DNS/TLS, backups, official pilot policies and permissions have been reviewed. **These deployment files are committed but have not yet been tested on an actual VPS.**
 
 ## Development stack
 
@@ -54,4 +78,4 @@ Start with the [documentation index](docs/INDEX.md) for local development, secur
 
 ## Contribution workflow
 
-Create a focused branch from an up-to-date `main`, run the relevant validation commands, and open a pull request. Keep work-in-progress changes in Draft until they are ready for review.
+For the current owner-directed demo/pilot work, use `main` as the integration branch and avoid unnecessary feature branches. Run the quality gate for each commit. The existing three Draft PRs must be reconciled file-by-file before merging or closing; never overwrite newer main fixes. Remove completed branches only after verifying their unique work is retained.
