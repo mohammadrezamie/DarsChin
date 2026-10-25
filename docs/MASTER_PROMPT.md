@@ -34,6 +34,12 @@ The project owner has delegated broad autonomy for product ideation and implemen
 
 Examples of academic-policy changes requiring approval include prerequisite/corequisite semantics, failed-prerequisite exceptions, final-semester exceptions, unit limits, GPA thresholds, curriculum/track eligibility, and course-specific exceptions.
 
+## 2.1 Per-curriculum academic condition configuration (owner decision 2026-10-25)
+
+**Owner decision [OWN-022–023](OWNER_DECISIONS_FA.md) overrides earlier hardcoded assumptions.** Course-specific requirements, including internship/project credit thresholds, are **admin-editable data scoped to an explicit university/campus/degree/major/entry-year/curriculum version**, not constants or universals. A course may have zero, one or multiple prerequisites/corequisites; support minimum passed-credit predicates and AND/OR relations. Never insert real numeric thresholds automatically into new chart conditions, and never ask the owner to enumerate per-course thresholds; the owner will maintain them in the panel. Prior sample course names/numbers are not official policy.
+
+**Educational-policy semantics and overrides remain a separate approved layer.** Before asking the owner anything, review the applicable current regulation, issued by a verifiable official authority, including edition/date/entry-year scope. Ask only unresolved broad interpretation questions with a source reference. If the valid source cannot be verified, disclose the gap and never claim an officially approved eligibility result. See [academic source research](ACADEMIC_REGULATION_RESEARCH_FA.md).
+
 ## 3. Confirmed academic requirements
 
 Treat these as owner-confirmed requirements, but inspect current code and tests before claiming they are implemented correctly:
