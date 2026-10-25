@@ -374,7 +374,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       }
     }
     if(method==='POST'){
-      const row={...data,id:id(),active:data.active!==false};
+      const row: Row={...data,id:id(),active:data.active!==false};
       if(isOffering){
         row.termId ??= semester.id;
         row.campusId ??= campus.id;
@@ -387,7 +387,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     if(method==='PUT' && route.id){
       const idx=rows.findIndex(row=>row.id===route.id);
       if(idx<0)return fail('رکورد دمو یافت نشد.');
-      const updated={...rows[idx],...data,id:route.id};
+      const updated: Row={...rows[idx],...data,id:route.id};
       if (isOffering && updated.startTime && updated.endTime && updated.startTime >= updated.endTime) {
         return fail('زمان پایان گروه نمونه باید بعد از شروع کلاس باشد.');
       }
