@@ -55,10 +55,11 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
         <main className="mx-auto max-w-7xl min-w-0 px-3 py-5 sm:px-6 sm:py-7">
           {role === 'student' ? <StudentDashboard /> : <AdminDashboard />}
         </main>
-        <footer className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-6 text-xs text-slate-500 dark:border-slate-800">
+        <aside role="note" aria-label="محدودیت محیط آزمایشی"
+          className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-6 text-center text-xs leading-7 text-slate-500 dark:border-slate-800 dark:text-slate-400">
           این نسخه برای دیباگ رابط کاربری است. بخش‌های متصل به سرور واقعی ممکن است در شبیه‌ساز هنوز پشتیبانی نشوند.
           گزارش‌های این محیط به سرور ارسال نمی‌شوند.
-        </footer>
+        </aside>
       </div>
     </DemoAuthProvider>
   );
