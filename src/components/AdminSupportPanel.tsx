@@ -69,6 +69,7 @@ export const AdminSupportPanel: React.FC = () => {
                       onChange={e => updateTicketStatus(t.id, e.target.value)}
                     >
                       <option value="OPEN">OPEN (باز)</option>
+                      <option value="IN_PROGRESS">IN_PROGRESS (در حال رسیدگی)</option>
                       <option value="ANSWERED">ANSWERED (پاسخ داده)</option>
                       <option value="CLOSED">CLOSED (بسته)</option>
                     </select>
@@ -105,7 +106,7 @@ export const AdminSupportPanel: React.FC = () => {
                       <option value="OPEN">OPEN (بررسی نشده)</option>
                       <option value="IN_PROGRESS">IN_PROGRESS (در دست بررسی)</option>
                       <option value="RESOLVED">RESOLVED (حل شده)</option>
-                      <option value="REJECTED">REJECTED (رد شده)</option>
+                      <option value="CLOSED">CLOSED (بسته شده)</option>
                     </select>
                   </td>
                 </tr>
