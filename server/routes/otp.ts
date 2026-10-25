@@ -41,8 +41,14 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
     return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
 }
 
-otpRouter.get('/captcha/generate', (req, res) => {
+otpRouter.get('/captcha/generate', (_req, res) => {
     pruneExpiredChallenges();
+    // Bound the pilot's persisted JSON CAPTCHA pool even under repeated guest
+    // requests. Never retain an unbounded list of challenge answers in storage.
+    if (db.captchaChallenges.length >= 2048) {
+        db.data.captchaChallenges = db.captchaChallenges.slice(-2047);
+    }
+    res.setHeader('Cache-Control', 'no-store');
     const captcha = svgCaptcha.create({
         size: 5,
         ignoreChars: '0o1i',
