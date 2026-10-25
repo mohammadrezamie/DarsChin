@@ -16,6 +16,7 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
@@ -38,7 +39,7 @@ const studentTabs = [
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
-  { id: 'registration', label: 'آماده‌باش سریع آموزشیار', short: 'ثبت سریع', icon: Download },
+  { id: 'registration', label: 'آماده‌باش سریع آموزشیار', short: 'ثبت سریع', icon: Zap },
   { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
   { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
   { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
