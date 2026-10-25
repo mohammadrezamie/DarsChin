@@ -16,6 +16,7 @@ let courseCode = '';
 let courseName = '';
 const createdJobIds: string[] = [];
 const testAdminId = 'test-sync-staging-root';
+const testStudentId = 'test-sync-staging-student';
 
 beforeAll(async () => {
   await db.init(true);
@@ -37,10 +38,35 @@ beforeAll(async () => {
   courseName = course.name;
   termId = db.academicTerms[0].id;
   campusId = db.campuses[0].id;
+  // An authenticated student with a precise academic profile must not be
+  // allowed to change the term or campus of an import job by request body.
+  db.data.users = db.users.filter(user => user.id !== testStudentId);
+  db.users.push({
+    id: testStudentId,
+    name: 'دانشجوی مصنوعی همگام‌سازی',
+    mobile: '09000000773',
+    roles: ['student'],
+    permissions: ['student.access'],
+    createdAt: new Date().toISOString(),
+  });
+  db.data.studentProfiles = db.studentProfiles.filter(profile => profile.userId !== testStudentId);
+  db.studentProfiles.push({
+    userId: testStudentId,
+    universityId: db.campuses[0].universityId,
+    campusId,
+    degreeLevelId: db.degreeLevels[0].id,
+    majorId: db.majors[0].id,
+    entryYearId: db.entryYears[0].id,
+    isTrackSelected: false,
+    desiredTrackIds: [],
+    currentTermId: termId,
+    updatedAt: new Date().toISOString(),
+  });
 });
 
 afterAll(() => {
-  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.data.users = db.users.filter(user => user.id !== testAdminId && user.id !== testStudentId);
+  db.data.studentProfiles = db.studentProfiles.filter(profile => profile.userId !== testStudentId);
   const keys = new Set(createdJobIds);
   const batchKeys = new Set(createdJobIds.map(id => `batch-sync-${id}`));
   db.syncJobs = db.syncJobs.filter(job => !keys.has(job.id));
@@ -132,6 +158,31 @@ describe('student extension sync has a no-autopublish boundary', () => {
     expect(db.courseOfferings.map(item => item.id)).toEqual(beforeIds);
     expect(db.importBatches.some(item => item.id === `batch-sync-${jobId}`)).toBe(false);
     expect(db.syncSnapshots.filter(item => item.jobId === jobId)).toHaveLength(0);
+  });
+
+  it('rejects a student sync from a different semester or campus, even when IDs exist', async () => {
+    const student = db.users.find(user => user.id === testStudentId)!;
+    const authorization = 'Bearer ' + generateToken(student);
+    const otherTerm = db.academicTerms.find(term => term.id !== termId);
+    const otherCampus = db.campuses.find(campus => campus.id !== campusId);
+    if (!otherTerm || !otherCampus) throw new Error('Secondary synthetic campus and term fixtures required');
+
+    const wrongTerm = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId: otherTerm.id, campusId });
+    expect(wrongTerm.status).toBe(403);
+
+    const wrongCampus = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId, campusId: otherCampus.id });
+    expect(wrongCampus.status).toBe(403);
+
+    const valid = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId, campusId });
+    expect(valid.status).toBe(201);
+    createdJobIds.push(valid.body.data.id);
+    expect(valid.body.data.userId).toBe(testStudentId);
   });
 
   it('requires authentication to start a sync session', async () => {
