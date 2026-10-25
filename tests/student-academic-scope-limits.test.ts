@@ -62,6 +62,20 @@ describe('student credit/graduation scope integrity',()=>{
       profile.isTrackSelected=false;profile.selectedTrackId=null;
     }
   });
+  it('keeps an explicit admin-approved last-term override even before the student declares a track',()=>{
+    const profile=db.studentProfiles.find(p=>p.userId===userId)!;
+    profile.isFinalSemesterOverride=true;
+    profile.finalSemesterNotes='تأیید صریح مدیر آموزش در سناریوی آزمایشی';
+    try {
+      const result=db.calculateStudentAcademicLimits(userId);
+      expect(result.isFinalSemester).toBe(true);
+      expect(result.effectiveMaxUnits).toBe(result.policySettings.finalSemesterMaxUnits);
+      expect(result.finalSemesterReason).toMatch(/تأیید صریح/);
+    } finally {
+      profile.isFinalSemesterOverride=null;
+      profile.finalSemesterNotes=undefined;
+    }
+  });
   it('never fabricates a 140-unit matching chart or final-term eligibility when campus is unknown',()=>{
     const profile=db.studentProfiles.find(p=>p.userId===userId)!;
     const before=profile.campusId;
