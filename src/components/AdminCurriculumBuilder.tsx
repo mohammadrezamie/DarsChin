@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
+import { extractSourceCourseIds } from '../utils/academic';
 
 export const AdminCurriculumBuilder: React.FC = () => {
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
@@ -20,7 +21,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED'
   });
   const [addRuleForm, setAddRuleForm] = useState({
-    sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
+    sourceCourseId: '', relationshipType: 'PREREQUISITE'
   });
 
   const fetchData = async () => {
@@ -88,12 +89,13 @@ export const AdminCurriculumBuilder: React.FC = () => {
       body: JSON.stringify({
         curriculumId: selectedCurriculumId,
         targetCourseId: activeCourseId,
-        ...addRuleForm
+        relationshipType: addRuleForm.relationshipType,
+        expression: { type: 'COURSE', courseId: addRuleForm.sourceCourseId },
       })
     });
     if (res.success) {
       loadCurriculumDetails(selectedCurriculumId!);
-      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '' });
+      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE' });
     } else {
       alert(res.error || 'خطا در افزودن قانون');
     }
@@ -114,8 +116,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
           مدیریت ساختار چارت تحصیلی
         </h2>
         
+        <div role="note" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-7 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          این چارت در نسخه آزمایشی از نظر مصوبه مرجع، سال ورود و اصلاحیه‌های دانشگاه آزاد هنوز تأیید رسمی نشده است. افزودن رابطه پیش‌نیاز/هم‌نیاز در پنل به معنی تأیید آیین‌نامه نیست.
+        </div>
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">انتخاب چارت مصوب:</label>
+          <label className="block text-sm font-medium mb-2">انتخاب چارت در حال بررسی:</label>
           <select 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-indigo-500"
             value={selectedCurriculumId || ''}
@@ -220,11 +225,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-500">پیش‌نیازها</h4>
-                    {curriculumFull.prereqs.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
+                    {(curriculumFull.prerequisites || []).filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
-                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.conditionType}</span>
-                          <span>{courses.find(c => c.id === r.sourceCourseId)?.name}</span>
+                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.expression?.operator || 'مستقیم'}</span>
+                          <span>{extractSourceCourseIds(r.expression).map(id => courses.find(c => c.id === id)?.name || id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -233,11 +238,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-500 mt-4">هم‌نیازها</h4>
-                    {curriculumFull.coreqs.filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
+                    {(curriculumFull.corequisites || []).filter((r: any) => r.targetCourseId === activeCourseId).map((r: any) => (
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
-                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.conditionType}</span>
-                          <span>{courses.find(c => c.id === r.sourceCourseId)?.name}</span>
+                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{r.expression?.operator || 'مستقیم'}</span>
+                          <span>{extractSourceCourseIds(r.expression).map(id => courses.find(c => c.id === id)?.name || id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -263,16 +268,10 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         <option value="PREREQUISITE">پیش‌نیاز</option>
                         <option value="COREQUISITE">هم‌نیاز</option>
                       </select>
-                      <select 
-                        className="w-24 p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
-                        value={addRuleForm.conditionType}
-                        onChange={(e) => setAddRuleForm({...addRuleForm, conditionType: e.target.value})}
-                      >
-                        <option value="AND">AND (و)</option>
-                        <option value="OR">OR (یا)</option>
-                      </select>
+
                     </div>
-                    <button 
+                    <p className="text-xs leading-6 text-amber-700 dark:text-amber-300">این فرم یک ارتباط مستقیم را ثبت می‌کند. تعریف شرط مرکب «و / یا» به ویرایشگر جداگانه و بازبینی مرجع مصوبه نیاز دارد.</p>
+                    <button
                       onClick={handleAddRule}
                       className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                     >
