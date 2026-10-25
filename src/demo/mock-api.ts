@@ -422,15 +422,46 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       .filter(row=>row.curriculumId===data.curriculumId && row.active!==false &&
         (!row.trackId || (data.trackIds||[]).includes(row.trackId))).map(row=>row.courseId));
     if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
-      !chart || !Array.isArray(data.entryYearIds) || data.entryYearIds.length!==1 ||
-      data.entryYearIds[0]!==chart.entryYearId || (data.trackIds||[]).length>1 ||
-      (data.trackIds||[]).some((trackId:string)=>!tracks.some(track=>track.id===trackId&&track.majorId===chart.majorId)) ||
+      !chart || typeof data.title !== 'string' || data.title.trim().length < 5 ||
+      data.title.length > 160 || typeof data.description !== 'string' ||
+      data.description.length > 1000 || data.targetTermId !== semester.id ||
+      data.universityId !== chart.universityId || data.campusId !== chart.campusId ||
+      data.degreeLevelId !== chart.degreeLevelId || data.majorId !== chart.majorId ||
+      !Array.isArray(data.entryYearIds) || data.entryYearIds.length!==1 ||
+      data.entryYearIds[0]!==chart.entryYearId || !Array.isArray(data.trackIds) ||
+      data.trackIds.length>1 || new Set(data.courseIds).size !== data.courseIds.length ||
+      data.trackIds.some((trackId:string)=>!tracks.some(track=>track.id===trackId&&track.majorId===chart.majorId)) ||
       data.courseIds.some((courseId:string)=>!validCourseIds.has(courseId)||
-        !currentCourses(s).some(c=>c.id===courseId))) {
-      return fail('برای ساخت نیازسنجی، چارت و درس‌های معتبر نمونه لازم است.');
+        !currentCourses(s).some(c=>c.id===courseId)) ||
+      !data.recommendedMinimumByCourse ||
+      typeof data.recommendedMinimumByCourse !== 'object' ||
+      Array.isArray(data.recommendedMinimumByCourse) ||
+      Object.entries(data.recommendedMinimumByCourse).some(([courseId, minimum]) =>
+        !data.courseIds.includes(courseId) || typeof minimum !== 'number' ||
+        !Number.isInteger(minimum) || minimum < 0 || minimum > 500)) {
+      return fail('برای ساخت نیازسنجی، اطلاعات فرم، چارت و درس‌های معتبر نمونه لازم است.');
     }
-    const record:DemandSurvey={...data,id:id(),status:'DRAFT',createdBy:'demo-manager',
-      createdAt:now(),updatedAt:now()};
+    // Match the typed real survey schema; never persist an unchecked body spread.
+    const currentTime = now();
+    const record: DemandSurvey = {
+      id: id(),
+      title: data.title.trim(),
+      description: data.description.trim(),
+      targetTermId: data.targetTermId,
+      universityId: chart.universityId,
+      campusId: chart.campusId,
+      degreeLevelId: chart.degreeLevelId,
+      majorId: chart.majorId,
+      curriculumId: chart.id,
+      entryYearIds: [...data.entryYearIds],
+      trackIds: [...data.trackIds],
+      courseIds: [...data.courseIds],
+      recommendedMinimumByCourse: { ...data.recommendedMinimumByCourse },
+      status: 'DRAFT',
+      createdBy: 'demo-manager',
+      createdAt: currentTime,
+      updatedAt: currentTime,
+    };
     s.demandSurveys.push(record);saveStore(s);return good(record) as ApiResponse<T>;
   }
   const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|export\.csv))?$/);
