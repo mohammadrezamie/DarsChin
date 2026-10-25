@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Student Dashboard
 // ============================================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   UploadCloud,
   FileJson,
@@ -11,6 +11,11 @@ import {
   BookOpen,
   Calendar,
   Download,
+  MessageCircle,
+  Bug,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
@@ -24,6 +29,17 @@ import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
+
+type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'passed' | 'support' | 'bugs';
+
+const studentTabs = [
+  { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
+  { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
+  { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
+  { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
+  { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
+  { id: 'bugs', label: 'گزارش خطاهای سامانه', short: 'گزارش باگ', icon: Bug },
+] as const;
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -44,85 +60,115 @@ export const StudentDashboard: React.FC = () => {
     courseName: string;
     messages: string[];
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<'offerings' | 'recommendations' | 'passed' | 'schedule'>('offerings');
-
+  const [activeTab, setActiveTab] = useState<StudentTab>('offerings');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const planMutationRef = useRef(false);
+  const evaluationVersionRef = useRef(0);
 
   const fetchDashboardData = async () => {
-    if (evaluations.length === 0) setLoading(true);
-    const [profileRes, evalRes, planRes] = await Promise.all([
-      apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
-      apiRequest<any>('/api/eligibility/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ plannedCourseIds: selectedOfferingIds }),
-      }),
-      apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: any; offeringPriorities?: any }>('/api/student/plan'),
-    ]);
+    const version = ++evaluationVersionRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      // Resolve saved selections before calculating eligibility on reload.
+      const [profileRes, planRes] = await Promise.all([
+        apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
+        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
+      ]);
+      if (version !== evaluationVersionRef.current) return;
+      if (profileRes.success && profileRes.data) setProfile(profileRes.data.profile);
+      else setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
 
-    if (profileRes.success && profileRes.data) {
-      setProfile(profileRes.data.profile);
-    }
-    if (evalRes.success && evalRes.data) {
-      setEvaluations(evalRes.data.report?.results || []);
-      setRecommendations(evalRes.data.recommendations || []);
-      if (evalRes.data.academicLimits) {
-        setAcademicLimits(evalRes.data.academicLimits);
-      }
-      if (evalRes.data.context && evalRes.data.context.term) {
-        setCurrentTerm(evalRes.data.context.term);
-      }
-    }
-    if (planRes.success && planRes.data) {
-      if (Array.isArray(planRes.data.selectedOfferingIds) && selectedOfferingIds.length === 0) {
-        setSelectedOfferingIds(planRes.data.selectedOfferingIds);
-      }
-      if (planRes.data.coursePriorities) {
-        if (Array.isArray(planRes.data.coursePriorities)) {
-          setCoursePriorities(planRes.data.coursePriorities);
-        } else if (typeof planRes.data.coursePriorities === 'object') {
-          const sorted = Object.keys(planRes.data.coursePriorities).sort(
-            (a, b) => planRes.data.coursePriorities[a] - planRes.data.coursePriorities[b]
-          );
-          setCoursePriorities(sorted);
+      const savedSelected = planRes.data?.selectedOfferingIds;
+      const planned: string[] = planRes.success && Array.isArray(savedSelected)
+        ? savedSelected
+        : selectedOfferingIds;
+      if (planRes.success && planRes.data) {
+        setSelectedOfferingIds(planned);
+        const priorities = planRes.data.coursePriorities;
+        if (Array.isArray(priorities)) setCoursePriorities(priorities);
+        else if (priorities && typeof priorities === 'object') {
+          setCoursePriorities(Object.keys(priorities).sort((x, y) => priorities[x] - priorities[y]));
         }
+        if (planRes.data.offeringPriorities && typeof planRes.data.offeringPriorities === 'object') {
+          setOfferingPriorities(planRes.data.offeringPriorities);
+        }
+      } else {
+        setLoadError(planRes.error || 'برنامه ذخیره‌شده قابل دریافت نیست.');
       }
-      if (planRes.data.offeringPriorities && typeof planRes.data.offeringPriorities === 'object') {
-        setOfferingPriorities(planRes.data.offeringPriorities);
+
+      const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
+        method: 'POST', body: JSON.stringify({ plannedCourseIds: planned }),
+      });
+      if (version !== evaluationVersionRef.current) return;
+      if (evalRes.success && evalRes.data) {
+        setEvaluations(evalRes.data.report?.results || []);
+        setRecommendations(evalRes.data.recommendations || []);
+        if (evalRes.data.academicLimits) setAcademicLimits(evalRes.data.academicLimits);
+        if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
+      } else setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
+    } catch {
+      if (version === evaluationVersionRef.current) {
+        setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
       }
+    } finally {
+      if (version === evaluationVersionRef.current) setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    if (user && user.roles?.includes('student')) {
-      fetchDashboardData();
-    }
+    if (user && user.roles?.includes('student')) void fetchDashboardData();
   }, [user]);
 
-  // Sync plan state changes to backend
-  const syncPlanToServer = async (
-    newSelectedIds: string[],
-    newCoursePriorities: string[],
-    newOfferingPriorities: Record<string, string[]>
-  ) => {
+  // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
+  const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
+    if (planMutationRef.current) {
+      setPlanError('تغییر قبلی هنوز در حال ثبت است. پس از پایان ذخیره‌سازی دوباره تلاش کنید.');
+      return false;
+    }
+    planMutationRef.current = true;
+    setPlanStatus('saving');
+    setPlanError(null);
     try {
-      await apiRequest('/api/student/plan', {
-        method: 'PUT',
-        body: JSON.stringify({
-          selectedOfferingIds: newSelectedIds,
-          coursePriorities: newCoursePriorities,
-          offeringPriorities: newOfferingPriorities,
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to sync plan to server:', err);
+      const response = await request();
+      if (!response.success) {
+        setPlanStatus('error');
+        setPlanError(response.error || 'تغییر برنامه ذخیره نشد. برنامه قبلی حفظ شده است.');
+        return false;
+      }
+      setPlanError(null);
+      setPlanStatus('saved');
+      return true;
+    } catch {
+      setPlanStatus('error');
+      setPlanError('ارتباط هنگام ذخیره‌سازی برقرار نشد. برنامه قبلی حفظ شده است.');
+      return false;
+    } finally {
+      planMutationRef.current = false;
     }
   };
 
+  const syncPlanToServer = (
+    newSelectedIds: string[],
+    newCoursePriorities: string[],
+    newOfferingPriorities: Record<string, string[]>,
+  ) => runPlanMutation(() => apiRequest('/api/student/plan', {
+    method: 'PUT',
+    body: JSON.stringify({
+      selectedOfferingIds: newSelectedIds,
+      coursePriorities: newCoursePriorities,
+      offeringPriorities: newOfferingPriorities,
+    }),
+  }));
+
   // Reorder courses
-  const handleReorderCourses = (newCourseOrder: string[]) => {
-    setCoursePriorities(newCourseOrder);
-    syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities);
+  const handleReorderCourses = async (newCourseOrder: string[]) => {
+    if (await syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities)) {
+      setCoursePriorities(newCourseOrder);
+    }
   };
 
   // Select primary offering for a course (promotes offering to primary)
@@ -148,10 +194,10 @@ export const StudentDashboard: React.FC = () => {
       [courseId]: updatedOfferingList,
     };
 
-    setSelectedOfferingIds(newSelected);
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities)) {
+      setSelectedOfferingIds(newSelected);
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Add a fallback offering for a course
@@ -163,9 +209,9 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: [...currentCourseOfferings, offeringId],
     };
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Remove a fallback offering from a course
@@ -175,9 +221,9 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: currentCourseOfferings.filter((id) => id !== offeringId),
     };
-    setOfferingPriorities(newOfferingPriorities);
-
-    await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities);
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+      setOfferingPriorities(newOfferingPriorities);
+    }
   };
 
   // Calculate schedule conflicts
@@ -210,29 +256,45 @@ export const StudentDashboard: React.FC = () => {
     const isAdding = !selectedOfferingIds.includes(offeringId);
     const newSelected = isAdding
       ? [...selectedOfferingIds, offeringId]
-      : selectedOfferingIds.filter((id) => id !== offeringId);
+      : selectedOfferingIds.filter(id => id !== offeringId);
 
-    setSelectedOfferingIds(newSelected);
-    setConflictWarning(null);
-
-    try {
-      await apiRequest('/api/student/plan/select', {
+    // Backend authorization/eligibility is authoritative; do not optimistically
+    // render an offering the API may reject.
+    let acceptedSelectedIds = newSelected;
+    let acceptedPriorities: Record<string, string[]> | undefined;
+    const saved = await runPlanMutation(async () => {
+      const response = await apiRequest<{
+        selectedOfferingIds?: string[];
+        plan?: { offeringPriorities?: Record<string, string[]> };
+        offeringPriorities?: Record<string, string[]>;
+      }>('/api/student/plan/select', {
         method: 'POST',
-        body: JSON.stringify({
-          offeringId,
-          action: isAdding ? 'add' : 'remove',
-        }),
+        body: JSON.stringify({ offeringId, action: isAdding ? 'add' : 'remove' }),
       });
-    
-      const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ plannedCourseIds: newSelected }),
-      });
-      if (evalRes.success && evalRes.data) {
-        setEvaluations(evalRes.data.report?.results || []);
+      if (response.success) {
+        if (Array.isArray(response.data?.selectedOfferingIds)) {
+          acceptedSelectedIds = response.data.selectedOfferingIds;
+        }
+        acceptedPriorities = response.data?.plan?.offeringPriorities || response.data?.offeringPriorities;
       }
-    } catch (err) {
-      console.error('Plan sync error:', err);
+      return response;
+    });
+    if (!saved) return;
+
+    setSelectedOfferingIds(acceptedSelectedIds);
+    if (acceptedPriorities) setOfferingPriorities(acceptedPriorities);
+    setConflictWarning(null);
+    const version = ++evaluationVersionRef.current;
+    const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
+      method: 'POST',
+      body: JSON.stringify({ plannedCourseIds: acceptedSelectedIds }),
+    });
+    if (version !== evaluationVersionRef.current) return;
+    if (evalRes.success && evalRes.data) {
+      setEvaluations(evalRes.data.report?.results || []);
+      setRecommendations(evalRes.data.recommendations || []);
+    } else {
+      setLoadError(evalRes.error || 'تغییر برنامه ثبت شد؛ تحلیل جدید در دسترس نیست. اطلاعات را دوباره دریافت کنید.');
     }
   };
 
@@ -329,10 +391,11 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  const handleClearSchedule = () => {
+  const handleClearSchedule = async () => {
     if (confirm('آیا از پاکسازی کل برنامه انتخابی مطمئن هستید؟')) {
-      setSelectedOfferingIds([]);
-      syncPlanToServer([], coursePriorities, offeringPriorities);
+      if (await syncPlanToServer([], coursePriorities, offeringPriorities)) {
+        setSelectedOfferingIds([]);
+      }
     }
   };
 
@@ -387,7 +450,7 @@ export const StudentDashboard: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={() => setImportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
+              className="flex min-h-11 items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
               title="راهنمای نصب و دانلود افزونه کروم"
             >
               <Download className="w-4 h-4" />
@@ -395,13 +458,13 @@ export const StudentDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setProfileModalOpen(true)}
-              className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+              className="min-h-11 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
             >
               مدیریت پرونده تحصیلی
             </button>
             <button
               onClick={() => setImportModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+              className="flex min-h-11 items-center gap-2 px-4 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
             >
               <UploadCloud className="w-4 h-4" />
               بارگذاری دروس ارائه‌شده
@@ -453,57 +516,61 @@ export const StudentDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Main Tabs */}
-      <div className="bg-liquid-glass rounded-2xl p-1.5 flex flex-wrap gap-1.5 sticky top-[72px] z-30 print:hidden overflow-x-auto sm:overflow-visible shadow-xs">
-        <button
-          onClick={() => setActiveTab('offerings')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'offerings'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          بررسی تطبیقی دروس ارائه‌شده
-        </button>
-        <button
-          onClick={() => setActiveTab('recommendations')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'recommendations'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          پیشنهاد هوشمند انتخاب واحد
-        </button>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'schedule'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          برنامه‌ریز و جدول زمانی
-        </button>
-        <button
-          onClick={() => setActiveTab('passed')}
-          className={`flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'passed'
-              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800/60'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          مدیریت کارنامه و دروس پاس‌شده
-        </button>
+      {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
+      <nav aria-label="بخش‌های میز کار دانشجو" className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {studentTabs.map(tab => {
+            const TabIcon = tab.icon;
+            const current = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                aria-current={current ? 'page' : undefined}
+                className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border px-2 py-3 text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
+                  ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
+                  : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+              >
+                <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
+                <span className="sm:hidden">{tab.short}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div aria-live="polite" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs dark:border-slate-800 dark:bg-slate-900">
+        <span className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+          {planStatus === 'saving' ? <RefreshCw aria-hidden={true} className="h-4 w-4 animate-spin text-blue-600" />
+            : planStatus === 'saved' ? <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-emerald-600" />
+            : planStatus === 'error' ? <AlertCircle aria-hidden={true} className="h-4 w-4 text-rose-600" />
+            : <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-slate-400" />}
+          {planStatus === 'saving' ? 'در حال ذخیره تغییرات…'
+            : planStatus === 'saved' ? 'تغییرات برنامه ثبت شد.'
+            : planStatus === 'error' ? 'برنامه ذخیره نشد.'
+            : 'برای ثبت تغییرات از بخش برنامه‌ریز استفاده کنید.'}
+        </span>
+        <span className="text-slate-500 dark:text-slate-400">{selectedOfferingIds.length} گروه درسی انتخاب شده</span>
       </div>
 
+      {(planError || loadError) && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <AlertCircle aria-hidden={true} className="h-5 w-5 shrink-0" />
+          <span className="flex-1">{planError || loadError}</span>
+          {loadError && (
+            <button type="button" disabled={planStatus === 'saving'} onClick={() => void fetchDashboardData()}
+              className="min-h-11 rounded-lg border border-rose-300 px-3 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:border-rose-700">
+              دریافت دوباره اطلاعات
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tab Content */}
-      <div className="min-h-[400px]">
-        {loading ? (
+      <section className="min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+        {loading && activeTab !== 'support' && activeTab !== 'bugs' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
@@ -553,7 +620,7 @@ export const StudentDashboard: React.FC = () => {
             {activeTab === 'bugs' && <BugReportPanel />}
           </>
         )}
-      </div>
+      </section>
 
       <AcademicProfileModal
         isOpen={isProfileModalOpen}
@@ -577,7 +644,7 @@ export const StudentDashboard: React.FC = () => {
             </div>
             
             <p className="text-slate-600 dark:text-slate-300 text-sm mb-4 leading-relaxed">
-              افزودن درس <strong>{conflictWarning.courseName}</strong> باعث تداخل‌های زیر خواهد شد:
+              درخواست افزودن درس <strong>{conflictWarning.courseName}</strong> نیازمند بررسی موارد زیر است. تأیید شما قوانین سرور را دور نمی‌زند:
             </p>
             
             <ul className="space-y-2 mb-6">
@@ -600,7 +667,7 @@ export const StudentDashboard: React.FC = () => {
                 onClick={() => confirmToggleScheduleOffering(conflictWarning.offeringId)}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/30 transition-colors"
               >
-                با علم به تداخل، اضافه کن
+                درخواست ثبت با بررسی سرور
               </button>
             </div>
           </div>
