@@ -135,7 +135,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <div className="min-w-0 flex-1 text-right">
             <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
+              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'} · کد <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -144,7 +144,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
             <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
-              aria-label={`کپی کد درس ${step.courseName}`}
+              aria-label={`کپی کد ${step.courseName}`}
               className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
