@@ -1,257 +1,225 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus, Pencil, Trash2, BookOpen, GraduationCap } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import { Trash2, Plus, Server, Network } from 'lucide-react';
-import { RelationshipType, AcademicRuleNode, Course } from '../types';
+import type { AcademicRule, AcademicRuleNode, Course, Curriculum, RelationshipType } from '../types';
 
+type ListedRule = AcademicRule & { targetCourseName?: string; curriculumName?: string };
+type Condition = { key: string; type: 'COURSE' | 'MIN_PASSED_UNITS'; courseId: string; minUnits: number };
+const empty = (): Condition => ({ key: `condition-${Math.random().toString(36).slice(2)}`, type: 'COURSE', courseId: '', minUnits: 1 });
+const field = 'mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+
+function describeCondition(node: AcademicRuleNode, names: Map<string,string>): string {
+  if (node.type === 'COURSE') return `قبولی در «${names.get(node.courseId || '') || node.courseId || 'درس نامشخص'}»`;
+  if (node.type === 'MIN_PASSED_UNITS') return `حداقل ${node.minUnits} واحد گذرانده‌شده`;
+  if (node.type === 'GROUP') return (node.operands || []).map(item=>describeCondition(item,names))
+    .join(node.operator === 'OR' ? ' یا ' : ' و ');
+  return 'شرط نیازمند بررسی';
+}
+function asSimpleEditor(node: AcademicRuleNode): { conditions: Condition[]; operator: 'AND' | 'OR' } | null {
+  const operator = node.type === 'GROUP' ? node.operator : 'AND';
+  const children = node.type === 'GROUP' ? node.operands || [] : [node];
+  if (children.some(item=>item.type === 'GROUP' || (item.type !== 'COURSE' && item.type !== 'MIN_PASSED_UNITS'))) return null;
+  return {
+    operator: operator === 'OR' ? 'OR' : 'AND',
+    conditions: children.map(item=>({ ...empty(),
+      type: item.type as Condition['type'], courseId: item.courseId || '', minUnits: item.minUnits || 1 })),
+  };
+}
+
+/** Simple, unlimited row-based rule form. Advanced legacy rule trees remain visible rather than silently rewritten. */
 export const AdminAcademicRules: React.FC = () => {
-  const [rules, setRules] = useState<any[]>([]);
+  const [rules, setRules] = useState<ListedRule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [curricula, setCurricula] = useState<any[]>([]);
+  const [curricula, setCurricula] = useState<Curriculum[]>([]);
+  const [curriculumId, setCurriculumId] = useState('');
+  const [targetCourseId, setTargetCourseId] = useState('');
+  const [relationshipType, setRelationshipType] = useState<RelationshipType>('PREREQUISITE');
+  const [conditions, setConditions] = useState<Condition[]>([empty()]);
+  const [operator, setOperator] = useState<'AND'|'OR'>('AND');
+  const [notes, setNotes] = useState('');
+  const [editId, setEditId] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const courseNames = useMemo(()=>new Map(courses.map(c=>[c.id,c.name])),[courses]);
+  const selectedChart = curricula.find(c=>c.id===curriculumId);
+  const visibleRules = rules.filter(r=>!curriculumId || r.curriculumId===curriculumId);
 
-  const [formData, setFormData] = useState<{
-    curriculumId: string;
-    targetCourseId: string;
-    relationshipType: RelationshipType;
-    expression: AcademicRuleNode;
-    notes: string;
-  }>({
-    curriculumId: '',
-    targetCourseId: '',
-    relationshipType: 'PREREQUISITE',
-    expression: { type: 'COURSE', courseId: '' },
-    notes: '',
-  });
-
-  const fetchData = async () => {
+  const refresh = async () => {
     setLoading(true);
-    const [rulesRes, coursesRes, curRes] = await Promise.all([
-      apiRequest('/api/curriculum/rules'),
-      apiRequest('/api/academic/courses'),
-      apiRequest('/api/curriculum'),
+    const [r, c, charts] = await Promise.all([
+      apiRequest<ListedRule[]>('/api/curriculum/rules'),
+      apiRequest<Course[]>('/api/academic/courses'),
+      apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
-    if (rulesRes.success) setRules(rulesRes.data);
-    if (coursesRes.success) setCourses(coursesRes.data);
-    if (curRes.success) setCurricula(curRes.data);
+    if (r.success) setRules(r.data || []);
+    if (c.success) setCourses(c.data || []);
+    if (charts.success) setCurricula(charts.data || []);
+    if (!r.success || !c.success || !charts.success) setMessage('بارگذاری همه اطلاعات آموزشی کامل نشد.');
     setLoading(false);
   };
+  useEffect(()=>{ void refresh(); },[]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
-    const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
-    if (res.success) {
-      fetchData();
-    } else {
-      alert(res.error || 'خطا در حذف');
+  const resetForm = () => {
+    setEditId('');setTargetCourseId('');setRelationshipType('PREREQUISITE');
+    setConditions([empty()]);setOperator('AND');setNotes('');setFormOpen(false);
+  };
+  const startEdit = (rule: ListedRule) => {
+    const editable = asSimpleEditor(rule.expression);
+    if (!editable) { setMessage('این قانون قدیمی دارای گروه‌های تو در تو است؛ ویرایش سادهٔ آن بدون حذف ساختارش امکان‌پذیر نیست.');return; }
+    setCurriculumId(rule.curriculumId);setTargetCourseId(rule.targetCourseId);
+    setRelationshipType(rule.relationshipType);setConditions(editable.conditions);
+    setOperator(editable.operator);setNotes(rule.notes || '');setEditId(rule.id);
+    setFormOpen(true);setMessage('');
+  };
+  const change = (key:string, patch:Partial<Condition>) =>
+    setConditions(list=>list.map(row=>row.key===key?{...row,...patch}:row));
+  const save = async () => {
+    if (!selectedChart || !targetCourseId) { setMessage('چارت و درس مقصد باید انتخاب شوند.');return; }
+    if (!conditions.length) { setMessage('این درس شرطی ندارد؛ نیازی به ثبت قانون نیست.');return; }
+    if (conditions.some(row=>row.type==='COURSE' ? !row.courseId || row.courseId===targetCourseId :
+      !Number.isInteger(row.minUnits) || row.minUnits<1 || row.minUnits>999)) {
+      setMessage('یکی از شروط نامعتبر یا ارجاع به خود درس است.');return;
     }
+    const operands: AcademicRuleNode[] = conditions.map(row=>
+      row.type==='COURSE' ? {type:'COURSE',courseId:row.courseId} :
+      {type:'MIN_PASSED_UNITS',minUnits:row.minUnits});
+    const expression: AcademicRuleNode = operands.length === 1 ? operands[0] :
+      {type:'GROUP',operator,operands};
+    const body = {
+      curriculumId: selectedChart.id, targetCourseId, relationshipType, expression, notes,
+      majorId: selectedChart.majorId, entryYearId: selectedChart.entryYearId,
+    };
+    setSaving(true);setMessage('');
+    const result = await apiRequest(editId?`/api/curriculum/rules/${editId}`:'/api/curriculum/rules',
+      {method:editId?'PUT':'POST',body:JSON.stringify(body)});
+    setSaving(false);
+    if (!result.success) {setMessage(result.error||'ذخیره قانون ناموفق بود.');return;}
+    setMessage('قانون ذخیره شد؛ اعمال رسمی آن منوط به تأیید مقررات آموزشی است.');
+    resetForm();await refresh();
+  };
+  const remove = async (id:string) => {
+    if (!window.confirm('قانون آموزشی حذف شود؟')) return;
+    const result = await apiRequest(`/api/curriculum/rules/${id}`,{method:'DELETE'});
+    if (!result.success) {setMessage(result.error || 'حذف انجام نشد.');return;}
+    setMessage('قانون حذف شد.');await refresh();
   };
 
-  const handleSave = async () => {
-    if (!formData.curriculumId || !formData.targetCourseId) {
-      alert('چارت درسی و درس هدف الزامی است.');
-      return;
-    }
-    const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
-    if (res.success) {
-      setIsAdding(false);
-      fetchData();
-    } else {
-      alert(res.error || 'خطا در ثبت قانون');
-    }
-  };
-
-  // --- Node Builder Component ---
-  const NodeEditor = ({ node, onChange, coursesList }: { node: AcademicRuleNode, onChange: (n: AcademicRuleNode) => void, coursesList: Course[] }) => {
-    return (
-      <div className="p-4 border rounded-xl bg-white shadow-sm mb-4 space-y-4">
-        <div className="flex items-center gap-4">
-          <select 
-            className="p-2 border rounded-lg bg-gray-50 text-sm"
-            value={node.type}
-            onChange={(e) => {
-              const val = e.target.value as 'COURSE'|'GROUP';
-              if (val === 'COURSE') onChange({ type: 'COURSE', courseId: '' });
-              else onChange({ type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: '' }] });
-            }}
-          >
-            <option value="COURSE">یک درس (Course)</option>
-            <option value="GROUP">گروه (Group)</option>
-          </select>
-          
-          {node.type === 'GROUP' && (
-            <select 
-              className="p-2 border rounded-lg bg-blue-50 text-blue-800 text-sm font-bold"
-              value={node.operator}
-              onChange={(e) => onChange({ ...node, operator: e.target.value as 'AND'|'OR' })}
-            >
-              <option value="AND">همه موارد بالا (AND)</option>
-              <option value="OR">حداقل یکی (OR)</option>
-            </select>
-          )}
-        </div>
-
-        {node.type === 'COURSE' ? (
-          <div>
-            <select
-              className="w-full p-2 border rounded-lg text-sm"
-              value={node.courseId || ''}
-              onChange={(e) => onChange({ ...node, courseId: e.target.value })}
-            >
-              <option value="">-- انتخاب درس پیش‌نیاز/هم‌نیاز --</option>
-              {coursesList.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
-            </select>
-          </div>
-        ) : (
-          <div className="pr-6 border-r-2 border-blue-200 space-y-2">
-            {node.operands?.map((child, idx) => (
-              <div key={idx} className="relative">
-                <NodeEditor 
-                  node={child} 
-                  coursesList={coursesList}
-                  onChange={(newChild) => {
-                    const newOps = [...(node.operands || [])];
-                    newOps[idx] = newChild;
-                    onChange({ ...node, operands: newOps });
-                  }} 
-                />
-                <button 
-                  onClick={() => {
-                    const newOps = [...(node.operands || [])];
-                    newOps.splice(idx, 1);
-                    onChange({ ...node, operands: newOps });
-                  }}
-                  className="absolute top-2 left-2 text-red-500 p-1 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => {
-                onChange({ ...node, operands: [...(node.operands || []), { type: 'COURSE', courseId: '' }] });
-              }}
-              className="flex items-center gap-2 text-sm text-blue-600 font-medium p-2 hover:bg-blue-50 rounded"
-            >
-              <Plus size={16} /> افزودن شرط جدید به این گروه
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Network className="text-blue-600" />
-          مدیریت قوانین آکادمیک (پیش‌نیازها)
+  return <section dir="rtl" className="darschin-page min-w-0 space-y-5">
+    <header className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 text-xl font-black text-slate-900 dark:text-slate-100">
+          <GraduationCap className="h-5 w-5 text-blue-600" /> تنظیم شرایط اخذ دروس
         </h2>
-        <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition"
-        >
-          {isAdding ? 'انصراف' : 'ثبت قانون جدید'}
+        <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+          هر درس می‌تواند هر تعداد پیش‌نیاز یا هم‌نیاز داشته باشد، یا اصلاً شرطی نداشته باشد.
+          حداقل واحد گذرانده‌شده نیز مثل انتخاب یک درس، یک ردیف ساده است.
+        </p>
+      </div>
+      <button type="button" onClick={()=>{resetForm();setFormOpen(true);setMessage('')}}
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white">
+        <Plus className="h-4 w-4" /> تعریف شرط
+      </button>
+    </header>
+    {message && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{message}</p>}
+    {formOpen && <div className="min-w-0 space-y-4 rounded-2xl border border-blue-200 bg-white p-3 dark:border-blue-900 dark:bg-slate-900 sm:p-5">
+      <h3 className="font-black">{editId?'ویرایش شرط':'افزودن شرط جدید'}</h3>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <label className="min-w-0 text-xs font-bold">چارت تحصیلی
+          <select className={field} value={curriculumId} disabled={!!editId}
+            onChange={e=>{setCurriculumId(e.target.value);setTargetCourseId('')}}>
+            <option value="">انتخاب چارت</option>{curricula.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-bold">درسی که شرط برای آن تعریف می‌شود
+          <select className={field} value={targetCourseId} disabled={!!editId}
+            onChange={e=>setTargetCourseId(e.target.value)}>
+            <option value="">انتخاب درس</option>
+            {courses.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-bold">نوع شرط
+          <select className={field} value={relationshipType}
+            onChange={e=>setRelationshipType(e.target.value as RelationshipType)}>
+            <option value="PREREQUISITE">پیش‌نیاز</option>
+            <option value="COREQUISITE">هم‌نیاز</option>
+            <option value="CONTEXTUAL_RETAKE_RULE">شرط اخذ مجدد (پس از مردودی؛ نیازمند تأیید ضوابط)</option>
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-bold">ارتباط بین شروط
+          <select className={field} value={operator} onChange={e=>setOperator(e.target.value as 'AND'|'OR')}>
+            <option value="AND">همهٔ شروط باید برقرار باشند</option>
+            <option value="OR">برقرار بودن یکی از شروط کافی است</option>
+          </select>
+        </label>
+      </div>
+      <div className="space-y-2">
+        <h4 className="text-sm font-black">شرط‌ها</h4>
+        {conditions.map((row,index)=><div key={row.key} className="grid min-w-0 gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70 sm:grid-cols-[auto_11rem_minmax(0,1fr)_auto] sm:items-end">
+          <span className="text-xs font-bold text-slate-500">#{index+1}</span>
+          <label className="min-w-0 text-xs font-bold">نوع
+            <select value={row.type} className={field} onChange={e=>change(row.key,{type:e.target.value as Condition['type']})}>
+              <option value="COURSE">قبولی در درس</option>
+              <option value="MIN_PASSED_UNITS">حداقل واحد پاس‌شده</option>
+            </select>
+          </label>
+          <label className="min-w-0 text-xs font-bold">{row.type==='COURSE'?'درس موردنیاز':'تعداد واحد گذرانده‌شده'}
+            {row.type==='COURSE'?<select className={field} value={row.courseId} onChange={e=>change(row.key,{courseId:e.target.value})}>
+              <option value="">انتخاب درس</option>
+              {courses.filter(c=>c.active!==false && c.id!==targetCourseId).map(c=><option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
+            </select>:<input type="number" min={1} max={999} step={1} value={row.minUnits}
+              onChange={e=>change(row.key,{minUnits:Number(e.target.value)})} className={field}/>}
+          </label>
+          <button type="button" aria-label={`حذف شرط ${index+1}`} onClick={()=>setConditions(list=>list.filter(x=>x.key!==row.key))}
+            className="min-h-11 rounded-xl border border-rose-200 px-3 text-rose-700 dark:border-rose-900 dark:text-rose-300">
+            <Trash2 className="mx-auto h-4 w-4" />
+          </button>
+        </div>)}
+        <button type="button" onClick={()=>setConditions(list=>[...list,empty()])}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300 px-3 text-xs font-bold text-blue-700 dark:text-blue-300">
+          <Plus className="h-4 w-4"/> افزودن شرط دیگر
+        </button>
+        <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
+          اگر این درس نه پیش‌نیاز دارد و نه هم‌نیاز، هیچ قانونی برایش نساز. قواعد چندشرطی در یک فرم ذخیره می‌شوند.
+        </p>
+      </div>
+      <label className="block text-xs font-bold">توضیح داخلی (اختیاری)
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2}
+          className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/>
+      </label>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm dark:border-slate-700" type="button" onClick={resetForm}>انصراف</button>
+        <button className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white disabled:opacity-50"
+          type="button" disabled={saving||!conditions.length} onClick={()=>void save()}>
+          {saving?'در حال ذخیره…':'ذخیره و اعتبارسنجی'}
         </button>
       </div>
-
-      {isAdding && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">چارت تحصیلی</label>
-              <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                value={formData.curriculumId}
-                onChange={(e) => setFormData({ ...formData, curriculumId: e.target.value })}
-              >
-                <option value="">-- انتخاب --</option>
-                {curricula.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">درس هدف</label>
-              <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                value={formData.targetCourseId}
-                onChange={(e) => setFormData({ ...formData, targetCourseId: e.target.value })}
-              >
-                <option value="">-- انتخاب --</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">نوع رابطه</label>
-              <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                value={formData.relationshipType}
-                onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value as any })}
-              >
-                <option value="PREREQUISITE">پیش‌نیاز</option>
-                <option value="COREQUISITE">هم‌نیاز</option>
-                <option value="CONTEXTUAL_RETAKE_RULE">هم‌نیاز در صورت افتادن</option>
-              </select>
-            </div>
+    </div>}
+    {loading?<p className="text-sm">در حال دریافت قوانین…</p>:
+      <div className="grid min-w-0 gap-3 md:grid-cols-2">
+        {visibleRules.map(rule=><article key={rule.id} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <h3 className="min-w-0 break-words font-black">{rule.targetCourseName||courseNames.get(rule.targetCourseId)||rule.targetCourseId}</h3>
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+              {rule.relationshipType==='PREREQUISITE'?'پیش‌نیاز':rule.relationshipType==='COREQUISITE'?'هم‌نیاز':'شرط اخذ مجدد'}
+            </span>
           </div>
-
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <h3 className="font-bold text-gray-700 mb-4">ساختار شرط (Prerequisite Tree)</h3>
-            <NodeEditor 
-              node={formData.expression} 
-              coursesList={courses} 
-              onChange={(exp) => setFormData({ ...formData, expression: exp })}
-            />
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">چارت: {rule.curriculumName||rule.curriculumId}</p>
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm leading-7 dark:bg-slate-800">
+            <BookOpen className="mt-1 h-4 w-4 shrink-0 text-blue-600"/>
+            <p className="min-w-0 break-words">{describeCondition(rule.expression,courseNames)}</p>
           </div>
-
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setIsAdding(false)}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
-            >
-              لغو
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={()=>startEdit(rule)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs dark:border-slate-700">
+              <Pencil className="h-4 w-4"/> ویرایش
             </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
-            >
-              ذخیره و اعتبارسنجی
+            <button type="button" onClick={()=>void remove(rule.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-rose-200 px-3 text-xs text-rose-700 dark:border-rose-900">
+              <Trash2 className="h-4 w-4"/> حذف
             </button>
           </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">در حال دریافت قوانین...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {rules.map((rule) => (
-            <div key={rule.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg text-gray-800">{rule.targetCourseName}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full ${rule.relationshipType === 'PREREQUISITE' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {rule.relationshipType === 'PREREQUISITE' ? 'پیش‌نیاز' : rule.relationshipType === 'COREQUISITE' ? 'هم‌نیاز' : 'افتاده'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">چارت: {rule.curriculumName}</p>
-                <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 font-mono text-left" dir="ltr">
-                  {JSON.stringify(rule.expression, null, 2)}
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button onClick={() => handleDelete(rule.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+        </article>)}
+        {!visibleRules.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm leading-7 dark:bg-slate-900">قانونی ثبت نشده است؛ هر درس بدون شرط، به همین شکل باقی می‌ماند.</p>}
+      </div>}
+  </section>;
 };
