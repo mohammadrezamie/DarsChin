@@ -631,6 +631,8 @@ export function getInitialSeedData(): DatabaseSchema {
         courseOfferings,
     studentProfiles: [],
     studentPassedCourses: [],
+    demandSurveys: [],
+    demandResponses: [],
     importBatches,
     importRecords,
     academicSettings,
