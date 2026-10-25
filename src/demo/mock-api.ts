@@ -3,6 +3,8 @@ import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
+import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
+import type { DemandSurvey, DemandResponse } from '../types';
 import type { AcademicRule } from '../types';
 import type {
   ApiResponse, AcademicLimitInfo, AcademicPolicySettings, Course, CourseEligibilityResult,
@@ -28,6 +30,8 @@ interface DemoStore {
   teacherRatings: TeacherRating[];
   importBatches: Row[];
   importRecords: Row[];
+  demandSurveys: DemandSurvey[];
+  demandResponses: DemandResponse[];
   academicSettings: AcademicPolicySettings;
 }
 const semester = { id: 'demo-term', name: 'نیمسال فرضی برای تست', year: 1405, termNumber: 1, isCurrent: true, active: true };
@@ -87,14 +91,17 @@ function initialStore(): DemoStore {
       '/api/offerings': sampleOfferings,
       '/api/curriculum': [curriculum],
       '/api/curriculum/rules': [],
-      '/api/curriculum-courses': [],
+      '/api/curriculum-courses': DEMO_COURSES.map(c=>({
+        id:'cc-'+c.id, curriculumId:curriculum.id,courseId:c.id,classification:'MAJOR_REQUIRED',
+        suggestedSemester:3,active:true,course:sampleCourses.find(course=>course.id===c.id),
+      })),
       '/api/admin/users': [{ id: 'demo-student', name: 'دانشجوی نمونه', mobile: 'شمارهٔ ساختگی', roles: ['student'] }],
     },
     profile: {
       userId: 'demo-student', universityId: university.id, provinceId: province.id,
       campusId: campus.id, degreeLevelId: degree.id, majorId: major.id,
       entryYearId: entryYear.id, isTrackSelected: false, desiredTrackIds: [],
-      currentTermId: semester.id, previousTermGpa: null, updatedAt: now(),
+      currentTermId: semester.id, studentNumber: '1403123456', previousTermGpa: null, updatedAt: now(),
     },
     plan: { selectedOfferingIds: ['off-math2', 'off-physics'], coursePriorities: [], offeringPriorities: {} },
     passed: [],
@@ -113,6 +120,16 @@ function initialStore(): DemoStore {
     teacherRatings: sampleRatings,
     importBatches: [],
     importRecords: [],
+    demandSurveys: [{
+      id:'demo-demand-fall',title:'نیازسنجی آزمایشی دروس ترم آینده برق',
+      description:'فقط برای تست روند ثبت تقاضا و آمار مدیر گروه؛ داده رسمی نیست.',
+      targetTermId:semester.id,universityId:university.id,campusId:campus.id,
+      degreeLevelId:degree.id,majorId:major.id,curriculumId:curriculum.id,
+      entryYearIds:[entryYear.id],trackIds:[],courseIds:DEMO_COURSES.map(c=>c.id),
+      recommendedMinimumByCourse:Object.fromEntries(DEMO_COURSES.map(c=>[c.id,3])),
+      status:'OPEN',createdBy:'demo-manager',createdAt:now(),updatedAt:now(),
+    }],
+    demandResponses: [],
     academicSettings: { ...defaults },
   }) as DemoStore;
 }
@@ -130,6 +147,8 @@ function readStore(): DemoStore {
         if (!Array.isArray(obj.collections['/api/curriculum-courses'])) obj.collections['/api/curriculum-courses'] = [];
         if (!Array.isArray(obj.importBatches)) obj.importBatches = [];
         if (!Array.isArray(obj.importRecords)) obj.importRecords = [];
+        if (!Array.isArray(obj.demandSurveys)) obj.demandSurveys = structuredClone(initialStore().demandSurveys);
+        if (!Array.isArray(obj.demandResponses)) obj.demandResponses = [];
         return obj as DemoStore;
       }
     }
@@ -273,6 +292,69 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         s.teacherRatings)) as ApiResponse<T>;
     }
     return fail('درخواست ارزشیابی دمو پشتیبانی نمی‌شود.');
+  }
+  // Demand module is a separate local workflow, never a real academic enrollment.
+  if (path === '/api/demand/surveys' && method === 'GET') {
+    const studentView = typeof window !== 'undefined' && window.location.pathname === '/demo/student';
+    return good(studentView ? s.demandSurveys.filter(survey =>
+      survey.status === 'OPEN' && surveyAppliesToProfile(survey, s.profile)) : s.demandSurveys) as ApiResponse<T>;
+  }
+  if (path === '/api/demand/surveys' && method === 'POST') {
+    if (!Array.isArray(data.courseIds) || data.courseIds.length === 0 ||
+      !s.collections['/api/curriculum'].some(row=>row.id===data.curriculumId) ||
+      data.courseIds.some((courseId:string)=>!currentCourses(s).some(c=>c.id===courseId))) {
+      return fail('برای ساخت نیازسنجی، چارت و درس‌های معتبر نمونه لازم است.');
+    }
+    const record:DemandSurvey={...data,id:id(),status:'DRAFT',createdBy:'demo-manager',
+      createdAt:now(),updatedAt:now()};
+    s.demandSurveys.push(record);saveStore(s);return good(record) as ApiResponse<T>;
+  }
+  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|export\.csv))?$/);
+  if (demandRoute) {
+    const survey = s.demandSurveys.find(row=>row.id===demandRoute[1]);
+    if(!survey)return fail('نیازسنجی نمونه یافت نشد.');
+    const operation=demandRoute[2];
+    if(operation==='status' && method==='PUT'){
+      if(!['OPEN','CLOSED','ARCHIVED'].includes(data.status))return fail('وضعیت نیازسنجی نامعتبر است.');
+      const allowed:Record<string,string[]>={DRAFT:['OPEN','ARCHIVED'],OPEN:['CLOSED'],CLOSED:['OPEN','ARCHIVED'],ARCHIVED:[]};
+      if(!allowed[survey.status].includes(data.status))return fail('انتقال وضعیت نیازسنجی مجاز نیست.');
+      survey.status=data.status;survey.updatedAt=now();saveStore(s);return good(survey) as ApiResponse<T>;
+    }
+    if(operation==='response' && method==='GET'){
+      return good(s.demandResponses.find(x=>x.surveyId===survey.id&&x.userId==='demo-student')||null) as ApiResponse<T>;
+    }
+    if(operation==='response' && method==='PUT'){
+      if(survey.status!=='OPEN'||!surveyAppliesToProfile(survey,s.profile))return fail('نیازسنجی بسته یا نامنطبق است.');
+      if(!Array.isArray(data.courseIds)||new Set(data.courseIds).size!==data.courseIds.length||
+        data.courseIds.some((courseId:string)=>!survey.courseIds.includes(courseId))||
+        !/^[0-9۰-۹٠-٩]{6,20}$/.test(data.studentNumber||'') ||
+        !['YES','NO','UNKNOWN'].includes(data.anticipatedGraduation))return fail('انتخاب‌ها یا شماره دانشجویی نامعتبرند.');
+      const old=s.demandResponses.find(x=>x.surveyId===survey.id&&x.userId==='demo-student');
+      const response:DemandResponse={
+        id:old?.id||id(),surveyId:survey.id,userId:'demo-student',
+        studentNumber:String(data.studentNumber),
+        anticipatedGraduation:data.anticipatedGraduation,courseIds:data.courseIds,
+        snapshot:{studentName:'دانشجوی نمونه',campusId:s.profile.campusId,majorId:s.profile.majorId,
+          entryYearId:s.profile.entryYearId,isTrackSelected:s.profile.isTrackSelected,
+          selectedTrackId:s.profile.selectedTrackId},
+        submittedAt:old?.submittedAt||now(),updatedAt:now(),
+      };
+      s.demandResponses=s.demandResponses.filter(x=>x.surveyId!==survey.id||x.userId!=='demo-student');
+      s.demandResponses.push(response);s.profile.studentNumber=response.studentNumber;saveStore(s);
+      return good(response) as ApiResponse<T>;
+    }
+    if(operation==='report' && method==='GET')return good(summarizeDemand(survey,s.demandResponses)) as ApiResponse<T>;
+    if(operation==='export.csv' && method==='GET') {
+      const csv=exportDemandCsv(survey,s.demandResponses,
+        new Map(currentCourses(s).map(course=>[course.id,course.name])),
+        new Map([[entryYear.id,String(entryYear.year)]]),new Map());
+      return good({csv}) as ApiResponse<T>;
+    }
+  }
+  if (path === `/api/curriculum/${curriculum.id}/full` && method === 'GET') {
+    return good({curriculum,courses:s.collections['/api/curriculum-courses']||[],
+      prerequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.relationshipType==='PREREQUISITE'),
+      corequisites:(s.collections['/api/curriculum/rules']||[]).filter(rule=>rule.relationshipType==='COREQUISITE')}) as ApiResponse<T>;
   }
   if (path === '/api/student/profile') {
     if (method === 'GET') return good({ profile: s.profile }) as ApiResponse<T>;
