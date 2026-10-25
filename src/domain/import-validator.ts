@@ -114,8 +114,10 @@ export function parseRawInput(rawContent: any): RawExtractedOffering[] {
     if (hasHeader) {
       firstRow.forEach((col, idx) => {
         const norm = normalizePersianText(col).replace(/\s+/g, '');
-        // Specific labels must take precedence over generic "name"/"capacity".
-        if (/ظرفیت(باقیمانده|باقی|مانده)|availablecapacity|remaining/.test(norm)) headerIndexMap.available = idx;
+        // نام درس ends with "مدرس" after spaces are removed; prioritize this
+        // exact header before matching the instructor keyword "مدرس".
+        if (/^(نامدرس|عنواندرس|coursename|coursetitle)$/.test(norm)) headerIndexMap.name = idx;
+        else if (/ظرفیت(باقیمانده|باقی|مانده)|availablecapacity|remaining/.test(norm)) headerIndexMap.available = idx;
         else if (/ظرفیت|capacity/.test(norm)) headerIndexMap.capacity = idx;
         else if (/ساعتشروع|زمانشروع|starttime|start/.test(norm)) headerIndexMap.start = idx;
         else if (/ساعتپایان|زمانپایان|endtime|end/.test(norm)) headerIndexMap.end = idx;
@@ -147,8 +149,10 @@ export function parseRawInput(rawContent: any): RawExtractedOffering[] {
         const code = hasHeader ? field('code') : (row[0] || '');
         const name = hasHeader ? field('name') : (row[1] || '');
         if (!code && !name) return null;
-        const timeRange = normalizeNumeral(hasHeader ? field('time') : (row[5] || ''));
-        const range = /(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/.exec(timeRange);
+        // Preserve the exact source digits in the raw preview; normalization to
+        // ASCII happens later when publishing a validated offering.
+        const timeRange = hasHeader ? field('time') : (row[5] || '');
+        const range = /([0-9۰-۹٠-٩]{1,2}:[0-9۰-۹٠-٩]{2})\s*[-–—]\s*([0-9۰-۹٠-٩]{1,2}:[0-9۰-۹٠-٩]{2})/.exec(timeRange);
         return {
           courseCode: code,
           courseName: name || code,
