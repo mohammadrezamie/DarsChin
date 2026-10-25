@@ -12,6 +12,7 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +52,9 @@ export const Login: React.FC = () => {
       setError(err.message || 'خطایی رخ داد.');
     } finally {
       setIsLoading(false);
+      // Provider tokens are one-use; a failed password attempt needs a new challenge.
+      setCaptchaToken('');
+      setCaptchaAttempt(value => value + 1);
     }
   };
 
@@ -157,7 +161,7 @@ export const Login: React.FC = () => {
                 </Link>
               </div>
 
-              <GuestHumanCheck action="login" token={captchaToken} onToken={setCaptchaToken} />
+              <GuestHumanCheck key={captchaAttempt} action="login" token={captchaToken} onToken={setCaptchaToken} />
               <button
                 type="submit"
                 disabled={isLoading}
