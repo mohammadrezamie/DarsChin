@@ -721,9 +721,11 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'offerings' && (
           <AdminCrudTable
             title="مدیریت ارائه‌های ترمی دروس (Course Offerings)"
-            description="گروه‌ها و اساتید ارائه‌دهنده دروس در نیمسال جاری"
+            description="زمان کلاس می‌تواند هنوز اعلام نشده باشد؛ ساعت شروع و پایان را هر دو خالی بگذارید و پس از اعلام تکمیل کنید."
             endpoint="/api/offerings"
             columns={[
+              { key: 'termId', label: 'نیمسال', type: 'select', lookupEndpoint: '/api/academic/terms' },
+              { key: 'campusId', label: 'واحد دانشگاهی', type: 'select', lookupEndpoint: '/api/academic/campuses' },
               { key: 'courseId', label: 'درس مرتبط', type: 'select', lookupEndpoint: '/api/academic/courses' },
               { key: 'rawCourseName', label: 'عنوان درس' },
               { key: 'groupCode', label: 'کد گروه' },
