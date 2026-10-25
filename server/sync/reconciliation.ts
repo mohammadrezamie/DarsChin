@@ -86,6 +86,7 @@ function findCourse(courseCode: string, courseName: string, courses: Course[]): 
   if (courseCode) {
     const code = normalizeCode(courseCode);
     const matches = courses.filter((course) => {
+      if (course.active === false) return false;
       const candidates = [
         course.code,
         ...(course.alternateCodes ?? []),
