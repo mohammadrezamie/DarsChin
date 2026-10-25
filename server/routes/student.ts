@@ -8,7 +8,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
-import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema } from '../schemas/student';
+import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, normalizeCoursePriorities } from '../schemas/student';
 
 export const studentRouter = Router();
 
