@@ -135,6 +135,9 @@ export const AdminImportCenter: React.FC = () => {
         `/api/imports/batches/${encodeURIComponent(expandedBatchId)}/records/${encodeURIComponent(record.id)}/review`,
         { method: 'PUT', body: JSON.stringify(payload) },
       );
+      // A review may complete after the manager opens another batch.
+      // Never apply the old response to a newly selected batch.
+      if (reviewSequence !== detailsSequence.current) return;
       if (!response.success || !response.data) {
         setReviewError(response.error || 'ثبت تصمیم بررسی امکان‌پذیر نشد.');
         return;
@@ -143,7 +146,9 @@ export const AdminImportCenter: React.FC = () => {
       setReviewMessage('تصمیم نگاشت ذخیره شد. هیچ گروه درسی منتشر نشده است.');
       setReviewDrafts(prev => ({ ...prev, [record.id]: { courseId: response.data!.matchedCourseId || '', reason: '' } }));
     } catch {
-      setReviewError('ارتباط با سامانه در هنگام ثبت تصمیم قطع شد.');
+      if (reviewSequence === detailsSequence.current) {
+        setReviewError('ارتباط با سامانه در هنگام ثبت تصمیم قطع شد.');
+      }
     } finally {
       setReviewBusyId(null);
     }
