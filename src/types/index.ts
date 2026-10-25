@@ -12,6 +12,8 @@ export interface User {
   recoveryKey?: string;
   roles: UserRole[];
   permissions?: string[];
+  /** Department-level access: the admin.panel.access permission alone grants no survey PII access. */
+  demandScopes?: DemandManagerScope[];
   createdBy?: string;
   deactivatedAt?: string;
   deactivatedBy?: string;
@@ -206,6 +208,8 @@ export interface StudentAcademicProfile {
   selectedTrackId?: string | null; // If isTrackSelected === true
   desiredTrackIds: string[]; // If isTrackSelected === false: array of trackIds student is considering
   currentTermId?: string | null;
+  /** Optional self-entered identifier, never present in public academic lists. */
+  studentNumber?: string;
   previousTermGpa?: number | null;
   isFinalSemesterOverride?: boolean | null; // Admin manual override
   finalSemesterNotes?: string;
@@ -258,6 +262,56 @@ export interface StudentPassedCourse {
   status?: CourseAttemptStatus; // default: 'PASSED'
   termId?: string | null;
   passedAt: string;
+}
+
+/** Manager assignments are independent of generic administrator status. */
+export interface DemandManagerScope {
+  campusId: string;
+  degreeLevelId: string;
+  majorId: string;
+}
+
+export type DemandSurveyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+export interface DemandSurvey {
+  id: string;
+  title: string;
+  description: string;
+  targetTermId: string;
+  universityId: string;
+  campusId: string;
+  degreeLevelId: string;
+  majorId: string;
+  curriculumId?: string;
+  entryYearIds: string[];
+  trackIds: string[];
+  courseIds: string[];
+  recommendedMinimumByCourse: Record<string, number>;
+  startsAt?: string;
+  endsAt?: string;
+  status: DemandSurveyStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DemandResponse {
+  id: string;
+  surveyId: string;
+  userId: string;
+  studentNumber: string;
+  anticipatedGraduation: 'YES' | 'NO' | 'UNKNOWN';
+  courseIds: string[];
+  /** Context at time of submission: never inferred to be officially verified. */
+  snapshot: {
+    studentName: string;
+    campusId: string;
+    majorId: string;
+    entryYearId: string;
+    isTrackSelected: boolean;
+    selectedTrackId?: string | null;
+  };
+  submittedAt: string;
+  updatedAt: string;
 }
 
 export interface StudentPlan {
