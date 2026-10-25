@@ -22,7 +22,7 @@ export function adminWorkspaceAccess(user: {
 export const ADMIN_TABS = [
   'overview', 'provinces', 'campuses', 'degrees', 'majors', 'tracks',
   'entry-years', 'curricula', 'courses', 'academic-rules', 'terms',
-  'offerings', 'academic-settings', 'imports', 'demand', 'users', 'support',
+  'offerings', 'academic-settings', 'imports', 'demand', 'sms-center', 'users', 'support',
   'diagnostics', 'logs',
 ] as const;
 
