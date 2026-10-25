@@ -5,7 +5,8 @@ import { downstreamCourseIds } from '../domain/course-demand';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
-type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[] };
+type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[]; byCohort?: {entryYearId:string; participantCount:number; declaredGraduationCount:number; byCourse:{courseId:string;count:number}[]}[] };
+type DemandPerson = { studentName:string; studentNumber:string; entryYearId:string; selectedTrackId:string|null; isTrackSelected:boolean; anticipatedGraduation:'YES'|'NO'|'UNKNOWN'; courseIds:string[];updatedAt:string };
 type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
 export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
@@ -32,12 +33,31 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
   const [newTrack, setNewTrack] = useState('');
+  const [selectedChartIds, setSelectedChartIds] = useState<string[]>([]);
+  const [personalRows, setPersonalRows] = useState<DemandPerson[]>([]);
+  const [privateAccessError, setPrivateAccessError] = useState('');
+  const [personSearch, setPersonSearch] = useState('');
+  const [personCohort, setPersonCohort] = useState('');
+  const [personCourse, setPersonCourse] = useState('');
+  const [personGraduation, setPersonGraduation] = useState('');
   const [newCourseIds, setNewCourseIds] = useState<string[]>([]);
   const [threshold, setThreshold] = useState(15);
 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
   const curriculum = curricula.find(c=>c.id===newCurriculum);
+  const sameDepartmentCharts = curricula.filter(c => curriculum &&
+    c.universityId===curriculum.universityId && c.campusId===curriculum.campusId &&
+    c.degreeLevelId===curriculum.degreeLevelId && c.majorId===curriculum.majorId &&
+    c.status!=='archived');
+  const effectiveChartIds = selectedChartIds.length ? selectedChartIds : curriculum ? [curriculum.id] : [];
+  const chosenCharts = sameDepartmentCharts.filter(c=>effectiveChartIds.includes(c.id));
+  const visiblePeople = useMemo(()=>personalRows.filter(row=>{
+    if(personSearch.trim() && !(row.studentName+' '+row.studentNumber).includes(personSearch.trim()))return false;
+    return (!personCohort || row.entryYearId===personCohort) &&
+      (!personCourse || row.courseIds.includes(personCourse)) &&
+      (!personGraduation || row.anticipatedGraduation===personGraduation);
+  }),[personalRows,personSearch,personCohort,personCourse,personGraduation]);
 
   const refresh = async () => {
     setError('');
@@ -62,6 +82,9 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       const latest = await apiRequest<SurveyStats>(`/api/demand/surveys/${stillSelected.id}/report`);
       if (latest.success) setReport(latest.data || null);
       else setError(latest.error || 'آمار نیازسنجی به‌روزرسانی نشد.');
+      const personal = await apiRequest<{students:DemandPerson[]}>(`/api/demand/surveys/${stillSelected.id}/students`);
+      setPersonalRows(personal.success ? personal.data?.students || [] : []);
+      setPrivateAccessError(personal.success ? '' : 'نمایش هویت دانشجویان نیازمند مجوز جداگانهٔ «گزارش فردی» است.');
     }
     if (role === 'student') {
       const p = await apiRequest<{profile:StudentAcademicProfile}>('/api/student/profile');
@@ -79,9 +102,11 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   useEffect(()=>{ void refresh(); },[role]);
 
   useEffect(()=>{
-    if (!survey) { setMyResponse(null); setReport(null); return; }
+    if (!survey) { setMyResponse(null); setReport(null); setPersonalRows([]); return; }
     let active=true;
     setSelectedCourses([]);
+    setPersonalRows([]);
+    setPrivateAccessError('');
     setSuccess('');
     if (role==='student') {
       void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(r=>{
@@ -95,19 +120,33 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       void apiRequest<SurveyStats>(`/api/demand/surveys/${survey.id}/report`).then(r=>{
         if(active) setReport(r.data || null);
       });
+      void apiRequest<{students:DemandPerson[]}>(`/api/demand/surveys/${survey.id}/students`).then(r=>{
+        if(!active)return;
+        setPersonalRows(r.success ? r.data?.students || [] : []);
+        setPrivateAccessError(r.success ? '' : 'برای مشاهدهٔ پاسخ هر دانشجو، مجوز جداگانهٔ گزارش فردی لازم است.');
+      });
     }
     return ()=>{active=false};
   },[survey?.id,role,profile?.studentNumber]);
 
   useEffect(()=>{
-    const curriculumId = role==='student' ? survey?.curriculumId : newCurriculum;
-    if (!curriculumId) { setAssigned([]); setRules([]); return; }
+    const curriculumIds = role==='student'
+      ? (survey?.curriculumIds?.length ? survey.curriculumIds : survey?.curriculumId ? [survey.curriculumId] : [])
+        .filter(id=>curricula.some(c=>c.id===id && c.entryYearId===profile?.entryYearId))
+      : effectiveChartIds;
+    if (!curriculumIds.length) { setAssigned([]); setRules([]); return; }
     let active=true;
-    void apiRequest<{courses: CourseAssigned[]; prerequisites:AcademicRule[]; corequisites:AcademicRule[]}>(`/api/curriculum/${curriculumId}/full`).then(r=>{
-      if(active){setAssigned(r.data?.courses || []);setRules([...(r.data?.prerequisites || []),...(r.data?.corequisites || [])]);}
+    setAssigned([]);setRules([]);
+    void Promise.all(curriculumIds.map(id=>
+      apiRequest<{courses: CourseAssigned[]; prerequisites:AcademicRule[]; corequisites:AcademicRule[]}>(`/api/curriculum/${id}/full`)
+    )).then(results=>{
+      if(!active)return;
+      const assignedRows = results.flatMap(r=>r.data?.courses || []);
+      setAssigned([...new Map(assignedRows.map(row=>[row.courseId,row])).values()]);
+      setRules(results.flatMap(r=>[...(r.data?.prerequisites || []),...(r.data?.corequisites || [])]));
     });
     return ()=>{active=false};
-  },[role,survey?.curriculumId,newCurriculum]);
+  },[role,survey?.curriculumId,survey?.curriculumIds?.join(','),newCurriculum,selectedChartIds.join(','),profile?.entryYearId,curricula]);
 
   const submit = async () => {
     if(!survey)return;
@@ -124,7 +163,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   const createSurvey=async()=>{
-    if(!curriculum){setError('ابتدا چارت را انتخاب کن.');return}
+    if(!curriculum || !chosenCharts.length){setError('حداقل یک ورودی و چارت انتخاب کن.');return}
     setBusy(true);setError('');setSuccess('');
     const r=await apiRequest<DemandSurvey>('/api/demand/surveys',{
       method:'POST',
@@ -132,8 +171,9 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         title:newTitle,description:newDescription,targetTermId:newTerm,
         universityId:curriculum.universityId,campusId:curriculum.campusId,
         degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
-        curriculumId:curriculum.id,entryYearIds:[curriculum.entryYearId],
-        trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
+        curriculumId:chosenCharts[0].id,curriculumIds:chosenCharts.map(c=>c.id),
+        entryYearIds:chosenCharts.map(c=>c.entryYearId),
+        trackIds:[],courseIds:newCourseIds,
         recommendedMinimumByCourse:Object.fromEntries(newCourseIds.map(id=>[id,threshold])),
       }),
     });
