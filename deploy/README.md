@@ -1,5 +1,6 @@
 # DARSCHYN VPS deployment
 
+> **Shared-VPS 2026-10-25:** اگر تکین روی این VPS با Nginx روی پورت‌های ۸۰/۴۴۳ فعال است، نصب درس‌چین را با [راهنمای دامنهٔ مستقل](../docs/VPS_SHARED_DOMAIN_FA.md) و فقط کانتینر `darschin` پشت پورت محلی جدا انجام بده. نمونهٔ Caddy کامل برای سرور **اختصاصی/خالی** است، نه کنار Nginx تکین. [راهنمای پیامک و کپچا](../docs/TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) را نیز قبل از فعال‌کردن فرم‌های عمومی بخوان.\n\n
 This deployment recipe is intentionally isolated from TakinTech. It uses one Node.js process managed by systemd and the existing Nginx installation; it does not add a second database service or alter the TakinTech virtual host.
 
 ## Important constraints
