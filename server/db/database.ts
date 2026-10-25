@@ -82,6 +82,18 @@ const DATA_DIR = process.env.DARSCHYN_DATA_DIR
   : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
 
+/**
+ * Normalize only review/sync collections introduced after the original JSON
+ * database format. Safe for loading old files and applying old admin backups:
+ * retain valid arrays and never silently overwrite existing review decisions.
+ */
+export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
+  if (!Array.isArray(data.importBatches)) data.importBatches = [];
+  if (!Array.isArray(data.importRecords)) data.importRecords = [];
+  if (!Array.isArray(data.syncJobs)) data.syncJobs = [];
+  if (!Array.isArray(data.syncSnapshots)) data.syncSnapshots = [];
+}
+
 export class LocalDatabase {
   public data: DatabaseSchema = {
     users: [],
@@ -176,12 +188,7 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         if (!this.data.supportMessages) this.data.supportMessages = [];
         if (!this.data.bugReports) this.data.bugReports = [];
         if (!this.data.auditLogs) this.data.auditLogs = [];
-        // Old persisted databases predate review-first Educationalyar imports.
-        // Normalize only the missing collections; never drop existing review data.
-        if (!Array.isArray(this.data.importBatches)) this.data.importBatches = [];
-        if (!Array.isArray(this.data.importRecords)) this.data.importRecords = [];
-        if (!Array.isArray(this.data.syncJobs)) this.data.syncJobs = [];
-        if (!Array.isArray(this.data.syncSnapshots)) this.data.syncSnapshots = [];
+        ensureReviewCollections(this.data);
         if (!this.data.errorLogs) this.data.errorLogs = [];
         if (!this.data.otpChallenges) this.data.otpChallenges = [];
         if (!this.data.captchaChallenges) this.data.captchaChallenges = [];
@@ -283,6 +290,7 @@ this.isInitialized = true;
       ...importedData,
       users: currentUsers,
     };
+    ensureReviewCollections(this.data);
     this.save();
     return this.data;
   }
@@ -307,8 +315,8 @@ this.isInitialized = true;
   get studentProfiles() { return this.data.studentProfiles; }
   get studentPassedCourses() { return this.data.studentPassedCourses; }
   get studentPlans() { return this.data.studentPlans || (this.data.studentPlans = []); }
-  get importBatches() { return this.data.importBatches; }
-  get importRecords() { return this.data.importRecords; }
+  get importBatches() { return this.data.importBatches || (this.data.importBatches = []); }
+  get importRecords() { return this.data.importRecords || (this.data.importRecords = []); }
   get academicSettings(): AcademicPolicySettings {
     if (!this.data.academicSettings) {
       this.data.academicSettings = { ...DEFAULT_ACADEMIC_SETTINGS };
