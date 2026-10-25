@@ -25,7 +25,7 @@ export const batchPassedCoursesSchema = z.object({
 });
 
 export const updatePlanSchema = z.object({
-  selectedOfferingIds: z.array(z.string()).optional(),
+  selectedOfferingIds: z.array(z.string().min(1).max(160)).max(100).optional(),
   // Historical plans store priority ranks as a map; the current planner sends an ordered array.
   coursePriorities: z.union([
     z.array(z.string().min(1)).max(500),
@@ -34,7 +34,10 @@ export const updatePlanSchema = z.object({
   offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
   /** Only for atomic, verified, same-course group rearrangements. */
   qualitySuggestion: z.boolean().optional(),
-});
+}).refine(
+  data => !data.qualitySuggestion || Boolean(data.selectedOfferingIds?.length),
+  {message:'برای اعمال چیدمان پیشنهادی باید گروه‌های انتخابی مشخص باشند.',path:['selectedOfferingIds']},
+);
 
 export const planSelectSchema = z.object({
   offeringId: z.string().min(1, 'شناسه گروه درسی الزامی است'),
