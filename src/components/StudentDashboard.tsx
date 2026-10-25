@@ -30,13 +30,15 @@ import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
+import { RegistrationLaunchpad } from './RegistrationLaunchpad';
 
-type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'demand' | 'passed' | 'support' | 'bugs';
+type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support' | 'bugs';
 
 const studentTabs = [
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
+  { id: 'registration', label: 'آماده‌باش سریع آموزشیار', short: 'ثبت سریع', icon: Download },
   { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
   { id: 'passed', label: 'مدیریت کارنامه و دروس پاس‌شده', short: 'کارنامه', icon: BookOpen },
   { id: 'support', label: 'پشتیبانی و درخواست‌ها', short: 'پشتیبانی', icon: MessageCircle },
@@ -47,6 +49,7 @@ export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
+  const [curriculumId, setCurriculumId] = useState<string | null>(null);
   const [academicLimits, setAcademicLimits] = useState<AcademicLimitInfo | null>(null);
   const [currentTerm, setCurrentTerm] = useState<any>(null);
   const [evaluations, setEvaluations] = useState<CourseEligibilityResult[]>([]);
@@ -79,12 +82,17 @@ export const StudentDashboard: React.FC = () => {
     try {
       // Resolve saved selections before calculating eligibility on reload.
       const [profileRes, planRes] = await Promise.all([
-        apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
+        apiRequest<{ profile: StudentAcademicProfile; curriculum?: { id: string } | null }>('/api/student/profile'),
         apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
       ]);
       if (version !== evaluationVersionRef.current) return;
-      if (profileRes.success && profileRes.data) setProfile(profileRes.data.profile);
-      else setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
+      if (profileRes.success && profileRes.data) {
+        setProfile(profileRes.data.profile);
+        setCurriculumId(profileRes.data.curriculum?.id || null);
+      } else {
+        setCurriculumId(null);
+        setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
+      }
 
       const savedSelected = planRes.data?.selectedOfferingIds;
       const planned: string[] = planRes.success && Array.isArray(savedSelected)
@@ -538,7 +546,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
       <nav aria-label="بخش‌های میز کار دانشجو" className="darschin-surface p-2 print:hidden">
-        <div className="grid grid-cols-1 gap-1.5 min-[390px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-7">
+        <div className="grid grid-cols-1 gap-1.5 min-[390px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
             const current = activeTab === tab.id;
@@ -633,6 +641,17 @@ export const StudentDashboard: React.FC = () => {
                 profile={profile}
                 currentTerm={currentTerm}
                 academicLimits={academicLimits}
+              />
+            )}
+
+            {activeTab === 'registration' && (
+              <RegistrationLaunchpad
+                evaluations={evaluations}
+                selectedOfferingIds={selectedOfferingIds}
+                coursePriorities={coursePriorities}
+                profile={profile}
+                curriculumId={curriculumId}
+                onEditPriorities={() => setActiveTab('schedule')}
               />
             )}
 
