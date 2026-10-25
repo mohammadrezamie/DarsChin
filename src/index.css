@@ -80,3 +80,125 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
+
+
+/*
+ * Persian-first visual system: stable in Iran and offline because Vazirmatn is
+ * bundled locally. All layout primitives inherit native RTL semantics.
+ * Codes, URLs and time may opt into LTR without moving Persian labels.
+ */
+@layer base {
+  html {
+    direction: rtl;
+    text-align: right;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { overflow-x: clip; }
+  #root { min-width: 0; min-height: 100vh; isolation: isolate; }
+  h1, h2, h3, h4, h5, h6, p, label, legend { text-wrap: pretty; }
+  p, li, td, th, dd, dt, label { overflow-wrap: anywhere; }
+  input, textarea, select, button { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  input, textarea, select { text-align: start; direction: rtl; }
+  input[dir="ltr"], textarea[dir="ltr"], select[dir="ltr"],
+  input[type="tel"], input[type="email"], input[inputmode="numeric"],
+  input[inputmode="decimal"] { direction: ltr; text-align: left; unicode-bidi: isolate; }
+  input::placeholder, textarea::placeholder { opacity: 1; color: #94a3b8; }
+  .dark input::placeholder, .dark textarea::placeholder { color: #8494ad; }
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+  }
+  :where(button, [role="button"], a) { -webkit-tap-highlight-color: transparent; }
+  :where(button, input, textarea, select):disabled { opacity: .65; }
+  select { max-width: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  table { direction: rtl; text-align: right; }
+  th, td { text-align: start; }
+}
+
+/* Tailwind colors stay available. These tokens govern component proportions. */
+:root {
+  --darschin-surface: #ffffff;
+  --darschin-subtle: #f5f8fd;
+  --darschin-stroke: #dce5f2;
+  --darschin-text: #152339;
+  --darschin-muted: #56677e;
+  --darschin-focus: #2563eb;
+  --darschin-radius: 1.125rem;
+  --darschin-shadow: 0 8px 28px -17px rgb(20 44 77 / 23%);
+}
+:root.dark {
+  --darschin-surface: #111e30;
+  --darschin-subtle: #16263a;
+  --darschin-stroke: #30415a;
+  --darschin-text: #e8eff9;
+  --darschin-muted: #b0bed1;
+  --darschin-focus: #93c5fd;
+  --darschin-shadow: 0 12px 36px -18px rgb(0 0 0 / 45%);
+}
+.darschin-surface {
+  background: var(--darschin-surface);
+  border: 1px solid var(--darschin-stroke);
+  border-radius: var(--darschin-radius);
+  box-shadow: var(--darschin-shadow);
+  min-width: 0;
+}
+.darschin-field {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  padding: .625rem .85rem;
+  border: 1px solid var(--darschin-stroke);
+  border-radius: .75rem;
+  background: var(--darschin-surface);
+  color: var(--darschin-text);
+  text-align: start;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.darschin-field:focus-visible {
+  border-color: var(--darschin-focus);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+.darschin-field[dir="ltr"] { text-align: left; }
+.darschin-touch { min-block-size: 2.75rem; }
+.darschin-scroll-x { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+.darschin-numbers { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.darschin-copy { max-inline-size: 72ch; line-height: 1.95; }
+.darschin-page { min-inline-size: 0; text-align: right; }
+.darschin-page > * { min-inline-size: 0; }
+.darschin-page :where(section, article, form) { min-inline-size: 0; }
+.darschin-page :where(h1, h2, h3, h4, p) { text-align: right; }
+.darschin-page :where(input, textarea, select) { max-inline-size: 100%; }
+.darschin-page :where(.rounded-3xl, .rounded-2xl) { background-clip: padding-box; }
+.darschin-page :where(.text-center):not(svg):not([data-align-center]) { text-align: right; }
+.darschin-dialog {
+  max-block-size: min(92dvh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.darschin-drawer {
+  animation: darschin-drawer-enter .22s cubic-bezier(.2,.72,.2,1) both;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+@keyframes darschin-drawer-enter {
+  from { opacity: .75; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 639px) {
+  html { scroll-padding-top: 4.75rem; }
+  .darschin-page { font-size: .9375rem; }
+  .darschin-page :where(h1) { line-height: 1.4; }
+  .darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+  .darschin-page :where(.p-8) { padding: 1.125rem; }
+  .darschin-page :where(.p-6) { padding: 1rem; }
+  .darschin-page :where(.px-8) { padding-inline: 1rem; }
+  .darschin-page :where(.text-3xl) { font-size: clamp(1.35rem, 6vw, 1.75rem); }
+  .darschin-drawer { width: min(90vw, 360px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .darschin-drawer { animation: none; }
+}
