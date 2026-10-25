@@ -428,7 +428,7 @@ export const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div dir="rtl" className="darschin-page space-y-6">
       {/* Header Panel */}
       <div className="bg-liquid-glass rounded-3xl p-5 sm:p-6 shadow-xs relative overflow-hidden print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
