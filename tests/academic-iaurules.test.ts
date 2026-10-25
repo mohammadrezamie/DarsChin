@@ -42,7 +42,8 @@ describe('IAU Academic Policy & Rules Engine', () => {
   const curriculum: any = { id: 'curr1' };
 
   const offerings: CourseOffering[] = [
-    { id: 'off-m2', courseId: 'math2', termId: 't1', groupCode: '01', dayOfWeek: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, enrolledCount: 0, instructor: 'Dr. Test', active: true, source: 'manual', campusId: 'camp1' }
+    { id: 'off-m2', courseId: 'math2', termId: 't1', groupCode: '01', dayOfWeek: 'شنبه', startTime: '08:00', endTime: '10:00', capacity: 30, enrolledCount: 0, instructor: 'Dr. Test', active: true, source: 'manual', campusId: 'camp1' },
+    { id: 'off-m1', courseId: 'math1', termId: 't1', groupCode: '02', dayOfWeek: 'یکشنبه', startTime: '08:00', endTime: '10:00', capacity: 30, enrolledCount: 0, instructor: 'Dr. Test', active: true, source: 'manual', campusId: 'camp1' }
   ];
 
   test('Missing prerequisite keeps dependent locked', () => {
@@ -69,27 +70,41 @@ describe('IAU Academic Policy & Rules Engine', () => {
     expect(res.results[0].isEligible).toBe(true);
   });
 
-  test('Failed prerequisite (grade < 10) triggers IAU same-term exception (conditionally allowed if selected)', () => {
-    const passedCourses: StudentPassedCourse[] = [
-      { id: 'p1', userId: 'u1', courseId: 'math1', status: 'FAILED', grade: 9, passedAt: '' }
+  test('a recorded failure cannot waive an ordinary prerequisite without a configured rule', () => {
+    const failed: StudentPassedCourse[] = [
+      {id:'p1',userId:'u1',courseId:'math1',status:'FAILED',grade:9,passedAt:''},
     ];
-    // If we evaluate without planning it in the same term, it is still locked (missing corequisite essentially).
-    const res = evaluateStudentEligibility({
-      studentProfile: profileTemplate, curriculum, curriculumCourses, allCourses, tracks: [],
-      academicRules: rules, passedCourses, currentOfferings: offerings
-    });
-    
-    expect(res.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
-    expect(res.results[0].allReasons[0]).toContain('قبلاً مردود شده');
-    
-    // Now if they select both in same term
-    const resBoth = evaluateStudentEligibility({
-      studentProfile: profileTemplate, curriculum, curriculumCourses, allCourses, tracks: [],
-      academicRules: rules, passedCourses, currentOfferings: offerings, plannedOfferingIdsInSameTerm: ['math1']
-    });
-    
-    expect(resBoth.results[0].overallStatus).toBe('AVAILABLE');
-    expect(resBoth.results[0].isEligible).toBe(true);
+    const evalResult=(selected:string[],configured:AcademicRule[]=rules,history=failed)=>
+      evaluateStudentEligibility({
+        studentProfile:profileTemplate,curriculum,curriculumCourses,allCourses,
+        tracks:[],academicRules:configured,passedCourses:history,
+        currentOfferings:offerings,plannedOfferingIdsInSameTerm:selected,
+      }).results.find(r=>r.offeringId==='off-m2')!;
+    expect(evalResult(['off-m1']).overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(evalResult(['math1']).overallStatus).toBe('BLOCKED_PREREQUISITE');
+
+    const retake:AcademicRule={
+      ...rules[0],id:'explicit-failed-retake-only',
+      relationshipType:'CONTEXTUAL_RETAKE_RULE',
+    };
+    expect(evalResult([],[retake]).overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(evalResult(['math1'],[retake]).overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(evalResult(['off-m1'],[retake]).overallStatus).toBe('AVAILABLE');
+    // A retake exception does not open the door to students who have never failed.
+    expect(evalResult(['off-m1'],[retake],[]).overallStatus).toBe('BLOCKED_PREREQUISITE');
+  });
+
+  test('explicit corequisites are satisfied only by a real offering in this semester',()=>{
+    const coreq:AcademicRule={...rules[0],id:'coreq-only',relationshipType:'COREQUISITE'};
+    const evaluated=(planned:string[])=>
+      evaluateStudentEligibility({
+        studentProfile:profileTemplate,curriculum,curriculumCourses,allCourses,
+        tracks:[],academicRules:[coreq],passedCourses:[],
+        currentOfferings:offerings,plannedOfferingIdsInSameTerm:planned,
+      }).results.find(r=>r.offeringId==='off-m2')!;
+    expect(evaluated([]).overallStatus).toBe('BLOCKED_COREQUISITE');
+    expect(evaluated(['math1']).overallStatus).toBe('BLOCKED_COREQUISITE');
+    expect(evaluated(['off-m1']).overallStatus).toBe('AVAILABLE');
   });
 
   test('Final-semester credit permission never waives prerequisites without an explicit rule', () => {
