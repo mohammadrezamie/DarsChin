@@ -105,6 +105,30 @@ describe('safe sync reconciliation', () => {
     expect(result.errors[0]).toContain('تطبیق یکتایی');
   });
 
+  it('refuses inactive and cohort-scoped aliases without a verified program context', () => {
+    const inactive = reconcileSyncRecords({
+      records: [record()],
+      termId: 'term-test',
+      campusId: 'campus-test',
+      courses: [{ ...course, active: false }],
+    });
+    expect(inactive.ok).toBe(false);
+    expect(inactive.offerings).toHaveLength(0);
+
+    const cohortScoped = reconcileSyncRecords({
+      records: [record()],
+      termId: 'term-test',
+      campusId: 'campus-test',
+      courses: [{
+        ...course,
+        code: 'NEW-CANONICAL',
+        courseCodes: [{ code: 'EE-101', entryYear: 1403, majorId: 'major-ee', active: true }],
+      }],
+    });
+    expect(cohortScoped.ok).toBe(false);
+    expect(cohortScoped.offerings).toHaveLength(0);
+  });
+
   it('rejects an empty extract and missing capacity', () => {
     const empty = reconcileSyncRecords({
       records: [],
