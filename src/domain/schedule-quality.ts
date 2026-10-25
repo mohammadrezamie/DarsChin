@@ -99,11 +99,13 @@ export function evaluateScheduleQuality(
   if(selected.some((o,i)=>selected.slice(i+1).some(other=>overlap(o,other)||examClash(o,other))))
     return fail('گروه‌های انتخاب‌شده تداخل دارند؛ اول تداخل را رفع کن.');
 
-  const options=courses.map(id=>all.filter(o=>o.courseId===id&&valid(o)&&!!clock(o))
-    .sort((a,b)=>a.offeringId.localeCompare(b.offeringId)).slice(0,12));
+  const allOptions=courses.map(id=>all.filter(o=>o.courseId===id&&valid(o)&&!!clock(o))
+    .sort((a,b)=>a.offeringId.localeCompare(b.offeringId)));
+  const options=allOptions.map(items=>items.slice(0,12));
+  const optionsLimited=allOptions.some(items=>items.length>12);
   if(options.some(group=>group.length===0))
     return fail('برای یک یا چند درس هیچ گروه دارای ساعت معتبر و وضعیت قابل‌اخذ وجود ندارد.');
-  let visits=0,truncated=false,min=Infinity,max=-Infinity;
+  let visits=0,truncated=optionsLimited,min=Infinity,max=-Infinity;
   let bestFew:QualityOffering[]=[];let bestTeacher:QualityOffering[]=[];
   let bestKnown=-1,bestTeacherScore=-1;
   const dfs=(depth:number,chosen:QualityOffering[])=>{
@@ -127,10 +129,14 @@ export function evaluateScheduleQuality(
     for(const option of options[depth]){
       if(!compatible(option,chosen))continue;
       chosen.push(option);dfs(depth+1,chosen);chosen.pop();
-      if(truncated)return;
+      if(visits>=maxVisits){truncated=true;return;}
     }
   };
+  // Do not skip the search entirely just because option lists were truncated.
+  const incompleteOptions=optionsLimited;
+  truncated=false;
   dfs(0,[]);
+  truncated ||= incompleteOptions;
   if(!bestFew.length)return fail('برای این ترکیب دروس، چیدمان بدون تداخل پیدا نشد.');
   const currentDays=countDays(selected);
   // Always include the current valid plan when a bounded search is incomplete.
