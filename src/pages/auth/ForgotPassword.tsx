@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import { GuestHumanCheck } from '../../components/GuestHumanCheck';
 
 export const ForgotPassword: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -10,6 +11,8 @@ export const ForgotPassword: React.FC = () => {
   const [captchaId, setCaptchaId] = useState('');
   const [captchaSvg, setCaptchaSvg] = useState('');
   const [captchaValue, setCaptchaValue] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [challengeId, setChallengeId] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -31,7 +34,13 @@ export const ForgotPassword: React.FC = () => {
   };
 
   useEffect(() => {
-    loadCaptcha();
+    let mounted=true;
+    void apiRequest<{enabled:boolean}>('/api/security/challenge').then(result=>{
+      if(!mounted)return;
+      if(result.success && result.data?.enabled) setTurnstileEnabled(true);
+      else void loadCaptcha();
+    });
+    return ()=>{mounted=false;};
   }, []);
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -39,13 +48,13 @@ export const ForgotPassword: React.FC = () => {
     setError('');
     
     if (!/^09\d{9}$/.test(mobile)) return setError('شماره موبایل نامعتبر است.');
-    if (!captchaValue) return setError('لطفاً کد امنیتی را وارد کنید.');
+    if (!turnstileEnabled && !captchaValue) return setError('لطفاً کد امنیتی را وارد کنید.');
 
     setIsLoading(true);
     try {
       const res = await apiRequest('/api/auth/otp/send', {
         method: 'POST',
-        body: JSON.stringify({ mobile, purpose: 'password_recovery', captchaId, captchaValue }),
+        body: JSON.stringify({ mobile, purpose: 'password_recovery', captchaId, captchaValue, captchaToken }),
       });
 
       if (res.success) {
@@ -53,7 +62,8 @@ export const ForgotPassword: React.FC = () => {
         setStep(2);
       } else {
         setError(res.error || 'خطایی رخ داد.');
-        loadCaptcha();
+        if (!turnstileEnabled) loadCaptcha();
+        setCaptchaToken('');
         setCaptchaValue('');
       }
     } catch (err: any) {
