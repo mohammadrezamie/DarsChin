@@ -132,10 +132,6 @@ export const FluidWeekTimetable: React.FC<{
               </div>
             </div>
             <div className="relative min-w-0 flex-1" style={{height:canvasHeight}}>
-              {Array.from({length:14},(_,i)=>(
-                <div key={i} aria-hidden="true" className="absolute inset-x-0 border-t border-dashed border-slate-200 dark:border-slate-700"
-                  style={{top:i*HOUR_HEIGHT}} />
-              ))}
               {mobileEntries.map(item=>(
                 <div key={item.id} title={`${item.title} · ${item.start} تا ${item.end}`}
                   className={`absolute overflow-hidden rounded-lg border p-2 text-right text-xs shadow-sm ${item.conflict
@@ -187,10 +183,6 @@ export const FluidWeekTimetable: React.FC<{
             <section key={day} aria-label={day} className="min-w-0 flex-1 border-l border-slate-200 last:border-l-0 dark:border-slate-700">
               <div className="flex h-12 items-center justify-start border-b border-slate-200 bg-slate-50 pr-2 text-xs font-black dark:border-slate-700 dark:bg-slate-800/60">{day}</div>
               <div className="relative" style={{ height: canvasHeight }}>
-                {Array.from({ length: 14 }, (_, i) => (
-                  <div key={i} aria-hidden="true" className="absolute inset-x-0 border-t border-dashed border-slate-200 dark:border-slate-700/70"
-                    style={{ top: i * HOUR_HEIGHT }} />
-                ))}
                 {placed.filter(item => normalizeClassDay(item.day) === day).map(item => (
                   <div key={item.id}
                     title={`${item.title} — ${item.start} تا ${item.end}`}
