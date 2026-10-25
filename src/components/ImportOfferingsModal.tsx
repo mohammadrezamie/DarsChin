@@ -137,18 +137,21 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       }
     }
 
-    const res = await apiRequest('/api/imports/process', {
-      method: 'POST',
-      body: JSON.stringify({ payload: contentToSend }),
-    });
-
-    setIsProcessing(false);
-
-    if (res.success && res.data) {
-      setImportResult(res.data);
-      if (res.data.createdOfferingsCount > 0) onImportSuccess();
-    } else {
-      setError(res.error || 'خطا در پردازش و تطبیق فایل دروس ارائه‌شده.');
+    try {
+      const res = await apiRequest('/api/imports/process', {
+        method: 'POST',
+        body: JSON.stringify({ payload: contentToSend }),
+      });
+      if (res.success && res.data) {
+        setImportResult(res.data);
+        if (res.data.createdOfferingsCount > 0) onImportSuccess();
+      } else {
+        setError(res.error || 'خطا در پردازش و تطبیق فایل دروس ارائه‌شده.');
+      }
+    } catch {
+      setError('ارتباط با سامانه برقرار نشد؛ فایل منتشر نشده است. دوباره تلاش کنید.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -202,8 +205,10 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
       >
         <button
           id="btnCloseImportModal"
+          type="button"
+          aria-label="بستن پنجره واردکردن فایل"
           onClick={onClose}
-          className="absolute top-4 left-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+          className="absolute top-4 left-4 min-h-11 min-w-11 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>
@@ -276,8 +281,8 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
             </div>
 
             {/* Records Details Table */}
-            <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-              <table className="w-full text-xs text-right border-collapse">
+            <div className="max-h-56 overflow-auto rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+              <table className="w-full min-w-[640px] text-xs text-right border-collapse">
                 <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   <tr>
                     <th className="py-2 px-3">کد استخراج‌شده</th>
