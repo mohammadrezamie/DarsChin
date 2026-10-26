@@ -22,6 +22,8 @@ const environment = {
   ROOT_OWNER_MOBILE: rootMobile,
   ROOT_OWNER_PASSWORD: rootPassword,
   ROOT_OWNER_RECOVERY_KEY: crypto.randomBytes(32).toString('hex'),
+  // Exercise the real self-hosted fallback; never depend on a live CAPTCHA key.
+  TURNSTILE_ENABLED: 'false',
 };
 delete environment.NIAZPARDAZ_API_KEY;
 
@@ -106,13 +108,34 @@ async function main() {
   const missing = await requestJson('/api/not-a-real-route');
   if (missing.status !== 404 || missing.body.success !== false) throw new Error('API 404 contract failed');
 
-  const login = await requestJson('/api/auth/login', {
+  const sendLogin = (captchaToken) => requestJson('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mobile: rootMobile, password: rootPassword }),
+    body: JSON.stringify({ mobile: rootMobile, password: rootPassword, captchaToken }),
   });
+  const missingCaptcha = await sendLogin(undefined);
+  if (missingCaptcha.status !== 403) {
+    throw new Error('SECURITY: anonymous login accepted without a human challenge');
+  }
+  const generated = await requestJson('/api/auth/otp/captcha/generate?action=login');
+  if (generated.status !== 200 || typeof generated.body?.data?.id !== 'string' ||
+      typeof generated.body?.data?.svg !== 'string' ||
+      generated.body.data.answer !== undefined || generated.body.data.value !== undefined) {
+    throw new Error('Local CAPTCHA did not generate a safe public challenge');
+  }
+  // Only inspect this test process's disposable JSON fixture, never a real
+  // user's CAPTCHA answer and never print it into logs.
+  const database = JSON.parse(fs.readFileSync(path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json'), 'utf8'));
+  const issued = database.captchaChallenges.find(row => row.id === generated.body.data.id);
+  if (!issued || issued.action !== 'login' || typeof issued.value !== 'string') {
+    throw new Error('A login-scoped challenge was not persisted in the isolated fixture');
+  }
+  const captchaToken = `local:${issued.id}:${issued.value}`;
+  const login = await sendLogin(captchaToken);
   const token = login.body?.data?.token;
   if (login.status !== 200 || typeof token !== 'string') throw new Error('Synthetic root login failed');
+  const replay = await sendLogin(captchaToken);
+  if (replay.status !== 403) throw new Error('SECURITY: guest CAPTCHA token replay succeeded');
 
   // Production services must never permit the old "reset to sample data"
   // endpoint: that would overwrite real students and reintroduce known logins.
@@ -165,7 +188,7 @@ async function main() {
     throw new Error('Sync job state did not survive a process restart');
   }
 
-  console.log('PASS: health, JSON 404, synthetic login, private demand API, disabled production reset, demo pages, and sync persistence.');
+  console.log('PASS: health, JSON 404, single-use CAPTCHA-protected synthetic login, private demand API, disabled production reset, demo pages, and sync persistence.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
