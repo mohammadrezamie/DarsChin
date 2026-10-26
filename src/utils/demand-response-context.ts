@@ -13,8 +13,9 @@ export function isDemandResponseForContext(
   surveyId: string,
   allowedCourseIds: readonly string[],
 ): response is DemandResponse | null {
+  if (!userId || !surveyId) return false;
   if (response === null) return true;
-  if (!userId || !surveyId || !response || typeof response !== 'object' || Array.isArray(response)) return false;
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return false;
 
   const candidate = response as Partial<DemandResponse>;
   if (candidate.userId !== userId || candidate.surveyId !== surveyId) return false;
