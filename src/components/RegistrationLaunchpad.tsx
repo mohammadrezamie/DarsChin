@@ -52,6 +52,10 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Wait for hydration of this exact term/chart before persisting; otherwise the
   // initial [] state could overwrite a student's previously checked progress.
   const [progressLoadedKey,setProgressLoadedKey]=useState<string|null>(null);
+  // Never render completion marks from the previous student's session during
+  // the render immediately after switching profiles.
+  const progressReady=progressLoadedKey===progressKey;
+  const activeDoneIds=progressReady?doneIds:[];
 
   useEffect(()=>{
     try {
@@ -106,13 +110,16 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&
     verifiedContextKey===academicContextKey&&!loading&&!error;
   const stepIds=queue.steps.map(s=>s.courseId);
-  const next=rulesReady?queue.steps.find(s=>s.ready&&!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id))):undefined;
+  const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!activeDoneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!activeDoneIds.includes(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyToClipboard(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[]);
-  const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const toggleDone=(id:string)=>{
+    if(!progressReady)return;
+    setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  };
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
     if(reorderLock.current||target<0||target>=stepIds.length)return;
@@ -141,7 +148,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <Zap className="h-4 w-4"/> صف سریع ثبت دروس
         </h2>
         <p className="mt-0.5 text-xs leading-6 text-blue-800 dark:text-blue-300">
-          {queue.steps.length} درس · {doneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
+          {queue.steps.length} درس · {activeDoneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -165,9 +172,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
     <ol className="space-y-1.5" aria-label="ترتیب ثبت دروس">
       {queue.steps.map((step,index)=>{
-        const done=doneIds.includes(step.courseId);
+        const done=activeDoneIds.includes(step.courseId);
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
-        const locked=step.dependencyCourseIds.some(id=>!doneIds.includes(id));
+        const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
         return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
@@ -193,7 +200,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
-            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
+            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!progressReady||(!done&&locked)} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
