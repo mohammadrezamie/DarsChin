@@ -102,7 +102,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(queue.steps[0].copyCode).toBe('410100');
     expect(queue.steps[0].ready).toBe(false);
     const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
-    expect(source).toContain('s.ready&&!doneIds.includes(s.courseId)');
+    expect(source).toContain('s.ready&&!activeDoneIds.includes(s.courseId)');
     expect(source).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
   });
 
