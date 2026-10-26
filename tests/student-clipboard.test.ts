@@ -11,7 +11,8 @@ describe('safe student code copying', () => {
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     vi.stubGlobal('document', undefined);
     expect(await copyTextWithFallback('410019')).toBe(true);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith('410019');
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith('410019');
   });
 
   it('falls back after clipboard denial, removes the temporary field and restores focus', async () => {
@@ -54,7 +55,7 @@ describe('safe student code copying', () => {
       execCommand: vi.fn().mockImplementation(() => { throw new Error('blocked'); }),
     });
     expect(await copyTextWithFallback('410019')).toBe(false);
-    expect(textarea.remove).toHaveBeenCalledExactlyOnceWith();
+    expect(textarea.remove).toHaveBeenCalledTimes(1);
     expect(await copyTextWithFallback('')).toBe(false);
   });
 
