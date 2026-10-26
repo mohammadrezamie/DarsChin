@@ -37,6 +37,10 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('صف سریع ثبت دروس');
     expect(html).toContain('کپی بعدی');
     expect(html).toContain('کپی کد مدارهای الکتریکی');
+    expect(html).toContain('aria-label="کپی کد درس بعدی"');
+    expect(html).toContain('کد ارائه');
+    expect(html.split('جزئیات کد و وابستگی‌ها')[0]).toContain('410100');
+    expect(html).toContain('min-h-11');
     expect(html).toContain('علامت ثبت مدارهای الکتریکی');
     expect(html).toContain('انتقال مدارهای الکتریکی به بالا');
     expect(html).toContain('انتقال مدارهای الکتریکی به پایین');
@@ -44,6 +48,18 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('02');
     expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
     expect(html).not.toContain('flex-nowrap');
+  });
+
+  it('waits for real save feedback and locks reorder actions while writing',()=>{
+    const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
+    const dashboard=readFileSync(resolve(process.cwd(),'src/components/StudentDashboard.tsx'),'utf8');
+    expect(component).toContain('const saved=await onReorderCourses(order)');
+    expect(component).toContain('if(saved===false)throw');
+    expect(component).toContain('if(reorderLock.current||');
+    expect(component).toContain('disabled={reordering||index===0}');
+    expect(component).toContain('ترتیب ذخیره نشد');
+    expect(dashboard).toContain('Promise<boolean>');
+    expect(dashboard).toContain('return saved;');
   });
 
   it('does not promote a course with unresolved academic prerequisites to quick-copy', () => {
