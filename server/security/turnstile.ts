@@ -28,7 +28,7 @@ export function assertTurnstileConfiguration(): void {
  * The existing OTP CAPTCHA generator issues the random id and SVG. Its answer is
  * never sent by the server, and every successful answer is single-use.
  */
-function validateLocalGuestChallenge(token: unknown): boolean {
+function validateLocalGuestChallenge(token: unknown, expectedAction: string): boolean {
   if (typeof token !== 'string' || token.length > 128) return false;
   const parts = /^local:([a-f0-9-]{36}):([a-z0-9]{1,12})$/i.exec(token.trim());
   if (!parts) return false;
@@ -37,7 +37,7 @@ function validateLocalGuestChallenge(token: unknown): boolean {
   const now = Date.now();
   if (!challenge || !Number.isFinite(challenge.expiresAt) ||
     challenge.expiresAt <= now || challenge.consumedAt ||
-    challenge.attempts >= 5) return false;
+    challenge.attempts >= 5 || challenge.action !== expectedAction) return false;
 
   const valid = challenge.value.toLowerCase() === parts[2].toLowerCase();
   challenge.attempts += 1;
@@ -48,7 +48,7 @@ function validateLocalGuestChallenge(token: unknown): boolean {
 
 /** Both Turnstile and the local image require a real server-side, single-use check. */
 export async function validateGuestChallenge(token: unknown, expectedAction: string): Promise<boolean> {
-  if (process.env.TURNSTILE_ENABLED !== 'true') return validateLocalGuestChallenge(token);
+  if (process.env.TURNSTILE_ENABLED !== 'true') return validateLocalGuestChallenge(token, expectedAction);
   if (typeof token !== 'string' || !token.trim() || token.length > 2048) return false;
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) return false;
