@@ -51,3 +51,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 ## گیت‌های جدید استفادهٔ واقعی
 
 - [ضدسوءاستفادهٔ API مهمان، مدیریت امن IP پشت Nginx و اعلام قطعی شکست استارت](GUEST_API_ABUSE_STARTUP_GATE_FA.md) — P0، وضعیت تست و موارد لازم قبل از استفادهٔ دانشجو.
+
+- [گیت جلوگیری از پاک‌شدن اطلاعات، ذخیرهٔ اتمیک با flush و راه‌اندازی امن دیتابیس](DURABLE_DATABASE_GATE_FA.md) — P0 پیش از پذیرش دانشجوی واقعی.
