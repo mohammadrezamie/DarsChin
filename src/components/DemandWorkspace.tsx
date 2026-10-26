@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, ClipboardList, Download, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { apiRequest } from '../utils/api';
+import { createRequestEpoch } from '../utils/request-epoch';
 import { downstreamCourseIds } from '../domain/course-demand';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
@@ -27,7 +28,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [detailState, setDetailState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [detailRevision, setDetailRevision] = useState(0);
   const [loadedChartId, setLoadedChartId] = useState<string | null>(null);
-  const refreshVersionRef = useRef(0);
+  const refreshVersionRef = useRef(createRequestEpoch());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,7 +47,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
 
   const refresh = async () => {
-    const requestVersion = ++refreshVersionRef.current;
+    const requestVersion = refreshVersionRef.current.begin();
     setError('');
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
@@ -55,7 +56,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
     // An older refresh must never replace a newer request, role, or survey.
-    if (requestVersion !== refreshVersionRef.current) return;
+    if (!refreshVersionRef.current.isCurrent(requestVersion)) return;
     if (!list.success || !Array.isArray(list.data)) {
       setError(list.error || 'فهرست نیازسنجی بارگذاری نشد؛ برای تلاش دوباره به‌روزرسانی کن.');
       return;
@@ -74,7 +75,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if (chart.success && Array.isArray(chart.data)) setCurricula(chart.data);
     if (role === 'student') {
       const response = await apiRequest<{profile:StudentAcademicProfile}>('/api/student/profile');
-      if (requestVersion !== refreshVersionRef.current) return;
+      if (!refreshVersionRef.current.isCurrent(requestVersion)) return;
       if (response.success && response.data?.profile) {
         setProfile(response.data.profile);
         setStudentNumber(previous => previous || response.data?.profile.studentNumber || '');
@@ -92,7 +93,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setReport(null);
     setSelectedCourses([]);
     void refresh();
-    return () => { refreshVersionRef.current += 1; };
+    return () => { refreshVersionRef.current.invalidate(); };
   },[role]);
 
   useEffect(()=>{
