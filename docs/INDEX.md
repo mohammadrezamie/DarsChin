@@ -33,6 +33,7 @@
 | Contribution & verification | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | **اجرای کامل تست، بیلد و API smoke مستقل از GitHub Actions** | [QA_WITHOUT_ACTIONS_FA.md](QA_WITHOUT_ACTIONS_FA.md) |
 | Safe deployment & rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| **محیط آزمایشی و اصلی مستقل، گیت Dry-run و تست نسخهٔ یکسان (با اقتباس خواندنی از تکین)** | [STAGING_AND_PRODUCTION_FA.md](../deploy/STAGING_AND_PRODUCTION_FA.md) |
 | Security and privacy | [SECURITY.md](SECURITY.md) |
 | Architecture and risks | [Repository audit](REPOSITORY_AUDIT.md) |
 | Sync ingestion and reconciliation | [Architecture](ARCHITECTURE.md) and [project status](PROJECT_STATUS.md) |
