@@ -4,6 +4,7 @@ import { apiRequest } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
+import { isDemandResponseForContext } from '../utils/demand-response-context';
 import { downstreamCourseIds } from '../domain/course-demand';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
@@ -24,6 +25,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 };
 
 const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
+  const { user } = useAuth();
   const [surveys, setSurveys] = useState<DemandSurvey[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
@@ -61,6 +63,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
   const currentDetailKey = demandDetailKey(role, survey?.id, detailRevision);
+  // A save response may arrive after the selected form has changed. The ref
+  // updates during render, before effects get a chance to clean up old data.
+  const activeDetailKeyRef = useRef(currentDetailKey);
+  activeDetailKeyRef.current = currentDetailKey;
+  const saveRequestRef = useRef(createRequestEpoch());
   // Protect the render before useEffect clears data from the previously selected survey.
   const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState);
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
@@ -133,7 +140,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setSuccess('');
     setBusy(false);
     void refresh(true);
-    return () => { refreshVersionRef.current.invalidate(); };
+    return () => {
+      refreshVersionRef.current.invalidate();
+      saveRequestRef.current.invalidate();
+    };
   },[role]);
 
   useEffect(()=>{
@@ -154,8 +164,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if (role==='student') {
       void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(result=>{
         if(!active) return;
-        if (!result.success) {
-          setError(result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.');
+        if (!result.success || !isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds)) {
+          setError(result.success ? 'پاسخ دریافتی با دانشجو یا این فرم مطابقت ندارد؛ برای حفظ حریم خصوصی امکان ویرایش موقتاً متوقف شد.' : (result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.'));
           setSettledDetailKey(requestedKey);
           setDetailState('error');
           return;
@@ -182,7 +192,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       });
     }
     return ()=>{active=false};
-  },[survey?.id,role,detailRevision]);
+  },[survey?.id,role,detailRevision,user?.id]);
 
   useEffect(()=>{
     const curriculumId = role==='student' ? survey?.curriculumId : newCurriculum;
@@ -206,17 +216,26 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   },[role,survey?.curriculumId,newCurriculum]);
 
   const submit = async () => {
-    if(!survey || !detailReady)return;
+    if(!survey || !detailReady || busy || survey.status !== 'OPEN')return;
+    const submittedKey = currentDetailKey;
+    const submissionEpoch = saveRequestRef.current.begin();
+    const stillCurrent = () => activeDetailKeyRef.current === submittedKey &&
+      saveRequestRef.current.isCurrent(submissionEpoch);
     setError('');setSuccess('');setBusy(true);
     try {
       const r=await apiRequest<DemandResponse>(`/api/demand/surveys/${survey.id}/response`,{
         method:'PUT',
         body:JSON.stringify({ courseIds:selectedCourses,studentNumber,anticipatedGraduation:graduation }),
       });
+      if (!stillCurrent()) return;
       if(!r.success){setError(r.error || 'ذخیره نشد.');return;}
-      setMyResponse(r.data || null);
+      if (!isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds) || !r.data) {
+        setError('تأیید پاسخ ذخیره‌شده معتبر نبود؛ وضعیت فرم را دوباره بارگذاری کن.');
+        return;
+      }
+      setMyResponse(r.data);
       setSuccess('پاسخ نیازسنجی ذخیره شد. این کار انتخاب واحد یا تضمین تشکیل گروه نیست.');
-    } finally{setBusy(false)}
+    } finally{if (stillCurrent()) setBusy(false)}
   };
 
   const createSurvey=async()=>{
