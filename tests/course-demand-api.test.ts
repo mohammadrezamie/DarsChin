@@ -163,6 +163,24 @@ describe('department course-demand workflow',()=>{
     expect(csv.body.data.csv).toContain('1403123456');
     expect(db.auditLogs.some(x=>x.entityId===id&&x.action==='DEMAND_PERSONAL_REPORT_EXPORTED')).toBe(true);
   });
+  it('keeps a student with no course selection in the authorized manager export',async()=>{
+    const endpoint=`/api/demand/surveys/${id}/response`;
+    const submitted=await request(app).put(endpoint).set('Authorization',auth.student)
+      .send({studentNumber:'1403123456',anticipatedGraduation:'NO',courseIds:[]});
+    expect(submitted.status).toBe(200);
+    const aggregate=await request(app).get(`/api/demand/surveys/${id}/report`).set('Authorization',auth.manager);
+    expect(aggregate.status).toBe(200);
+    expect(aggregate.body.data.participantCount).toBe(1);
+    expect(aggregate.body.data.byCourse[0].count).toBe(0);
+    const exported=await request(app).get(`/api/demand/surveys/${id}/export.csv?format=json`)
+      .set('Authorization',auth.manager);
+    expect(exported.status).toBe(200);
+    expect(exported.body.data.csv).toContain('"بدون درس درخواستی",""');
+    expect(exported.body.data.csv).toContain('1403123456');
+    const restored=await request(app).put(endpoint).set('Authorization',auth.student)
+      .send({studentNumber:'1403123456',anticipatedGraduation:'NO',courseIds:[courseId]});
+    expect(restored.status).toBe(200);
+  });
   it('rejects editing once the manager closes the survey, without losing history',async()=>{
     const closed=await request(app).put(`/api/demand/surveys/${id}/status`).set('Authorization',auth.manager).send({status:'CLOSED'});
     expect(closed.status).toBe(200);
