@@ -31,6 +31,7 @@
 | Contribution | [CONTRIBUTING](../CONTRIBUTING.md) |
 | Maintenance checklist | [REPOSITORY_MAINTENANCE.md](REPOSITORY_MAINTENANCE.md) |
 | Contribution & verification | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| **اجرای کامل تست، بیلد و API smoke مستقل از GitHub Actions** | [QA_WITHOUT_ACTIONS_FA.md](QA_WITHOUT_ACTIONS_FA.md) |
 | Safe deployment & rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | Security and privacy | [SECURITY.md](SECURITY.md) |
 | Architecture and risks | [Repository audit](REPOSITORY_AUDIT.md) |
