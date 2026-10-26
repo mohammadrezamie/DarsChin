@@ -96,25 +96,45 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   },[role]);
 
   useEffect(()=>{
-    if (!survey) { setMyResponse(null); setReport(null); return; }
+    if (!survey) {
+      setMyResponse(null); setReport(null); setDetailState('idle');
+      setSelectedCourses([]);
+      return;
+    }
     let active=true;
+    setDetailState('loading');
+    setMyResponse(null);
+    setReport(null);
     setSelectedCourses([]);
     setSuccess('');
     if (role==='student') {
-      void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(r=>{
+      void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(result=>{
         if(!active) return;
-        setMyResponse(r.data || null);
-        setSelectedCourses(r.data?.courseIds || []);
-        setStudentNumber(r.data?.studentNumber || profile?.studentNumber || '');
-        setGraduation(r.data?.anticipatedGraduation || 'UNKNOWN');
+        if (!result.success) {
+          setError(result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.');
+          setDetailState('error');
+          return;
+        }
+        setMyResponse(result.data || null);
+        setSelectedCourses(result.data?.courseIds || []);
+        setStudentNumber(previous => result.data?.studentNumber || previous);
+        setGraduation(result.data?.anticipatedGraduation || 'UNKNOWN');
+        setDetailState('ready');
       });
     } else {
-      void apiRequest<SurveyStats>(`/api/demand/surveys/${survey.id}/report`).then(r=>{
-        if(active) setReport(r.data || null);
+      void apiRequest<SurveyStats>(`/api/demand/surveys/${survey.id}/report`).then(result=>{
+        if(!active) return;
+        if (!result.success || !result.data) {
+          setError(result.error || 'گزارش نیازسنجی دریافت نشد؛ دوباره تلاش کنید.');
+          setDetailState('error');
+          return;
+        }
+        setReport(result.data);
+        setDetailState('ready');
       });
     }
     return ()=>{active=false};
-  },[survey?.id,role,profile?.studentNumber]);
+  },[survey?.id,role,detailRevision]);
 
   useEffect(()=>{
     const curriculumId = role==='student' ? survey?.curriculumId : newCurriculum;
