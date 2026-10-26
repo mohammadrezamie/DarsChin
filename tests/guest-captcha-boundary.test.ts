@@ -1,4 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import request from 'supertest';
 import express from 'express';
 import { db } from '../server/db/database';
@@ -17,6 +19,17 @@ beforeAll(async () => {
 async function issue(action: string) {
   return request(app).get('/api/auth/otp/captcha/generate').query({ action });
 }
+
+describe('guest CAPTCHA rendering security', () => {
+  it('keeps server-generated SVG outside executable DOM markup in guest and recovery forms', () => {
+    for (const filename of ['src/components/GuestHumanCheck.tsx','src/pages/auth/ForgotPassword.tsx']) {
+      const source = readFileSync(resolve(process.cwd(), filename), 'utf8');
+      expect(source).not.toContain('dangerouslySetInnerHTML');
+      expect(source).toContain('data:image/svg+xml;charset=utf-8');
+      expect(source).toContain('encodeURIComponent');
+    }
+  });
+});
 
 describe('P0 first-party CAPTCHA route and cross-form protection', () => {
   it('rejects unsupported action and never leaks the challenge answer', async () => {
