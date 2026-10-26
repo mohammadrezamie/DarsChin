@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, ClipboardList, Download, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { apiRequest } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { downstreamCourseIds } from '../domain/course-demand';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
@@ -9,7 +10,19 @@ type Option = { id: string; name: string; active?: boolean; universityId?: strin
 type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[] };
 type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
+// A new account, role, permission set or department scope must remount this
+// workspace before the first paint. Effects alone cannot hide private records
+// in the render immediately following an identity/role switch.
 export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
+  const { user } = useAuth();
+  const principalKey = JSON.stringify([
+    role, user?.id ?? null, user?.roles ?? [],
+    user?.permissions ?? [], user?.demandScopes ?? [],
+  ]);
+  return <DemandWorkspaceSession key={principalKey} role={role} />;
+};
+
+const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
   const [surveys, setSurveys] = useState<DemandSurvey[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
