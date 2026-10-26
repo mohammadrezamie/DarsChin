@@ -162,8 +162,17 @@ export function buildRegistrationQueue(input: {
       unresolved.value = true;
       problems.push(`این گروه در گزارش فعلی قابل اخذ نیست: ${o.primaryReason || 'نیازمند بررسی شرایط آموزشی است.'}`);
     }
-    if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده؛ قبل از جست‌وجوی آموزشیار کد ارائه را کنترل کن.');
-    if (!code) problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
+    if (!code) {
+      unresolved.value = true;
+      problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    }
+    // A synthetic demo code is visible as a sample only; it cannot be a
+    // quick-registration action in the real Educationalyar portal.
+    if (/^DEMO[-_]/i.test(code)) {
+      unresolved.value = true;
+      problems.push('این کد نمایشی DEMO است و برای ثبت واقعی در آموزشیار معتبر نیست.');
+    }
     const requestedRank = requested.indexOf(id) + 1;
     return {
       courseId: id, courseName: o.courseName,
