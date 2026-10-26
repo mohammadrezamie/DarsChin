@@ -71,6 +71,44 @@ export const StudentDashboard: React.FC = () => {
   const planMutationRef = useRef(false);
   const evaluationVersionRef = useRef(0);
   const tabButtonsRef = useRef<Partial<Record<StudentTab, HTMLButtonElement | null>>>({});
+  const conflictDialogRef = useRef<HTMLDivElement>(null);
+  const conflictCancelRef = useRef<HTMLButtonElement>(null);
+  const conflictOpen = Boolean(conflictWarning);
+
+  // An academic warning must stay usable when the browser is zoomed or a
+  // keyboard is attached: lock underlying scroll and contain keyboard focus.
+  useEffect(() => {
+    if (!conflictOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    conflictCancelRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setConflictWarning(null);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const actions = conflictDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])');
+      if (!actions?.length) return;
+      const first = actions[0], last = actions[actions.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = oldOverflow;
+      previousFocus?.focus();
+    };
+  }, [conflictOpen]);
 
   // When another workspace switches tabs (e.g. Edit priorities -> Schedule),
   // ensure its tab is visible inside the horizontal mobile navigation.
@@ -692,36 +730,36 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Conflict Warning Modal */}
       {conflictWarning && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div dir="rtl" role="alertdialog" aria-modal="true" aria-label="هشدار تداخل برنامه" className="darschin-dialog darschin-page bg-liquid-glass w-full max-w-md rounded-3xl p-4 shadow-xl sm:p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-3 backdrop-blur-sm sm:p-4">
+          <div ref={conflictDialogRef} dir="rtl" role="alertdialog" aria-modal="true" aria-labelledby="student-conflict-dialog-title" aria-describedby="student-conflict-dialog-desc" className="darschin-dialog darschin-page my-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[1.75rem] border border-amber-200 bg-white p-4 shadow-2xl dark:border-amber-800/40 dark:bg-slate-900 sm:p-6">
             <div className="flex items-center gap-3 mb-4 text-amber-600 dark:text-amber-500">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-              <h3 className="text-xl font-bold">هشدار تداخل برنامه</h3>
+              <h3 id="student-conflict-dialog-title" className="text-lg font-black sm:text-xl">هشدار تداخل برنامه</h3>
             </div>
             
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4 leading-relaxed">
+            <p id="student-conflict-dialog-desc" className="mb-4 break-words text-sm leading-7 text-slate-700 dark:text-slate-300">
               درخواست افزودن درس <strong>{conflictWarning.courseName}</strong> نیازمند بررسی موارد زیر است. تأیید شما قوانین سرور را دور نمی‌زند:
             </p>
             
-            <ul className="space-y-2 mb-6">
+            <ul className="mb-5 space-y-2">
               {conflictWarning.messages.map((msg, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 p-3 rounded-xl border border-amber-200 dark:border-amber-800/50">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                  <span className="leading-relaxed">{msg}</span>
+                  <span className="min-w-0 break-words leading-relaxed">{msg}</span>
                 </li>
               ))}
             </ul>
             
-            <div className="flex justify-end gap-3">
-              <button
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" ref={conflictCancelRef}
                 onClick={() => setConflictWarning(null)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold transition-colors"
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
               >
                 انصراف
               </button>
-              <button
-                onClick={() => confirmToggleScheduleOffering(conflictWarning.offeringId)}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/30 transition-colors"
+              <button type="button" disabled={planStatus === 'saving'}
+                onClick={() => void confirmToggleScheduleOffering(conflictWarning.offeringId)}
+                className="min-h-11 min-w-0 rounded-xl bg-amber-600 px-3 py-2 text-xs font-extrabold leading-6 text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50 sm:text-sm"
               >
                 درخواست ثبت با بررسی سرور
               </button>
