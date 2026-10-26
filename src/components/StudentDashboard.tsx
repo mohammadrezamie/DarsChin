@@ -60,6 +60,7 @@ export const StudentDashboard: React.FC = () => {
 
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [conflictWarning, setConflictWarning] = useState<{
     offeringId: string;
     courseName: string;
@@ -75,6 +76,8 @@ export const StudentDashboard: React.FC = () => {
   const tabButtonsRef = useRef<Partial<Record<StudentTab, HTMLButtonElement | null>>>({});
   const conflictDialogRef = useRef<HTMLDivElement>(null);
   const conflictCancelRef = useRef<HTMLButtonElement>(null);
+  const clearDialogRef = useRef<HTMLDivElement>(null);
+  const clearCancelRef = useRef<HTMLButtonElement>(null);
   const conflictOpen = Boolean(conflictWarning);
 
   // An academic warning must stay usable when the browser is zoomed or a
@@ -111,6 +114,45 @@ export const StudentDashboard: React.FC = () => {
       previousFocus?.focus();
     };
   }, [conflictOpen]);
+
+  // Replace blocking native confirm() with a keyboard-accessible in-app
+  // confirmation. Closing never discards an in-flight server write.
+  useEffect(() => {
+    if (!clearConfirmOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    clearCancelRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (!planMutationRef.current) {
+          event.preventDefault();
+          setClearConfirmOpen(false);
+        }
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        clearDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') || [],
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = oldOverflow;
+      previousFocus?.focus();
+    };
+  }, [clearConfirmOpen]);
 
   // When another workspace switches tabs (e.g. Edit priorities -> Schedule),
   // ensure its tab is visible inside the horizontal mobile navigation.
@@ -449,27 +491,19 @@ export const StudentDashboard: React.FC = () => {
       }
     });
 
-    // Unit Limits Check (respecting final-semester and GPA rules)
-    const isSummer = currentTerm?.termNumber === 3 || academicLimits?.isSummer;
-    const isFinalSemester = academicLimits?.isFinalSemester ?? false;
-    const isGradeA = academicLimits?.isGradeA ?? (profile?.previousTermGpa ? profile.previousTermGpa >= 17 : false);
-    const maxUnits = academicLimits?.effectiveMaxUnits ?? (isSummer ? 8 : isFinalSemester || isGradeA ? 24 : 20);
-
+    // Never invent 8/20/24-unit legal limits from a missing or stale profile.
+    // The Express eligibility/selection response remains authoritative.
+    const maxUnits = academicLimits?.effectiveMaxUnits;
     const isExtra = newEval.isExtraUnit;
 
-    if (!isExtra) {
+    if (!isExtra && typeof maxUnits === 'number' && Number.isFinite(maxUnits)) {
       const currentUnits = currentSelected.reduce((sum, item) => {
         if (item.isExtraUnit) return sum;
         return sum + (item.units || 0);
       }, 0);
 
       if (currentUnits + (newEval.units || 0) > maxUnits) {
-        const limitTypeLabel = isFinalSemester
-          ? 'ترم آخری (۲۴ واحد)'
-          : isGradeA
-          ? 'معدل الف (۲۴ واحد)'
-          : `عادی (${maxUnits} واحد)`;
-        messages.push(`افزودن این درس باعث عبور از سقف مجاز انتخاب واحد ${limitTypeLabel} می‌شود.`);
+        messages.push(`افزودن این درس از سقف اعلام‌شده برای این دانشجو (${maxUnits} واحد) بیشتر می‌شود؛ نتیجه نهایی با سرور بررسی خواهد شد.`);
       }
     }
 
@@ -480,11 +514,14 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  const handleClearSchedule = async () => {
-    if (confirm('آیا از پاکسازی کل برنامه انتخابی مطمئن هستید؟')) {
-      if (await syncPlanToServer([], coursePriorities, offeringPriorities)) {
-        setSelectedOfferingIds([]);
-      }
+  const handleClearSchedule = () => setClearConfirmOpen(true);
+  const confirmClearSchedule = async () => {
+    // A full reset must clear priority/fallback state as well as selected IDs.
+    if (await syncPlanToServer([], [], {})) {
+      setSelectedOfferingIds([]);
+      setCoursePriorities([]);
+      setOfferingPriorities({});
+      setClearConfirmOpen(false);
     }
   };
 
@@ -729,6 +766,32 @@ export const StudentDashboard: React.FC = () => {
         onClose={() => setImportModalOpen(false)}
         onImportSuccess={fetchDashboardData}
       />
+
+      {/* Destructive plan reset: keep focus and scroll inside this in-app dialog. */}
+      {clearConfirmOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-3 backdrop-blur-sm sm:p-4">
+          <div ref={clearDialogRef} dir="rtl" role="alertdialog" aria-modal="true"
+            aria-labelledby="student-clear-title" aria-describedby="student-clear-desc"
+            className="darschin-dialog darschin-page my-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-rose-200 bg-white p-4 shadow-2xl dark:border-rose-900 dark:bg-slate-900 sm:p-6">
+            <h3 id="student-clear-title" className="mb-3 text-lg font-black text-slate-950 dark:text-white">پاک‌کردن برنامهٔ انتخابی؟</h3>
+            <p id="student-clear-desc" className="mb-5 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              {selectedOfferingIds.length} گروه انتخاب‌شده، ترتیب درس‌ها و گروه‌های جایگزین از برنامه پاک می‌شوند. پاک‌سازی فقط پس از تأیید سرور اعمال می‌شود.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button ref={clearCancelRef} type="button" disabled={planStatus === 'saving'}
+                onClick={() => setClearConfirmOpen(false)}
+                className="min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">
+                انصراف
+              </button>
+              <button type="button" disabled={planStatus === 'saving'}
+                onClick={() => void confirmClearSchedule()}
+                className="min-h-11 rounded-xl bg-rose-700 px-3 py-2 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50">
+                {planStatus === 'saving' ? 'در حال پاک‌سازی…' : 'بله، پاک کن'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Conflict Warning Modal */}
       {conflictWarning && (
