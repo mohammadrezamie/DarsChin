@@ -38,6 +38,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
+  // A successful fetch authorizes only the exact student, term and chart used
+  // for that fetch. Changing profiles must invalidate the previous proof
+  // synchronously, before React's effects run.
+  const [verifiedContextKey,setVerifiedContextKey]=useState<string|null>(null);
+  const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   const [copyState,setCopyState]=useState('');
   const [reordering,setReordering]=useState(false);
   const reorderLock=useRef(false);
@@ -62,22 +67,33 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
 
   useEffect(()=>{
     let alive=true;
-    if(!curriculumId){setLoading(false);setError('چارت ورودی مشخص نیست؛ ترتیب دستی قابل نمایش است اما کپی سریع تا تعیین چارت فعال نمی‌شود.');setRules([]);return;}
-    setLoading(true);setError('');setRules([]);setPassed([]);
+    setVerifiedContextKey(null);
+    setRules([]);setPassed([]);
+    if(!curriculumId||!profile?.userId){
+      setLoading(false);
+      setError('هویت دانشجو یا چارت ورودی مشخص نیست؛ نمایش دستی ممکن است اما کپی سریع تا تعیین آن‌ها فعال نمی‌شود.');
+      return ()=>{alive=false;};
+    }
+    setLoading(true);setError('');
     void Promise.all([
       apiRequest<ChartRules>(`/api/curriculum/${encodeURIComponent(curriculumId)}/full`),
       apiRequest<{passedCourses:StudentPassedCourse[]}>('/api/student/passed-courses'),
     ]).then(([chart,history])=>{
       if(!alive)return;
-      if(!chart.success||!history.success||!chart.data||!history.data||chart.data.curriculum?.id!==curriculumId){
-        setError('دریافت قوانین و سوابق کامل نبود؛ کدها نمایش داده می‌شوند، اما کپی سریع تا دریافت اطلاعات غیرفعال است.');return;
+      if(!chart.success||!history.success||!chart.data||!history.data||
+          chart.data.curriculum?.id!==curriculumId||
+          !Array.isArray(chart.data.prerequisites)||!Array.isArray(chart.data.corequisites)||
+          !Array.isArray(history.data.passedCourses)){
+        setError('دریافت قوانین و سوابق کامل نبود؛ کدها نمایش داده می‌شوند، اما کپی سریع تا دریافت اطلاعات غیرفعال است.');
+        return;
       }
-      setRules([...(chart.data.prerequisites||[]),...(chart.data.corequisites||[])]);
-      setPassed(history.data.passedCourses||[]);
+      setRules([...chart.data.prerequisites,...chart.data.corequisites]);
+      setPassed(history.data.passedCourses);
+      setVerifiedContextKey(academicContextKey);
     }).catch(()=>{if(alive)setError('ارتباط برای دریافت سوابق یا قوانین برقرار نشد؛ کپی سریع تا بررسی دوباره غیرفعال است.');})
       .finally(()=>{if(alive)setLoading(false);});
     return ()=>{alive=false};
-  },[curriculumId,revision]);
+  },[academicContextKey]);
 
   const queue=useMemo(()=>buildRegistrationQueue({
     evaluations,selectedOfferingIds,preferredCourseIds:coursePriorities,rules,passedCourses:passed,
@@ -87,7 +103,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
 
   // Do not advertise a safe copy/order while its chart and passed-course data
   // are pending or failed. Raw codes remain visible for manual verification.
-  const rulesReady=Boolean(curriculumId)&&!loading&&!error;
+  const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&
+    verifiedContextKey===academicContextKey&&!loading&&!error;
   const stepIds=queue.steps.map(s=>s.courseId);
   const next=rulesReady?queue.steps.find(s=>s.ready&&!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
