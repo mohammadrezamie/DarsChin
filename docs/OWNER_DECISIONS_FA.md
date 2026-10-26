@@ -90,7 +90,7 @@
 
 - **هدف / معیار پذیرش:** staging و production از نظر data directory، user سرویس، secrets، مسیر release/current و پورت مستقل باشند؛ ابزار read-only با SHA کامل، خروجی Dry-run به‌عنوان حالت پیش‌فرض، کنترل JSON health/404 و الزام تست staging روی همان SHA قبل از تأیید production داشته باشد؛ localhost-only و fail-closed، بدون وابستگی اجباری به GitHub Actions.
 - **پیش‌نیاز عملیاتی:** تست مستقل Bun/Vitest/Build/API smoke، بکاپ و restore واقعی دادهٔ درس‌چین، اطمینان از پایداری systemd، مجوز اپراتور و دامنه/TLS مستقل. Vercel Preview فعلاً تنها رابط کاربری است و Express را میزبانی نمی‌کند. PR #42 و crash-loop VPS هنوز جداگانه نیازمند بررسی هستند.
-- **وضعیت:** قرارداد `deploy/targets.json`، سرویس نمونهٔ staging، فایل متغیرهای نمونه، گیت `deploy:gate` و تست‌های رجعتی در شاخهٔ `feat/staging-prod-release-gates-20261026` ثبت شده‌اند؛ **روی VPS نصب/اجرا نشده‌اند** و در صورت نبود گزارش گیت اجرایی و بازبینی، ادغام و انتشار تأییدشده نیست.
+- **وضعیت:** قرارداد `deploy/targets.json`، سرویس نمونهٔ staging، فایل متغیرهای نمونه، گیت `deploy:gate` و تست‌های رجعتی در شاخهٔ `feat/staging-prod-release-gates-20261026` ثبت شده‌اند؛ **روی VPS نصب/اجرا نشده‌اند**. تست‌های مستقل ابزار گیت روی Sandbox با **۱۲/۱۲ آزمون Vitest** و بررسی TypeScript موفق شدند؛ یک آزمایش GET واقعی با دو listener ساختگی در loopback نیز الزام SHA یکسان را نشان داد. گیت کامل برنامه برای این SHA مستقل دوباره اجرا نشده (آخرین گیت کامل مربوط به PR #34 و mainِ پیش از این شاخه است)؛ وضعیت مرج و انتشار باید جدا گزارش شود.
 - **مراجع:** [طرح staging/production](../deploy/STAGING_AND_PRODUCTION_FA.md)، `scripts/deploy-target-gate.cjs`، `tests/deploy-target-gate.test.ts` و [حادثهٔ VPS](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md). هیچ فایل یا تغییر GitHub در TNA ایجاد نشده است.
 
 ## تضاد تصمیم‌ها و روش حل
