@@ -127,7 +127,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
+        <button type="button" aria-label="کپی کد درس بعدی" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
           disabled={!next?.copyCode} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
           <ClipboardCopy className="h-4 w-4"/> کپی بعدی
         </button>
@@ -167,6 +167,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               <span className="block break-words text-xs leading-5 text-slate-600 dark:text-slate-300">
                 زمان: {time||'روز و ساعت نامشخص'} · گروه {step.groupCode||'نامشخص'}
               </span>
+              <span className="block break-all text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+                کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
+              </span>
             </div>
             <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
               <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
@@ -175,7 +178,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
               <button type="button" disabled={!step.copyCode||locked||!step.ready} onClick={()=>void copy(step.copyCode,step.courseName)}
                 aria-label={`کپی کد ${step.courseName}`}
-                className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-45">
+                className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-45">
                 <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی کد</span>
               </button>
               <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
