@@ -594,7 +594,10 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                 const primary = pc.selectedOffering;
                 const importedCode = primary?.rawCourseCode?.trim() || '';
                 const copyCode = importedCode || pc.courseCode?.trim() || '';
-                const canCopyCode = Boolean(copyCode && copyCode !== '---' && !/^DEMO[-_]/i.test(copyCode));
+                // A plausible code never overrides a blocked/uncertain academic verdict.
+                const canCopyCode = Boolean(copyCode && copyCode !== '---' &&
+                  !/^DEMO[-_]/i.test(copyCode) &&
+                  primary?.canSelect && primary?.isEligible && primary?.overallStatus === 'AVAILABLE');
                 const hasConflicts = pc.conflictDetails.length > 0;
                 const isAddingFallback = addingFallbackForCourseId === pc.courseId;
 
@@ -630,7 +633,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                               onClick={() => void handleCopyCode(copyCode)}
                               aria-label={`کپی کد ${pc.courseName}`}
                               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
-                              title={!canCopyCode ? 'کد نامعتبر یا آزمایشی است؛ ابتدا کد واقعی ارائه را کنترل کنید.' : importedCode ? 'کپی کد واردشده همراه ارائه' : 'کد کاتالوگ رسمی بودن کد ارائه در آموزشیار را تضمین نمی‌کند.'}
+                              title={!canCopyCode ? 'کد نامعتبر است یا این گروه طبق آخرین تحلیل قابل اخذ نیست؛ وضعیت و کد ارائه را بررسی کنید.' : importedCode ? 'کپی کد واردشده همراه ارائه' : 'کد کاتالوگ رسمی بودن کد ارائه در آموزشیار را تضمین نمی‌کند.'}
                             >
                               {copyFeedback?.code === copyCode && copyFeedback.success ? (
                                 <>
