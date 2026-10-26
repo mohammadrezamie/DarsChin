@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Activity, BookOpen, CalendarDays, CheckCircle2, Database, FileSpreadsheet, GraduationCap, Layers3, ListChecks, MessageSquare, ShieldCheck, SlidersHorizontal, Sparkles, Users, Workflow, type LucideIcon } from 'lucide-react';
 
 type Feature = { icon: LucideIcon; title: string; description: string };
@@ -18,22 +18,24 @@ const adminFeatures: Feature[] = [
   { icon: Users, title: 'کاربران و دسترسی‌ها', description: 'مدیریت حساب‌ها و سطح دسترسی‌های سامانه.' },
 ];
 
-const FeatureList: React.FC<{ items: Feature[]; variant: 'student' | 'admin' }> = ({ items, variant }) => (
-  <div className="grid gap-3 sm:grid-cols-2">
+const FeatureList: React.FC<{ items: Feature[]; variant: 'student' | 'admin' }> = ({ items, variant }) => {
+  const reduceMotion = useReducedMotion();
+  return <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
     {items.map(({ icon: Icon, title, description }, index) => (
-      <motion.div key={title} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
-        className="group rounded-2xl border border-slate-200/80 bg-white/80 p-4 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-blue-500/50">
+      <motion.div key={title} initial={reduceMotion ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: reduceMotion ? 0 : index * 0.06 }}
+        className="group min-w-0 rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm transition hover:border-blue-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-blue-500/50">
         <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${variant === 'student' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300' : 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300'}`}><Icon className="h-5 w-5" /></div>
-        <h3 className="mb-1 text-sm font-extrabold text-slate-900 dark:text-white">{title}</h3>
-        <p className="text-xs leading-6 text-slate-600 dark:text-slate-400">{description}</p>
+        <h3 className="mb-1 break-words text-xs font-extrabold leading-6 text-slate-900 sm:text-sm dark:text-white">{title}</h3>
+        <p className="hidden text-xs leading-6 text-slate-600 min-[420px]:block dark:text-slate-400">{description}</p>
       </motion.div>
     ))}
-  </div>
-);
+  </div>;
+};
 
 export const DashboardShowcaseSection: React.FC = () => {
+  const reduceMotion = useReducedMotion();
   return (
-    <section id="workspaces" dir="rtl" className="scroll-mt-24 relative overflow-hidden bg-slate-100/80 px-4 py-24 dark:bg-slate-900/50 sm:px-6 sm:py-32 lg:px-8">
+    <section id="workspaces" dir="rtl" className="scroll-mt-24 relative overflow-hidden bg-slate-100/80 px-4 py-16 dark:bg-slate-900/50 sm:px-6 sm:py-24 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-16 h-72 w-72 rounded-full bg-violet-400/10 blur-3xl" />
       <div className="relative z-10 mx-auto mb-14 max-w-3xl text-center">
         <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"><Activity className="h-3.5 w-3.5" /> فضای کار یکپارچه</span>
@@ -42,7 +44,7 @@ export const DashboardShowcaseSection: React.FC = () => {
       </div>
 
       <div className="relative z-10 mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
-        <motion.article initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+        <motion.article initial={reduceMotion ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/70 sm:p-7">
           <div className="mb-6 flex items-center justify-between gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
             <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><GraduationCap className="h-6 w-6" /></div><div><h3 className="text-lg font-black text-slate-900 dark:text-white">میز کار دانشجو</h3><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">تمرکز روی برنامه و مسیر تحصیلی</p></div></div>
@@ -52,7 +54,7 @@ export const DashboardShowcaseSection: React.FC = () => {
           <div className="mt-5 flex items-start gap-2 rounded-2xl bg-blue-50/80 p-3.5 text-xs leading-6 text-blue-900 dark:bg-blue-500/10 dark:text-blue-100"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0" />وضعیت نهایی هر درس باید بر اساس اطلاعات واقعی پروفایل و موتور بررسی شرایط مشخص شود.</div>
         </motion.article>
 
-        <motion.article initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+        <motion.article initial={reduceMotion ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: reduceMotion ? 0 : 0.1 }}
           className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 p-5 text-white shadow-xl shadow-slate-950/10 dark:border-slate-700 sm:p-7">
           <div className="mb-6 flex items-center justify-between gap-3 border-b border-slate-800 pb-5">
             <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-300"><ShieldCheck className="h-6 w-6" /></div><div><h3 className="text-lg font-black">پنل مدیریت آموزشی</h3><p className="mt-1 text-xs text-slate-400">ساختار، داده و دسترسی‌ها</p></div></div>

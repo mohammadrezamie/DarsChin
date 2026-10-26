@@ -27,7 +27,10 @@ describe('live demo product feedback acceptance',()=>{
     expect(html).toContain('انتقال ریاضی عمومی دو به بالا');
     expect(html).toContain('انتقال ریاضی عمومی دو به پایین');
     expect(html).toContain('کپی کد ریاضی عمومی دو');
-    expect(html).toContain('flex-nowrap');
+    expect(html).toContain('min-[430px]:flex-nowrap');
+    expect(html).toContain('gap-y-1.5');
+    expect(html).toContain('h-11 w-11');
+    expect(html).toContain('min-w-0 rounded-xl border');
     expect(html).not.toContain('صف آمادهٔ ثبت درس در آموزشیار');
   });
   it('shows a real create-curriculum control in admin and keeps new charts drafts',()=>{
