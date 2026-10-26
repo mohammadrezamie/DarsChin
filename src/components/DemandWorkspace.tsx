@@ -138,10 +138,21 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
   useEffect(()=>{
     const curriculumId = role==='student' ? survey?.curriculumId : newCurriculum;
-    if (!curriculumId) { setAssigned([]); setRules([]); return; }
     let active=true;
-    void apiRequest<{courses: CourseAssigned[]; prerequisites:AcademicRule[]; corequisites:AcademicRule[]}>(`/api/curriculum/${curriculumId}/full`).then(r=>{
-      if(active){setAssigned(r.data?.courses || []);setRules([...(r.data?.prerequisites || []),...(r.data?.corequisites || [])]);}
+    setAssigned([]);
+    setRules([]);
+    setLoadedChartId(null);
+    if (!curriculumId) return ()=>{active=false};
+    void apiRequest<{courses: CourseAssigned[]; prerequisites:AcademicRule[]; corequisites:AcademicRule[]}>(`/api/curriculum/${encodeURIComponent(curriculumId)}/full`).then(result=>{
+      if(!active) return;
+      if (!result.success || !result.data || !Array.isArray(result.data.courses) ||
+          !Array.isArray(result.data.prerequisites) || !Array.isArray(result.data.corequisites)) {
+        setError(result.error || 'چارت و روابط درسی دریافت نشدند؛ ابتدا اطلاعات را دوباره بررسی کن.');
+        return;
+      }
+      setAssigned(result.data.courses);
+      setRules([...result.data.prerequisites,...result.data.corequisites]);
+      setLoadedChartId(curriculumId);
     });
     return ()=>{active=false};
   },[role,survey?.curriculumId,newCurriculum]);
