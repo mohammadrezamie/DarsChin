@@ -11,8 +11,9 @@ type DayAgenda = { day: string; entries: PlacedClass[] };
 export const CompactMobileTimetable: React.FC<{
   days: DayAgenda[];
   canvasHeight: number;
+  hourHeight: number;
   onRemove?: (id: string) => void;
-}> = ({ days, canvasHeight, onRemove }) => {
+}> = ({ days, canvasHeight, hourHeight, onRemove }) => {
   const [chosenDay, setChosenDay] = useState<string | null>(null);
   const [showTimeline, setShowTimeline] = useState(false);
   const id = useId();
@@ -115,7 +116,7 @@ export const CompactMobileTimetable: React.FC<{
         {selectedDay.entries.length > 0 && (
           <>
             <button type="button" aria-expanded={showTimeline}
-              aria-controls={`${id}-timeline`}
+              aria-controls={showTimeline ? `${id}-timeline` : undefined}
               onClick={() => setShowTimeline(open => !open)}
               className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-slate-200 px-3 text-xs font-bold text-blue-700 hover:bg-blue-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800">
               <Clock3 className="h-4 w-4" aria-hidden="true" />
@@ -129,7 +130,7 @@ export const CompactMobileTimetable: React.FC<{
                   <div className="relative" style={{ height: canvasHeight }}>
                     {Array.from({ length: 14 }, (_, i) => (
                       <span key={i} dir="ltr" className="absolute right-1 -translate-y-1/2 font-mono text-[10px] text-slate-600 dark:text-slate-300"
-                        style={{ top: i * 56 }}>{String(i + 7).padStart(2, '0')}:00</span>
+                        style={{ top: i * hourHeight }}>{String(i + 7).padStart(2, '0')}:00</span>
                     ))}
                   </div>
                 </div>
