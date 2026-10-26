@@ -132,14 +132,14 @@ const Landing: React.FC = () => {
 
       <main>
         <HeroSection />
-        <section aria-label="انتخاب دسترسی دمو" className="relative mx-auto -mt-3 mb-10 max-w-7xl px-3 sm:px-6 lg:px-8">
-          <div className="grid min-w-0 gap-4 rounded-[1.75rem] border border-blue-200/80 bg-gradient-to-br from-white via-blue-50/80 to-indigo-50/60 p-4 shadow-[0_22px_60px_-32px_rgba(37,99,235,0.35)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-blue-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40">
+        <section aria-label="انتخاب دسترسی دمو" className="darschin-demo-entry relative mx-auto -mt-3 mb-10 max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="darschin-demo-entry__body grid min-w-0 gap-4 rounded-[1.75rem] border border-blue-200/80 bg-gradient-to-br from-white via-blue-50/80 to-indigo-50/60 p-4 shadow-[0_22px_60px_-32px_rgba(37,99,235,0.35)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-blue-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40">
             <div>
               <p className="text-xs font-black tracking-wide text-blue-700 dark:text-blue-300">پایلوت دانشگاه آزاد · مهندسی برق کارشناسی · علوم و تحقیقات</p>
               <h2 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl dark:text-white">بدون ساخت حساب، تمام پنل‌ها را آزمایش کن</h2>
               <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">داده‌های دمو ساختگی‌اند. تغییرات صرفاً در مرورگر تو ذخیره می‌شوند؛ هیچ اطلاعاتی در دانشگاه ثبت نمی‌شود.</p>
             </div>
-            <div className="flex min-w-0 flex-wrap gap-2 sm:justify-end">
+            <div className="darschin-demo-entry__actions sm:justify-end">
               <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-[1_1_130px] items-center justify-center rounded-xl bg-blue-700 px-4 text-center text-sm font-black leading-6 text-white shadow-lg shadow-blue-700/15 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:flex-none sm:px-5">ورود دمو دانشجو</Link>
               <Link to="/demo/admin" className="inline-flex min-h-12 min-w-0 flex-[1_1_130px] items-center justify-center rounded-xl border border-blue-300 px-4 text-center text-sm font-black leading-6 text-blue-800 transition hover:border-blue-500 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:flex-none sm:px-5 dark:text-blue-200 dark:hover:bg-blue-950/40">ورود دمو مدیر</Link>
               <Link to="/demo" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300 sm:flex-none">برنامه‌ریز ساده</Link>
