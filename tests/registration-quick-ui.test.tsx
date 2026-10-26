@@ -47,7 +47,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('انتقال مدارهای الکتریکی به پایین');
     expect(html).toContain('ثبت خودکار در آموزشیار نیست');
     expect(html).toContain('02');
-    expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
+    expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 flex-wrap items-center/);
     expect(html).toContain('min-[430px]:flex-nowrap');
     expect(html).toContain('gap-y-1.5');
     expect(html).toContain('h-11 w-11');
