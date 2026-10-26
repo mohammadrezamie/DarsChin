@@ -32,7 +32,8 @@ export async function copyTextWithFallback(value: string): Promise<boolean> {
   } catch {
     return false;
   } finally {
-    input?.remove();
-    previousFocus?.focus({ preventScroll: true });
+    // Cleanup must never turn an otherwise successful copy into a rejection.
+    try { input?.remove(); } catch { /* detached DOM */ }
+    try { previousFocus?.focus({ preventScroll: true }); } catch { /* no focus target */ }
   }
 }
