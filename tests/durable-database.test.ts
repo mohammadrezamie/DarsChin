@@ -71,6 +71,21 @@ describe('durable JSON persistence for a single-process student pilot', () => {
     }
   });
 
+  it('refuses to drop duplicated or malformed student identities on startup', () => {
+    const file = isolatedFile();
+    for (const users of [
+      [{ id: 'same' }, { id: 'same' }],
+      [{ id: 'good' }, { id: '' }],
+      [{ id: 42 }],
+      [{ id: 'good' }, null],
+    ]) {
+      const original = JSON.stringify({ users, studentPlans: [{ userId: 'same', id: 'valuable-plan' }] });
+      fs.writeFileSync(file, original);
+      expect(() => readPersistedJson(file)).toThrow(/missing or duplicate user identity/);
+      expect(fs.readFileSync(file, 'utf8')).toBe(original);
+    }
+  });
+
   it('prevents accidental creation of an empty database if an existing one is required', () => {
     const file = isolatedFile();
     expect(() => assertExistingDatabasePresent(file, true)).toThrow(/required persisted database is missing/);
