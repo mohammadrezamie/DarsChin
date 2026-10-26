@@ -54,7 +54,7 @@ describe('Persian-first responsive UI guardrails',()=>{
       expect(s).toContain('aria-modal="true"');
       expect(s).toContain("document.body.style.overflow = 'hidden'");
       // Preserve the main-branch regression guard: both Tab-branch styles are valid.
-      expect(s).toMatch(/event\\.key\\s*(?:===|!==)\\s*'Tab'/);
+      expect(s).toMatch(/event\.key\s*(?:===|!==)\s*'Tab'/);
       expect(s).toContain('event.shiftKey');
       expect(s).toContain('event.preventDefault()');
       expect(s).toContain('right-0');
