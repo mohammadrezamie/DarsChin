@@ -1,5 +1,8 @@
 # Deployment and rollback runbook
 
+**2026-10-26 staging/production split:** The reviewed, *read-only* deployment target contract, exact-SHA staging-first HTTP gate and sample isolated staging unit are documented in [STAGING_AND_PRODUCTION_FA.md](../deploy/STAGING_AND_PRODUCTION_FA.md). Run `bun run deploy:gate --target staging --sha <FULL_SHA>` for a dry run; `--check` performs loopback GET readiness only and does not deploy or restart anything. Production promotion remains operator-controlled. The existing template's legacy port must be reconciled with pending VPS P0 #42; never assume it is already in service.
+
+
 DarsChin's current stack includes a React/Vite frontend, Express API and JSON file persistence. A frontend-only Vercel deployment **does not host the Express API**. A fully functional release needs a persistent Node.js host, writable database storage and reverse proxy (or a separately implemented backend deployment). This is a repeatable checklist, not an automatic production launch.
 
 ## 1. Prepare (one-time infrastructure)
