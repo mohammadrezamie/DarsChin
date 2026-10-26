@@ -252,10 +252,10 @@ export const StudentDashboard: React.FC = () => {
   }));
 
   // Reorder courses
-  const handleReorderCourses = async (newCourseOrder: string[]) => {
-    if (await syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities)) {
-      setCoursePriorities(newCourseOrder);
-    }
+  const handleReorderCourses = async (newCourseOrder: string[]): Promise<boolean> => {
+    const saved = await syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities);
+    if (saved) setCoursePriorities(newCourseOrder);
+    return saved;
   };
 
   // Select primary offering for a course (promotes offering to primary)
