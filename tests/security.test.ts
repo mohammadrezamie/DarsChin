@@ -20,8 +20,8 @@ app.use('/api/admin', adminRouter);
 app.use('/api/admin-management', adminManagementRouter);
 app.use('/api/sync', syncRouter);
 
-async function createLocalCaptchaToken() {
-    const response = await request(app).get('/api/auth/otp/captcha/generate');
+async function createLocalCaptchaToken(action: 'login' | 'register') {
+    const response = await request(app).get(`/api/auth/otp/captcha/generate?action=${action}`);
     expect(response.status).toBe(200);
     const id = response.body.data.id as string;
     const answer = db.captchaChallenges.find(challenge => challenge.id === id)?.value;
@@ -64,7 +64,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         const res = await request(app)
             .post('/api/auth/register')
             .send({ mobile: randomMobile, password: 'password123', name: 'Public User',
-                captchaToken: await createLocalCaptchaToken() });
+                captchaToken: await createLocalCaptchaToken('register') });
             
         if(res.status!==201) console.log(res.body);
         expect(res.status).toBe(201);
@@ -77,7 +77,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         const payload = { mobile: generateTestMobile(), password: 'wrong-password' };
         const missing = await request(app).post('/api/auth/login').send(payload);
         expect(missing.status).toBe(403);
-        const captchaToken = await createLocalCaptchaToken();
+        const captchaToken = await createLocalCaptchaToken('login');
         const attempted = await request(app).post('/api/auth/login')
             .send({ ...payload, captchaToken });
         expect(attempted.status).toBe(401); // Valid CAPTCHA; invalid account credentials
@@ -90,7 +90,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         const res = await request(app)
             .post('/api/auth/register')
             .send({ mobile: { value: '09123456789' }, password: 'password123', name: 'Test User',
-                captchaToken: await createLocalCaptchaToken() });
+                captchaToken: await createLocalCaptchaToken('register') });
 
         expect(res.status).toBe(400);
         expect(res.body.success).toBe(false);
