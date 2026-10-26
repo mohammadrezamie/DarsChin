@@ -63,15 +63,15 @@ export const HeroSection: React.FC = () => {
             <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             دمو بدون شماره و رمز · داده‌ها نمونه‌اند · هیچ ثبت خودکاری در آموزشیار انجام نمی‌شود
           </p>
-          <div className="grid max-w-xl grid-cols-1 gap-2 min-[380px]:grid-cols-3 sm:gap-3">
+          <div aria-label="مزیت‌های اصلی" className="grid max-w-xl grid-cols-3 gap-2 sm:gap-3">
             {[
               { icon: ShieldCheck, title: 'بررسی شرایط', description: 'دلایل قابل فهم برای وضعیت درس‌ها' },
               { icon: CalendarDays, title: 'برنامه هفتگی', description: 'نمایش انتخاب‌ها در کنار هم' },
               { icon: LayoutGrid, title: 'اولویت‌بندی', description: 'مدیریت ساده‌تر گزینه‌ها' },
             ].map(({ icon: Icon, title, description }) => (
-              <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200/70 bg-white/55 p-3 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/45">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"><Icon className="h-4 w-4" /></span>
-                <span><span className="block text-sm font-extrabold text-slate-900 dark:text-white">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</span></span>
+              <div key={title} className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/65 p-2.5 text-center shadow-sm backdrop-blur-sm sm:flex-row sm:items-start sm:gap-3 sm:p-3 sm:text-right dark:border-slate-800 dark:bg-slate-900/55">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"><Icon className="h-4 w-4" /></span>
+                <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-5 text-slate-900 sm:text-sm dark:text-white">{title}</span><span className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block dark:text-slate-400">{description}</span></span>
               </div>
             ))}
           </div>
