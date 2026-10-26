@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap } from 'lucide-react';
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
@@ -16,7 +16,7 @@ interface Props {
   profile: StudentAcademicProfile | null;
   curriculumId: string | null;
   onEditPriorities: () => void;
-  onReorderCourses: (orderedCourseIds: string[]) => void | Promise<void>;
+  onReorderCourses: (orderedCourseIds: string[]) => void | boolean | Promise<void | boolean>;
 }
 
 async function copyToClipboard(value: string): Promise<boolean> {
@@ -38,6 +38,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [copyState,setCopyState]=useState('');
+  const [reordering,setReordering]=useState(false);
+  const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
@@ -90,14 +92,25 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[]);
   const toggleDone=(id:string)=>setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-  const move=(index:number,direction:-1|1)=>{
+  const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
-    if(target<0||target>=stepIds.length)return;
+    if(reorderLock.current||target<0||target>=stepIds.length)return;
     const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
-    // Persist the actual student's requested order. The dependency engine will
-    // still enforce confirmed corequisite-before-target relations at render.
-    void onReorderCourses(order);
-    setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.');
+    reorderLock.current=true;
+    setReordering(true);
+    setCopyState('در حال ذخیرهٔ ترتیب دلخواه…');
+    try {
+      // The live dashboard returns false if saving failed. Demo callbacks may
+      // return void; they must never be mistaken for a rejected save.
+      const saved=await onReorderCourses(order);
+      if(saved===false)throw new Error('save rejected');
+      setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.');
+    } catch {
+      setCopyState('ترتیب ذخیره نشد؛ چیدمان قبلی حفظ شده است. دوباره تلاش کن.');
+    } finally {
+      reorderLock.current=false;
+      setReordering(false);
+    }
   };
 
   return <section dir="rtl" aria-label="صف سریع ثبت دروس" className="darschin-page space-y-3">
@@ -111,7 +124,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
+        <button type="button" aria-label="کپی کد درس بعدی" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
           disabled={!next?.copyCode} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
           <ClipboardCopy className="h-4 w-4"/> کپی بعدی
         </button>
@@ -145,15 +158,18 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
               {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
             </span>
+            <span className="block truncate text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+              کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
+            </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button type="button" disabled={index===0} onClick={()=>move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
+            <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
-            <button type="button" disabled={index===queue.steps.length-1} onClick={()=>move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
+            <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.ready||!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
-              className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
+              className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
             </button>
             <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
