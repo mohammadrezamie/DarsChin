@@ -7,6 +7,7 @@ import type { SmsConfiguration, SmsDelivery } from '../sms/service';
 import bcrypt from 'bcryptjs';
 import { getInitialSeedData } from './seed';
 import path from 'path';
+import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
 import {
   User,
   University,
@@ -166,35 +167,32 @@ export class LocalDatabase {
   private isInitialized = false;
 
   constructor() {
-    this.ensureDataDir();
+    // A guarded startup must not even recreate the missing mountpoint.
+    if (process.env.DARSCHYN_REQUIRE_EXISTING_DB !== 'true') {
+      this.ensureDataDir();
+    }
   }
 
   private ensureDataDir() {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
     }
   }
 
   public async init(seedIfEmpty = true) {
     if (this.isInitialized) return;
+
+    // Guard *before* mkdir: if a durable volume is detached, do not recreate
+    // its mount path or bootstrap an empty database there.
+    assertExistingDatabasePresent(DB_FILE, process.env.DARSCHYN_REQUIRE_EXISTING_DB === 'true');
     this.ensureDataDir();
     let loadedExisting = false;
-
     if (fs.existsSync(DB_FILE)) {
       try {
-        const content = fs.readFileSync(DB_FILE, 'utf-8');
-        this.data = JSON.parse(content);
+        this.data = readPersistedJson(DB_FILE) as DatabaseSchema;
         if (!this.data.provinces) this.data.provinces = [];
-        // Clean and deduplicate users by ID
-        const seenIds = new Set<string>();
-        const cleanUsers: any[] = [];
-        for (const u of this.data.users) {
-          if (!u.id || seenIds.has(u.id)) continue;
-          seenIds.add(u.id);
-          cleanUsers.push(u);
-        }
-        this.data.users = cleanUsers;
-
+        // Invalid or duplicate user IDs were already rejected by the reader.
+        // Do not silently discard accounts and orphan their academic records.
         this.data.users.forEach((u) => {
           if (!Array.isArray(u.roles)) {
             u.roles = u.roles ? [(u.roles as any)] : ['student'];
@@ -220,11 +218,9 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         }
         loadedExisting = true;
       } catch (err) {
-        if (process.env.NODE_ENV === 'production') {
-          // Never overwrite a damaged production database with synthetic seed data.
-          throw new Error('Unable to read persisted production database; restore an audited backup.', { cause: err });
-        }
-        console.error('Error reading database file, re-initializing with seed data:', err);
+        // Staging/development can contain real student data too. Never reset
+        // damaged persisted data to sample accounts under ANY environment.
+        throw new Error('Unable to load persisted database; keep the original file and restore a verified backup.', { cause: err });
       }
     }
 
@@ -299,9 +295,7 @@ this.isInitialized = true;
 
   public save() {
     this.ensureDataDir();
-    const tempFile = `${DB_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(this.data, null, 2), 'utf-8');
-    fs.renameSync(tempFile, DB_FILE);
+    writeDurableJson(DB_FILE, this.data);
   }
 
   public resetToSeed() {
