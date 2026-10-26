@@ -436,6 +436,8 @@ export interface TrackEligibilityBreakdown {
 }
 
 export interface CourseEligibilityResult {
+  /** Taken from the actual course record; never inferred from the name. */
+  isExtraUnit?: boolean;
   offeringId: string;
   courseId: string;
   courseCode: string;

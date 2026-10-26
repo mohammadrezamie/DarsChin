@@ -6,6 +6,7 @@
 | --- | --- |
 | **قرارداد دائمی دستیارها و توسعه‌دهنده‌ها: ثبت همهٔ دستورهای مالک در GitHub** | [AGENTS.md](../AGENTS.md) |
 | **دفتر تاریخ‌دار همهٔ درخواست‌ها، برنامه‌ها، اولویت‌ها و تغییر تصمیم مالک** | [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md) |
+| **معماری مدرن درس‌چین با الگوگیری فقط‌خواندنی از تکین، UI mobile-first و نقشهٔ فناوری** | [MODERN_ARCHITECTURE_TNA_INSPIRED_FA.md](MODERN_ARCHITECTURE_TNA_INSPIRED_FA.md) |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
 | طراحی جدید پنل مدیریت: رشته ← مقطع ← گرایش/ورودی ← چارت، بدون شناسه‌های فنی | [ADMIN_MAJOR_WORKSPACE_FA.md](ADMIN_MAJOR_WORKSPACE_FA.md) |
 | فوتر سازمانی درس‌چین و قواعد وسط‌چین/راست‌چین فارسی | [BRAND_FOOTER_RTL_FA.md](BRAND_FOOTER_RTL_FA.md) |
