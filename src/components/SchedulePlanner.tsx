@@ -577,7 +577,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
       {activePlannerTab === 'priorities' && (
         <div className="space-y-4">
           {plannedCourses.length === 0 ? (
-            <div className="p-12 text-center bg-liquid-glass rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 space-y-3">
+            <div className="space-y-3 rounded-3xl border border-dashed border-slate-300 bg-liquid-glass p-5 text-center sm:p-8 lg:p-12 dark:border-slate-700">
               <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
                 <BookOpen className="w-7 h-7" />
               </div>
@@ -632,6 +632,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                               disabled={!canCopyCode}
                               onClick={() => void handleCopyCode(copyCode)}
                               aria-label={`کپی کد ${pc.courseName}`}
+                              aria-live="polite"
                               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                               title={!canCopyCode ? 'کد نامعتبر است یا این گروه طبق آخرین تحلیل قابل اخذ نیست؛ وضعیت و کد ارائه را بررسی کنید.' : importedCode ? 'کپی کد واردشده همراه ارائه' : 'کد کاتالوگ رسمی بودن کد ارائه در آموزشیار را تضمین نمی‌کند.'}
                             >
