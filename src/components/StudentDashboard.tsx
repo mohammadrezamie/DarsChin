@@ -522,6 +522,8 @@ export const StudentDashboard: React.FC = () => {
       setCoursePriorities([]);
       setOfferingPriorities({});
       setClearConfirmOpen(false);
+      // Recalculate eligibility against the cleared server-side plan.
+      void fetchDashboardData();
     }
   };
 
