@@ -57,6 +57,30 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).not.toContain('ترم آخری (۲۴ واحد)');
   });
 
+  it('does not evaluate a stale local selection when profile or saved plan retrieval fails',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    expect(dashboard).toContain('!planRes.success || !planRes.data ||');
+    expect(dashboard).toContain('!Array.isArray(planRes.data.selectedOfferingIds)');
+    expect(dashboard).toContain('const planned = planRes.data.selectedOfferingIds;');
+    expect(dashboard).not.toContain(': selectedOfferingIds;');
+    expect(dashboard).toContain('setCurriculumId(null);');
+    expect(dashboard).toContain('setEvaluations([]);');
+    expect(dashboard).toContain('setRecommendations([]);');
+    expect(dashboard).toContain('setAcademicLimits(null);');
+    expect(dashboard).toContain('setCurrentTerm(null);');
+    expect(dashboard).toContain('اطلاعات حساب حذف نشده‌اند');
+  });
+
+  it('blocks plan changes on unreliable data and holds the conflict modal during a pending save',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    expect(dashboard).toContain('if (loading || loadError)');
+    expect(dashboard).toContain('برنامه هنوز به‌طور معتبر بارگذاری نشده است');
+    expect(dashboard).toContain("if (!planMutationRef.current)");
+    expect(dashboard).toContain('ref={conflictCancelRef} disabled={planStatus === \'saving\'}');
+    expect(dashboard).toContain("planStatus === 'error' && planError");
+    expect(dashboard).toContain('درخواست ثبت با بررسی سرور');
+  });
+
   it('contains keyboard focus within the warning dialog and restores background scroll',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
     expect(dashboard).toContain('role="alertdialog" aria-modal="true"');
