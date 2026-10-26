@@ -123,6 +123,9 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('setVerifiedContextKey(null)');
     expect(component).toContain('},[academicContextKey]);');
     expect(component).toContain('const progressReady=progressLoadedKey===progressKey;');
+    expect(component).toContain('const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:');
+    expect(component).toContain('setCopyNotice({contextKey:academicContextKey,message})');
+    expect(component).toContain('},[academicContextKey]);');
     expect(component).toContain('const activeDoneIds=progressReady?doneIds:[];');
     expect(component).toContain('const done=activeDoneIds.includes(step.courseId);');
     expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));');
