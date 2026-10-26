@@ -47,6 +47,8 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('انتقال مدارهای الکتریکی به پایین');
     expect(html).toContain('ثبت خودکار در آموزشیار نیست');
     expect(html).toContain('02');
+    expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
+    expect(html).toContain('کپی شماره گروه');
     expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 flex-wrap items-center/);
     expect(html).toContain('min-[430px]:flex-nowrap');
     expect(html).toContain('gap-y-1.5');
@@ -110,6 +112,8 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('const next=rulesReady?queue.steps.find');
     expect(component).toContain('disabled={!rulesReady||!next?.copyCode}');
     expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
+    expect(component).toContain('disabled={!rulesReady||!step.ready||locked}');
+    expect(component).toContain('aria-label={`کپی شماره گروه ${step.courseName}`}');
     expect(component).toContain('کپی سریع تا دریافت اطلاعات غیرفعال است');
     expect(component).toContain('کپی سریع پس از بررسی فعال می‌شود');
     // The fallback copy textarea must not remain in the document on error.
