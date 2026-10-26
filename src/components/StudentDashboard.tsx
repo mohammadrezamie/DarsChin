@@ -350,6 +350,9 @@ export const StudentDashboard: React.FC = () => {
     if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities)) {
       setSelectedOfferingIds(newSelected);
       setOfferingPriorities(newOfferingPriorities);
+      // The primary section changed; refresh server-derived prerequisites,
+      // schedule conflicts and recommendations for the actual saved plan.
+      void fetchDashboardData();
     }
   };
 
