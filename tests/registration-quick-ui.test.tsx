@@ -51,6 +51,10 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('min-[430px]:flex-nowrap');
     expect(html).toContain('gap-y-1.5');
     expect(html).toContain('h-11 w-11');
+    expect(html).toContain('کپی سریع پس از بررسی فعال می‌شود');
+    // The first render has no hydrated rules/history yet: no risky early copy.
+    expect(html).toMatch(/aria-label="کپی کد درس بعدی"[^>]*disabled=""/);
+    expect(html).toMatch(/disabled=""[^>]*aria-label="کپی کد مدارهای الکتریکی"/);
   });
 
   it('waits for real save feedback and locks reorder actions while writing',()=>{
@@ -97,7 +101,32 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(queue.steps[0].ready).toBe(false);
     const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
     expect(source).toContain('s.ready&&!doneIds.includes(s.courseId)');
-    expect(source).toContain('disabled={!step.ready||!step.copyCode||locked}');
+    expect(source).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
+  });
+
+  it('keeps quick-copy fail-closed until chart and passed-course rules resolve', () => {
+    const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
+    expect(component).toContain('const rulesReady=Boolean(curriculumId)&&!loading&&!error');
+    expect(component).toContain('const next=rulesReady?queue.steps.find');
+    expect(component).toContain('disabled={!rulesReady||!next?.copyCode}');
+    expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
+    expect(component).toContain('کپی سریع تا دریافت اطلاعات غیرفعال است');
+    expect(component).toContain('کپی سریع پس از بررسی فعال می‌شود');
+    // The fallback copy textarea must not remain in the document on error.
+    expect(component).toContain('finally { input.remove(); }');
+  });
+
+  it('keeps long course and instructor names visible on compact RTL rows', () => {
+    const html=renderQueue({...offering,
+      courseName:'مبانی بسیار طولانی مدارات الکتریکی و سیستم‌های دیجیتال',
+      instructor:'استاد آزمایشی با نام خانوادگی طولانی برای بررسی واکنش‌گرایی',
+    });
+    expect(html).toContain('مبانی بسیار طولانی مدارات الکتریکی و سیستم‌های دیجیتال');
+    expect(html).toContain('استاد آزمایشی با نام خانوادگی طولانی');
+    expect(html).toContain('[overflow-wrap:anywhere]');
+    expect(html).not.toContain('min-[430px]:truncate');
+    expect(html).not.toContain('block truncate text-[11px]');
+    expect(html).toContain('min-h-11');
   });
 
   it('places optional details below the compact action row, not alongside it', () => {
