@@ -31,11 +31,14 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // for that fetch. Changing profiles must invalidate the previous proof
   // synchronously, before React's effects run.
   const [verifiedContextKey,setVerifiedContextKey]=useState<string|null>(null);
-  const [copyState,setCopyState]=useState('');
+  const [copyNotice,setCopyNotice]=useState<{contextKey:string;message:string}|null>(null);
   const [reordering,setReordering]=useState(false);
   const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
+  // Async clipboard/reorder responses from another account never show on this one.
+  const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:'';
+  const setCopyState=(message:string)=>setCopyNotice({contextKey:academicContextKey,message});
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
   // Wait for hydration of this exact term/chart before persisting; otherwise the
@@ -104,7 +107,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyTextWithFallback(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
-  },[]);
+  },[academicContextKey]);
   const toggleDone=(id:string)=>{
     if(!progressReady)return;
     setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
