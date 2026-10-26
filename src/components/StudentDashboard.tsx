@@ -118,7 +118,7 @@ export const StudentDashboard: React.FC = () => {
   useEffect(() => {
     const button = tabButtonsRef.current[activeTab];
     if (!button || typeof button.scrollIntoView !== 'function') return;
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
     button.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
   }, [activeTab]);
 
