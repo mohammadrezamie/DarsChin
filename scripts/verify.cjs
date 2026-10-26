@@ -29,7 +29,7 @@ try {
   // Dependency-free tests for the shared-VPS readiness gate, before any Bun
   // installation or mutable application fixtures. Never touches systemd.
   const readiness=spawnSync(process.execPath,
-    ['--test','scripts/check-vps-readiness.test.cjs'],{
+    ['--test','scripts/check-vps-readiness.nodecheck.cjs'],{
       cwd:root,env:environment,stdio:'inherit',shell:false,
     });
   if(readiness.error || readiness.status!==0){
