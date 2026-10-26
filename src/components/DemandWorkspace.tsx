@@ -45,6 +45,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [detailRevision, setDetailRevision] = useState(0);
   const [settledDetailKey, setSettledDetailKey] = useState<string | null>(null);
   const [loadedChartId, setLoadedChartId] = useState<string | null>(null);
+  const [loadedChartRevision, setLoadedChartRevision] = useState<number | null>(null);
   const refreshVersionRef = useRef(createRequestEpoch());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +62,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
   const curriculum = curricula.find(c=>c.id===newCurriculum);
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
-  const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
+  // Rechecking the same chart after a refresh is not equivalent to reusing the
+  // previous academic relationships: the revision must also match.
+  const chartReady = Boolean(chartContextId && loadedChartId === chartContextId &&
+    loadedChartRevision === detailRevision);
   const currentDetailKey = demandDetailKey(role, survey?.id, detailRevision);
   // A save response may arrive after the selected form has changed. The ref
   // updates during render, before effects get a chance to clean up old data.
@@ -136,6 +140,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setAssigned([]);
     setRules([]);
     setLoadedChartId(null);
+    setLoadedChartRevision(null);
     setNewCourseIds([]);
     setNewCurriculum('');
     setNewTrack('');
@@ -203,6 +208,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setAssigned([]);
     setRules([]);
     setLoadedChartId(null);
+    setLoadedChartRevision(null);
     if (!curriculumId) return ()=>{active=false};
     void apiRequest<{courses: CourseAssigned[]; prerequisites:AcademicRule[]; corequisites:AcademicRule[]}>(`/api/curriculum/${encodeURIComponent(curriculumId)}/full`).then(result=>{
       if(!active) return;
@@ -214,9 +220,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       setAssigned(result.data.courses);
       setRules([...result.data.prerequisites,...result.data.corequisites]);
       setLoadedChartId(curriculumId);
+      setLoadedChartRevision(detailRevision);
     });
     return ()=>{active=false};
-  },[role,survey?.curriculumId,newCurriculum]);
+  },[role,survey?.curriculumId,newCurriculum,detailRevision]);
 
   const submit = async () => {
     if(!survey || !detailReady || busy || survey.status !== 'OPEN')return;
