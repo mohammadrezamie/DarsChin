@@ -22,9 +22,9 @@ const shared = {
 
 export function createGuestAbuseLimiters() {
   return {
-    captcha: rateLimit({ ...shared, windowMs: 5 * 60_000, limit: 100, identifier: 'guest-captcha' }),
-    login: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 45, identifier: 'guest-login' }),
-    register: rateLimit({ ...shared, windowMs: 60 * 60_000, limit: 25, identifier: 'guest-register' }),
-    otpSend: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 30, identifier: 'guest-otp-send' }),
+    captcha: rateLimit({ ...shared, windowMs: 5 * 60_000, limit: 240, identifier: 'guest-captcha' }),
+    login: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 90, identifier: 'guest-login' }),
+    register: rateLimit({ ...shared, windowMs: 60 * 60_000, limit: 80, identifier: 'guest-register' }),
+    otpSend: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 60, identifier: 'guest-otp-send' }),
   };
 }
