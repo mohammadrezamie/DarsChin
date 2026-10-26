@@ -14,9 +14,11 @@ describe('guest human verification is always verified by the server',()=>{
 
     const id='00000000-0000-4000-8000-000000000001';
     const row={id,value:'AbC42',createdAt:Date.now(),
-      expiresAt:Date.now()+300_000,attempts:0};
+      expiresAt:Date.now()+300_000,attempts:0,action:'login' as const};
     db.captchaChallenges.push(row);
     try {
+      expect(await validateGuestChallenge(`local:${id}:AbC42`,'register')).toBe(false);
+      expect(row.attempts).toBe(0);
       expect(await validateGuestChallenge(`local:${id}:wrong`,'login')).toBe(false);
       expect(row.attempts).toBe(1);
       expect(await validateGuestChallenge(`local:${id}:abc42`,'login')).toBe(true);
@@ -31,7 +33,7 @@ describe('guest human verification is always verified by the server',()=>{
     vi.spyOn(db,'save').mockImplementation(()=>{});
     const id='00000000-0000-4000-8000-000000000002';
     const row={id,value:'XyZ77',createdAt:Date.now()-600_000,
-      expiresAt:Date.now()-1,attempts:0};
+      expiresAt:Date.now()-1,attempts:0,action:'register' as const};
     db.captchaChallenges.push(row);
     try {
       expect(await validateGuestChallenge(`local:${id}:XyZ77`,'register')).toBe(false);
