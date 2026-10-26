@@ -39,7 +39,7 @@ export function isInternalApiPath(endpoint: string): boolean {
   }
 }
 
-export async function apiRequest<T = unknown>(
+export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
