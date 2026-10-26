@@ -123,9 +123,11 @@ describe('Persian-first responsive UI guardrails',()=>{
 
     expect(recommendation).toContain('flex-wrap items-start justify-between gap-3');
     expect(recommendation).toContain('[overflow-wrap:anywhere]');
-    expect(recommendation).toContain('text-3xl');
+    expect(recommendation).toContain('text-[clamp(1.8rem,5vw,3rem)]');
+    expect(recommendation).toContain('useReducedMotion()');
     expect(eligibility).toContain('min-h-[300px]');
-    expect(eligibility).toContain('text-3xl');
+    expect(eligibility).toContain('text-[clamp(1.8rem,5vw,3rem)]');
+    expect(eligibility).toContain('useReducedMotion()');
     expect(hero).toContain('min-w-0 max-w-2xl');
     expect(hero).toContain('break-words text-sm font-extrabold');
     expect(hero).not.toContain('block truncate text-sm font-extrabold');
