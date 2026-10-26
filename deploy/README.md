@@ -142,3 +142,25 @@ Before real student data is accepted, establish and test a backup routine for `/
 ## Current verification status
 
 These files are deployment guidance/templates, not evidence that the server has been changed or the app deployed. Run the repository's lint, tests, and production build on a named commit before calling a release verified. Test against a staging copy before accepting real student data.
+
+## P0 data-store survival guard — provision once, then fail closed
+
+The JSON datastore is **one-process only**. All updates now use uniquely named,
+private 0600 temporary files, flush their contents, atomically rename over the
+old file, and flush the directory on POSIX. If serialization or rename fails
+before replacement, the old database remains intact.
+
+**First setup:** Keep `DARSCHYN_REQUIRE_EXISTING_DB=false` until the existing
+`DARSCHYN_DATA_DIR/darschyn-db.json` is created by the **verified** release,
+its permissions are restricted and a separate backup can actually be restored.
+After proving that the real service points to the durable data volume, set
+`DARSCHYN_REQUIRE_EXISTING_DB=true` in **DarsChin's own** private environment
+and restart only that service under the approved deployment plan. Thereafter,
+missing/unmounted/corrupt data **must** fail startup (nonzero) and keep all
+original bytes, rather than silently replacing students with demo/empty data.
+
+Do not use `rm`, `mv`, clearing the data directory, or resetting the
+service to sample seed data as a repair strategy. Restore from a separately
+verified backup. This guard does **not** verify Nginx, systemd restart stability,
+real SMS, multi-instance atomicity or the earlier shared-VPS crash root cause.
+See [durable storage gate](../docs/DURABLE_DATABASE_GATE_FA.md).
