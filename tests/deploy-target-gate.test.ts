@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 const require = createRequire(import.meta.url);
 const gate = require('../scripts/deploy-target-gate.cjs');
@@ -117,6 +119,46 @@ describe('isolated staging and production deployment gate', () => {
       fetchImpl:async()=>{throw new Error('connection refused');},
       sleep:async()=>{},
     })).rejects.toThrow(/connection refused/);
+  });
+
+  it('uses real ephemeral HTTP listeners for stage-then-production verification and fail-closed mismatch',async()=>{
+    const settings=cloned();
+    let wrongStage=false;
+    let productionRequests=0;
+    const serve=async(kind:'staging'|'production')=>{
+      const server=createServer((req,res)=>{
+        if(kind==='production')productionRequests+=1;
+        const health=req.url==='/api/health';
+        res.writeHead(health?200:404,{'content-type':'application/json'});
+        res.end(JSON.stringify(health
+          ? {status:'ok',product:'درس‌چین',releaseSha:kind==='staging'&&wrongStage?'0'.repeat(40):SHA}
+          : {error:'not found'}));
+      });
+      await new Promise<void>((resolve,reject)=>{
+        server.once('error',reject);
+        server.listen(0,'127.0.0.1',resolve);
+      });
+      settings[kind].port=(server.address() as AddressInfo).port;
+      return server;
+    };
+    const staging=await serve('staging');
+    const production=await serve('production');
+    try{
+      const verified=await gate.verifyDeployment({target:'production',sha:SHA,samples:2},{
+        settings,sleep:async()=>{},
+      });
+      expect(verified.map((row:{target:string})=>row.target)).toEqual(['staging','production']);
+      expect(productionRequests).toBeGreaterThan(0);
+      const before=productionRequests;
+      wrongStage=true;
+      await expect(gate.verifyDeployment({target:'production',sha:SHA,samples:2},{
+        settings,sleep:async()=>{},
+      })).rejects.toThrow(/release SHA/);
+      expect(productionRequests).toBe(before);
+    }finally{
+      await Promise.all([staging,production].map(server=>
+        new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()))));
+    }
   });
 
   it('ships a staging-only hardened service and excludes the TNA VPS paths',()=>{
