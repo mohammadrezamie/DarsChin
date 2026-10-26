@@ -46,7 +46,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
 
-  const refresh = async () => {
+  const refresh = async (resetDefaults = false) => {
     const requestVersion = refreshVersionRef.current.begin();
     setError('');
     const [list, courseResult, meta, chart] = await Promise.all([
@@ -81,10 +81,10 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         setStudentNumber(previous => previous || response.data?.profile.studentNumber || '');
       }
     }
-    if (!newTerm && meta.success && meta.data?.academicTerms?.length) {
+    if ((resetDefaults || !newTerm) && meta.success && meta.data?.academicTerms?.length) {
       setNewTerm(meta.data.academicTerms.find(t=>t.active)?.id || meta.data.academicTerms[0].id);
     }
-    if (!newCurriculum && chart.success && chart.data?.length) setNewCurriculum(chart.data[0].id);
+    if ((resetDefaults || !newCurriculum) && chart.success && chart.data?.length) setNewCurriculum(chart.data[0].id);
   };
 
   useEffect(()=>{
@@ -109,7 +109,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setError('');
     setSuccess('');
     setBusy(false);
-    void refresh();
+    void refresh(true);
     return () => { refreshVersionRef.current.invalidate(); };
   },[role]);
 
