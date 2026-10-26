@@ -41,7 +41,11 @@ function pruneExpiredChallenges(now = Date.now()): boolean {
     return captchaCount !== db.captchaChallenges.length || otpCount !== db.otpChallenges.length;
 }
 
-otpRouter.get('/captcha/generate', (_req, res) => {
+otpRouter.get('/captcha/generate', (req, res) => {
+    const action = req.query.action === undefined ? 'otp' : req.query.action;
+    if (action !== 'otp' && action !== 'login' && action !== 'register') {
+        return res.status(400).json({ success: false, error: 'نوع چالش امنیتی معتبر نیست.' });
+    }
     pruneExpiredChallenges();
     // Bound the pilot's persisted JSON CAPTCHA pool even under repeated guest
     // requests. Never retain an unbounded list of challenge answers in storage.
@@ -63,7 +67,8 @@ otpRouter.get('/captcha/generate', (_req, res) => {
         value: captcha.text, // Kept server-side
         createdAt: Date.now(),
         expiresAt: Date.now() + CAPTCHA_EXPIRY_MS,
-        attempts: 0
+        attempts: 0,
+        action,
     });
     db.save();
     
@@ -116,7 +121,7 @@ otpRouter.post('/send', async (req, res) => {
     }
     if (!usingTurnstile) {
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
-    if (!captcha || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
+    if (!captcha || (captcha.action && captcha.action !== 'otp') || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
     }
     
