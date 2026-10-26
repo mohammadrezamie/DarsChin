@@ -77,6 +77,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
   const refresh = async (resetDefaults = false) => {
     const requestVersion = refreshVersionRef.current.begin();
+    // Immediately invalidate visible answers/reports, even if list loading
+    // subsequently fails. Never keep a stale form editable during an outage.
+    setDetailRevision(value => value + 1);
+    saveRequestRef.current.invalidate();
     setError('');
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
@@ -92,9 +96,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     }
     setSurveys(list.data);
     setSelectedId(prev => list.data.some(item => item.id === prev) ? prev : list.data[0]?.id || '');
-    // Force same-ID details to refetch, without a parallel report request that
-    // could commit after the user had already switched to a different survey.
-    setDetailRevision(value => value + 1);
+    // The revision was already invalidated when refresh began, so the current
+    // survey detail must be reloaded even if its ID has not changed.
     if (courseResult.success && Array.isArray(courseResult.data)) setCourses(courseResult.data);
     if (meta.success && meta.data) {
       if (Array.isArray(meta.data.academicTerms)) setTerms(meta.data.academicTerms);
