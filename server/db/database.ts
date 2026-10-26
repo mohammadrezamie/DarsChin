@@ -167,7 +167,10 @@ export class LocalDatabase {
   private isInitialized = false;
 
   constructor() {
-    this.ensureDataDir();
+    // A guarded startup must not even recreate the missing mountpoint.
+    if (process.env.DARSCHYN_REQUIRE_EXISTING_DB !== 'true') {
+      this.ensureDataDir();
+    }
   }
 
   private ensureDataDir() {
@@ -178,12 +181,12 @@ export class LocalDatabase {
 
   public async init(seedIfEmpty = true) {
     if (this.isInitialized) return;
+
+    // Guard *before* mkdir: if a durable volume is detached, do not recreate
+    // its mount path or bootstrap an empty database there.
+    assertExistingDatabasePresent(DB_FILE, process.env.DARSCHYN_REQUIRE_EXISTING_DB === 'true');
     this.ensureDataDir();
     let loadedExisting = false;
-
-    // Once a real deployment is initialized, set this guard to prevent a
-    // mistyped data directory or unmounted disk from creating an empty DB.
-    assertExistingDatabasePresent(DB_FILE, process.env.DARSCHYN_REQUIRE_EXISTING_DB === 'true');
     if (fs.existsSync(DB_FILE)) {
       try {
         this.data = readPersistedJson(DB_FILE) as DatabaseSchema;
