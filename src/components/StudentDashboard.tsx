@@ -175,31 +175,36 @@ export const StudentDashboard: React.FC = () => {
         apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
       ]);
       if (version !== evaluationVersionRef.current) return;
-      if (profileRes.success && profileRes.data) {
-        setProfile(profileRes.data.profile);
-        setCurriculumId(profileRes.data.curriculum?.id || null);
-      } else {
+      // Both responses are required before evaluating a plan. Never silently
+      // use an old browser selection if the persisted plan request failed.
+      if (!profileRes.success || !profileRes.data?.profile ||
+          !planRes.success || !planRes.data ||
+          !Array.isArray(planRes.data.selectedOfferingIds)) {
+        setProfile(null);
         setCurriculumId(null);
-        setLoadError(profileRes.error || 'پرونده تحصیلی دریافت نشد.');
+        setSelectedOfferingIds([]);
+        setCoursePriorities([]);
+        setOfferingPriorities({});
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
+        setLoadError(!profileRes.success || !profileRes.data?.profile
+          ? profileRes.error || 'پرونده تحصیلی دریافت نشد؛ پیش‌نمایش موقتاً خالی است.'
+          : planRes.error || 'برنامه ذخیره‌شده دریافت نشد؛ اطلاعات حساب حذف نشده‌اند. دوباره تلاش کنید.');
+        return;
       }
-
-      const savedSelected = planRes.data?.selectedOfferingIds;
-      const planned: string[] = planRes.success && Array.isArray(savedSelected)
-        ? savedSelected
-        : selectedOfferingIds;
-      if (planRes.success && planRes.data) {
-        setSelectedOfferingIds(planned);
-        const priorities = planRes.data.coursePriorities;
-        if (Array.isArray(priorities)) setCoursePriorities(priorities);
-        else if (priorities && typeof priorities === 'object') {
-          setCoursePriorities(Object.keys(priorities).sort((x, y) => priorities[x] - priorities[y]));
-        }
-        if (planRes.data.offeringPriorities && typeof planRes.data.offeringPriorities === 'object') {
-          setOfferingPriorities(planRes.data.offeringPriorities);
-        }
-      } else {
-        setLoadError(planRes.error || 'برنامه ذخیره‌شده قابل دریافت نیست.');
-      }
+      setProfile(profileRes.data.profile);
+      setCurriculumId(profileRes.data.curriculum?.id || null);
+      const planned = planRes.data.selectedOfferingIds;
+      setSelectedOfferingIds(planned);
+      const priorities = planRes.data.coursePriorities;
+      if (Array.isArray(priorities)) setCoursePriorities(priorities);
+      else if (priorities && typeof priorities === 'object') {
+        setCoursePriorities(Object.keys(priorities).sort((x, y) => priorities[x] - priorities[y]));
+      } else setCoursePriorities([]);
+      setOfferingPriorities(planRes.data.offeringPriorities &&
+        typeof planRes.data.offeringPriorities === 'object' ? planRes.data.offeringPriorities : {});
 
       const evalRes = await apiRequest<any>('/api/eligibility/evaluate', {
         method: 'POST', body: JSON.stringify({ plannedCourseIds: planned }),
@@ -210,10 +215,20 @@ export const StudentDashboard: React.FC = () => {
         setRecommendations(evalRes.data.recommendations || []);
         if (evalRes.data.academicLimits) setAcademicLimits(evalRes.data.academicLimits);
         if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
-      } else setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست.');
+      } else {
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
+        setLoadError(evalRes.error || 'تحلیل دروس ارائه‌شده در دسترس نیست؛ تا دریافت مجدد امکان ویرایش برنامه غیرفعال است.');
+      }
     } catch {
       if (version === evaluationVersionRef.current) {
-        setLoadError('ارتباط با سامانه برای دریافت اطلاعات دانشجو برقرار نشد.');
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
+        setLoadError('ارتباط با سامانه برقرار نشد؛ پیش از تغییر برنامه، اطلاعات را دوباره دریافت کنید.');
       }
     } finally {
       if (version === evaluationVersionRef.current) setLoading(false);
@@ -256,6 +271,10 @@ export const StudentDashboard: React.FC = () => {
 
   // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
   const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
+    if (loading || loadError) {
+      setPlanError('برنامه هنوز به‌طور معتبر بارگذاری نشده است. ابتدا دریافت دوباره اطلاعات را انجام دهید.');
+      return false;
+    }
     if (planMutationRef.current) {
       setPlanError('تغییر قبلی هنوز در حال ثبت است. پس از پایان ذخیره‌سازی دوباره تلاش کنید.');
       return false;
