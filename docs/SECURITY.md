@@ -26,3 +26,19 @@ Review all authenticated API responses for secrets, including backup downloads a
 8. Test authorization, cross-user access, state persistence and rollback at a named commit.
 
 **Responsible reporting:** keep vulnerability details and real data in private project channels, redact samples, and do not publish exploits or identifiers in issues.
+
+
+## Guest CAPTCHA (login, registration, OTP)
+
+- `TURNSTILE_ENABLED=true`: verify every submitted token on the Express server against Cloudflare Siteverify, expected action and permitted hostname. Missing token/provider error is denied.
+- `TURNSTILE_ENABLED=false`: the sign-in and sign-up UI uses the existing local SVG CAPTCHA service. The server validates a time-limited challenge ID and answer, increments failed attempts, and consumes a successful answer so replay is denied. SMS-OTP initiation already uses its own local image check in this mode.
+- A returned SVG/image is **not** proof that a human was verified. The server must verify the solution on every guest account-creation or login request. Fake checkboxes, unverified frontend flags and fail-open fallbacks are forbidden.
+- Limitations: the JSON database and public CAPTCHA generation endpoint remain single-process pilot infrastructure, not a production anti-abuse platform. Verify rate limits, bot resistance, storage scaling, visual accessibility and Iran connectivity before inviting real students; OTP verification itself remains a separate factor.
+- Current change is code-reviewed only until TypeScript/Vitest, live browser checks and a named preview build have completed; do not treat documentation as release approval.
+
+
+## Guest CAPTCHA acceptance — 2026-10-26
+
+Public login and registration must never rely on a decorative checkbox or a browser-only flag. The server checks a one-use, action-scoped first-party image CAPTCHA when Turnstile is disabled; when enabled, it checks the real provider's Siteverify token, action and exact allowed hostname. The OTP request keeps its own scoped challenge. Challenge images are rendered using `img`, not inserted as raw SVG markup. A failed challenge/configuration must not authenticate a user.
+
+Full deployment, Iranian connectivity, shared-store atomicity, proxy-level rate limits, accessible non-image fallback and real SMS must still be verified before inviting real students. See [CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) for the detailed checklist. No real secrets or other repositories were modified.

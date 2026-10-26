@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { OtpChallenge } from '../src/types';
 import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../server/auth/password-recovery';
 import { loginSchema, recoverPasswordSchema, otpPasswordRecoverySchema } from '../server/schemas/auth';
@@ -112,5 +114,14 @@ describe('password recovery request validation', () => {
       otpChallengeId: '',
       newPassword: '123',
     }).success).toBe(false);
+  });
+});
+
+
+describe('legacy modal recovery entry', () => {
+  it('directs guests to the working OTP-protected flow instead of a dead recovery-key form', () => {
+    const code = readFileSync(resolve(process.cwd(), 'src/components/AuthModal.tsx'), 'utf8');
+    expect(code).toContain('href="/forgot-password"');
+    expect(code).not.toContain('onSubmit={handleRecover}');
   });
 });

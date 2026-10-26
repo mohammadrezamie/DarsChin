@@ -23,8 +23,12 @@ export const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
 
   const loadCaptcha = async () => {
+    // A failed refresh must never leave an old challenge looking active.
+    setCaptchaId('');
+    setCaptchaSvg('');
+    setCaptchaValue('');
     try {
-      const res = await apiRequest('/api/auth/otp/captcha/generate');
+      const res = await apiRequest('/api/auth/otp/captcha/generate?action=otp');
       if (res.success && res.data) {
         setCaptchaId(res.data.id);
         setCaptchaSvg(res.data.svg);
@@ -163,7 +167,11 @@ export const ForgotPassword: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد امنیتی</label>
                   <div className="flex gap-4 items-center">
-                    <div className="bg-white rounded-xl border border-slate-200 p-2 h-[60px]" dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+                    <div className="bg-white rounded-xl border border-slate-200 p-2">
+                      <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(captchaSvg)}`}
+                        alt="تصویر کد امنیتی بازیابی حساب" draggable={false}
+                        className="h-[60px] max-w-full object-contain" />
+                    </div>
                     <button type="button" onClick={loadCaptcha} className="text-sm text-blue-600 font-medium whitespace-nowrap">تغییر کد</button>
                   </div>
                   <input type="text" dir="ltr" value={captchaValue} onChange={(e) => setCaptchaValue(e.target.value)} className="mt-3 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="کد بالا را وارد کنید" />

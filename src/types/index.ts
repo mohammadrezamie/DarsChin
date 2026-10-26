@@ -40,6 +40,8 @@ export interface CaptchaChallenge {
   createdAt: number;
   expiresAt: number;
   attempts: number;
+  /** Prevent reusing an OTP CAPTCHA for guest login or registration. */
+  action?: 'login' | 'register' | 'otp';
   consumedAt?: number;
 }
 

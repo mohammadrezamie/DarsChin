@@ -45,3 +45,5 @@
 For a release, validate one named commit: dependency installation, TypeScript, tests, build, API smoke check, persistence across restart, backup restore, and HTTPS. A successful Vercel preview of the frontend is **not** a verified backend deployment.
 
 No changes to academic eligibility rules without the owner's explicit confirmation.
+
+| **گیت CAPTCHA واقعی مهمان، Turnstile/تصویر محلی، بازیابی OTP و شرایط پذیرش دانشجو** | [CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) |
