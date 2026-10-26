@@ -188,7 +188,34 @@ async function main() {
     throw new Error('Sync job state did not survive a process restart');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA-protected synthetic login, private demand API, disabled production reset, demo pages, and sync persistence.');
+  // Reproduce a fatal startup after initialization without touching the VPS.
+  // The previous entrypoint logged a failed bootstrap but exited with code 0,
+  // preventing systemd and deploy gates from recognizing the error.
+  await stopServer();
+  const invalidServer = spawn(process.execPath, [binary], {
+    cwd: root,
+    env: { ...environment, PORT: 'invalid-port' },
+    stdio: 'ignore',
+  });
+  const badStatus = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      invalidServer.kill('SIGKILL');
+      reject(new Error('Invalid startup did not exit within five seconds'));
+    }, 5000);
+    invalidServer.once('error', error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    invalidServer.once('exit', (code, signal) => {
+      clearTimeout(timeout);
+      resolve({ code, signal });
+    });
+  });
+  if (badStatus.code !== 1 || badStatus.signal !== null) {
+    throw new Error('SECURITY: failed server bootstrap returned success instead of exit code 1');
+  }
+
+  console.log('PASS: health, JSON 404, single-use CAPTCHA-protected synthetic login, private demand API, disabled production reset, demo pages, sync persistence and nonzero fatal startup.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
