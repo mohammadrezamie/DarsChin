@@ -84,6 +84,15 @@
 
 | OWN-036 | **دستور دائمی ۲۰۲۶/۱۰/۲۶: اتصال هر دو ریپوی تکین و درس‌چین به یک VPS بدون تداخل انتشار یا منابع.** استقرار هرکدام باید مستقل، قابل‌ردیابی، SHA-ثابت، دارای rollback و بدون دستکاری کد/DB/ENV/Nginx یا ایمیل پروژه دیگر باشد. همان روز SHA `5a6c51fe` روی Windows با TypeScript، **۱۹۷/۱۹۷** تست، build و API smoke ایزوله پاس و بسته با SHA256 معتبر به سرور منتقل شد. ولی سرویس واقعی درس‌چین بعد نصب **۵۵ مرتبه restart** شده، هیچ listener در ۳۰۰۱ نداشته و localhost health مردود است؛ موفقیت نمایش‌داده‌شدهٔ installer کاذب بوده. GitHub به معنی auto deploy نیست؛ TNA همچنان تنها با `tna-deploy` مالک و درس‌چین با release مستقل. عیب‌یابی P0، ثبت نسخهٔ اصلاح‌شدهٔ installer و بررسی actual Git remote/health/rollback پیش‌نیاز انتشار است. | P0 امنیت/استقرار | **مستند شد؛ خطای runtime رفع نشده، سرویس موفق نیست، اتصال خودکار/remote دو پروژه تأیید نشده** | [جزئیات سرور مشترک](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md)، [Issue #40](https://github.com/mohammadrezamie/DarsChin/issues/40)، [Issue تکین #386](https://github.com/mohammadrezamie/tnacompany/issues/386) |
 
+## OWN-040 — دو محیط مستقلِ تست و اصلی با الگوگیری فقط‌خواندنی از تکین (۲۰۲۶/۱۰/۲۶)
+
+در ادامهٔ OWN-036 و OWN-038، مالک خواست کد دیپلوی شرکت تکین **فقط خوانده شود** و در صورت مفیدبودن، جداسازی انتشار آزمایشی و اصلی برای درس‌چین نیز پیاده شود؛ توسعه و رفع ایراد هم ادامه داشته باشد. **حق هیچ نوع تغییر در مخزن تکین وجود ندارد.**
+
+- **هدف / معیار پذیرش:** staging و production از نظر data directory، user سرویس، secrets، مسیر release/current و پورت مستقل باشند؛ ابزار read-only با SHA کامل، خروجی Dry-run به‌عنوان حالت پیش‌فرض، کنترل JSON health/404 و الزام تست staging روی همان SHA قبل از تأیید production داشته باشد؛ localhost-only و fail-closed، بدون وابستگی اجباری به GitHub Actions.
+- **پیش‌نیاز عملیاتی:** تست مستقل Bun/Vitest/Build/API smoke، بکاپ و restore واقعی دادهٔ درس‌چین، اطمینان از پایداری systemd، مجوز اپراتور و دامنه/TLS مستقل. Vercel Preview فعلاً تنها رابط کاربری است و Express را میزبانی نمی‌کند. PR #42 و crash-loop VPS هنوز جداگانه نیازمند بررسی هستند.
+- **وضعیت:** قرارداد `deploy/targets.json`، سرویس نمونهٔ staging، فایل متغیرهای نمونه، گیت `deploy:gate` و تست‌های رجعتی در شاخهٔ `feat/staging-prod-release-gates-20261026` ثبت شده‌اند؛ **روی VPS نصب/اجرا نشده‌اند** و در صورت نبود گزارش گیت اجرایی و بازبینی، ادغام و انتشار تأییدشده نیست.
+- **مراجع:** [طرح staging/production](../deploy/STAGING_AND_PRODUCTION_FA.md)، `scripts/deploy-target-gate.cjs`، `tests/deploy-target-gate.test.ts` و [حادثهٔ VPS](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md). هیچ فایل یا تغییر GitHub در TNA ایجاد نشده است.
+
 ## تضاد تصمیم‌ها و روش حل
 
 - **نیازسنجی تک‌ورودی در نسخهٔ قدیمی `FEATURE_COURSE_DEMAND.md §۱.۱` منسوخ است.** تصمیم جدید OWN-004 امکان یک فرم برای مجموعهٔ دلخواه از ورودی‌ها با چارت مستقل هر ورودی را الزام می‌کند؛ API نباید صرفاً فیلتر ظاهری داشته باشد. گزارش باید علاوه بر تجمیع، تفکیک دقیق بر اساس ورودی را نگه دارد.
