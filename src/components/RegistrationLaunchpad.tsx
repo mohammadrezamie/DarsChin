@@ -42,11 +42,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // for that fetch. Changing profiles must invalidate the previous proof
   // synchronously, before React's effects run.
   const [verifiedContextKey,setVerifiedContextKey]=useState<string|null>(null);
-  const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   const [copyState,setCopyState]=useState('');
   const [reordering,setReordering]=useState(false);
   const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
+  const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
   // Wait for hydration of this exact term/chart before persisting; otherwise the
