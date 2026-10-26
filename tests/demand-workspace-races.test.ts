@@ -61,6 +61,24 @@ describe('principal isolation and safe role reinitialization', () => {
   });
 });
 
+describe('refresh fail-closed behavior', () => {
+  it('invalidates previous survey detail and outstanding save before any network await', () => {
+    const s = source();
+    const refreshStart = s.indexOf('const refresh = async (resetDefaults = false)');
+    const refreshEnd = s.indexOf('useEffect(()=>{', refreshStart);
+    const body = s.slice(refreshStart, refreshEnd);
+    const invalidate = body.indexOf('setDetailRevision(value => value + 1)');
+    const preventSave = body.indexOf('saveRequestRef.current.invalidate()');
+    const network = body.indexOf('await Promise.all');
+    expect(invalidate).toBeGreaterThan(0);
+    expect(preventSave).toBeGreaterThan(0);
+    expect(network).toBeGreaterThan(invalidate);
+    expect(network).toBeGreaterThan(preventSave);
+    expect(body.match(/setDetailRevision\(value => value \+ 1\)/g)).toHaveLength(1);
+    expect(body).toContain('if (!list.success || !Array.isArray(list.data))');
+  });
+});
+
 describe('render-time survey detail isolation', () => {
   it('rejects the previously ready survey at the first render of a new selection, role or refresh', () => {
     const oldKey = demandDetailKey('student','survey-A',0);
