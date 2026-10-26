@@ -32,6 +32,12 @@ describe('compact manual registration priority rows in Persian RTL',()=>{
     expect(html).toContain('aria-label="اولویت 1"');
     expect(html).toContain('کپی کد');
     expect(html).toContain('410100');
+    const initialRow=html.split('جزئیات کد و وابستگی‌ها')[0];
+    expect(initialRow).toContain('کد ارائه');
+    expect(initialRow).toContain('410100');
+    expect(initialRow).toContain('aria-label="کپی کد درس بعدی"');
+    expect(initialRow).toContain('aria-label="کپی کد مدارهای الکتریکی و سیستم‌های الکترونیکی پیشرفته"');
+    expect(initialRow).toContain('min-h-11');
     expect(html).toContain('break-words');
     expect(html).not.toContain('block truncate');
     expect(html).toContain('این فهرست ثبت خودکار در آموزشیار نیست');
