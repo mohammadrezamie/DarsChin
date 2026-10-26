@@ -110,7 +110,7 @@ describe('compact manual Educationalyar registration queue', () => {
     const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
     expect(component).toContain('const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&');
     expect(component).toContain('verifiedContextKey===academicContextKey&&!loading&&!error');
-    expect(component).toContain('const next=rulesReady?queue.steps.find');
+    expect(component).toContain('const next=rulesReady&&progressReady?queue.steps.find');
     expect(component).toContain('disabled={!rulesReady||!next?.copyCode}');
     expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
     expect(component).toContain('disabled={!rulesReady||!step.ready||locked}');
@@ -122,6 +122,11 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('setVerifiedContextKey(academicContextKey)');
     expect(component).toContain('setVerifiedContextKey(null)');
     expect(component).toContain('},[academicContextKey]);');
+    expect(component).toContain('const progressReady=progressLoadedKey===progressKey;');
+    expect(component).toContain('const activeDoneIds=progressReady?doneIds:[];');
+    expect(component).toContain('const done=activeDoneIds.includes(step.courseId);');
+    expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));');
+    expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
     expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
     // The fallback copy textarea must not remain in the document on error.
