@@ -4,6 +4,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **اولویت UI-first یک‌ماهه برای جذب دانشجو، QA موبایل/تبلت/دسکتاپ و حفظ کیفیت بک‌اند (OWN-038)** | [UI_FIRST_30_DAY_FA.md](UI_FIRST_30_DAY_FA.md) |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
 | دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) |
