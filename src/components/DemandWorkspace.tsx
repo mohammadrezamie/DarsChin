@@ -158,7 +158,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   },[role,survey?.curriculumId,newCurriculum]);
 
   const submit = async () => {
-    if(!survey)return;
+    if(!survey || detailState !== 'ready')return;
     setError('');setSuccess('');setBusy(true);
     try {
       const r=await apiRequest<DemandResponse>(`/api/demand/surveys/${survey.id}/response`,{
@@ -243,7 +243,7 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {role==='student'?'درس‌های موردنیازت را درخواست کن؛ مشخصات پرونده‌ات دوباره پرسیده نمی‌شود.':'نیازسنجی مستقل برای مدیر گروه؛ آمار تقاضا و ریزگزارش امن دانشجویان.'}
             </p>
           </div>
-          <button type="button" onClick={()=>void refresh()} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-slate-700"><RefreshCw className="h-4 w-4"/> به‌روزرسانی</button>
+          <button type="button" disabled={busy} onClick={()=>void refresh()} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-slate-700"><RefreshCw className="h-4 w-4"/> به‌روزرسانی</button>
         </div>
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           تقاضا به‌معنی ثبت‌نام قطعی نیست. حدنصاب‌ها فقط شاخص برنامه‌ریزی‌اند؛ تشکیل کلاس یا مجازبودن درس نیاز به تأیید آموزشی دارد.
@@ -309,14 +309,14 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
             </div>
           </div>
-          <button type="button" disabled={busy||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
+          <button type="button" disabled={busy||!chartReady||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
         </section>
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 className="text-base font-black">{role==='admin'?'پایش نیازسنجی‌ها':'نیازسنجی‌های قابل پاسخ'}</h3>
         {!surveys.length && <p className="mt-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800">فعلاً نیازسنجی قابل دسترسی وجود ندارد.</p>}
-        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" disabled={busy} onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
       </section>
 
       {survey && role==='student' && (
@@ -340,13 +340,13 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             {survey.courseIds.map(courseId=>{
               const impacted = downstreamCourseIds(courseId,survey.curriculumId||'',rules).length;
               return <label key={courseId} className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-blue-400 dark:border-slate-700">
-                <input type="checkbox" checked={selectedCourses.includes(courseId)} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
+                <input type="checkbox" checked={selectedCourses.includes(courseId)} disabled={busy||detailState!=='ready'||survey.status!=='OPEN'} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
                 <span className="min-w-0"><span className="block text-sm font-bold">{courseMap.get(courseId)?.name||courseId}</span><span className="text-xs text-slate-500 dark:text-slate-400">{impacted>0?`بر اساس گراف موجود، به ${impacted} درس بعدی وابستگی دارد (پیشنهاد، نه مجوز)`:'بدون وابستگی مستقیم یا غیرمستقیمِ ثبت‌شده'}</span></span>
               </label>;
             })}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{selectedCourses.length} درس انتخاب شده · {myResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
-            <button type="button" disabled={busy||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-blue-700 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
+            <button type="button" disabled={busy||detailState!=='ready'||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-blue-700 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
         </section>
       )}
