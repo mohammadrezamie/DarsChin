@@ -61,6 +61,22 @@ describe('principal isolation and safe role reinitialization', () => {
   });
 });
 
+describe('private manager CSV export scope', () => {
+  it('does not create a download until the current report is ready and its request is still current', () => {
+    const s = source();
+    const start = s.indexOf('const exportFile=async()=>{');
+    const end = s.indexOf('const toggle=',start);
+    const code = s.slice(start,end);
+    expect(code).toContain('if(!survey || !detailReady || busy)return;');
+    expect(code).toContain('exportRequestRef.current.begin()');
+    expect(code).toContain('activeDetailKeyRef.current===exportedKey');
+    expect(code).toContain('exportRequestRef.current.isCurrent(exportEpoch)');
+    expect(code.indexOf('if(!stillCurrent())return;')).toBeLessThan(code.indexOf('URL.createObjectURL(blob)'));
+    expect(s).toContain('exportRequestRef.current.invalidate()');
+    expect(s).toContain('disabled={busy||!detailReady} onClick={()=>void exportFile()}');
+  });
+});
+
 describe('refresh fail-closed behavior', () => {
   it('invalidates previous survey detail and outstanding save before any network await', () => {
     const s = source();
