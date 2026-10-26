@@ -461,36 +461,37 @@ export const StudentDashboard: React.FC = () => {
   return (
     <div dir="rtl" className="darschin-page space-y-6">
       {/* Header Panel */}
-      <div className="darschin-surface relative overflow-hidden p-4 shadow-sm sm:p-6 print:hidden">
+      <div className="darschin-surface relative min-w-0 overflow-hidden rounded-[1.75rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-4 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
-        <div className="relative flex min-w-0 flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white mb-1">
+        <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <h2 className="mb-2 break-words text-[clamp(1.1rem,4vw,1.55rem)] font-black leading-8 tracking-tight text-slate-950 dark:text-white">
               سلام، {user.name} 👋
             </h2>
-            <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-md inline-block mb-1 border border-amber-200 dark:border-amber-800">
-              توجه: داده‌های چارت تحصیلی در این نسخه آزمایشی (DEMO DATA) بوده و فاقد استناد رسمی می‌باشند.
+            <div className="mb-2 inline-flex max-w-full items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50/85 px-2.5 py-1 text-[11px] font-bold leading-5 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              به میز کار دانشجویی سامانه تصمیم‌یار انتخاب واحد درس‌چین خوش آمدید.
+              از اینجا درس‌ها، برنامهٔ هفتگی و ترتیب ثبت را سریع مدیریت کن.
             </p>
             {academicLimits && (
-              <div className="mt-4 flex flex-wrap gap-4 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500">رشته‌ای اجباری</span>
-                  <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+              <div className="mt-3 grid min-w-0 grid-cols-3 gap-1.5 rounded-xl border border-blue-100 bg-white/65 p-2 sm:gap-3 sm:p-3 dark:border-slate-700/70 dark:bg-slate-900/50">
+                <div className="min-w-0 flex flex-col gap-1">
+                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">رشته‌ای اجباری</span>
+                  <span className="break-words text-[11px] font-bold leading-5 text-slate-700 dark:text-slate-300">
                     پاس‌شده: {academicLimits.majorRequiredPassed} | باقیمانده: {academicLimits.majorRequiredRemaining}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500">گرایشی اجباری</span>
+                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">گرایشی اجباری</span>
                   <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                     پاس‌شده: {academicLimits.trackRequiredPassed} | باقیمانده: {academicLimits.trackRequiredRemaining}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500">اختیاری (کل)</span>
+                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">اختیاری (کل)</span>
                   <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                     پاس‌شده: {academicLimits.electivesPassed}
                   </span>
