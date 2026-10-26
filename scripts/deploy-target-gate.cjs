@@ -104,6 +104,10 @@ async function checkOne(name, sha, samples, {
     if (missing.status !== 404 || !missing.headers.get('content-type')?.includes('application/json')) {
       throw new Error(name + ': API fallback must return JSON 404, not a frontend page');
     }
+    const missingBody = await missing.json().catch(() => null);
+    if (!missingBody || typeof missingBody !== 'object' || Array.isArray(missingBody)) {
+      throw new Error(name + ': API 404 body must be valid JSON');
+    }
     if (i + 1 < samples) await sleep(250);
   }
   return {target: name, port: settings[name].port, sha, samples, ok: true};
