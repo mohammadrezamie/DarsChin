@@ -48,6 +48,8 @@
     "@types/jalaali-js": "^1.2.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.14.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "@types/supertest": "^7.2.1",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
