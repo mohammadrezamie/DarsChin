@@ -108,7 +108,8 @@ describe('compact manual Educationalyar registration queue', () => {
 
   it('keeps quick-copy fail-closed until chart and passed-course rules resolve', () => {
     const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
-    expect(component).toContain('const rulesReady=Boolean(curriculumId)&&!loading&&!error');
+    expect(component).toContain('const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&');
+    expect(component).toContain('verifiedContextKey===academicContextKey&&!loading&&!error');
     expect(component).toContain('const next=rulesReady?queue.steps.find');
     expect(component).toContain('disabled={!rulesReady||!next?.copyCode}');
     expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
@@ -116,6 +117,13 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('aria-label={`کپی شماره گروه ${step.courseName}`}');
     expect(component).toContain('کپی سریع تا دریافت اطلاعات غیرفعال است');
     expect(component).toContain('کپی سریع پس از بررسی فعال می‌شود');
+    // Switching students or term/chart invalidates previous eligibility BEFORE effects run.
+    expect(component).toContain('const academicContextKey=');
+    expect(component).toContain('setVerifiedContextKey(academicContextKey)');
+    expect(component).toContain('setVerifiedContextKey(null)');
+    expect(component).toContain('},[academicContextKey]);');
+    expect(component).toContain('!Array.isArray(history.data.passedCourses)');
+    expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
     // The fallback copy textarea must not remain in the document on error.
     expect(component).toContain('finally { input.remove(); }');
   });
