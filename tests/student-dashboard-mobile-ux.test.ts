@@ -28,6 +28,7 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).toContain('min-h-11 shrink-0 items-center justify-start');
     expect(dashboard).toContain("planStatus !== 'idle'");
     expect(dashboard).toContain('setCoursePriorities(newCourseOrder)');
+    expect(dashboard).toContain('Promise<boolean>');
     expect(dashboard).toContain('return saved;');
   });
 
