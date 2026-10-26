@@ -93,6 +93,17 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(update).toContain('void fetchDashboardData();');
   });
 
+  it('does not leak a previous account plan or stale academic limits during reload',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    expect(dashboard).toContain('if (profile?.userId && profile.userId !== user?.id)');
+    expect(dashboard).toContain('setSelectedOfferingIds([]);');
+    expect(dashboard).toContain('setOfferingPriorities({});');
+    expect(dashboard).toContain('setProfile(null);');
+    expect(dashboard).toContain('setAcademicLimits(evalRes.data.academicLimits ?? null)');
+    expect(dashboard).toContain('setCurrentTerm(evalRes.data.context?.term ?? null)');
+    expect(dashboard).not.toContain('if (evalRes.data.academicLimits) setAcademicLimits');
+  });
+
   it('contains keyboard focus within the warning dialog and restores background scroll',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
     expect(dashboard).toContain('role="alertdialog" aria-modal="true"');
