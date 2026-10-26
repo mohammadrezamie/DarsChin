@@ -129,8 +129,11 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
     expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
-    // The fallback copy textarea must not remain in the document on error.
-    expect(component).toContain('finally { input.remove(); }');
+    // Both student workspaces use the same clipboard fallback and cleanup.
+    expect(component).toContain("import { copyTextWithFallback } from '../utils/clipboard'");
+    const clipboard=readFileSync(resolve(process.cwd(),'src/utils/clipboard.ts'),'utf8');
+    expect(clipboard).toContain('input?.remove();');
+    expect(clipboard).toContain('previousFocus?.focus({ preventScroll: true });');
   });
 
   it('keeps long course and instructor names visible on compact RTL rows', () => {
