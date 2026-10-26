@@ -65,6 +65,9 @@ describe('safe student code copying', () => {
     expect(planner).toContain("const importedCode = primary?.rawCourseCode?.trim() || '';");
     expect(planner).toContain("!/^DEMO[-_]/i.test(copyCode)");
     expect(planner).toContain("disabled={!canCopyCode}");
+    expect(planner).toContain("primary?.canSelect && primary?.isEligible && primary?.overallStatus === 'AVAILABLE'");
+    expect(planner).toContain('min-h-11');
+    expect(planner).toContain('[overflow-wrap:anywhere]');
     expect(planner).toContain('کد کاتالوگ؛ تأییدنشده');
     expect(planner).toContain('کپی نشد؛ دستی بردار');
     expect(planner).not.toContain('navigator.clipboard.writeText(code)');
