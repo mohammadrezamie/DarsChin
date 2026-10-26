@@ -72,7 +72,7 @@ export const GuestHumanCheck: React.FC<{
     setLocalAnswer('');
     onToken('');
     // Reuse the existing OTP image CAPTCHA endpoint; no third-party access needed.
-    void apiRequest<{ id:string; svg:string }>('/api/auth/otp/captcha/generate')
+    void apiRequest<{ id:string; svg:string }>(`/api/auth/otp/captcha/generate?action=${encodeURIComponent(action)}`)
       .then(result => {
         if (!alive) return;
         if (result.success && result.data &&
@@ -82,7 +82,7 @@ export const GuestHumanCheck: React.FC<{
         } else setStatus('error');
       }).catch(() => { if (alive) setStatus('error'); });
     return () => { alive = false; };
-  }, [settings?.enabled, retry]);
+  }, [settings?.enabled, action, retry]);
 
   useEffect(() => {
     if (!settings?.enabled) return;
@@ -119,8 +119,11 @@ export const GuestHumanCheck: React.FC<{
     {localMode ? <>
       {localCaptcha && <>
         <div className="flex flex-wrap items-center gap-3">
-          <div role="img" aria-label="تصویر کد امنیتی" className="max-w-full overflow-hidden rounded-lg bg-white p-2"
-            dangerouslySetInnerHTML={{ __html: localCaptcha.svg }} />
+          <div className="max-w-full overflow-hidden rounded-lg bg-white p-2">
+            <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(localCaptcha.svg)}`}
+              alt="تصویر کد امنیتی؛ حروف تصویر را در کادر زیر وارد کنید" draggable={false}
+              className="h-[65px] max-w-full object-contain" />
+          </div>
           <button type="button" onClick={() => setRetry(n => n + 1)}
             className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 px-3 text-xs dark:border-slate-600">
             <RefreshCw className="h-4 w-4" /> تصویر جدید
