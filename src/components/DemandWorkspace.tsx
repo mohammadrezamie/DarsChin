@@ -375,10 +375,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">{survey.description || 'این فرم صرفاً برای برآورد تقاضای ترم هدف است.'}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold">شماره دانشجویی (یک‌بار ثبت می‌شود)
-              <input inputMode="numeric" value={studentNumber} onChange={e=>setStudentNumber(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700" placeholder="شماره دانشجویی خودت"/>
+              <input inputMode="numeric" value={detailReady ? studentNumber : ''} disabled={busy || !detailReady} onChange={e=>setStudentNumber(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700" placeholder="شماره دانشجویی خودت"/>
             </label>
             <label className="text-xs font-bold">آیا احتمال می‌دهی در ترم هدف فارغ‌التحصیل شوی؟
-              <select value={graduation} onChange={e=>setGraduation(e.target.value as typeof graduation)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"><option value="UNKNOWN">هنوز مشخص نیست</option><option value="YES">بله (اظهار من)</option><option value="NO">خیر (اظهار من)</option></select>
+              <select value={detailReady ? graduation : 'UNKNOWN'} disabled={busy || !detailReady} onChange={e=>setGraduation(e.target.value as typeof graduation)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"><option value="UNKNOWN">هنوز مشخص نیست</option><option value="YES">بله (اظهار من)</option><option value="NO">خیر (اظهار من)</option></select>
             </label>
           </div>
           <p className="rounded-xl bg-slate-50 p-3 text-xs leading-6 dark:bg-slate-800">
