@@ -47,3 +47,7 @@ For a release, validate one named commit: dependency installation, TypeScript, t
 No changes to academic eligibility rules without the owner's explicit confirmation.
 
 | **گیت CAPTCHA واقعی مهمان، Turnstile/تصویر محلی، بازیابی OTP و شرایط پذیرش دانشجو** | [CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) |
+
+## گیت‌های جدید استفادهٔ واقعی
+
+- [ضدسوءاستفادهٔ API مهمان، مدیریت امن IP پشت Nginx و اعلام قطعی شکست استارت](GUEST_API_ABUSE_STARTUP_GATE_FA.md) — P0، وضعیت تست و موارد لازم قبل از استفادهٔ دانشجو.
