@@ -154,7 +154,14 @@ export function buildRegistrationQueue(input: {
     const explicit = typeof o.rawCourseCode === 'string' ? o.rawCourseCode.trim() : '';
     const catalog = typeof o.courseCode === 'string' ? o.courseCode.trim() : '';
     const code = explicit || (catalog && catalog !== '---' ? catalog : '');
-    const problems = warnings.get(id) || [];
+    const problems = [...(warnings.get(id) || [])];
+    // A code is not permission to select an ineligible offering. Honor the
+    // evaluated eligibility report rather than inventing academic exceptions.
+    const blocked = !o.canSelect || !o.isEligible || o.overallStatus !== 'AVAILABLE';
+    if (blocked) {
+      unresolved.value = true;
+      problems.push(`این گروه در گزارش فعلی قابل اخذ نیست: ${o.primaryReason || 'نیازمند بررسی شرایط آموزشی است.'}`);
+    }
     if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده؛ قبل از جست‌وجوی آموزشیار کد ارائه را کنترل کن.');
     if (!code) problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
     const requestedRank = requested.indexOf(id) + 1;
@@ -166,7 +173,7 @@ export function buildRegistrationQueue(input: {
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
       dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
-      ready: !hasCycle && !problems.some(text =>
+      ready: !hasCycle && !blocked && !problems.some(text =>
         !text.startsWith('کد از کاتالوگ/تطبیق')),
     };
   });
