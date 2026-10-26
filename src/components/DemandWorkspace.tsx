@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, ClipboardList, Download, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { downstreamCourseIds } from '../domain/course-demand';
@@ -24,6 +24,10 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [assigned, setAssigned] = useState<CourseAssigned[]>([]);
   const [rules, setRules] = useState<AcademicRule[]>([]);
   const [report, setReport] = useState<SurveyStats | null>(null);
+  const [detailState, setDetailState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [detailRevision, setDetailRevision] = useState(0);
+  const [loadedChartId, setLoadedChartId] = useState<string | null>(null);
+  const refreshVersionRef = useRef(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -38,8 +42,11 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
   const curriculum = curricula.find(c=>c.id===newCurriculum);
+  const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
+  const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
 
   const refresh = async () => {
+    const requestVersion = ++refreshVersionRef.current;
     setError('');
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
@@ -47,36 +54,46 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       apiRequest<{ academicTerms: Option[]; entryYears: {id:string;year:number}[]; tracks:Option[] }>('/api/academic/all-meta'),
       apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
-    if (!list.success) setError(list.error || 'فهرست نیازسنجی بارگذاری نشد.');
-    setSurveys(list.data || []);
-    setCourses(courseResult.data || []);
-    setTerms(meta.data?.academicTerms || []);
-    setEntryYears(meta.data?.entryYears || []);
-    setTracks(meta.data?.tracks || []);
-    setCurricula(chart.data || []);
-    const stillSelected = list.data?.find(item => item.id === selectedId);
-    setSelectedId(prev => list.data?.some(item => item.id === prev) ? prev : list.data?.[0]?.id || '');
-    // A same-ID refresh otherwise leaves the report effect untouched, displaying
-    // stale counts even after another browser tab submits new demand.
-    if (role === 'admin' && stillSelected) {
-      const latest = await apiRequest<SurveyStats>(`/api/demand/surveys/${stillSelected.id}/report`);
-      if (latest.success) setReport(latest.data || null);
-      else setError(latest.error || 'آمار نیازسنجی به‌روزرسانی نشد.');
+    // An older refresh must never replace a newer request, role, or survey.
+    if (requestVersion !== refreshVersionRef.current) return;
+    if (!list.success || !Array.isArray(list.data)) {
+      setError(list.error || 'فهرست نیازسنجی بارگذاری نشد؛ برای تلاش دوباره به‌روزرسانی کن.');
+      return;
     }
+    setSurveys(list.data);
+    setSelectedId(prev => list.data.some(item => item.id === prev) ? prev : list.data[0]?.id || '');
+    // Force same-ID details to refetch, without a parallel report request that
+    // could commit after the user had already switched to a different survey.
+    setDetailRevision(value => value + 1);
+    if (courseResult.success && Array.isArray(courseResult.data)) setCourses(courseResult.data);
+    if (meta.success && meta.data) {
+      if (Array.isArray(meta.data.academicTerms)) setTerms(meta.data.academicTerms);
+      if (Array.isArray(meta.data.entryYears)) setEntryYears(meta.data.entryYears);
+      if (Array.isArray(meta.data.tracks)) setTracks(meta.data.tracks);
+    }
+    if (chart.success && Array.isArray(chart.data)) setCurricula(chart.data);
     if (role === 'student') {
-      const p = await apiRequest<{profile:StudentAcademicProfile}>('/api/student/profile');
-      if (p.success && p.data?.profile) {
-        setProfile(p.data.profile);
-        setStudentNumber(p.data.profile.studentNumber || '');
+      const response = await apiRequest<{profile:StudentAcademicProfile}>('/api/student/profile');
+      if (requestVersion !== refreshVersionRef.current) return;
+      if (response.success && response.data?.profile) {
+        setProfile(response.data.profile);
+        setStudentNumber(previous => previous || response.data?.profile.studentNumber || '');
       }
     }
-    if (!newTerm && meta.data?.academicTerms?.length) {
+    if (!newTerm && meta.success && meta.data?.academicTerms?.length) {
       setNewTerm(meta.data.academicTerms.find(t=>t.active)?.id || meta.data.academicTerms[0].id);
     }
-    if (!newCurriculum && chart.data?.length) setNewCurriculum(chart.data[0].id);
+    if (!newCurriculum && chart.success && chart.data?.length) setNewCurriculum(chart.data[0].id);
   };
 
-  useEffect(()=>{ void refresh(); },[role]);
+  useEffect(()=>{
+    setSurveys([]);
+    setMyResponse(null);
+    setReport(null);
+    setSelectedCourses([]);
+    void refresh();
+    return () => { refreshVersionRef.current += 1; };
+  },[role]);
 
   useEffect(()=>{
     if (!survey) { setMyResponse(null); setReport(null); return; }
