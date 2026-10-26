@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, Lo
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
+import { copyTextWithFallback } from '../utils/clipboard';
 
 interface ChartRules {
   curriculum: { id: string; name: string; version: string };
@@ -17,18 +18,6 @@ interface Props {
   curriculumId: string | null;
   onEditPriorities: () => void;
   onReorderCourses: (orderedCourseIds: string[]) => void | boolean | Promise<void | boolean>;
-}
-
-async function copyToClipboard(value: string): Promise<boolean> {
-  try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(value); return true; } }
-  catch { /* Unsupported or denied in embedded/HTTP demos. */ }
-  try {
-    const input=document.createElement('textarea');
-    input.value=value; input.dir='ltr'; input.style.position='fixed'; input.style.opacity='0';
-    document.body.appendChild(input);
-    try { input.select(); return document.execCommand('copy'); }
-    finally { input.remove(); }
-  } catch { return false; }
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
@@ -113,7 +102,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!activeDoneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!activeDoneIds.includes(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
-    const ok=await copyToClipboard(value);
+    const ok=await copyTextWithFallback(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[]);
   const toggleDone=(id:string)=>{
