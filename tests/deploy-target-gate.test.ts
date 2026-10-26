@@ -103,6 +103,15 @@ describe('isolated staging and production deployment gate', () => {
     })).rejects.toThrow(/JSON 404/);
   });
 
+  it('rejects an invalid 404 body even if Content-Type pretends to be JSON',async()=>{
+    await expect(gate.verifyDeployment({target:'staging',sha:SHA,samples:2},{
+      fetchImpl:async(url:string)=>url.endsWith('/api/health')?ok():new Response('<html>not JSON</html>',{
+        status:404,headers:{'content-type':'application/json'},
+      }),
+      sleep:async()=>{},
+    })).rejects.toThrow(/valid JSON/);
+  });
+
   it('fails closed when the staging service is unreachable',async()=>{
     await expect(gate.verifyDeployment({target:'staging',sha:SHA,samples:2},{
       fetchImpl:async()=>{throw new Error('connection refused');},
