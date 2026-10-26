@@ -79,7 +79,7 @@ export const StudentDashboard: React.FC = () => {
     const button = tabButtonsRef.current[activeTab];
     if (!button || typeof button.scrollIntoView !== 'function') return;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    button.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
+    button.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
   }, [activeTab]);
 
   const fetchDashboardData = async () => {
@@ -564,11 +564,12 @@ export const StudentDashboard: React.FC = () => {
               <button
                 type="button"
                 key={tab.id}
+                ref={element => { tabButtonsRef.current[tab.id] = element; }}
                 disabled={tab.id === 'demand' && !demandSurveyAvailable}
                 title={tab.id === 'demand' && !demandSurveyAvailable ? 'پس از بازکردن نیازسنجی توسط مدیر گروه فعال می‌شود' : undefined}
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={current ? 'page' : undefined}
-                className={`flex min-h-10 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
+                className={`flex min-h-11 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
                   ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
                   : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'} disabled:cursor-not-allowed disabled:opacity-40`}
               >
@@ -581,8 +582,8 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </nav>
 
-      <div aria-live="polite" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs dark:border-slate-800 dark:bg-slate-900">
-        <span className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+      <div aria-live="polite" className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900/80 sm:px-4">
+        {planStatus !== 'idle' && <span role="status" className="flex min-w-0 items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
           {planStatus === 'saving' ? <RefreshCw aria-hidden={true} className="h-4 w-4 animate-spin text-blue-600" />
             : planStatus === 'saved' ? <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-emerald-600" />
             : planStatus === 'error' ? <AlertCircle aria-hidden={true} className="h-4 w-4 text-rose-600" />
@@ -591,8 +592,8 @@ export const StudentDashboard: React.FC = () => {
             : planStatus === 'saved' ? 'تغییرات برنامه ثبت شد.'
             : planStatus === 'error' ? 'برنامه ذخیره نشد.'
             : 'برای ثبت تغییرات از بخش برنامه‌ریز استفاده کنید.'}
-        </span>
-        <span className="text-slate-500 dark:text-slate-400">{selectedOfferingIds.length} گروه درسی انتخاب شده</span>
+        </span>}
+        <span className="font-semibold tabular-nums text-slate-600 dark:text-slate-300">{selectedOfferingIds.length} گروه در برنامهٔ من</span>
       </div>
 
       {(planError || loadError) && (
@@ -609,7 +610,7 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Tab Content */}
-      <section className="min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+      <section className="min-h-[240px] min-w-0 sm:min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
