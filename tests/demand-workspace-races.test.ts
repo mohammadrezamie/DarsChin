@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createRequestEpoch } from '../src/utils/request-epoch';
+import { demandDetailKey, isCurrentDemandDetail } from '../src/utils/demand-detail-context';
 
 const source = () => readFileSync(resolve(process.cwd(), 'src/components/DemandWorkspace.tsx'), 'utf8');
 
@@ -60,6 +61,36 @@ describe('principal isolation and safe role reinitialization', () => {
   });
 });
 
+describe('render-time survey detail isolation', () => {
+  it('rejects the previously ready survey at the first render of a new selection, role or refresh', () => {
+    const oldKey = demandDetailKey('student','survey-A',0);
+    expect(isCurrentDemandDetail(oldKey,oldKey,'ready')).toBe(true);
+    expect(isCurrentDemandDetail(demandDetailKey('student','survey-B',0),oldKey,'ready')).toBe(false);
+    expect(isCurrentDemandDetail(demandDetailKey('admin','survey-A',0),oldKey,'ready')).toBe(false);
+    expect(isCurrentDemandDetail(demandDetailKey('student','survey-A',1),oldKey,'ready')).toBe(false);
+    expect(isCurrentDemandDetail(oldKey,oldKey,'error')).toBe(false);
+    expect(isCurrentDemandDetail(null,oldKey,'ready')).toBe(false);
+  });
+
+  it('does not expose prior manager statistics, student choices or identifier while survey detail is unverified', () => {
+    const s=source();
+    for(const token of [
+      'const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState)',
+      'const visibleSelectedCourses = detailReady ? selectedCourses : []',
+      'const visibleResponse = detailReady ? myResponse : null',
+      'const visibleReport = detailReady ? report : null',
+      'checked={visibleSelectedCourses.includes(courseId)}',
+      'value={detailReady ? studentNumber :',
+      "value={detailReady ? graduation : 'UNKNOWN'}",
+      '{visibleReport?.participantCount',
+      '{visibleReport?.byCourse.map',
+      "if(!survey || !detailReady)return;",
+    ]) expect(s).toContain(token);
+    expect(s).toContain('setSettledDetailKey(requestedKey)');
+    expect(s).toContain('setSettledDetailKey(null)');
+  });
+});
+
 describe('demand UI account/survey guards', () => {
   it('clears saved student answers and manager reports immediately on each selected survey', () => {
     const s=source();
@@ -74,11 +105,11 @@ describe('demand UI account/survey guards', () => {
 
   it('does not allow edits before confirmed response loading or after survey closes', () => {
     const s=source();
-    expect(s).toContain("if(!survey || detailState !== 'ready')return;");
-    expect(s).toContain("disabled={busy||detailState!=='ready'||survey.status!=='OPEN'}");
+    expect(s).toContain("if(!survey || !detailReady)return;");
+    expect(s).toContain("disabled={busy||!detailReady||survey.status!=='OPEN'}");
     expect(s).toContain("disabled={busy||!chartReady||!newCourseIds.length}");
     expect(s).toContain("disabled={busy} onClick={()=>setSelectedId(s.id)}");
-    expect(s).toContain("detailState === 'error'");
+    expect(s).toContain("currentDetailError");
     expect(s).toContain("setDetailRevision(value=>value+1)");
   });
 
