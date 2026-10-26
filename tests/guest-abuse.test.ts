@@ -10,7 +10,7 @@ describe('guest throttling and trusted proxy boundaries', () => {
     app.get('/captcha', createGuestAbuseLimiters().captcha, (_req, res) => res.json({ success: true }));
     const forwarded = { 'X-Forwarded-For': '198.51.100.23' };
 
-    for (let i = 0; i < 100; i += 1) {
+    for (let i = 0; i < 240; i += 1) {
       const response = await request(app).get('/captcha').set(forwarded);
       expect(response.status).toBe(200);
     }
@@ -28,7 +28,7 @@ describe('guest throttling and trusted proxy boundaries', () => {
     const app = express();
     app.set('trust proxy', 'loopback');
     app.post('/register', createGuestAbuseLimiters().register, (_req, res) => res.json({ success: true }));
-    for (let i = 0; i < 25; i += 1) {
+    for (let i = 0; i < 80; i += 1) {
       const response = await request(app).post('/register')
         .set('X-Forwarded-For', `203.0.113.${i + 1}, 198.51.100.60`);
       expect(response.status).toBe(200);
@@ -42,7 +42,7 @@ describe('guest throttling and trusted proxy boundaries', () => {
     const app = express();
     app.set('trust proxy', 'loopback');
     app.post('/register', createGuestAbuseLimiters().register, (_req, res) => res.status(204).end());
-    for (let i = 0; i < 25; i += 1) {
+    for (let i = 0; i < 80; i += 1) {
       const ip = `2001:db8:1234:ab${(i % 16).toString(16).padStart(2, '0')}::1`;
       const response = await request(app).post('/register').set('X-Forwarded-For', ip);
       expect(response.status).toBe(204);
@@ -57,7 +57,7 @@ describe('guest throttling and trusted proxy boundaries', () => {
     const limits = createGuestAbuseLimiters();
     app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
     app.post('/api/auth/otp/send', limits.otpSend, (_req, res) => res.status(202).end());
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0; i < 60; i += 1) {
       expect((await request(app).post('/api/auth/otp/send')).status).toBe(202);
     }
     expect((await request(app).post('/api/auth/otp/send')).status).toBe(429);
