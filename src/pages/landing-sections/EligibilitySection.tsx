@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { CheckCircle2, Lock } from 'lucide-react';
 
 export const EligibilitySection: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
@@ -16,23 +17,25 @@ export const EligibilitySection: React.FC = () => {
   const node2Opacity = useTransform(scrollYProgress, [0.4, 0.6], [0, 1]);
   
   const lineProgress = useTransform(scrollYProgress, [0.4, 0.6], [0, 100]);
+  const lineHeight = useTransform(lineProgress, value => `${value}%`);
 
   return (
-    <section id="eligibility" ref={containerRef} className="scroll-mt-24 relative overflow-hidden bg-slate-50 px-3 py-16 dark:bg-slate-950/50 sm:px-6 sm:py-24 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col items-stretch gap-8 md:flex-row md:items-center md:gap-16">
-        <div className="min-w-0 flex-1 space-y-5 sm:space-y-8">
-          <h2 className="break-words text-3xl font-black leading-snug text-slate-900 dark:text-white sm:text-4xl md:text-5xl">
-            موتور بررسی قوانین آموزشی
+    <section id="eligibility" ref={containerRef} className="scroll-mt-24 relative overflow-hidden bg-slate-50/80 px-4 py-16 dark:bg-slate-950/50 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col items-stretch gap-9 lg:flex-row lg:items-center lg:gap-16">
+        <div className="min-w-0 flex-1 space-y-5 sm:space-y-7">
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-white/80 px-3 py-1.5 text-xs font-extrabold text-blue-700 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300">شرایط درس‌ها، واضح و قابل پیگیری</span>
+          <h2 className="max-w-xl break-words text-[clamp(1.8rem,5vw,3rem)] font-black leading-[1.35] tracking-tight text-slate-950 dark:text-white">
+            هر درس، <span className="bg-gradient-to-l from-blue-600 to-violet-600 bg-clip-text text-transparent dark:from-blue-300 dark:to-violet-300">با دلیل مشخص</span>
           </h2>
           <p className="text-base leading-8 text-slate-600 dark:text-slate-400 sm:text-xl">
-            درس‌چین قبل از اینکه شما خطایی در سامانه دانشگاه دریافت کنید، تمام پیش‌نیازها، هم‌نیازها و سقف واحدهای شما را به‌صورت زنده تحلیل می‌کند.
+            درس‌چین قوانین و پیش‌نیازهایی را که برای چارت و ورودی تو ثبت شده‌اند بررسی می‌کند و نشان می‌دهد هر درس چرا قابل انتخاب است یا به بررسی آموزش نیاز دارد. نتیجه به اعتبار داده‌ها و مقررات تأییدشده وابسته است.
           </p>
           
           <div className="space-y-4 pt-4">
             {[
-              "تشخیص خودکار دانشجویان ترم آخر و حذف محدودیت‌ها",
-              "محاسبه دروس مازاد بر سقف مجاز",
-              "جلوگیری از انتخاب دروس تکراری یا پاس‌شده"
+              "نمایش شفاف پیش‌نیاز و هم‌نیاز هر درس",
+              "محاسبه واحدها بر اساس چارت و تنظیمات معتبر",
+              "یادآوری درس‌های پاس‌شده و موارد نیازمند بررسی"
             ].map((text, i) => (
               <div key={i} className="flex min-w-0 items-start gap-3">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
@@ -42,8 +45,8 @@ export const EligibilitySection: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative flex min-h-[300px] w-full min-w-0 max-w-md flex-1 flex-col items-center justify-center sm:min-h-[400px]">
-          <motion.div style={{ opacity: node1Opacity, y: node1Y }} className="w-full">
+        <div className="relative mx-auto flex min-h-[300px] w-full min-w-0 max-w-md flex-1 flex-col items-center justify-center rounded-[2rem] bg-gradient-to-br from-blue-100/55 via-white/60 to-violet-100/50 p-4 dark:from-blue-950/25 dark:via-slate-900/50 dark:to-violet-950/30 sm:min-h-[400px] sm:p-7">
+          <motion.div style={reduceMotion ? undefined : { opacity: node1Opacity, y: node1Y }} className="w-full">
             <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 relative z-10 flex min-w-0 items-center justify-between rounded-2xl p-4 shadow-lg sm:p-6">
               <div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-bold mb-1 text-sm">پاس شده</div>
@@ -56,11 +59,11 @@ export const EligibilitySection: React.FC = () => {
           <div className="h-24 w-1 bg-slate-200 dark:bg-slate-800 my-2 relative overflow-hidden">
             <motion.div 
               className="absolute top-0 left-0 w-full bg-blue-500"
-              style={{ height: useTransform(lineProgress, v => `${v}%`) }}
+              style={reduceMotion ? { height: '100%' } : { height: lineHeight }}
             />
           </div>
 
-          <motion.div style={{ opacity: node2Opacity, y: node2Y }} className="w-full">
+          <motion.div style={reduceMotion ? undefined : { opacity: node2Opacity, y: node2Y }} className="w-full">
             <div className="bg-white dark:bg-slate-900 border-2 border-blue-500 relative z-10 flex min-w-0 items-center justify-between rounded-2xl p-4 shadow-lg sm:p-6">
               <div>
                 <div className="text-blue-600 dark:text-blue-400 font-bold mb-1 text-sm">مجاز برای اخذ</div>
