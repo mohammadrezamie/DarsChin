@@ -777,6 +777,9 @@ export const StudentDashboard: React.FC = () => {
             <p id="student-clear-desc" className="mb-5 text-sm leading-7 text-slate-600 dark:text-slate-300">
               {selectedOfferingIds.length} گروه انتخاب‌شده، ترتیب درس‌ها و گروه‌های جایگزین از برنامه پاک می‌شوند. پاک‌سازی فقط پس از تأیید سرور اعمال می‌شود.
             </p>
+            {planStatus === 'error' && planError && (
+              <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-6 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{planError}</p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <button ref={clearCancelRef} type="button" disabled={planStatus === 'saving'}
                 onClick={() => setClearConfirmOpen(false)}
