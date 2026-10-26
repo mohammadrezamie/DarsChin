@@ -3,6 +3,7 @@ import { BarChart3, ClipboardList, Download, RefreshCw, ShieldCheck, Sparkles } 
 import { apiRequest } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
+import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { downstreamCourseIds } from '../domain/course-demand';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
@@ -40,6 +41,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [report, setReport] = useState<SurveyStats | null>(null);
   const [detailState, setDetailState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [detailRevision, setDetailRevision] = useState(0);
+  const [settledDetailKey, setSettledDetailKey] = useState<string | null>(null);
   const [loadedChartId, setLoadedChartId] = useState<string | null>(null);
   const refreshVersionRef = useRef(createRequestEpoch());
   const [busy, setBusy] = useState(false);
@@ -58,6 +60,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const curriculum = curricula.find(c=>c.id===newCurriculum);
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId);
+  const currentDetailKey = demandDetailKey(role, survey?.id, detailRevision);
+  // Protect the render before useEffect clears data from the previously selected survey.
+  const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState);
+  const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
+  const visibleSelectedCourses = detailReady ? selectedCourses : [];
+  const visibleResponse = detailReady ? myResponse : null;
+  const visibleReport = detailReady ? report : null;
 
   const refresh = async (resetDefaults = false) => {
     const requestVersion = refreshVersionRef.current.begin();
@@ -110,6 +119,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setMyResponse(null);
     setReport(null);
     setDetailState('idle');
+    setSettledDetailKey(null);
     setSelectedCourses([]);
     setStudentNumber('');
     setGraduation('UNKNOWN');
@@ -129,10 +139,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   useEffect(()=>{
     if (!survey) {
       setMyResponse(null); setReport(null); setDetailState('idle');
+      setSettledDetailKey(null);
       setSelectedCourses([]);
       return;
     }
+    const requestedKey = demandDetailKey(role, survey.id, detailRevision);
     let active=true;
+    setSettledDetailKey(null);
     setDetailState('loading');
     setMyResponse(null);
     setReport(null);
@@ -143,6 +156,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         if(!active) return;
         if (!result.success) {
           setError(result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.');
+          setSettledDetailKey(requestedKey);
           setDetailState('error');
           return;
         }
@@ -150,6 +164,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         setSelectedCourses(result.data?.courseIds || []);
         setStudentNumber(previous => result.data?.studentNumber || previous);
         setGraduation(result.data?.anticipatedGraduation || 'UNKNOWN');
+        setSettledDetailKey(requestedKey);
         setDetailState('ready');
       });
     } else {
@@ -157,10 +172,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         if(!active) return;
         if (!result.success || !result.data) {
           setError(result.error || 'گزارش نیازسنجی دریافت نشد؛ دوباره تلاش کنید.');
+          setSettledDetailKey(requestedKey);
           setDetailState('error');
           return;
         }
         setReport(result.data);
+        setSettledDetailKey(requestedKey);
         setDetailState('ready');
       });
     }
@@ -189,7 +206,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   },[role,survey?.curriculumId,newCurriculum]);
 
   const submit = async () => {
-    if(!survey || detailState !== 'ready')return;
+    if(!survey || !detailReady)return;
     setError('');setSuccess('');setBusy(true);
     try {
       const r=await apiRequest<DemandResponse>(`/api/demand/surveys/${survey.id}/response`,{
@@ -283,8 +300,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error}</div>}
       {success && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{success}</div>}
-      {survey && detailState === 'loading' && <p role="status" aria-live="polite" className="rounded-xl bg-blue-50 p-3 text-xs font-bold text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">در حال دریافت پاسخ و گزارش همین نیازسنجی…</p>}
-      {survey && detailState === 'error' && <button type="button" onClick={()=>setDetailRevision(value=>value+1)} className="min-h-11 rounded-xl border border-amber-300 px-4 text-xs font-bold text-amber-900 dark:text-amber-200">تلاش دوباره برای دریافت اطلاعات همین فرم</button>}
+      {survey && !detailReady && !currentDetailError && <p role="status" aria-live="polite" className="rounded-xl bg-blue-50 p-3 text-xs font-bold text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">در حال دریافت پاسخ و گزارش همین نیازسنجی…</p>}
+      {survey && currentDetailError && <button type="button" onClick={()=>setDetailRevision(value=>value+1)} className="min-h-11 rounded-xl border border-amber-300 px-4 text-xs font-bold text-amber-900 dark:text-amber-200">تلاش دوباره برای دریافت اطلاعات همین فرم</button>}
 
       {isDemoStudent && (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
@@ -373,13 +390,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             {survey.courseIds.map(courseId=>{
               const impacted = downstreamCourseIds(courseId,survey.curriculumId||'',rules).length;
               return <label key={courseId} className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-blue-400 dark:border-slate-700">
-                <input type="checkbox" checked={selectedCourses.includes(courseId)} disabled={busy||detailState!=='ready'||survey.status!=='OPEN'} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
+                <input type="checkbox" checked={visibleSelectedCourses.includes(courseId)} disabled={busy||!detailReady||survey.status!=='OPEN'} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
                 <span className="min-w-0"><span className="block text-sm font-bold">{courseMap.get(courseId)?.name||courseId}</span><span className="text-xs text-slate-500 dark:text-slate-400">{!chartReady?'روابط درسی هنوز بارگذاری نشده‌اند':impacted>0?`بر اساس گراف موجود، به ${impacted} درس بعدی وابستگی دارد (پیشنهاد، نه مجوز)`:'بدون وابستگی مستقیم یا غیرمستقیمِ ثبت‌شده'}</span></span>
               </label>;
             })}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{selectedCourses.length} درس انتخاب شده · {myResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
-            <button type="button" disabled={busy||detailState!=='ready'||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-blue-700 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
+          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
+            <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-blue-700 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
         </section>
       )}
@@ -395,9 +412,9 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               <button type="button" disabled={busy} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-blue-400 px-3 text-xs font-bold text-blue-800 dark:text-blue-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
             </div>
           </div>
-          <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-blue-800 dark:text-blue-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{report?.participantCount ?? '—'}</strong></div>
+          <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-blue-800 dark:text-blue-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {report?.byCourse.map(item=>(
+            {visibleReport?.byCourse.map(item=>(
               <div key={item.courseId} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <h4 className="text-sm font-black">{courseMap.get(item.courseId)?.name || item.courseId}</h4>
                 <div className="mt-3 flex items-end justify-between gap-2"><strong className="text-2xl font-black text-blue-700 dark:text-blue-300">{item.count}</strong><span className="text-xs text-slate-500">حدنصاب پیشنهادی: {item.threshold||'تعریف نشده'}</span></div>
