@@ -609,18 +609,18 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                   >
                     {/* Course Card Header */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         {/* Priority Rank Badge */}
                         <div className="flex flex-col items-center justify-center w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm shrink-0 shadow-xs">
                           {idx + 1}
                         </div>
 
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h4 className="min-w-0 break-words text-sm font-bold text-slate-900 [overflow-wrap:anywhere] dark:text-white">
                               {pc.courseName}
                             </h4>
-                            <span className="text-[11px] font-mono px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            <span className="max-w-full break-all rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                               کد <code dir="ltr">{copyCode || 'نامشخص'}</code>
                             </span>
                             {!importedCode && <span className="text-[11px] text-amber-800 dark:text-amber-300">کد کاتالوگ؛ تأییدنشده</span>}
