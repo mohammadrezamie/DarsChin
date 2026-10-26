@@ -50,16 +50,20 @@ export const HeroSection: React.FC = () => {
             درس‌چین به تو کمک می‌کند وضعیت درس‌ها، اولویت‌ها و برنامه هفتگی‌ات را یک‌جا ببینی؛ تصمیم‌ها روشن‌تر می‌شوند و بررسی تداخل‌ها ساده‌تر.
           </motion.p>
 
-          <motion.div initial={heroAnimation(12)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }} className="mb-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link to="/demo/student" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30">
+          <motion.div initial={heroAnimation(12)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }} className="mb-4 flex flex-col gap-2.5 min-[380px]:flex-row min-[380px]:flex-wrap">
+            <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-600 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 sm:flex-none sm:px-6 sm:text-base">
               تست رایگان پنل دانشجو <ArrowLeft className="h-4 w-4" />
             </Link>
-            <Link to="/demo/admin" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-6 py-3 font-bold text-slate-800 transition hover:border-blue-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-blue-500">
-              مشاهدهٔ پنل مدیریت
+            <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-blue-500">
+              ساخت حساب کاربری
             </Link>
           </motion.div>
 
-          <div className="grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <p className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold leading-6 text-slate-500 dark:text-slate-400">
+            <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            دمو بدون شماره و رمز · داده‌ها نمونه‌اند · هیچ ثبت خودکاری در آموزشیار انجام نمی‌شود
+          </p>
+          <div className="grid max-w-xl grid-cols-1 gap-2 min-[380px]:grid-cols-3 sm:gap-3">
             {[
               { icon: ShieldCheck, title: 'بررسی شرایط', description: 'دلایل قابل فهم برای وضعیت درس‌ها' },
               { icon: CalendarDays, title: 'برنامه هفتگی', description: 'نمایش انتخاب‌ها در کنار هم' },
@@ -86,10 +90,10 @@ export const HeroSection: React.FC = () => {
             </div>
 
             <div className="grid min-w-0 gap-5 p-3 sm:p-6">
-              <div className="grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:gap-3">
-                <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"><div className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" /> درس انتخابی</div><div className="text-2xl font-black text-slate-900 dark:text-white">{persianNumber(selectedOfferings.length)}</div></div>
-                <div className="rounded-2xl bg-blue-50/80 p-3 dark:bg-blue-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300"><GraduationCap className="h-3.5 w-3.5" /> مجموع واحد</div><div className="text-2xl font-black text-blue-800 dark:text-blue-200">{persianNumber(selectedUnits)}</div></div>
-                <div className="rounded-2xl bg-emerald-50/80 p-3 dark:bg-emerald-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300"><Check className="h-3.5 w-3.5" /> وضعیت</div><div className="text-sm font-black text-emerald-800 dark:text-emerald-200">قابل بررسی</div></div>
+              <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:gap-3">
+                <div className="min-w-0 rounded-2xl bg-slate-50 p-2.5 sm:p-3 dark:bg-slate-800/70"><div className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" /> درس انتخابی</div><div className="text-xl font-black tabular-nums text-slate-900 dark:text-white sm:text-2xl">{persianNumber(selectedOfferings.length)}</div></div>
+                <div className="min-w-0 rounded-2xl bg-blue-50/80 p-2.5 sm:p-3 dark:bg-blue-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300"><GraduationCap className="h-3.5 w-3.5" /> مجموع واحد</div><div className="text-xl font-black tabular-nums text-blue-800 dark:text-blue-200 sm:text-2xl">{persianNumber(selectedUnits)}</div></div>
+                <div className="min-w-0 rounded-2xl bg-emerald-50/80 p-2.5 sm:p-3 dark:bg-emerald-500/10"><div className="mb-2 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300"><Check className="h-3.5 w-3.5" /> وضعیت</div><div className="text-[11px] font-black leading-5 text-emerald-800 dark:text-emerald-200 sm:text-sm">قابل بررسی</div></div>
               </div>
 
               <div>
