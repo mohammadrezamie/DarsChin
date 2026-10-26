@@ -99,7 +99,7 @@ export const FluidWeekTimetable: React.FC<{
     <div dir="rtl" className="space-y-4">
       <div className="flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-xs leading-6 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
         <Clock3 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        بازه نمایش ۷ صبح تا ۸ شب است. جای هر کلاس دقیقاً بر اساس ساعت شروع و پایان واقعی تعیین می‌شود؛ کلاس‌های بی‌زمان یا خارج از این محدوده پایین جدول می‌آیند.
+        بازهٔ نمایش: ۰۷:۰۰ تا ۲۰:۰۰. جای هر کلاس دقیقاً بر اساس ساعت شروع و پایان واقعی تعیین می‌شود؛ کلاس‌های بی‌زمان یا خارج از این محدوده پایین جدول می‌آیند.
       </div>
       {/* A compact, keyboard-accessible agenda is the default on mobile. */}
       <CompactMobileTimetable
