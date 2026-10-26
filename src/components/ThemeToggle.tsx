@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Monitor, ChevronDown } from 'lucide-react';
+import { Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../context/ThemeContext';
 
 /** Always-visible mode control on desktop and small RTL mobile headers. */
@@ -12,22 +12,23 @@ export const ThemeToggle: React.FC = () => {
   ];
   return (
     <>
-      <div className="relative flex min-h-11 w-[116px] shrink-0 items-center rounded-xl border border-slate-200 bg-white/95 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:hidden">
-        <span className="pointer-events-none absolute right-2.5 flex items-center text-blue-600 dark:text-blue-300" aria-hidden="true">
-          {theme === 'dark' ? <Moon className="h-4 w-4" /> : theme === 'light' ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+      {/* Compact 44px native picker: the previous 116px control pushed the
+          login CTA out of 320px mobile headers. The entire icon is tappable. */}
+      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-blue-700 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-300 sm:hidden">
+        <span className="pointer-events-none" aria-hidden="true">
+          {theme === 'dark' ? <Moon className="h-5 w-5" /> : theme === 'light' ? <Sun className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
         </span>
         <select
           aria-label="انتخاب حالت نمایش"
-          title="حالت روز، خودکار یا شب"
+          title={`حالت نمایش: ${options.find(option => option.mode === theme)?.label || 'خودکار'}`}
           value={theme}
           onChange={event => setTheme(event.target.value as ThemeMode)}
-          className="h-full w-full cursor-pointer appearance-none rounded-xl bg-transparent pr-9 pl-6 text-right text-xs font-extrabold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-100"
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-xl opacity-0"
         >
           <option value="light">روز</option>
           <option value="system">خودکار</option>
           <option value="dark">شب</option>
         </select>
-        <ChevronDown aria-hidden="true" className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
       </div>
       <div role="group" aria-label="انتخاب حالت نمایش" className="hidden items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 shadow-inner shadow-slate-950/5 dark:border-slate-700 dark:bg-slate-800 sm:inline-flex">
         {options.map(option => (
