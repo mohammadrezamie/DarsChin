@@ -29,7 +29,7 @@ Node.js 22+ و Bun با `bun.lock` لازم است:
 ```bash
 bun run verify
 bun run smoke:api
-node --test scripts/check-vps-readiness.test.cjs
+node --test scripts/check-vps-readiness.nodecheck.cjs
 ```
 
 تست‌ها دادهٔ مصنوعی و ایزوله دارند. `verify` شامل تست‌های read-only گیت VPS، TypeScript، Vitest و build است؛ `smoke:api` فقط API نمونهٔ محلی را تست می‌کند. هیچ‌کدام به‌تنهایی نبود Crash-loop در systemd واقعی را ثابت نمی‌کنند. تعداد ۱۹۷ آزمون فقط متعلق به SHA بالا بوده است؛ برای هر SHA جدید باید خروجی آزمون همان SHA ثبت شود.
