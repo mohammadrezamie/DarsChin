@@ -84,7 +84,7 @@ describe('render-time survey detail isolation', () => {
       "value={detailReady ? graduation : 'UNKNOWN'}",
       '{visibleReport?.participantCount',
       '{visibleReport?.byCourse.map',
-      "if(!survey || !detailReady)return;",
+      "if(!survey || !detailReady || busy || survey.status !== 'OPEN')return;",
     ]) expect(s).toContain(token);
     expect(s).toContain('setSettledDetailKey(requestedKey)');
     expect(s).toContain('setSettledDetailKey(null)');
