@@ -40,7 +40,7 @@ export const ThemeToggle: React.FC = () => {
             aria-label={`حالت ${option.label}`}
             aria-pressed={theme === option.mode}
             onClick={() => setTheme(option.mode)}
-            className={`inline-flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${theme === option.mode
+            className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${theme === option.mode
               ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300'
               : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
           >
