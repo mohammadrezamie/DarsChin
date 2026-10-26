@@ -188,16 +188,8 @@ export class LocalDatabase {
       try {
         this.data = readPersistedJson(DB_FILE) as DatabaseSchema;
         if (!this.data.provinces) this.data.provinces = [];
-        // Clean and deduplicate users by ID
-        const seenIds = new Set<string>();
-        const cleanUsers: any[] = [];
-        for (const u of this.data.users) {
-          if (!u.id || seenIds.has(u.id)) continue;
-          seenIds.add(u.id);
-          cleanUsers.push(u);
-        }
-        this.data.users = cleanUsers;
-
+        // Invalid or duplicate user IDs were already rejected by the reader.
+        // Do not silently discard accounts and orphan their academic records.
         this.data.users.forEach((u) => {
           if (!Array.isArray(u.roles)) {
             u.roles = u.roles ? [(u.roles as any)] : ['student'];
