@@ -72,6 +72,17 @@ export const StudentDashboard: React.FC = () => {
   const [planStatus, setPlanStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const planMutationRef = useRef(false);
   const evaluationVersionRef = useRef(0);
+  const tabButtonsRef = useRef<Partial<Record<StudentTab, HTMLButtonElement | null>>>({});
+
+  // When another workspace switches tabs (e.g. Edit priorities -> Schedule),
+  // ensure its tab is visible inside the horizontal mobile navigation.
+  // 'nearest' avoids unexpectedly jumping the document itself to the top.
+  useEffect(() => {
+    const button = tabButtonsRef.current[activeTab];
+    if (!button || typeof button.scrollIntoView !== 'function') return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    button.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
+  }, [activeTab]);
 
   const fetchDashboardData = async () => {
     const version = ++evaluationVersionRef.current;
