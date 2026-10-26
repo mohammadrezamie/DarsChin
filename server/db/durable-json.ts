@@ -66,5 +66,18 @@ export function readPersistedJson(filePath: string): unknown {
       !Array.isArray((parsed as { users?: unknown }).users)) {
     throw new Error('Persisted database has an invalid root/users collection');
   }
+  // The previous loader silently deleted duplicate/invalid user identities.
+  // That could discard a real student's plan when root/bootstrap saved again.
+  // Block startup and require a reviewed repair instead of losing accounts.
+  const seen = new Set<string>();
+  for (const user of (parsed as { users: unknown[] }).users) {
+    if (!user || typeof user !== 'object' || Array.isArray(user) ||
+        typeof (user as { id?: unknown }).id !== 'string' ||
+        !(user as { id: string }).id.trim() ||
+        seen.has((user as { id: string }).id)) {
+      throw new Error('Persisted database has a missing or duplicate user identity');
+    }
+    seen.add((user as { id: string }).id);
+  }
   return parsed;
 }
