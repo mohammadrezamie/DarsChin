@@ -133,11 +133,14 @@ describe('demand UI account/survey guards', () => {
 
   it('never shows dependencies from an old academic chart as verified for the new one', () => {
     const s=source();
-    expect(s).toContain('const chartReady = Boolean(chartContextId && loadedChartId === chartContextId)');
+    expect(s).toContain('loadedChartId === chartContextId &&');
+    expect(s).toContain('loadedChartRevision === detailRevision');
     expect(s).toContain('setLoadedChartId(null);');
     expect(s).toContain('setAssigned([]);');
     expect(s).toContain('setRules([]);');
     expect(s).toContain('setLoadedChartId(curriculumId);');
+    expect(s).toContain('setLoadedChartRevision(detailRevision);');
+    expect(s).toContain('},[role,survey?.curriculumId,newCurriculum,detailRevision]);');
     expect(s).toContain('روابط درسی هنوز بارگذاری نشده‌اند');
   });
 
