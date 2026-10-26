@@ -91,8 +91,11 @@ export const StudentDashboard: React.FC = () => {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.preventDefault();
-        setConflictWarning(null);
+        // Keep the warning visible until the pending server write finishes.
+        if (!planMutationRef.current) {
+          event.preventDefault();
+          setConflictWarning(null);
+        }
         return;
       }
       if (event.key !== 'Tab') return;
@@ -839,8 +842,11 @@ export const StudentDashboard: React.FC = () => {
               ))}
             </ul>
             
+            {planStatus === 'error' && planError && (
+              <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-6 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{planError}</p>
+            )}
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" ref={conflictCancelRef}
+              <button type="button" ref={conflictCancelRef} disabled={planStatus === 'saving'}
                 onClick={() => setConflictWarning(null)}
                 className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
               >
