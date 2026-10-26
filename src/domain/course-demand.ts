@@ -40,8 +40,11 @@ export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[
 
 /** No user-supplied CSV values may execute as a formula when opened by spreadsheet software. */
 function safeCell(value: string | number | boolean | null | undefined) {
-  const text = String(value ?? '').replace(/\r?\n/g, ' ');
-  const guarded = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? "'" + text : text;
+  // CSV row separators and embedded controls must not let untrusted student
+  // fields start a new record or manufacture an executable spreadsheet cell.
+  const text = String(value ?? '').replace(/[\r\n\t\u2028\u2029]/g, ' ');
+  const guarded = /^[\s\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060\ufeff]*[=+\-@]/.test(text)
+    ? "'" + text : text;
   return '"' + guarded.replace(/"/g, '""') + '"';
 }
 export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[], courseNames: Map<string,string>, entryYears: Map<string,string>, tracks: Map<string,string>, majors: Map<string,string> = new Map()) {
@@ -49,7 +52,9 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
     ['نام دانشجو','شماره دانشجویی','ورودی','رشته','انتخاب رسمی گرایش','گرایش','اظهار ترم آخر','نام درس','کد/شناسه درس','آخرین ویرایش'].map(safeCell).join(','),
   ];
   for (const r of responses.filter(x => x.surveyId === survey.id)) {
-    for (const courseId of r.courseIds) {
+    // A submitted empty selection still counts as a participating student.
+    // Omitting that row makes the personal export contradict the aggregate.
+    for (const courseId of r.courseIds.length > 0 ? r.courseIds : [null]) {
       rows.push([
         r.snapshot.studentName, r.studentNumber,
         entryYears.get(r.snapshot.entryYearId) || r.snapshot.entryYearId,
@@ -57,7 +62,7 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
         r.snapshot.isTrackSelected ? 'بله' : 'خیر',
         r.snapshot.selectedTrackId ? (tracks.get(r.snapshot.selectedTrackId) || r.snapshot.selectedTrackId) : 'انتخاب نشده',
         r.anticipatedGraduation === 'YES' ? 'بله (اظهار دانشجو)' : r.anticipatedGraduation === 'NO' ? 'خیر (اظهار دانشجو)' : 'نامشخص',
-        courseNames.get(courseId) || courseId, courseId, r.updatedAt,
+        courseId ? (courseNames.get(courseId) || courseId) : 'بدون درس درخواستی', courseId ?? '', r.updatedAt,
       ].map(safeCell).join(','));
     }
   }

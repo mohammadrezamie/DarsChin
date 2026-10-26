@@ -23,6 +23,7 @@ import { adminRouter } from './server/routes/admin';
 import { adminManagementRouter } from './server/routes/admin-management';
 import { supportRouter } from './server/routes/support';
 import { logger } from './server/utils/logger';
+import { securityHeaders } from './server/middleware/security-headers';
 
 async function startServer() {
   // Initialize and seed database
@@ -39,6 +40,7 @@ async function startServer() {
   const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
   assertTurnstileConfiguration();
+  app.use(securityHeaders);
   // JSON Body Parser with limit for batch imports (2MB is sufficient for text data and prevents OOM)
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));

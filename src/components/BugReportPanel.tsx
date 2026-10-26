@@ -99,10 +99,10 @@ export const BugReportPanel: React.FC = () => {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                   r.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
                   r.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
-                  r.status === 'REJECTED' ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300' :
+                  r.status === 'CLOSED' ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300' :
                   'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                 }`}>
-                  {r.status === 'RESOLVED' ? 'حل شده' : r.status === 'IN_PROGRESS' ? 'در حال بررسی' : r.status === 'REJECTED' ? 'رد شده' : 'باز'}
+                  {r.status === 'RESOLVED' ? 'حل شده' : r.status === 'IN_PROGRESS' ? 'در حال بررسی' : r.status === 'CLOSED' ? 'بسته شده' : 'باز'}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">{r.description}</p>

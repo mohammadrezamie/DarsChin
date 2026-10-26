@@ -2,14 +2,19 @@
 
 This is currently a demo. Preserve a clean `main` and use short-lived branches and PRs for changes. Development is not blocked by GitHub Actions quota, but **missing automated test evidence must be disclosed**.
 
+## Persistent owner directives and development decisions
+
+Before each coding session, read [AGENTS.md](../AGENTS.md) and [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md). Every owner instruction/plan/change must be recorded there with a dated, non-sensitive note and its true status, whether or not code can be written immediately. Link corresponding technical docs and PRs. A feature PR should include its owner-decision IDs; it is not enough to summarize the requirement only in a chat.
+
 ## Local work
 
 Install Node.js 22+ and Bun. Run:
 
 ```bash
-bun run verify
-bun run smoke:api
+bun run qa:full  # verify + API smoke; no GitHub Actions needed
 ```
+
+Read [QA_WITHOUT_ACTIONS_FA.md](QA_WITHOUT_ACTIONS_FA.md) for the repeatable Vercel Sandbox option, exact-SHA evidence, and the 2026-10-26 QA report. The combined command exits nonzero on either failed verification or failed API smoke.
 
 Run the suite against a **disposable** database, never a live or committed database. To isolate the application tests, set `DARSCHYN_DATA_DIR` to a writable temporary directory **before importing the database module**. Set a unique `JWT_SECRET` in a local `.env` file; use synthetic root account settings for test runs. Do not copy operational credentials into commands, logs or issues.
 

@@ -62,20 +62,18 @@ export const AdminLogs: React.FC = () => {
             
             {activeTab === 'audit' ? auditLogs.map(log => (
               <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
-                <td className="px-4 py-3 text-xs text-slate-500" dir="ltr">{new Date(log.timestamp).toLocaleString('fa-IR')}</td>
-                <td className="px-4 py-3 text-xs">{log.userId}</td>
+                <td className="px-4 py-3 text-xs text-slate-500" dir="ltr">{new Date(log.createdAt).toLocaleString('fa-IR')}</td>
+                <td className="px-4 py-3 text-xs">{log.adminId}</td>
                 <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{log.action}</td>
                 <td className="px-4 py-3 text-xs overflow-hidden text-ellipsis max-w-xs">{log.details}</td>
               </tr>
             )) : errorLogs.map(log => (
               <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
-                <td className="px-4 py-3 text-xs text-slate-500" dir="ltr">{new Date(log.timestamp).toLocaleString('fa-IR')}</td>
+                <td className="px-4 py-3 text-xs text-slate-500" dir="ltr">{new Date(log.createdAt).toLocaleString('fa-IR')}</td>
                 <td className="px-4 py-3 text-xs">
                   <span className={`px-2 py-1 rounded-md font-bold text-xs ${
-                    log.severity === 'FATAL' ? 'bg-red-600 text-white shadow-xs' : 
-                    log.severity === 'ERROR' ? 'bg-red-100 text-red-700 dark:bg-red-950/70 dark:text-red-300 border border-red-200 dark:border-red-800' : 
-                    'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                  }`}>{log.severity}</span>
+                    'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                  }`}>خطا</span>
                 </td>
                 <td className="px-4 py-3 text-red-600 dark:text-red-400 font-bold max-w-sm truncate">{log.errorMessage}</td>
                 <td className="px-4 py-3 text-xs overflow-hidden text-ellipsis max-w-xs">{log.stackTrace || log.context}</td>

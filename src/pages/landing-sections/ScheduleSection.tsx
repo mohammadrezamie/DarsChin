@@ -1,79 +1,141 @@
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
-import { Clock, MapPin, User, AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { AlertTriangle, CheckCircle2, Clock3, MapPin, UserRound } from 'lucide-react';
+
+type PreviewSlot = 'morning' | 'noon';
+type PreviewCourse = {
+  id: string;
+  day: string;
+  slot: PreviewSlot;
+  time: string;
+  title: string;
+  teacher?: string;
+  room?: string;
+  conflictWith?: string;
+  tone: 'blue' | 'emerald' | 'violet';
+};
+
+// Fixed fictional content for the landing preview: no live schedule or eligibility claims.
+const previewDays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه'];
+const previewCourses: PreviewCourse[] = [
+  { id: 'physics', day: 'شنبه', slot: 'morning', time: '۰۸:۰۰ تا ۱۰:۰۰',
+    title: 'فیزیک ۱', teacher: 'دکتر احمدی', room: 'کلاس ۱۰۱', tone: 'blue' },
+  { id: 'programming', day: 'یکشنبه', slot: 'noon', time: '۱۰:۰۰ تا ۱۲:۰۰',
+    title: 'برنامه‌سازی پیشرفته', teacher: 'دکتر کریمی', conflictWith: 'مدار منطقی', tone: 'violet' },
+  { id: 'differential', day: 'دوشنبه', slot: 'morning', time: '۰۸:۰۰ تا ۱۰:۰۰',
+    title: 'معادلات دیفرانسیل', teacher: 'دکتر رضایی', tone: 'emerald' },
+];
+
+const courseTones = {
+  blue: 'bg-blue-50 text-blue-950 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-100 dark:ring-blue-900/60',
+  emerald: 'bg-emerald-50 text-emerald-950 ring-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-100 dark:ring-emerald-900/60',
+  violet: 'bg-violet-50 text-violet-950 ring-violet-100 dark:bg-violet-950/30 dark:text-violet-100 dark:ring-violet-900/60',
+} as const;
+
+/** Normal-flow content that wraps within the card instead of overflowing a narrow grid cell. */
+const CoursePreviewCard: React.FC<{ course: PreviewCourse; mobile?: boolean }> = ({ course, mobile = false }) => (
+  <article className={`min-w-0 max-w-full rounded-2xl p-3 ring-1 ring-inset ${courseTones[course.tone]} ${mobile ? 'sm:p-4' : 'h-full'}`}>
+    {mobile && (
+      <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-bold">
+        <span>{course.day}</span>
+        <span className="inline-flex min-w-0 items-center gap-1"><Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />{course.time}</span>
+      </div>
+    )}
+    <h3 className="min-w-0 break-words text-sm font-extrabold leading-6 [overflow-wrap:anywhere]">{course.title}</h3>
+    <div className="mt-2 flex min-w-0 flex-col items-start gap-1.5 text-xs leading-5">
+      {course.teacher && (
+        <span className="flex min-w-0 max-w-full items-start gap-1.5">
+          <UserRound aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 break-words [overflow-wrap:anywhere]">{course.teacher}</span>
+        </span>
+      )}
+      {course.room && (
+        <span className="flex min-w-0 max-w-full items-start gap-1.5">
+          <MapPin aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 break-words [overflow-wrap:anywhere]">{course.room}</span>
+        </span>
+      )}
+    </div>
+    {course.conflictWith && (
+      <p className="mt-3 flex min-w-0 items-start gap-1.5 rounded-lg bg-rose-100/80 px-2.5 py-2 text-xs font-bold leading-5 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">تداخل نمونه با {course.conflictWith}</span>
+      </p>
+    )}
+  </article>
+);
 
 export const ScheduleSection: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "center center"]
-  });
-
-  const block1Opacity = useTransform(scrollYProgress, [0.3, 0.5], [0, 1]);
-  const block2Opacity = useTransform(scrollYProgress, [0.4, 0.6], [0, 1]);
-  const block3Opacity = useTransform(scrollYProgress, [0.5, 0.7], [0, 1]);
-  const collisionOpacity = useTransform(scrollYProgress, [0.7, 0.8], [0, 1]);
-  const resolveOpacity = useTransform(scrollYProgress, [0.8, 1], [0, 1]);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <section id="schedule" ref={containerRef} className="scroll-mt-24 py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">
+    <section id="schedule" dir="rtl" aria-labelledby="landing-conflict-heading"
+      className="scroll-mt-24 mx-auto w-full min-w-0 max-w-7xl px-3 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto mb-8 max-w-3xl text-center sm:mb-12">
+        <h2 id="landing-conflict-heading"
+          className="mb-4 text-3xl font-black leading-snug text-slate-900 dark:text-white sm:text-4xl lg:text-5xl">
           تشخیص هوشمند تداخل
         </h2>
-        <p className="text-xl text-slate-600 dark:text-slate-400">
-          دیگر نگران هم‌پوشانی کلاس‌ها یا امتحانات نباشید. برنامه هفتگی به‌صورت زنده ترسیم شده و تداخل‌ها را قبل از ثبت نهایی به شما اخطار می‌دهد.
+        <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-lg sm:leading-9">
+          هم‌پوشانی ساعت کلاس‌ها را به‌موقع ببین و گزینه‌های دیگر را بررسی کن.
+          این برنامه، پیش‌نمایش ساختگی از شکل نمایش تداخل در درس‌چین است.
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-10 shadow-xl overflow-x-auto relative">
-        <div className="grid grid-cols-6 gap-4 min-w-[700px]">
-          {['ساعت', 'شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه'].map(day => (
-            <div key={day} className="text-center font-bold text-slate-500 pb-4 border-b border-slate-200 dark:border-slate-800">{day}</div>
+      <div className="min-w-0 max-w-full rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-5 lg:p-7">
+        <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white">
+            <Clock3 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            پیش‌نمایش برنامه هفتگی
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            دادهٔ نمونه
+          </span>
+        </div>
+
+        {/* Phones and small tablets: cards preserve readable course, teacher and time details. */}
+        <div aria-label="برنامهٔ هفتگی نمونه به تفکیک روز" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
+          {previewCourses.map((course, index) => (
+            <motion.div key={course.id} className="min-w-0"
+              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ delay: reduceMotion ? 0 : index * 0.06 }}>
+              <CoursePreviewCard course={course} mobile />
+            </motion.div>
           ))}
-          
-          <div className="text-center font-medium text-slate-400 py-6">08:00<br/>10:00</div>
-          <div className="col-span-1 relative">
-            <motion.div style={{ opacity: block1Opacity }} className="absolute inset-2 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-              <div className="font-bold text-blue-900 dark:text-blue-100 text-sm mb-2">فیزیک ۱</div>
-              <div className="text-xs flex flex-col gap-1 text-blue-700 dark:text-blue-300">
-                <span className="flex items-center gap-1"><User className="w-3 h-3"/>دکتر احمدی</span>
-                <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/>کلاس ۱۰۱</span>
-              </div>
-            </motion.div>
+        </div>
+
+        {/* Desktop: six fluid columns without a forced 700px minimum or absolute-positioned cards. */}
+        <div aria-label="جدول هفتگی نمونه" className="hidden min-w-0 lg:block">
+          <div className="grid min-w-0 grid-cols-[5rem_repeat(5,minmax(0,1fr))] gap-2">
+            <div className="self-center text-center text-xs font-bold text-slate-500 dark:text-slate-400">ساعت</div>
+            {previewDays.map(day => <div key={day}
+              className="min-w-0 self-center py-2 text-center text-xs font-extrabold text-slate-600 dark:text-slate-300">{day}</div>)}
+            {(['morning', 'noon'] as const).map(slot => (
+              <React.Fragment key={slot}>
+                <div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl bg-slate-50 px-1 py-3 text-xs font-semibold text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                  <span>{slot === 'morning' ? '۰۸:۰۰' : '۱۰:۰۰'}</span>
+                  <span>{slot === 'morning' ? '۱۰:۰۰' : '۱۲:۰۰'}</span>
+                </div>
+                {previewDays.map(day => {
+                  const course = previewCourses.find(item => item.day === day && item.slot === slot);
+                  return <div key={day} className="min-w-0 rounded-xl bg-slate-50/70 p-1 dark:bg-slate-800/30">
+                    {course ? <CoursePreviewCard course={course} /> : <div aria-hidden="true" className="h-full min-h-28" />}
+                  </div>;
+                })}
+              </React.Fragment>
+            ))}
           </div>
-          <div className="col-span-1"></div>
-          <div className="col-span-1 relative">
-             <motion.div style={{ opacity: block2Opacity }} className="absolute inset-2 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
-              <div className="font-bold text-emerald-900 dark:text-emerald-100 text-sm mb-2">معادلات دیفرانسیل</div>
-              <div className="text-xs flex flex-col gap-1 text-emerald-700 dark:text-emerald-300">
-                <span className="flex items-center gap-1"><User className="w-3 h-3"/>دکتر رضایی</span>
-              </div>
-            </motion.div>
+        </div>
+
+        <div className="mt-4 flex min-w-0 flex-wrap items-start gap-3 rounded-2xl bg-emerald-50/80 p-3 text-sm text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-100 sm:p-4">
+          <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="min-w-0 flex-1">
+            <p className="font-extrabold">گروه جایگزین در این مثال</p>
+            <p className="mt-1 break-words text-xs leading-6 [overflow-wrap:anywhere] sm:text-sm">
+              مدار منطقی، گروه ۲ — دوشنبه ۱۳:۰۰؛ بررسی جایگزین‌ها باید با اطلاعات معتبر ترم انجام شود.
+            </p>
           </div>
-          <div className="col-span-2"></div>
-          
-          <div className="text-center font-medium text-slate-400 py-6">10:00<br/>12:00</div>
-          <div className="col-span-1"></div>
-          <div className="col-span-1 relative">
-            <motion.div style={{ opacity: block3Opacity }} className="absolute inset-2 bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-xl p-3">
-              <div className="font-bold text-purple-900 dark:text-purple-100 text-sm mb-2">برنامه‌سازی پیشرفته</div>
-            </motion.div>
-            
-            <motion.div style={{ opacity: collisionOpacity }} className="absolute inset-2 bg-red-100/90 dark:bg-red-900/80 backdrop-blur-sm border-2 border-red-500 rounded-xl p-3 flex flex-col items-center justify-center text-center z-10 shadow-lg shadow-red-500/20">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 mb-1" />
-              <div className="text-xs font-bold text-red-700 dark:text-red-300 leading-tight">تداخل با<br/>مدار منطقی</div>
-            </motion.div>
-            
-            <motion.div style={{ opacity: resolveOpacity }} className="absolute top-1/2 left-full ml-4 -translate-y-1/2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl z-20 hidden md:block">
-              <div className="text-xs text-slate-500 mb-2">گروه جایگزین پیشنهادی:</div>
-              <div className="font-bold text-sm text-slate-900 dark:text-white mb-1">مدار منطقی - گروه ۲</div>
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> دوشنبه ۱۳:۰۰
-              </div>
-            </motion.div>
-          </div>
-          <div className="col-span-3 border-t border-dashed border-slate-200 dark:border-slate-800"></div>
         </div>
       </div>
     </section>

@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 // DARSCHYN (درس‌چین) - Course Planning, Priority Engine & Conflict Timetable
 // ============================================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   AlertTriangle,
@@ -34,6 +34,7 @@ import { CourseEligibilityResult, AcademicLimitInfo } from '../types';
 import { ExamCalendar } from './ExamCalendar';
 import { FluidWeekTimetable } from './FluidWeekTimetable';
 import { generateExamsICS, downloadICSFile } from '../utils/calendar';
+import { copyTextWithFallback } from '../utils/clipboard';
 
 export interface PlannedCourseCardData {
   courseId: string;
@@ -83,11 +84,15 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   academicLimits,
 }) => {
   const [activePlannerTab, setActivePlannerTab] = useState<'priorities' | 'timetable' | 'exams'>('priorities');
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const [copyFeedback, setCopyFeedback] = useState<{ code: string; success: boolean } | null>(null);
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timeout = window.setTimeout(() => setCopyFeedback(null), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [copyFeedback]);
+  const handleCopyCode = async (code: string) => {
+    const success = await copyTextWithFallback(code);
+    setCopyFeedback({ code, success });
   };
   
   const [addingFallbackForCourseId, setAddingFallbackForCourseId] = useState<string | null>(null);
@@ -572,7 +577,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
       {activePlannerTab === 'priorities' && (
         <div className="space-y-4">
           {plannedCourses.length === 0 ? (
-            <div className="p-12 text-center bg-liquid-glass rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 space-y-3">
+            <div className="space-y-3 rounded-3xl border border-dashed border-slate-300 bg-liquid-glass p-5 text-center sm:p-8 lg:p-12 dark:border-slate-700">
               <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
                 <BookOpen className="w-7 h-7" />
               </div>
@@ -587,6 +592,12 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
             <div className="space-y-3.5">
               {plannedCourses.map((pc, idx) => {
                 const primary = pc.selectedOffering;
+                const importedCode = primary?.rawCourseCode?.trim() || '';
+                const copyCode = importedCode || pc.courseCode?.trim() || '';
+                // A plausible code never overrides a blocked/uncertain academic verdict.
+                const canCopyCode = Boolean(copyCode && copyCode !== '---' &&
+                  !/^DEMO[-_]/i.test(copyCode) &&
+                  primary?.canSelect && primary?.isEligible && primary?.overallStatus === 'AVAILABLE');
                 const hasConflicts = pc.conflictDetails.length > 0;
                 const isAddingFallback = addingFallbackForCourseId === pc.courseId;
 
@@ -601,34 +612,39 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                   >
                     {/* Course Card Header */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         {/* Priority Rank Badge */}
                         <div className="flex flex-col items-center justify-center w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm shrink-0 shadow-xs">
                           {idx + 1}
                         </div>
 
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h4 className="min-w-0 break-words text-sm font-bold text-slate-900 [overflow-wrap:anywhere] dark:text-white">
                               {pc.courseName}
                             </h4>
-                            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                              کد {pc.courseCode}
+                            <span className="max-w-full break-all rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                              کد <code dir="ltr">{copyCode || 'نامشخص'}</code>
                             </span>
+                            {!importedCode && <span className="text-[11px] text-amber-800 dark:text-amber-300">کد کاتالوگ؛ تأییدنشده</span>}
                             <button
-                              onClick={() => handleCopyCode(primary?.courseCode || primary?.courseCode || pc.courseCode)}
-                              className="px-2.5 py-1 flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-[11px] font-bold"
-                              title="کپی کد ارائه جهت پیست در آموزشیار"
+                              type="button"
+                              disabled={!canCopyCode}
+                              onClick={() => void handleCopyCode(copyCode)}
+                              aria-label={`کپی کد ${pc.courseName}`}
+                              aria-live="polite"
+                              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                              title={!canCopyCode ? 'کد نامعتبر است یا این گروه طبق آخرین تحلیل قابل اخذ نیست؛ وضعیت و کد ارائه را بررسی کنید.' : importedCode ? 'کپی کد واردشده همراه ارائه' : 'کد کاتالوگ رسمی بودن کد ارائه در آموزشیار را تضمین نمی‌کند.'}
                             >
-                              {copiedCode === (primary?.courseCode || primary?.courseCode || pc.courseCode) ? (
+                              {copyFeedback?.code === copyCode && copyFeedback.success ? (
                                 <>
-                                  <Check className="w-3.5 h-3.5" />
+                                  <Check aria-hidden="true" className="h-4 w-4" />
                                   کپی شد
                                 </>
                               ) : (
                                 <>
-                                  <Copy className="w-3.5 h-3.5" />
-                                  کپی کد آموزشیار
+                                  <Copy aria-hidden="true" className="h-4 w-4" />
+                                  {copyFeedback?.code === copyCode && !copyFeedback.success ? 'کپی نشد؛ دستی بردار' : 'کپی کد'}
                                 </>
                               )}
                             </button>

@@ -77,6 +77,7 @@ export const AdminDashboard: React.FC = () => {
   const mobileDialogRef = useRef<HTMLDivElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -110,6 +111,28 @@ export const AdminDashboard: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileMenuOpen]);
+
+  // Cmd/Ctrl+K brings administrators straight to their destination. "/" works
+  // only outside editable controls, preserving normal typing in forms.
+  useEffect(() => {
+    const onNavigationShortcut = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const editable = event.target instanceof HTMLElement &&
+        (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName));
+      if (!((key === 'k' && (event.metaKey || event.ctrlKey)) ||
+          (event.key === '/' && !editable && !event.metaKey && !event.ctrlKey && !event.altKey))) return;
+      event.preventDefault();
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        desktopNavRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+      } else {
+        setMobileMenuOpen(true);
+        requestAnimationFrame(() =>
+          mobileDialogRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus());
+      }
+    };
+    document.addEventListener('keydown', onNavigationShortcut);
+    return () => document.removeEventListener('keydown', onNavigationShortcut);
+  }, []);
 
   // A department manager receives only the survey workspace, not global admin menus.
   const { isSuperAdmin, demandOnly, isAdmin } = adminWorkspaceAccess(user);
@@ -241,8 +264,9 @@ export const AdminDashboard: React.FC = () => {
           placeholder="جست‌وجوی بخش‌ها…"
           value={navigationSearch}
           onChange={event => setNavigationSearch(event.target.value)}
-          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-14 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
         />
+        <kbd aria-hidden="true" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">⌘ K</kbd>
       </div>
       {filteredNavGroups.length === 0 && (
         <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">بخشی با این عبارت پیدا نشد.</p>
@@ -326,7 +350,7 @@ export const AdminDashboard: React.FC = () => {
       </header>
 
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-6">
-        <aside className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
+        <aside ref={desktopNavRef} className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
           <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
             بخش‌های مدیریت
             <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">انتخاب سریع بخش مورد نظر</p>
