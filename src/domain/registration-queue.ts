@@ -173,6 +173,10 @@ export function buildRegistrationQueue(input: {
       unresolved.value = true;
       problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
     }
+    if (/^DEMO[-_]/i.test(code)) {
+      unresolved.value = true;
+      problems.push('این شناسهٔ نمایشی DEMO است و برای ثبت واقعی در آموزشیار معتبر نیست.');
+    }
     const requestedRank = requested.indexOf(id) + 1;
     return {
       courseId: id, courseName: o.courseName,
