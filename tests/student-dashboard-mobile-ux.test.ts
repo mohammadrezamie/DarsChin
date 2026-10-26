@@ -17,6 +17,11 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
 
   it('keeps the mobile tab visible, 44px touchable, and reports only real save states',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
+    const visibleJourney=['id: \'offerings\'','id: \'schedule\'','id: \'registration\''];
+    const offsets=visibleJourney.map(token => dashboard.indexOf(token));
+    expect(offsets.every(offset => offset >= 0)).toBe(true);
+    expect(offsets[0]).toBeLessThan(offsets[1]);
+    expect(offsets[1]).toBeLessThan(offsets[2]);
     expect(dashboard).toContain('tabButtonsRef.current[activeTab]');
     expect(dashboard).toContain("button.scrollIntoView({ block: 'nearest', inline: 'nearest'");
     expect(dashboard).toContain('ref={element => { tabButtonsRef.current[tab.id] = element; }}');
