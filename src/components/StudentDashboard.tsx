@@ -171,6 +171,19 @@ export const StudentDashboard: React.FC = () => {
     const version = ++evaluationVersionRef.current;
     setLoading(true);
     setLoadError(null);
+    // Never carry a prior student's selection or private academic summary into
+    // a newly authenticated student's workspace while requests are pending.
+    if (profile?.userId && profile.userId !== user?.id) {
+      setProfile(null);
+      setCurriculumId(null);
+      setAcademicLimits(null);
+      setCurrentTerm(null);
+      setEvaluations([]);
+      setRecommendations([]);
+      setSelectedOfferingIds([]);
+      setCoursePriorities([]);
+      setOfferingPriorities({});
+    }
     try {
       // Resolve saved selections before calculating eligibility on reload.
       const [profileRes, planRes] = await Promise.all([
@@ -216,8 +229,10 @@ export const StudentDashboard: React.FC = () => {
       if (evalRes.success && evalRes.data) {
         setEvaluations(evalRes.data.report?.results || []);
         setRecommendations(evalRes.data.recommendations || []);
-        if (evalRes.data.academicLimits) setAcademicLimits(evalRes.data.academicLimits);
-        if (evalRes.data.context?.term) setCurrentTerm(evalRes.data.context.term);
+        // Absence is not permission to retain an earlier student's limits or
+        // a previous evaluation's academic term.
+        setAcademicLimits(evalRes.data.academicLimits ?? null);
+        setCurrentTerm(evalRes.data.context?.term ?? null);
       } else {
         setEvaluations([]);
         setRecommendations([]);
