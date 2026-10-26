@@ -68,6 +68,34 @@ describe('course demand domain boundaries',()=>{
     expect(csv).toContain('1403123456');
     expect(csv).toContain('مدارهای الکتریکی');
   });
+  it('includes every participating student in the identity export, even with zero requested courses',()=>{
+    const empty = response('zero',['a']);
+    empty.courseIds = [];
+    empty.snapshot.studentName = 'شرکت‌کننده بدون انتخاب';
+    const chosen = response('one',['a']);
+    const aggregate = summarizeDemand(survey,[empty,chosen]);
+    const csv = exportDemandCsv(survey,[empty,chosen],new Map([['a','ریاضی']]),
+      new Map([['year-1403','۱۴۰۳']]),new Map());
+    const rows = csv.slice(1).trimEnd().split('\\r\\n');
+    expect(aggregate.participantCount).toBe(2);
+    expect(rows).toHaveLength(3); // one header and one row for each participant
+    expect(csv).toContain('شرکت‌کننده بدون انتخاب');
+    expect(csv).toContain('"بدون درس درخواستی",""');
+    expect(csv).toContain('"ریاضی","a"');
+  });
+
+  it('guards leading invisible formula prefixes and prevents embedded control characters creating CSV rows',()=>{
+    const payload = response('x',['a']);
+    payload.snapshot.studentName = '\\u200b=HYPERLINK("https://example.invalid")\\r\\nنام';
+    payload.studentNumber = '\\t@SUM(1,2)';
+    const csv = exportDemandCsv(survey,[payload],new Map([['a','مدار']]),
+      new Map([['year-1403','۱۴۰۳']]),new Map());
+    const rows = csv.slice(1).trimEnd().split('\\r\\n');
+    expect(rows).toHaveLength(2);
+    expect(csv).toContain('"\'\\u200b=HYPERLINK(""https://example.invalid"")');
+    expect(csv).toContain('"\' @SUM(1,2)"');
+    expect(csv).not.toContain('\\r\\nنام');
+  });
   it('counts multi-step prerequisite dependencies without cycles or other curricula',()=>{
     const rule=(id:string,target:string,source:string,curriculumId='ee-1403'):AcademicRule=>({
       id,curriculumId,targetCourseId:target,relationshipType:'PREREQUISITE',
