@@ -4,9 +4,16 @@
 
 | Topic | Reference |
 | --- | --- |
+| **قرارداد دائمی دستیارها و توسعه‌دهنده‌ها: ثبت همهٔ دستورهای مالک در GitHub** | [AGENTS.md](../AGENTS.md) |
+| **دفتر تاریخ‌دار همهٔ درخواست‌ها، برنامه‌ها، اولویت‌ها و تغییر تصمیم مالک** | [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md) |
 | راهنمای کامل محصول و وضعیت قابلیت‌ها | [PRODUCT_GUIDE_FA.md](PRODUCT_GUIDE_FA.md) |
+| طراحی جدید پنل مدیریت: رشته ← مقطع ← گرایش/ورودی ← چارت، بدون شناسه‌های فنی | [ADMIN_MAJOR_WORKSPACE_FA.md](ADMIN_MAJOR_WORKSPACE_FA.md) |
+| فوتر سازمانی درس‌چین و قواعد وسط‌چین/راست‌چین فارسی | [BRAND_FOOTER_RTL_FA.md](BRAND_FOOTER_RTL_FA.md) |
+| صف سریع ثبت: نمایش کامل عنوان درس، استاد و ساعت کنار اولویت‌ها | [REGISTRATION_QUEUE_UX_FA.md](REGISTRATION_QUEUE_UX_FA.md) |
+| کیفیت برنامهٔ انتخاب واحد: امتیاز روزهای حضور، استادها و پیشنهاد بدون تداخل | [PLAN_QUALITY_SCORING_FA.md](PLAN_QUALITY_SCORING_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
-| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) |
+| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) || **P0: دو ریپو GitHub روی یک VPS، تفکیک نصب/امنیت و حادثهٔ Crash-loop درس‌چین** | [SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md) |
+
 | راهنمای ساختار پوشه‌ها، آرشیو ابزارهای قدیمی و نظافت GitHub | [REPOSITORY_STRUCTURE_FA.md](REPOSITORY_STRUCTURE_FA.md) |
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | بازخورد دموی زنده: صف ثبت فشرده، فعال‌سازی نیازسنجی و ساخت چارت توسط مدیر | [UX_LIVE_DEMO_FEEDBACK_FA.md](UX_LIVE_DEMO_FEEDBACK_FA.md) |
@@ -17,6 +24,7 @@
 | نیازسنجی درس‌های ترم آینده، گزارش مدیر گروه، حریم خصوصی و برنامهٔ توسعه | [FEATURE_COURSE_DEMAND.md](FEATURE_COURSE_DEMAND.md) |
 | قوانین حوزه‌ایِ دانشگاه/واحد/مقطع/رشته/گرایش و طرح کپی پیش‌نویس | [FEATURE_COURSE_DEMAND.md §۵](FEATURE_COURSE_DEMAND.md) |
 | پرونده جمع‌آوری و تأیید قوانین دانشگاه آزاد (در انتظار) | [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md) |
+| منابع بررسی‌شدهٔ آیین‌نامه، اعتبارسنجی منبع و مرزبندی قوانین عمومی/شرط‌های قابل تنظیم | [ACADEMIC_REGULATION_RESEARCH_FA.md](ACADEMIC_REGULATION_RESEARCH_FA.md) |
 | نقشه عملیاتی‌کردن کامل Vercel | [VERCEL_FULLSTACK_PLAN_FA.md](VERCEL_FULLSTACK_PLAN_FA.md) |
 | روند همکاری چندنفره و استقرار خودکار | [TEAM_WORKFLOW_FA.md](TEAM_WORKFLOW_FA.md) |
 | Local setup | [README](../README.md) |

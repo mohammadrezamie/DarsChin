@@ -2,6 +2,18 @@
 
 > Canonical project brief and operating contract for any AI coding agent working on DARSCHYN (درس‌چین). Read this file before planning or changing code. If it conflicts with a more recent explicit instruction from the project owner, follow the newer instruction and update this document only when appropriate.
 
+## 0. Mandatory GitHub record of **every** owner instruction
+
+**The owner confirmed this as a permanent top-priority project rule on 2026-10-25.** Every owner request, feature idea or plan, changed priority, reported defect, decision, restriction, pending question and superseding instruction **must be committed into the DarsChin GitHub repository**, even if the actual implementation is postponed. Do not rely on chat history, agent memory or an unmerged branch as the canonical record. For each new instruction:
+
+1. Read and append a dated, non-sensitive entry to [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md), including a stable reference ID, priority, implementation/verification status, dependency and related PR/Issue; link to a more detailed document when appropriate.
+2. Update the relevant product/architecture/testing/academic document, and [INDEX.md](INDEX.md) for new documents. Mark superseded decisions explicitly instead of quietly deleting history; apply the owner's newer explicit instruction.
+3. Show what was **committed on a branch**, what was **merged into main**, and what was only **planned, untested or undeployed**. Test evidence must belong to the exact commit.
+4. Never commit personal data, live student responses, secrets or private project material just to preserve an instruction.
+5. Read [AGENTS.md](../AGENTS.md) as the stable agent contract. All other sections of this prompt remain subordinate to owner decisions recorded after them, within security and policy boundaries.
+
+**Immediate owner priority:** a sale-ready, thoroughly verified **demand-survey workflow** (multi-entry-year surveys, per-student manager reports and self-reported final-term segmentation) before secondary features. Target is approximately 2–3 weeks after 2026-10-25, not an unverified production promise. Prefer clean code, local quality gates and safe authorization over rushed merges.
+
 ## 1. Mission and product boundary
 
 Build DARSCHYN as a reliable, secure, maintainable web platform that helps Islamic Azad University (IAU) students understand course eligibility, plan course selection, compare offerings, build a weekly timetable, and helps authorized academic/department staff manage curriculum data and estimate course demand.
@@ -21,6 +33,12 @@ The project owner has delegated broad autonomy for product ideation and implemen
 4. Continue independent work on unrelated, non-policy areas where possible.
 
 Examples of academic-policy changes requiring approval include prerequisite/corequisite semantics, failed-prerequisite exceptions, final-semester exceptions, unit limits, GPA thresholds, curriculum/track eligibility, and course-specific exceptions.
+
+## 2.1 Per-curriculum academic condition configuration (owner decision 2026-10-25)
+
+**Owner decision [OWN-022–023](OWNER_DECISIONS_FA.md) overrides earlier hardcoded assumptions.** Course-specific requirements, including internship/project credit thresholds, are **admin-editable data scoped to an explicit university/campus/degree/major/entry-year/curriculum version**, not constants or universals. A course may have zero, one or multiple prerequisites/corequisites; support minimum passed-credit predicates and AND/OR relations. Never insert real numeric thresholds automatically into new chart conditions, and never ask the owner to enumerate per-course thresholds; the owner will maintain them in the panel. Prior sample course names/numbers are not official policy.
+
+**Educational-policy semantics and overrides remain a separate approved layer.** Before asking the owner anything, review the applicable current regulation, issued by a verifiable official authority, including edition/date/entry-year scope. Ask only unresolved broad interpretation questions with a source reference. If the valid source cannot be verified, disclose the gap and never claim an officially approved eligibility result. See [academic source research](ACADEMIC_REGULATION_RESEARCH_FA.md).
 
 ## 3. Confirmed academic requirements
 

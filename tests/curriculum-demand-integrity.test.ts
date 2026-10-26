@@ -18,6 +18,7 @@ const userId=id+'-manager', studentId=id+'-student';
 const chartId=id+'-1403', wrongChartId=id+'-wrong-campus', trackId=id+'-power';
 const surveyId=id+'-survey';
 let token='', studentToken='', courseId='', campusId='', majorId='', degreeId='', entryYearId='',universityId='';
+let createdUniversity = false;
 
 beforeAll(async()=>{
   await db.init(true);
@@ -28,6 +29,12 @@ beforeAll(async()=>{
   if(!campus||!major||!course||!entry)throw Error('Pilot synthetic academic fixtures required');
   campusId=campus.id;majorId=major.id;degreeId=major.degreeLevelId;
   courseId=course.id;entryYearId=entry.id;universityId=campus.universityId;
+  // The minimal synthetic seed intentionally has no university master rows.
+  // Create the relationship explicitly rather than weakening route validation.
+  if (!db.universities.some(u => u.id === universityId)) {
+    db.universities.push({ id: universityId, name: 'دانشگاه ساختگی تست', code: 'TEST-U', active: true });
+    createdUniversity = true;
+  }
   const now=new Date().toISOString();
   const root:User={id:userId,name:'مدیر آزمون چارت',mobile:'09999988111',
     roles:['super-admin'],permissions:['curriculum.manage'],createdAt:now};
@@ -49,6 +56,7 @@ beforeAll(async()=>{
 
 afterAll(()=>{
   const userSet=new Set([userId,studentId]), chartSet=new Set([chartId,wrongChartId]);
+  if (createdUniversity) db.data.universities = db.universities.filter(u => u.id !== universityId);
   db.data.users=db.users.filter(u=>!userSet.has(u.id));
   db.data.studentProfiles=db.studentProfiles.filter(p=>p.userId!==studentId);
   db.data.curricula=db.curricula.filter(c=>!chartSet.has(c.id));
