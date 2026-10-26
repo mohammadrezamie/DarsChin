@@ -245,10 +245,10 @@ async function main() {
   }
 
   const missingStore = path.join(temporary, 'missing-store');
-  fs.mkdirSync(missingStore);
+  // Simulate an unmounted volume: neither the DB nor its directory exists.
   await assertRejectedDatabaseBoot(missingStore, 'Missing mounted DB');
-  if (fs.existsSync(path.join(missingStore, 'darschyn-db.json'))) {
-    throw new Error('SECURITY: an empty replacement DB was created in a missing volume');
+  if (fs.existsSync(missingStore)) {
+    throw new Error('SECURITY: a detached data mountpoint was silently recreated');
   }
 
   const corruptStore = path.join(temporary, 'corrupt-store');
