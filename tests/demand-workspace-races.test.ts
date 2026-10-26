@@ -35,6 +35,31 @@ describe('survey request epochs', () => {
   });
 });
 
+describe('principal isolation and safe role reinitialization', () => {
+  it('remounts the workspace on student identity, role, permission or department scope change', () => {
+    const s = source();
+    expect(s).toContain("import { useAuth } from '../context/AuthContext'");
+    expect(s).toContain('const principalKey = JSON.stringify([');
+    expect(s).toContain('user?.id ?? null');
+    expect(s).toContain('user?.permissions ?? []');
+    expect(s).toContain('user?.demandScopes ?? []');
+    expect(s).toContain('<DemandWorkspaceSession key={principalKey} role={role} />');
+  });
+
+  it('clears old identity fields and restores valid chart defaults when a role is reset', () => {
+    const s = source();
+    for (const token of [
+      'setProfile(null);', "setStudentNumber('');", "setGraduation('UNKNOWN');",
+      'setAssigned([]);', 'setRules([]);', 'setLoadedChartId(null);',
+      'setNewCourseIds([]);', "setNewCurriculum('');", "setSelectedId('');",
+      'void refresh(true);', 'const refresh = async (resetDefaults = false) =>',
+      'resetDefaults || !newCurriculum', 'resetDefaults || !newTerm',
+    ]) {
+      expect(s).toContain(token);
+    }
+  });
+});
+
 describe('demand UI account/survey guards', () => {
   it('clears saved student answers and manager reports immediately on each selected survey', () => {
     const s=source();
