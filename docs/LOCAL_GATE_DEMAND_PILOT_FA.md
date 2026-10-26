@@ -135,4 +135,7 @@ node scripts/local-gate.cjs --browser
 - شناسهٔ کد قابل کپی به‌تنهایی **مجوز اخذ** نیست؛ اگر `canSelect`، `isEligible` یا `overallStatus` در گزارش شرایط یک گروه نامعتبر باشد، `ready=false` و `hasUnresolvedRules=true` شود. نبود کد نیز همین هشدار unresolved را ایجاد می‌کند. قانون آموزشی جدیدی فرض نشده است.
 - تست‌ها در `tests/registration-quick-ui.test.tsx` و `tests/registration-queue.test.ts` افزوده شدند.
 
+- کد نمایشیِ `DEMO-*` یا `DEMO_*` می‌تواند برای معرفی عملکرد صف دیده شود، ولی هرگز `ready=true` و مجوز کپیِ آمادهٔ ثبت واقعی نمی‌گیرد. همین‌طور گروه مسدود و نیازمند بررسی، حتی با کد موجود، قابل اخذ قلمداد نمی‌شود.
+- در ۲۰۲۶/۱۰/۲۶، سورس `src/domain/registration-queue.ts` از GitHub خوانده و پس از **حذف نوع‌گذاری صرفاً برای آزمون منطق** در V8 اجرا شد؛ ۵/۵ سناریوی اصلی معتبر/مسدود/نیازمند بررسی/دمو/کد خالی موفق بود. این **TypeScript compile یا Vitest نیست** و گیت اصلی همچنان اجرا نشده.
+
 **این بازبینی جای rebase/merge واقعی را نمی‌گیرد.** PR #37 نسبت به `main` فعلی `1f28e634` هنوز دارای تداخل است؛ به‌ویژه `RegistrationLaunchpad.tsx`، `mock-api.ts`، `registration-queue.ts` و فایل‌های تست/مستندات. پس از حفظ اصلاحات PR #39، باید TypeScript، Vitest و QA موبایل روی SHA نهایی شاخه **واقعاً اجرا شوند**. نمرهٔ ۱۹۷/۱۹۷ فقط مربوط به SHA سابق است و به این PR قابل انتقال نیست.
