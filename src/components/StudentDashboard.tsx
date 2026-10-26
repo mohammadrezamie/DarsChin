@@ -135,10 +135,10 @@ export const StudentDashboard: React.FC = () => {
         return;
       }
       if (event.key !== 'Tab') return;
-      const focusable = clearDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])');
-      if (!focusable?.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const focusable = clearDialogRef.current?.querySelectorAll('button:not([disabled])');
+      const first = focusable?.item(0) as HTMLButtonElement | null;
+      const last = focusable?.item((focusable?.length ?? 0) - 1) as HTMLButtonElement | null;
+      if (!first || !last) return;
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
