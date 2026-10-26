@@ -72,6 +72,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const activeDetailKeyRef = useRef(currentDetailKey);
   activeDetailKeyRef.current = currentDetailKey;
   const saveRequestRef = useRef(createRequestEpoch());
+  const exportRequestRef = useRef(createRequestEpoch());
   // Protect the render before useEffect clears data from the previously selected survey.
   const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState);
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
@@ -85,6 +86,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     // subsequently fails. Never keep a stale form editable during an outage.
     setDetailRevision(value => value + 1);
     saveRequestRef.current.invalidate();
+    exportRequestRef.current.invalidate();
     setError('');
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
@@ -151,6 +153,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     return () => {
       refreshVersionRef.current.invalidate();
       saveRequestRef.current.invalidate();
+      exportRequestRef.current.invalidate();
     };
   },[role]);
 
@@ -281,16 +284,36 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   const exportFile=async()=>{
-    if(!survey)return;
-    setBusy(true);setError('');
-    const r=await apiRequest<{csv:string}>(`/api/demand/surveys/${survey.id}/export.csv?format=json`);
-    setBusy(false);
-    if(!r.success || !r.data?.csv){setError(r.error || 'مجوز صادرات ریز اطلاعات لازم است.');return;}
-    const blob=new Blob([r.data.csv],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download=`darschin-demand-${survey.id}.csv`;
-    document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-    setSuccess('گزارش ریز نیازسنجی دریافت شد.');
+    if(!survey || !detailReady || busy)return;
+    // CSV is student-identifying data: NEVER download an old export after a
+    // different form, permission scope or account replaces this workspace.
+    const exportedKey=currentDetailKey;
+    const exportEpoch=exportRequestRef.current.begin();
+    const stillCurrent=()=>activeDetailKeyRef.current===exportedKey &&
+      exportRequestRef.current.isCurrent(exportEpoch);
+    setBusy(true);setError('');setSuccess('');
+    try {
+      const r=await apiRequest<{csv:string}>(`/api/demand/surveys/${survey.id}/export.csv?format=json`);
+      if(!stillCurrent())return;
+      if(!r.success || typeof r.data?.csv!=='string' || !r.data.csv) {
+        setError(r.error || 'مجوز صادرات ریز اطلاعات لازم است.');return;
+      }
+      const blob=new Blob([r.data.csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try {
+        const a=document.createElement('a');
+        a.href=url;a.download=`darschin-demand-${survey.id}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setSuccess('گزارش ریز نیازسنجی دریافت شد.');
+      } finally {
+        // Safari may consume the temporary Blob after the click event returns.
+        window.setTimeout(()=>URL.revokeObjectURL(url),2000);
+      }
+    } finally {
+      if(stillCurrent())setBusy(false);
+    }
   };
 
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
@@ -438,7 +461,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-blue-700 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
-              <button type="button" disabled={busy} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-blue-400 px-3 text-xs font-bold text-blue-800 dark:text-blue-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
+              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-blue-400 px-3 text-xs font-bold text-blue-800 dark:text-blue-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
             </div>
           </div>
           <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-blue-800 dark:text-blue-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
