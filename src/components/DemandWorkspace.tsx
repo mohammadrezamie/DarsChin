@@ -88,10 +88,27 @@ export const DemandWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   useEffect(()=>{
+    // The demo can replace the workspace role without a full reload. Treat that
+    // boundary like a new session: never render identity fields, draft choices,
+    // chart relationships or a prior manager's report under the new role.
     setSurveys([]);
+    setSelectedId('');
+    setProfile(null);
     setMyResponse(null);
     setReport(null);
+    setDetailState('idle');
     setSelectedCourses([]);
+    setStudentNumber('');
+    setGraduation('UNKNOWN');
+    setAssigned([]);
+    setRules([]);
+    setLoadedChartId(null);
+    setNewCourseIds([]);
+    setNewCurriculum('');
+    setNewTrack('');
+    setError('');
+    setSuccess('');
+    setBusy(false);
     void refresh();
     return () => { refreshVersionRef.current.invalidate(); };
   },[role]);
