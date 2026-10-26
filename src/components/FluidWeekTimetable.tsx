@@ -108,6 +108,7 @@ export const FluidWeekTimetable: React.FC<{
           entries: placed.filter(item => normalizeClassDay(item.day) === day),
         }))}
         canvasHeight={canvasHeight}
+        hourHeight={HOUR_HEIGHT}
         onRemove={onRemove}
       />
 
