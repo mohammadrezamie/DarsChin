@@ -99,13 +99,13 @@ describe('demand UI account/survey guards', () => {
     expect(s).toContain("setReport(null);");
     expect(s).toContain("setSelectedCourses([]);");
     expect(s).toContain("return ()=>{active=false};");
-    expect(s).toContain("},[survey?.id,role,detailRevision]);");
+    expect(s).toContain("},[survey?.id,role,detailRevision,user?.id]);");
     expect(s).not.toContain("},[survey?.id,role,profile?.studentNumber]);");
   });
 
   it('does not allow edits before confirmed response loading or after survey closes', () => {
     const s=source();
-    expect(s).toContain("if(!survey || !detailReady)return;");
+    expect(s).toContain("if(!survey || !detailReady || busy || survey.status !== 'OPEN')return;");
     expect(s).toContain("disabled={busy||!detailReady||survey.status!=='OPEN'}");
     expect(s).toContain("disabled={busy||!chartReady||!newCourseIds.length}");
     expect(s).toContain("disabled={busy} onClick={()=>setSelectedId(s.id)}");
