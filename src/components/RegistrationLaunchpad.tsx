@@ -25,8 +25,9 @@ async function copyToClipboard(value: string): Promise<boolean> {
   try {
     const input=document.createElement('textarea');
     input.value=value; input.dir='ltr'; input.style.position='fixed'; input.style.opacity='0';
-    document.body.appendChild(input); input.select();
-    const ok=document.execCommand('copy');input.remove();return ok;
+    document.body.appendChild(input);
+    try { input.select(); return document.execCommand('copy'); }
+    finally { input.remove(); }
   } catch { return false; }
 }
 
@@ -61,7 +62,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
 
   useEffect(()=>{
     let alive=true;
-    if(!curriculumId){setLoading(false);setError('چارت ورودی مشخص نیست؛ اولویت‌ها صرفاً دستی هستند.');setRules([]);return;}
+    if(!curriculumId){setLoading(false);setError('چارت ورودی مشخص نیست؛ ترتیب دستی قابل نمایش است اما کپی سریع تا تعیین چارت فعال نمی‌شود.');setRules([]);return;}
     setLoading(true);setError('');setRules([]);setPassed([]);
     void Promise.all([
       apiRequest<ChartRules>(`/api/curriculum/${encodeURIComponent(curriculumId)}/full`),
@@ -69,11 +70,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     ]).then(([chart,history])=>{
       if(!alive)return;
       if(!chart.success||!history.success||!chart.data||!history.data||chart.data.curriculum?.id!==curriculumId){
-        setError('دریافت قوانین و سوابق کامل نبود؛ اولویت‌های دستی نمایش داده می‌شوند.');return;
+        setError('دریافت قوانین و سوابق کامل نبود؛ کدها نمایش داده می‌شوند، اما کپی سریع تا دریافت اطلاعات غیرفعال است.');return;
       }
       setRules([...(chart.data.prerequisites||[]),...(chart.data.corequisites||[])]);
       setPassed(history.data.passedCourses||[]);
-    }).catch(()=>{if(alive)setError('ارتباط برای دریافت سوابق یا قوانین برقرار نشد.');})
+    }).catch(()=>{if(alive)setError('ارتباط برای دریافت سوابق یا قوانین برقرار نشد؛ کپی سریع تا بررسی دوباره غیرفعال است.');})
       .finally(()=>{if(alive)setLoading(false);});
     return ()=>{alive=false};
   },[curriculumId,revision]);
@@ -84,8 +85,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
       selectedTrackId:profile?.selectedTrackId||null},
   }),[evaluations,selectedOfferingIds,coursePriorities,rules,passed,profile?.majorId,profile?.entryYearId,profile?.selectedTrackId]);
 
+  // Do not advertise a safe copy/order while its chart and passed-course data
+  // are pending or failed. Raw codes remain visible for manual verification.
+  const rulesReady=Boolean(curriculumId)&&!loading&&!error;
   const stepIds=queue.steps.map(s=>s.courseId);
-  const next=queue.steps.find(s=>s.ready&&!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id)));
+  const next=rulesReady?queue.steps.find(s=>s.ready&&!doneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneIds.includes(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyToClipboard(value);
@@ -123,19 +127,19 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           {queue.steps.length} درس · {doneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" aria-label="کپی کد درس بعدی" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
-          disabled={!next?.copyCode} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+          disabled={!rulesReady||!next?.copyCode} className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
           <ClipboardCopy className="h-4 w-4"/> کپی بعدی
         </button>
-        <button type="button" onClick={onEditPriorities} className="min-h-10 rounded-lg border border-blue-300 px-3 text-xs font-bold text-blue-900 dark:text-blue-100">برنامه</button>
+        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-blue-300 px-3 text-xs font-bold text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-100">برنامه</button>
       </div>
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
       این فهرست ثبت خودکار در آموزشیار نیست؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
     </p>
-    {loading&&<p role="status" className="text-xs text-slate-500"><RefreshCw className="ml-1 inline h-4 w-4 animate-spin"/>در حال تطبیق قوانین…</p>}
+    {loading&&<p role="status" className="text-xs text-slate-600 dark:text-slate-300"><RefreshCw aria-hidden="true" className="ml-1 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>در حال تطبیق قوانین… کپی سریع پس از بررسی فعال می‌شود.</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
       <AlertTriangle className="ml-1 inline h-4 w-4"/>{error||'قانون معتبری برای ترتیب خودکار این چارت ثبت نشده؛ ترتیب فعلاً دستی است.'}
       <button type="button" onClick={()=>setRevision(x=>x+1)} className="mr-2 underline">بررسی مجدد</button>
@@ -154,8 +158,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1.5 px-2 py-1.5 min-[430px]:flex-nowrap sm:gap-2 sm:py-2">
           <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
           <div className="min-w-0 flex-[1_1_160px] text-right min-[430px]:flex-1">
-            <strong className="block break-words text-[13px] font-bold leading-5 text-slate-900 dark:text-slate-100 min-[430px]:truncate">{step.courseName}</strong>
-            <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
+            <strong className="block break-words text-[13px] font-bold leading-5 text-slate-900 [overflow-wrap:anywhere] dark:text-slate-100">{step.courseName}</strong>
+            <span className="block break-words text-[11px] leading-5 text-slate-500 [overflow-wrap:anywhere] dark:text-slate-300">
               {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
             </span>
             <span className="block break-all text-[11px] leading-5 text-slate-600 dark:text-slate-300">
@@ -167,7 +171,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowUp className="h-4 w-4"/></button>
             <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowDown className="h-4 w-4"/></button>
-            <button type="button" disabled={!step.ready||!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
+            <button type="button" disabled={!rulesReady||!step.ready||!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
               className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-3.5 w-3.5"/><span>کپی</span>
