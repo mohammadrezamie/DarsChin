@@ -17,6 +17,9 @@ const environment = {
   NODE_ENV: 'production',
   HOST: '127.0.0.1',
   DARSCHYN_DATA_DIR: path.join(temporary, 'data'),
+  // Smoke bootstraps an intentionally empty disposable store. Real release
+  // instances should require the already-provisioned persistent DB.
+  DARSCHYN_REQUIRE_EXISTING_DB: 'false',
   JWT_SECRET: crypto.randomBytes(32).toString('hex'),
   DARSCHYN_RELEASE_SHA: testReleaseSha,
   ROOT_OWNER_MOBILE: rootMobile,
@@ -215,7 +218,50 @@ async function main() {
     throw new Error('SECURITY: failed server bootstrap returned success instead of exit code 1');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA-protected synthetic login, private demand API, disabled production reset, demo pages, sync persistence and nonzero fatal startup.');
+  // Fail closed if the expected volume is unmounted / a wrong data path is
+  // configured. Never regenerate an empty database behind a student's back.
+  async function assertRejectedDatabaseBoot(dataDir, label) {
+    const child = spawn(process.execPath, [binary], {
+      cwd: root,
+      env: {
+        ...environment,
+        DARSCHYN_DATA_DIR: dataDir,
+        DARSCHYN_REQUIRE_EXISTING_DB: 'true',
+        PORT: String(port),
+      },
+      stdio: 'ignore',
+    });
+    const outcome = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        child.kill('SIGKILL');
+        reject(new Error(`${label} unexpectedly remained alive`));
+      }, 5000);
+      child.once('error', error => { clearTimeout(timeout); reject(error); });
+      child.once('exit', (code, signal) => { clearTimeout(timeout); resolve({ code, signal }); });
+    });
+    if (outcome.code !== 1 || outcome.signal !== null) {
+      throw new Error(`${label} must exit with status 1, not silently start an empty database`);
+    }
+  }
+
+  const missingStore = path.join(temporary, 'missing-store');
+  fs.mkdirSync(missingStore);
+  await assertRejectedDatabaseBoot(missingStore, 'Missing mounted DB');
+  if (fs.existsSync(path.join(missingStore, 'darschyn-db.json'))) {
+    throw new Error('SECURITY: an empty replacement DB was created in a missing volume');
+  }
+
+  const corruptStore = path.join(temporary, 'corrupt-store');
+  fs.mkdirSync(corruptStore);
+  const corruptFile = path.join(corruptStore, 'darschyn-db.json');
+  const invalidBytes = '{"users": [BROKEN-JSON';
+  fs.writeFileSync(corruptFile, invalidBytes);
+  await assertRejectedDatabaseBoot(corruptStore, 'Corrupt existing DB');
+  if (fs.readFileSync(corruptFile, 'utf8') !== invalidBytes) {
+    throw new Error('SECURITY: corrupt original data was overwritten instead of preserved');
+  }
+
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, and corrupted-database preservation.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
