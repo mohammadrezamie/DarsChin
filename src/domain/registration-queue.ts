@@ -165,10 +165,14 @@ export function buildRegistrationQueue(input: {
     // authorization. If the latest eligibility report blocks this offering,
     // the quick queue must never label it ready to copy/register.
     if (!o.canSelect || !o.isEligible || o.overallStatus !== 'AVAILABLE') {
+      unresolved.value = true;
       problems.push(`این گروه در گزارش شرایط فعلی قابل اخذ نیست: ${o.primaryReason || 'بررسی آموزشی لازم است.'}`);
     }
     if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
-    if (!code) problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    if (!code) {
+      unresolved.value = true;
+      problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    }
     const requestedRank = requested.indexOf(id) + 1;
     return {
       courseId: id, courseName: o.courseName,
