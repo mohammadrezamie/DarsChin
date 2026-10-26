@@ -183,11 +183,20 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
             </button>
           </div>
           </div>
-          {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-'))&&
+          {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-')||Boolean(step.groupCode))&&
             <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
               <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>
               <div className="space-y-1 px-8 pb-2 leading-6">
                 <p>کد: <code dir="ltr">{step.copyCode||'نامشخص'}</code> · گروه: <code dir="ltr">{step.groupCode||'نامشخص'}</code></p>
+                {step.groupCode && (
+                  <button type="button"
+                    disabled={!rulesReady||!step.ready||locked}
+                    onClick={()=>void copy(step.groupCode,`شمارهٔ گروه ${step.courseName}`)}
+                    aria-label={`کپی شماره گروه ${step.courseName}`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 font-bold text-amber-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-200">
+                    <ClipboardCopy aria-hidden="true" className="h-4 w-4"/> کپی شماره گروه
+                  </button>
+                )}
                 {step.copyCode?.startsWith('DEMO-')&&<p>کد آزمایشی است، برای ثبت واقعی استفاده نکن.</p>}
                 {step.dependencyNames.length>0&&<p>ابتدا همنیاز: {step.dependencyNames.join('، ')}</p>}
                 {step.warnings.map((text,i)=><p key={i}>{text}</p>)}
