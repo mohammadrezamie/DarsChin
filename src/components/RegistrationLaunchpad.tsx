@@ -151,22 +151,22 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
-          <div className="flex min-w-0 items-center gap-1.5 px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1.5 px-2 py-1.5 min-[430px]:flex-nowrap sm:gap-2 sm:py-2">
           <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
-          <div className="min-w-0 flex-1 text-right">
-            <strong className="block truncate text-[13px] font-bold leading-6 text-slate-900 dark:text-slate-100">{step.courseName}</strong>
+          <div className="min-w-0 flex-[1_1_160px] text-right min-[430px]:flex-1">
+            <strong className="block break-words text-[13px] font-bold leading-5 text-slate-900 dark:text-slate-100 min-[430px]:truncate">{step.courseName}</strong>
             <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
               {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
             </span>
-            <span className="block truncate text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+            <span className="block break-all text-[11px] leading-5 text-slate-600 dark:text-slate-300">
               کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex w-full min-w-0 items-center justify-end gap-1 min-[430px]:w-auto min-[430px]:shrink-0">
             <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowUp className="h-4 w-4"/></button>
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowUp className="h-4 w-4"/></button>
             <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"><ArrowDown className="h-4 w-4"/></button>
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowDown className="h-4 w-4"/></button>
             <button type="button" disabled={!step.ready||!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
               className="flex min-h-11 items-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
@@ -174,7 +174,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
             </button>
             <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!done&&locked} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
             </button>
           </div>
