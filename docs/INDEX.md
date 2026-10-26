@@ -13,7 +13,8 @@
 | صف سریع ثبت: نمایش کامل عنوان درس، استاد و ساعت کنار اولویت‌ها | [REGISTRATION_QUEUE_UX_FA.md](REGISTRATION_QUEUE_UX_FA.md) |
 | کیفیت برنامهٔ انتخاب واحد: امتیاز روزهای حضور، استادها و پیشنهاد بدون تداخل | [PLAN_QUALITY_SCORING_FA.md](PLAN_QUALITY_SCORING_FA.md) |
 | اقتباس صرفاً خواندنی از تکین: نیازپرداز، مرکز پیامک و «من ربات نیستم» | [TAKIN_REFERENCE_SMS_CAPTCHA_FA.md](TAKIN_REFERENCE_SMS_CAPTCHA_FA.md) |
-| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) || **P0: دو ریپو GitHub روی یک VPS، تفکیک نصب/امنیت و حادثهٔ Crash-loop درس‌چین** | [SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md) |
+| دامنهٔ مستقل درس‌چین روی همان VPS تکین با Nginx مشترک | [VPS_SHARED_DOMAIN_FA.md](VPS_SHARED_DOMAIN_FA.md) |
+| **P0: دو ریپو GitHub روی یک VPS، تفکیک نصب/امنیت و حادثهٔ Crash-loop درس‌چین** | [SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md](SHARED_VPS_GITHUB_OPERATIONS_2026-10-26_FA.md) |
 
 | راهنمای ساختار پوشه‌ها، آرشیو ابزارهای قدیمی و نظافت GitHub | [REPOSITORY_STRUCTURE_FA.md](REPOSITORY_STRUCTURE_FA.md) |
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
@@ -23,6 +24,7 @@
 | آماده‌باش انتخاب واحد: صف کپی سریع کدهای آموزشیار، اولویت‌ها و تقدم همنیاز | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
 | ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | نیازسنجی درس‌های ترم آینده، گزارش مدیر گروه، حریم خصوصی و برنامهٔ توسعه | [FEATURE_COURSE_DEMAND.md](FEATURE_COURSE_DEMAND.md) |
+| **محافظت اطلاعات نیازسنجی، خروجی CSV و جلوگیری از درخواست‌های قدیمی** | [DEMAND_ASYNC_SAFETY_FA.md](DEMAND_ASYNC_SAFETY_FA.md) |
 | قوانین حوزه‌ایِ دانشگاه/واحد/مقطع/رشته/گرایش و طرح کپی پیش‌نویس | [FEATURE_COURSE_DEMAND.md §۵](FEATURE_COURSE_DEMAND.md) |
 | پرونده جمع‌آوری و تأیید قوانین دانشگاه آزاد (در انتظار) | [ACADEMIC_RULES_INTAKE_FA.md](ACADEMIC_RULES_INTAKE_FA.md) |
 | منابع بررسی‌شدهٔ آیین‌نامه، اعتبارسنجی منبع و مرزبندی قوانین عمومی/شرط‌های قابل تنظیم | [ACADEMIC_REGULATION_RESEARCH_FA.md](ACADEMIC_REGULATION_RESEARCH_FA.md) |
