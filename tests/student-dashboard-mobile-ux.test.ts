@@ -81,6 +81,18 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).toContain('درخواست ثبت با بررسی سرور');
   });
 
+  it('re-evaluates the persisted selection after a successful primary-group change',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    const begin=dashboard.indexOf('const handleSelectPrimaryOffering = async');
+    const end=dashboard.indexOf('const handleAddFallbackOffering = async',begin);
+    expect(begin).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(begin);
+    const update=dashboard.slice(begin,end);
+    expect(update).toContain('if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities))');
+    expect(update).toContain('setSelectedOfferingIds(newSelected)');
+    expect(update).toContain('void fetchDashboardData();');
+  });
+
   it('contains keyboard focus within the warning dialog and restores background scroll',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
     expect(dashboard).toContain('role="alertdialog" aria-modal="true"');
