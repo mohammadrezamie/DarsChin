@@ -95,6 +95,14 @@ describe('manual Educationalyar registration priority queue',()=>{
         primaryReason:'در انتظار تطبیق داده'} ,math,physics]});
     expect(missing.steps.find(s=>s.courseId==='diff')?.ready).toBe(false);
   });
+  it('shows demo registration code as a sample, but never allows it as a ready-to-copy portal code',()=>{
+    const q=buildRegistrationQueue(input([]));
+    const sample=q.steps.find(s=>s.courseId==='diff')!;
+    expect(sample.copyCode).toBe('DEMO-109');
+    expect(sample.ready).toBe(false);
+    expect(q.hasUnresolvedRules).toBe(true);
+    expect(sample.warnings.join(' ')).toContain('DEMO');
+  });
   it('prioritizes actual imported course codes but warns if only catalog code exists',()=>{
     const imported={...diff,rawCourseCode:'410019'};
     const q=buildRegistrationQueue({...input([]),evaluations:[imported,math,physics]});
