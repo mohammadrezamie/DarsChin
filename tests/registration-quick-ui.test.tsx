@@ -65,6 +65,24 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(dashboard).toContain('return saved;');
   });
 
+  it('shows the code but disables quick-copy for a blocked course, even with a real imported code',()=>{
+    const blocked:CourseEligibilityResult={
+      ...offering,overallStatus:'BLOCKED_PREREQUISITE',
+      canSelect:false,isEligible:false,primaryReason:'پیش‌نیاز پاس نشده است',
+    };
+    const queue=buildRegistrationQueue({
+      evaluations:[blocked],selectedOfferingIds:['test-off-1'],
+      preferredCourseIds:['test-course'],rules:[],passedCourses:[],
+      profile:{majorId:'ee',entryYearId:'1403',selectedTrackId:null},
+    });
+    expect(queue.hasUnresolvedRules).toBe(true);
+    expect(queue.steps[0].ready).toBe(false);
+    expect(queue.steps[0].warnings.join(' ')).toContain('پیش‌نیاز پاس نشده است');
+    const html=renderQueue(blocked);
+    expect(html).toContain('410100');
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="کپی کد مدارهای الکتریکی"/);
+  });
+
   it('does not promote a course with unresolved academic prerequisites to quick-copy', () => {
     const prerequisite: AcademicRule = {
       id: 'rule-1', curriculumId: 'chart-example', targetCourseId: 'test-course',
