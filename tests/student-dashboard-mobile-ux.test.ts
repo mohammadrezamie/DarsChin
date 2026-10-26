@@ -32,6 +32,31 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).toContain('return saved;');
   });
 
+  it('clears the whole saved plan only after an accessible confirmation and server acceptance',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    expect(dashboard).not.toContain("confirm('آیا از پاکسازی کل برنامه");
+    expect(dashboard).toContain('const handleClearSchedule = () => setClearConfirmOpen(true);');
+    expect(dashboard).toContain('if (await syncPlanToServer([], [], {}))');
+    expect(dashboard).toContain('setSelectedOfferingIds([]);');
+    expect(dashboard).toContain('setCoursePriorities([]);');
+    expect(dashboard).toContain('setOfferingPriorities({});');
+    expect(dashboard).toContain('aria-labelledby="student-clear-title"');
+    expect(dashboard).toContain('aria-describedby="student-clear-desc"');
+    expect(dashboard).toContain('ref={clearCancelRef}');
+    expect(dashboard).toContain('clearCancelRef.current?.focus()');
+    expect(dashboard).toContain("if (!planMutationRef.current)");
+    expect(dashboard).toContain('role="alert"');
+  });
+
+  it('uses server-provided academic unit limits instead of invented numerical thresholds',()=>{
+    const dashboard=source('src/components/StudentDashboard.tsx');
+    expect(dashboard).toContain('const maxUnits = academicLimits?.effectiveMaxUnits;');
+    expect(dashboard).toContain("typeof maxUnits === 'number' && Number.isFinite(maxUnits)");
+    expect(dashboard).not.toContain('isSummer ? 8');
+    expect(dashboard).not.toContain('previousTermGpa >= 17');
+    expect(dashboard).not.toContain('ترم آخری (۲۴ واحد)');
+  });
+
   it('contains keyboard focus within the warning dialog and restores background scroll',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
     expect(dashboard).toContain('role="alertdialog" aria-modal="true"');
