@@ -78,6 +78,23 @@ describe('manual Educationalyar registration priority queue',()=>{
     expect(queue.steps).toHaveLength(3);
     expect(queue.steps.find(s=>s.courseId==='diff')?.warnings.join(' ')).toContain('چرخه');
   });
+  it('does not advertise a blocked selected offering as registration-ready even with a real code',()=>{
+    const blocked:CourseEligibilityResult={
+      ...diff,rawCourseCode:'410019',overallStatus:'BLOCKED_PREREQUISITE',
+      canSelect:false,isEligible:false,
+      primaryReason:'پیش‌نیاز درس پاس نشده است.',
+    };
+    const q=buildRegistrationQueue({...input([]),
+      evaluations:[blocked,math,physics]});
+    const step=q.steps.find(s=>s.courseId==='diff')!;
+    expect(step.copyCode).toBe('410019');
+    expect(step.ready).toBe(false);
+    expect(step.warnings.join(' ')).toContain('پیش‌نیاز درس پاس نشده است');
+    const missing=buildRegistrationQueue({...input([]),
+      evaluations:[{...blocked,overallStatus:'NEEDS_REVIEW',
+        primaryReason:'در انتظار تطبیق داده'} ,math,physics]});
+    expect(missing.steps.find(s=>s.courseId==='diff')?.ready).toBe(false);
+  });
   it('prioritizes actual imported course codes but warns if only catalog code exists',()=>{
     const imported={...diff,rawCourseCode:'410019'};
     const q=buildRegistrationQueue({...input([]),evaluations:[imported,math,physics]});
