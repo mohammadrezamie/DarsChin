@@ -629,6 +629,7 @@ export const StudentDashboard: React.FC = () => {
                     پاس‌شده: {academicLimits.electivesPassed}
                   </span>
                 </div>
+                </div>
               </details>
             )}
           </div>
