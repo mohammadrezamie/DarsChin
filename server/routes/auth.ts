@@ -9,6 +9,7 @@ import { db } from '../db/database';
 import { generateToken, AuthenticatedRequest, authenticate } from '../middleware/auth';
 import { User, UserRole } from '../../src/types';
 import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../auth/password-recovery';
+import { smsReadiness } from '../sms/service';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, changePasswordSchema, otpPasswordRecoverySchema } from '../schemas/auth';
 
@@ -53,7 +54,7 @@ function normalizeMobile(mobile: string): string {
 // ----------------------------------------------------------------------------
 authRouter.post('/register', requireGuestChallenge('register'), validate(registerSchema), (req, res) => {
   
-  let { mobile, password, name, recoveryKey } = req.body;
+  let { mobile, password, name, recoveryKey, otpChallengeId, otpCode } = req.body;
   mobile = normalizeMobile(mobile);
 
   if (!mobile || !/^09\d{9}$/.test(mobile)) {
@@ -86,6 +87,33 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     });
   }
 
+  // During verified-registration rollout, a CAPTCHA alone is insufficient:
+  // an attacker must not claim someone else's mobile without receiving SMS.
+  const otpRequired = process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED === 'true';
+  let verifiedRegistrationOtp: (typeof db.otpChallenges)[number] | undefined;
+  if (otpRequired) {
+    if (process.env.NODE_ENV === 'production' && !smsReadiness().canDeliver) {
+      return res.status(503).json({ success: false, error: 'ثبت‌نام پیامکی هنوز روی سرور فعال نشده است.' });
+    }
+    if (typeof otpChallengeId !== 'string' || typeof otpCode !== 'string' || !/^\\d{6}$/.test(otpCode)) {
+      return res.status(400).json({ success: false, error: 'کد شش‌رقمی تأیید شماره موبایل الزامی است.' });
+    }
+    verifiedRegistrationOtp = db.otpChallenges.find(item =>
+      item.id === otpChallengeId && item.mobile === mobile && item.purpose === 'registration');
+    if (!verifiedRegistrationOtp || verifiedRegistrationOtp.expiresAt <= Date.now() ||
+        verifiedRegistrationOtp.consumedAt) {
+      return res.status(403).json({ success: false, error: 'کد ثبت‌نام نامعتبر یا منقضی شده است.' });
+    }
+    if (verifiedRegistrationOtp.attempts >= 5) {
+      return res.status(429).json({ success: false, error: 'تعداد تلاش برای کد تأیید به پایان رسیده است.' });
+    }
+    if (!bcrypt.compareSync(otpCode, verifiedRegistrationOtp.hashedOtp)) {
+      verifiedRegistrationOtp.attempts += 1;
+      db.save();
+      return res.status(403).json({ success: false, error: 'کد تأیید شماره موبایل اشتباه است.' });
+    }
+  }
+
   // Hash password securely
   const passwordHash = bcrypt.hashSync(password.trim(), 10);
   const userRecoveryKey = recoveryKey?.trim() || `rec-${randomBytes(24).toString('base64url')}`;
@@ -100,9 +128,13 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     password: passwordHash,
     recoveryKey: userRecoveryKey,
     roles,
+    ...(otpRequired ? { mobileVerifiedAt: new Date().toISOString() } : {}),
     createdAt: new Date().toISOString(),
   };
 
+  // Never commit the verified OTP separately before saving the new account.
+  // A retry cannot claim the same verified mobile with the same challenge.
+  if (verifiedRegistrationOtp) verifiedRegistrationOtp.consumedAt = Date.now();
   db.users.push(newUser);
 
   // Automatically initialize student academic profile
