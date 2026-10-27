@@ -2,6 +2,7 @@
 // DARSCHYN (درس‌چین) - Mobile Number + Password Authentication Routes
 // ============================================================================
 import { Router } from 'express';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { requireGuestChallenge } from '../security/turnstile';
 import bcrypt from 'bcryptjs';
 import { db } from '../db/database';
@@ -87,13 +88,13 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
 
   // Hash password securely
   const passwordHash = bcrypt.hashSync(password.trim(), 10);
-  const userRecoveryKey = recoveryKey?.trim() || `rec-${Math.random().toString(36).substring(2, 10)}`;
+  const userRecoveryKey = recoveryKey?.trim() || `rec-${randomBytes(24).toString('base64url')}`;
 
   // Public registration always creates a student. Root privileges are assigned only by trusted bootstrap.
   const roles: UserRole[] = ['student'];
 
   const newUser: User = {
-    id: `usr-${Date.now()}`,
+    id: `usr-${randomUUID()}`,
     mobile,
     name: name.trim(),
     password: passwordHash,
