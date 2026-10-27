@@ -253,7 +253,13 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
             // For testing only, allow continuing without root if not provided, but do NOT set fallbacks
         }
 
-        let superAdmin = rootMobile ? this.data.users.find(u => u.mobile === rootMobile || u.id === 'usr-super') : null;
+        // Only the reserved root identity may ever receive bootstrap privileges.
+        // Do not silently promote a student because ROOT_OWNER_MOBILE collides
+        // with their number (e.g. a configuration typo or a rotated number).
+        const superAdmin = this.data.users.find(u => u.id === 'usr-super');
+        if (rootMobile && this.data.users.some(u => u.mobile === rootMobile && u.id !== 'usr-super')) {
+            throw new Error('ROOT_OWNER_MOBILE conflicts with a non-root account; bootstrap refused.');
+        }
         
         const allRoles = ['super-admin', 'admin', 'student'];
         const allPerms = [
@@ -265,6 +271,11 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
             'system.settings.manage', 'backup.manage', 'demand.manage', 'demand.export', 'sms.manage'
         ];
 
+        // If this is not the first boot, never adopt an unrelated user as
+        // root. Only the reserved usr-super row may be repaired/updated.
+        if (superAdmin && !Array.isArray(superAdmin.roles)) {
+            throw new Error('Root account has invalid roles; manual repair required.');
+        }
         if (!superAdmin && rootMobile && rootPassword) {
             this.data.users.push({
                 id: 'usr-super',
