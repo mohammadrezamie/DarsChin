@@ -24,8 +24,12 @@
 ## شواهد QA
 
 - کد: `src/components/StudentMobileDock.tsx`، `src/components/StudentDashboard.tsx`، `src/pages/DemoWorkspace.tsx`، و تست‌های `student-mobile-dock` و `student-dashboard-mobile-ux`.
-- تست هدفمند RTL/داک: **۱۳/۱۳**. گیت `bun run qa:full` ایزوله روی سورس بازیابی‌شده و SHA همسان: **۳۲۰/۳۲۰ Vitest در ۵۸ فایل**، frozen Bun dependencies، TypeScript، build فرانت/Express/افزونه و synthetic API smoke با **exit 0**.
+- تست هدفمند RTL/داک: **۱۳/۱۳**. گیت `bun run qa:full` ایزوله روی سورس بازیابی‌شده و SHA همسان: **۳۲۱/۳۲۱ Vitest در ۵۸ فایل**، frozen Bun dependencies، TypeScript، build فرانت/Express/افزونه و synthetic API smoke با **exit 0**.
 - Chromium/Playwright در `/demo/student`، ۳۲۰/۳۶۰/۳۹۰/۴۳۰/۷۶۸/۱۴۴۰: داک فقط روی موبایل، باز/بسته‌شدن منو با Escape و دکمه، تمرکز داخل پنل، ناوبری واقعی به پشتیبانی و صف ثبت، عدم فعال‌شدن نیازسنجیِ بسته، دکمه‌های ۵۶ پیکسلی، `pageerror=0` و **بدون document overflow**؛ همهٔ بررسی‌ها موفق بودند.
 - مانده: Safari/iPhone فیزیکی، حساب‌های سرور واقعی، برنامهٔ هفتگی با چند هزار مورد، تست screen reader در همهٔ زبان‌ها، محتوای فرانت در نسخهٔ Vercel عمومی و VPS هنوز جداگانه باید پذیرش شوند.
 
 **مرز:** هیچ کلید واقعی، دیتابیس دانشجو، تنظیمات VPS، یا مخزن دیگر تغییر نکرد.
+
+## خطای واقعی پیدا‌شده در مرورگر: تداخل sticky تبلت
+
+مرورگر Chromium در دمو نشان داد در عرض‌های ۷۶۸، ۱۰۲۴ و ۱۴۴۰ هنگام اسکرول به ۵۰۰px، سربرگ دمو با ارتفاع متفاوت (بین ۱۳۵ و ۱۸۳px) و نوار workspace با `top:68px` **روی هم می‌افتادند**. رفع شد: بنر اطلاع‌رسانی آزمایشی دیگر sticky نیست و تنها نوار مقصد دانشجو در حالت دمو با `md:top-0` بالا می‌ماند؛ در داشبورد احرازشده `top-[68px]` برای زیر Navbar اصلی حفظ شد. پس از اصلاح، در سه عرض **overlap=false**، و با اجرای مجدد ۶ عرض ناوبری `CHROMIUM_FAILURES=0` تأیید شد. تست جدید `student-mobile-dock.test.tsx` از برگشت این باگ جلوگیری می‌کند. مجموع گیت کامل **۳۲۱ تست موفق در ۵۸ فایل** است.
