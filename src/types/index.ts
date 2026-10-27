@@ -10,6 +10,8 @@ export interface User {
   name: string;
   /** Present only after server-verified SMS ownership during registration. */
   mobileVerifiedAt?: string;
+  /** Incremented after password reset/change to revoke all previously issued JWTs. */
+  sessionVersion?: number;
   password?: string;
   recoveryKey?: string;
   roles: UserRole[];

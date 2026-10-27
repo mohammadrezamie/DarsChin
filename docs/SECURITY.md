@@ -42,3 +42,7 @@ Review all authenticated API responses for secrets, including backup downloads a
 Public login and registration must never rely on a decorative checkbox or a browser-only flag. The server checks a one-use, action-scoped first-party image CAPTCHA when Turnstile is disabled; when enabled, it checks the real provider's Siteverify token, action and exact allowed hostname. The OTP request keeps its own scoped challenge. Challenge images are rendered using `img`, not inserted as raw SVG markup. A failed challenge/configuration must not authenticate a user.
 
 Full deployment, Iranian connectivity, shared-store atomicity, proxy-level rate limits, accessible non-image fallback and real SMS must still be verified before inviting real students. See [CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) for the detailed checklist. No real secrets or other repositories were modified.
+
+## Password reset session revocation (2026-10-28)
+
+Every server-issued JWT is bound to the persisted per-account `sessionVersion`; an OTP recovery or authenticated password change increments it. JWTs issued beforehand must be rejected even before their original expiry. The password-change response supplies a fresh token for that same browser. Legacy JWTs without the version claim are accepted only for accounts that have not yet rotated their session version. Details, constraints and exact-source automated QA: [AUTH_SESSION_REVOCATION_FA.md](AUTH_SESSION_REVOCATION_FA.md). This change does not claim live VPS, multi-server or iPhone acceptance.
