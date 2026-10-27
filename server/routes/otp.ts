@@ -112,6 +112,11 @@ otpRouter.post('/send', async (req, res) => {
     }
 
     mobile = normalizeIranianMobile(mobile);
+    // Do not issue unused sign-up SMS when account ownership verification is
+    // intentionally disabled for local/demo pilots.
+    if (purpose === 'registration' && process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED !== 'true') {
+        return res.status(400).json({ success: false, error: 'تأیید پیامکی ثبت‌نام در این محیط فعال نیست.' });
+    }
     if (!/^09\d{9}$/.test(mobile)) {
         return res.status(400).json({ success: false, error: 'شماره موبایل نامعتبر است.' });
     }
