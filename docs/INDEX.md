@@ -57,3 +57,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [گیت امنیت هویت مدیر اصلی و شناسهٔ یکتای ثبت‌نام دانشجو](ROOT_REGISTRATION_IDENTITY_GATE_FA.md) — P0، آزمون collision و مسیر OTP آتی.
 
 - [گیت تأیید شمارهٔ موبایل هنگام ثبت‌نام، OTP یک‌بارمصرف و فعال‌سازی مرحله‌ای](VERIFIED_REGISTRATION_FA.md) — P0 امنیت هویت پیش از ورود دانشجوهای واقعی.
+
+- [تحول UI/UX میز کار دانشجو: داک موبایل، حالت فشردهٔ پروفایل و تست‌های مرورگری](STUDENT_MOBILE_UX_20261027_FA.md) — یادداشت مالک، مبنای تحقیق و گیت پذیرش.
