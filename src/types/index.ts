@@ -8,6 +8,8 @@ export interface User {
   id: string;
   mobile: string;
   name: string;
+  /** Present only after server-verified SMS ownership during registration. */
+  mobileVerifiedAt?: string;
   password?: string;
   recoveryKey?: string;
   roles: UserRole[];
