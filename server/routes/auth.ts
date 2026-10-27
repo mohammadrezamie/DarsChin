@@ -95,7 +95,7 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     if (process.env.NODE_ENV === 'production' && !smsReadiness().canDeliver) {
       return res.status(503).json({ success: false, error: 'ثبت‌نام پیامکی هنوز روی سرور فعال نشده است.' });
     }
-    if (typeof otpChallengeId !== 'string' || typeof otpCode !== 'string' || !/^\\d{6}$/.test(otpCode)) {
+    if (typeof otpChallengeId !== 'string' || typeof otpCode !== 'string' || !/^\d{6}$/.test(otpCode)) {
       return res.status(400).json({ success: false, error: 'کد شش‌رقمی تأیید شماره موبایل الزامی است.' });
     }
     verifiedRegistrationOtp = db.otpChallenges.find(item =>
