@@ -51,7 +51,7 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
     // password change. After that, even a stolen unexpired JWT is invalid.
     const version = user.sessionVersion ?? 0;
     if (!Number.isSafeInteger(version) || version < 0 ||
-        (decoded.sv !== undefined && (!Number.isSafeInteger(decoded.sv) || decoded.sv < 0)) ||
+        (decoded.sv !== undefined && (typeof decoded.sv !== 'number' || !Number.isSafeInteger(decoded.sv) || decoded.sv < 0)) ||
         (decoded.sv ?? 0) !== version) {
       return res.status(401).json({ success: false, error: 'نشست قبلی شما منقضی شده است؛ دوباره وارد شوید.' });
     }
