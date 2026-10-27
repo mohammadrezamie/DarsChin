@@ -341,7 +341,7 @@ export const AdminDashboard: React.FC = () => {
       {/* On a long admin table, the old header-only drawer trigger scrolled away.
           Keep workspace switching reachable, with the actual section labelled. */}
       <div aria-label="ناوبری سریع مدیریت"
-        className={`sticky top-[68px] z-30 flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 lg:hidden print:hidden ${isBrowserDemo ? 'top-0' : ''}`}>
+        className={`sticky z-30 flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 lg:hidden print:hidden ${isBrowserDemo ? 'top-0' : 'top-[68px]'}`}>
         <button
           ref={menuTriggerRef}
           type="button"
