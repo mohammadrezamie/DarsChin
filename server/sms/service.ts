@@ -10,7 +10,7 @@ export interface SmsConfiguration {
 }
 export interface SmsDelivery {
   id: string;
-  purpose: 'login' | 'password_recovery';
+  purpose: 'login' | 'registration' | 'password_recovery';
   recipientMasked: string;
   recipientHash: string;
   provider: SmsConfiguration['mode'];
@@ -69,7 +69,7 @@ export function recordSmsDelivery(data: Omit<SmsDelivery,'id'|'createdAt'|'recip
   db.save();
   return item;
 }
-export async function sendOtpSms(mobile: string, code: string, purpose:'login'|'password_recovery') {
+export async function sendOtpSms(mobile: string, code: string, purpose:'login'|'registration'|'password_recovery') {
   const cfg=smsConfiguration();
   const ready=smsReadiness();
   const normalized=normalizeIranianMobile(mobile);
