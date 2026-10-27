@@ -15,6 +15,8 @@ export const registerSchema = z.object({
   name: z.string().min(2, 'لطفاً نام و نام خانوادگی خود را وارد کنید'),
   recoveryKey: z.string().optional(),
   captchaToken: z.string().max(2048).optional(),
+  otpChallengeId: z.string().max(100).optional(),
+  otpCode: z.string().regex(/^\d{6}$/).optional(),
 });
 
 export const loginSchema = z.object({
