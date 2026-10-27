@@ -55,3 +55,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [گیت جلوگیری از پاک‌شدن اطلاعات، ذخیرهٔ اتمیک با flush و راه‌اندازی امن دیتابیس](DURABLE_DATABASE_GATE_FA.md) — P0 پیش از پذیرش دانشجوی واقعی.
 
 - [گیت امنیت هویت مدیر اصلی و شناسهٔ یکتای ثبت‌نام دانشجو](ROOT_REGISTRATION_IDENTITY_GATE_FA.md) — P0، آزمون collision و مسیر OTP آتی.
+
+- [گیت تأیید شمارهٔ موبایل هنگام ثبت‌نام، OTP یک‌بارمصرف و فعال‌سازی مرحله‌ای](VERIFIED_REGISTRATION_FA.md) — P0 امنیت هویت پیش از ورود دانشجوهای واقعی.
