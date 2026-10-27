@@ -43,15 +43,19 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('min-h-11');
     expect(html).toContain('کد ارائه');
     expect(html).toContain('علامت ثبت مدارهای الکتریکی');
-    expect(html).toContain('انتقال مدارهای الکتریکی به بالا');
-    expect(html).toContain('انتقال مدارهای الکتریکی به پایین');
+    expect(html).not.toContain('انتقال مدارهای الکتریکی به بالا');
+    expect(html).not.toContain('انتقال مدارهای الکتریکی به پایین');
+    expect(html).toContain('چیدمان');
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).toContain('aria-controls="registration-queue-list"');
     expect(html).toContain('ثبت خودکار در آموزشیار نیست');
     expect(html).toContain('02');
     expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
     expect(html).toContain('کپی شماره گروه');
-    expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 flex-wrap items-center/);
-    expect(html).toContain('min-[430px]:flex-nowrap');
-    expect(html).toContain('gap-y-1.5');
+    expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
+    expect(html).toContain('line-clamp-2');
+    expect(html).toContain('flex shrink-0 items-center justify-end');
+    expect(html).not.toContain('gap-y-1.5');
     expect(html).toContain('h-11 w-11');
     expect(html).toContain('کپی سریع پس از بررسی فعال می‌شود');
     // The first render has no hydrated rules/history yet: no risky early copy.
@@ -66,6 +70,10 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('if(saved===false)throw');
     expect(component).toContain('if(reorderLock.current||');
     expect(component).toContain('disabled={reordering||index===0}');
+    expect(component).toContain('const [sortMode,setSortMode]=useState(false)');
+    expect(component).toContain('{sortMode ? <>');
+    expect(component).toContain("setSortMode(value=>!value)");
+    expect(component).toContain('disabled={reordering||queue.steps.length<2}');
     expect(component).toContain('ترتیب ذخیره نشد');
     expect(dashboard).toContain('Promise<boolean>');
     expect(dashboard).toContain('return saved;');
