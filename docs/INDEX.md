@@ -53,3 +53,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [ضدسوءاستفادهٔ API مهمان، مدیریت امن IP پشت Nginx و اعلام قطعی شکست استارت](GUEST_API_ABUSE_STARTUP_GATE_FA.md) — P0، وضعیت تست و موارد لازم قبل از استفادهٔ دانشجو.
 
 - [گیت جلوگیری از پاک‌شدن اطلاعات، ذخیرهٔ اتمیک با flush و راه‌اندازی امن دیتابیس](DURABLE_DATABASE_GATE_FA.md) — P0 پیش از پذیرش دانشجوی واقعی.
+
+- [گیت امنیت هویت مدیر اصلی و شناسهٔ یکتای ثبت‌نام دانشجو](ROOT_REGISTRATION_IDENTITY_GATE_FA.md) — P0، آزمون collision و مسیر OTP آتی.
