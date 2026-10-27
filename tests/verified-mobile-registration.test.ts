@@ -119,6 +119,15 @@ describe('opt-in proof of phone ownership during registration', () => {
     expect(db.users.some(u => u.mobile === phone)).toBe(false);
   });
 
+  it('does not send registration SMS when ownership verification is intentionally disabled', async () => {
+    vi.stubEnv('DARSCHYN_REGISTRATION_OTP_REQUIRED', 'false');
+    const phone = mobile();
+    const before = db.otpChallenges.filter(c => c.mobile === phone).length;
+    const response = await sendRegistrationCode(phone);
+    expect(response.status).toBe(400);
+    expect(db.otpChallenges.filter(c => c.mobile === phone)).toHaveLength(before);
+  });
+
   it('keeps existing development and demo registration available when verification is disabled', async () => {
     vi.stubEnv('DARSCHYN_REGISTRATION_OTP_REQUIRED', 'false');
     const phone = mobile();
