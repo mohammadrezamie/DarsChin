@@ -58,6 +58,15 @@ describe('real student mobile workspace dock', () => {
     expect(s).toContain('pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]');
   });
 
+  it('prevents overlapping sticky headers between the demo banner and the desktop workspace tabs', () => {
+    const demo = source('src/pages/DemoWorkspace.tsx');
+    const student = source('src/components/StudentDashboard.tsx');
+    expect(demo).not.toContain('md:sticky md:top-0');
+    expect(student).toContain("useLocation().pathname.startsWith('/demo/')");
+    expect(student).toContain("isBrowserDemo ? 'md:top-0' : ''");
+    expect(student).toContain('sticky top-[68px]');
+  });
+
   it('compresses repetitive intro content while retaining full academic details on demand', () => {
     const student = source('src/components/StudentDashboard.tsx');
     const demo = source('src/pages/DemoWorkspace.tsx');
