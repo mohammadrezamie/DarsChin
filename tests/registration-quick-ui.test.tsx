@@ -53,7 +53,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
     expect(html).toContain('کپی شماره گروه');
     expect(html).toMatch(/<li[^>]*><div class="flex min-w-0 items-center/);
-    expect(html).toContain('line-clamp-2');
+    expect(html).not.toContain('line-clamp-2');
     expect(html).toContain('flex shrink-0 items-center justify-end');
     expect(html).not.toContain('gap-y-1.5');
     expect(html).toContain('h-11 w-11');
