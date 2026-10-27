@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { getInitialSeedData } from './seed';
 import path from 'path';
 import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
+import { resolveBootstrapRoot } from './root-identity';
 import {
   User,
   University,
@@ -256,10 +257,7 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
         // Only the reserved root identity may ever receive bootstrap privileges.
         // Do not silently promote a student because ROOT_OWNER_MOBILE collides
         // with their number (e.g. a configuration typo or a rotated number).
-        const superAdmin = this.data.users.find(u => u.id === 'usr-super');
-        if (rootMobile && this.data.users.some(u => u.mobile === rootMobile && u.id !== 'usr-super')) {
-            throw new Error('ROOT_OWNER_MOBILE conflicts with a non-root account; bootstrap refused.');
-        }
+        const superAdmin = resolveBootstrapRoot(this.data.users, rootMobile);
         
         const allRoles = ['super-admin', 'admin', 'student'];
         const allPerms = [
