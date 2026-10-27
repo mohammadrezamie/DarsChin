@@ -23,7 +23,10 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(offsets[0]).toBeLessThan(offsets[1]);
     expect(offsets[1]).toBeLessThan(offsets[2]);
     expect(dashboard).toContain('tabButtonsRef.current[activeTab]');
-    expect(dashboard).toContain("button.scrollIntoView({ block: 'nearest', inline: 'nearest'");
+    expect(dashboard).toContain('strip.scrollBy({ left: delta');
+    expect(dashboard).not.toContain('button.scrollIntoView(');
+    expect(dashboard).toContain('<StudentMobileDock active={activeTab}');
+    expect(source('src/components/StudentMobileDock.tsx')).toContain('min-h-14');
     expect(dashboard).toContain('ref={element => { tabButtonsRef.current[tab.id] = element; }}');
     expect(dashboard).toContain('min-h-11 shrink-0 items-center justify-start');
     expect(dashboard).toContain("planStatus !== 'idle'");
