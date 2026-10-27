@@ -261,7 +261,30 @@ async function main() {
     throw new Error('SECURITY: corrupt original data was overwritten instead of preserved');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, and corrupted-database preservation.');
+  // Production bootstrap must never turn an unrelated student into root
+  // because their mobile collides with ROOT_OWNER_MOBILE. Exercise the actual
+  // bundled Express startup, not only the pure identity resolver.
+  const collisionStore = path.join(temporary, 'root-number-collision');
+  fs.mkdirSync(collisionStore);
+  const collisionFile = path.join(collisionStore, 'darschyn-db.json');
+  const originalStore = JSON.parse(fs.readFileSync(
+    path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json'), 'utf8',
+  ));
+  originalStore.users.push({
+    id: 'usr-synthetic-collision',
+    mobile: rootMobile,
+    name: 'Synthetic account that must stay student',
+    roles: ['student'],
+    createdAt: new Date().toISOString(),
+  });
+  const collisionBytes = JSON.stringify(originalStore);
+  fs.writeFileSync(collisionFile, collisionBytes);
+  await assertRejectedDatabaseBoot(collisionStore, 'Root mobile/student identity collision');
+  if (fs.readFileSync(collisionFile, 'utf8') !== collisionBytes) {
+    throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
+  }
+
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
