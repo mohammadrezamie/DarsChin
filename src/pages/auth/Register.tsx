@@ -5,6 +5,7 @@ import { UserPlus, ShieldCheck, Loader2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { GuestHumanCheck } from '../../components/GuestHumanCheck';
+import { isValidIranianMobileInput, normalizeIranianMobileInput } from '../../utils/iranian-mobile';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -39,8 +40,9 @@ export const Register: React.FC = () => {
   }, []);
 
   const handleMobileChange = (value: string) => {
-    setMobile(value);
-    if (value !== verifiedMobile) {
+    const normalized = normalizeIranianMobileInput(value);
+    setMobile(normalized);
+    if (normalized !== verifiedMobile) {
       setOtpChallengeId('');
       setOtpCode('');
       setOtpCaptchaToken('');
@@ -51,7 +53,7 @@ export const Register: React.FC = () => {
   const requestRegistrationOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^09\d{9}$/.test(mobile)) return setError('شماره موبایل معتبر وارد کنید.');
+    if (!isValidIranianMobileInput(mobile)) return setError('شماره موبایل معتبر وارد کنید.');
     if (!otpCaptchaToken) return setError('کد امنیتی را وارد کنید.');
     setIsLoading(true);
     try {
@@ -84,7 +86,7 @@ export const Register: React.FC = () => {
       return setError('ابتدا کد پیامکی تأیید شماره موبایل را دریافت و وارد کنید.');
     }
     if (!name.trim()) return setError('نام و نام خانوادگی الزامی است.');
-    if (!/^09\d{9}$/.test(mobile)) return setError('شماره موبایل نامعتبر است.');
+    if (!isValidIranianMobileInput(mobile)) return setError('شماره موبایل نامعتبر است.');
     if (password.length < 6) return setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
 
     setIsLoading(true);
