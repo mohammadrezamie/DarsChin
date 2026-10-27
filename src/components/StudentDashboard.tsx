@@ -28,6 +28,7 @@ import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
+import { StudentMobileDock } from './StudentMobileDock';
 
 type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support';
 
@@ -74,6 +75,8 @@ export const StudentDashboard: React.FC = () => {
   const planMutationRef = useRef(false);
   const evaluationVersionRef = useRef(0);
   const tabButtonsRef = useRef<Partial<Record<StudentTab, HTMLButtonElement | null>>>({});
+  const tabStripRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<HTMLElement>(null);
   const conflictDialogRef = useRef<HTMLDivElement>(null);
   const conflictCancelRef = useRef<HTMLButtonElement>(null);
   const clearDialogRef = useRef<HTMLDivElement>(null);
@@ -155,15 +158,28 @@ export const StudentDashboard: React.FC = () => {
     };
   }, [clearConfirmOpen]);
 
-  // When another workspace switches tabs (e.g. Edit priorities -> Schedule),
-  // ensure its tab is visible inside the horizontal mobile navigation.
-  // 'nearest' avoids unexpectedly jumping the document itself to the top.
+  // Only scroll the desktop tab strip itself. scrollIntoView() on the tab
+  // accidentally scrolled the WHOLE document when students switched tabs.
   useEffect(() => {
     const button = tabButtonsRef.current[activeTab];
-    if (!button || typeof button.scrollIntoView !== 'function') return;
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
-    button.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+    const strip = tabStripRef.current;
+    if (!button || !strip) return;
+    const bounds = button.getBoundingClientRect();
+    const area = strip.getBoundingClientRect();
+    const delta = bounds.right > area.right ? bounds.right - area.right
+      : bounds.left < area.left ? bounds.left - area.left : 0;
+    if (Math.abs(delta) > 1) strip.scrollBy({ left: delta, behavior: 'auto' });
   }, [activeTab]);
+
+  const selectMobileWorkspace = (tab: StudentTab) => {
+    setActiveTab(tab);
+    // A deliberate bottom-dock action should reveal the selected content
+    // above the dock instead of leaving the student at a distant scroll point.
+    requestAnimationFrame(() => {
+      workspaceRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      workspaceRef.current?.focus({ preventScroll: true });
+    });
+  };
 
   const fetchDashboardData = async () => {
     const version = ++evaluationVersionRef.current;
@@ -574,14 +590,14 @@ export const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div dir="rtl" className="darschin-page space-y-6">
+    <div dir="rtl" className="darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
       {/* Header Panel */}
-      <div className="darschin-surface relative min-w-0 overflow-hidden rounded-[1.75rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-4 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
+      <div className="darschin-surface relative min-w-0 overflow-hidden rounded-[1.35rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
-            <h2 className="mb-2 break-words text-[clamp(1.1rem,4vw,1.55rem)] font-black leading-8 tracking-tight text-slate-950 dark:text-white">
+            <h2 className="mb-1.5 break-words text-[clamp(1.1rem,4vw,1.45rem)] font-bold leading-8 tracking-tight text-slate-950 dark:text-white">
               سلام، {user.name} 👋
             </h2>
             <div className="mb-2 inline-flex max-w-full items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50/85 px-2.5 py-1 text-[11px] font-bold leading-5 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
@@ -592,7 +608,9 @@ export const StudentDashboard: React.FC = () => {
               از اینجا درس‌ها، برنامهٔ هفتگی و ترتیب ثبت را سریع مدیریت کن.
             </p>
             {academicLimits && (
-              <div className="mt-3 grid min-w-0 grid-cols-3 gap-1.5 rounded-xl border border-blue-100 bg-white/65 p-2 sm:gap-3 sm:p-3 dark:border-slate-700/70 dark:bg-slate-900/50">
+              <details className="group mt-3 min-w-0 rounded-xl border border-blue-100 bg-white/65 dark:border-slate-700/70 dark:bg-slate-900/50">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-blue-800 dark:text-blue-200">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
+                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-blue-100 p-3 sm:grid-cols-3 dark:border-slate-700/70">
                 <div className="min-w-0 flex flex-col gap-1">
                   <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">رشته‌ای اجباری</span>
                   <span className="break-words text-[11px] font-bold leading-5 text-slate-700 dark:text-slate-300">
@@ -611,7 +629,7 @@ export const StudentDashboard: React.FC = () => {
                     پاس‌شده: {academicLimits.electivesPassed}
                   </span>
                 </div>
-              </div>
+              </details>
             )}
           </div>
           <div className="grid w-full min-w-0 grid-cols-2 gap-2 lg:w-auto lg:min-w-[20rem]">
@@ -672,8 +690,8 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
-      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-[68px] z-30 min-w-0 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
-        <div className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
+      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
+        <div ref={tabStripRef} className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
             const current = activeTab === tab.id;
@@ -727,7 +745,7 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Tab Content */}
-      <section className="min-h-[240px] min-w-0 sm:min-h-[400px]" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+      <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
@@ -794,6 +812,8 @@ export const StudentDashboard: React.FC = () => {
           </>
         )}
       </section>
+
+      <StudentMobileDock active={activeTab} demandAvailable={demandSurveyAvailable} onSelect={selectMobileWorkspace} />
 
       <AcademicProfileModal
         isOpen={isProfileModalOpen}
