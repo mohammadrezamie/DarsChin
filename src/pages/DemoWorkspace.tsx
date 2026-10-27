@@ -13,7 +13,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
   return (
     <DemoAuthProvider role={role}>
       <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <div className="relative z-50 border-b border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950 md:sticky md:top-0 md:px-5 md:py-3">
+        <div className="relative z-50 border-b border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950 md:px-5 md:py-3">
           <div className="mx-auto flex max-w-7xl flex-col gap-1.5 md:flex-row md:items-center md:justify-between md:gap-3">
             <div className="flex items-start gap-2 text-amber-950 dark:text-amber-100">
               <FlaskConical className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
