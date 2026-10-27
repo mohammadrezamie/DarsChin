@@ -328,8 +328,10 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
     return res.status(400).json({ success: false, error: 'رمز عبور فعلی نادرست است.' });
   }
 
-  // Update password
+  // Invalidate every older JWT, including leaked tokens from other devices.
+  // The current browser receives a newly signed JWT after persistence.
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
@@ -345,7 +347,8 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
 
   res.json({
     success: true,
-    message: 'رمز عبور با موفقیت تغییر یافت.',
+    message: 'رمز عبور با موفقیت تغییر یافت. نشست‌های قبلی بسته شدند.',
+    data: { token: generateToken(user) },
   });
 });
 
@@ -381,6 +384,8 @@ authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, 
   }
 
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
+  // OTP recovery must revoke JWTs issued before the reset, not just passwords.
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
   failedLogins.delete(mobile);
 
   // A verified recovery challenge may reset a password only once.
