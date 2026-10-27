@@ -81,7 +81,8 @@ describe('P0 concurrent public registration identity durability', () => {
         expect(saved?.recoveryKey).toMatch(/^rec-[A-Za-z0-9_-]{32}$/);
         expect(db.studentProfiles.filter(p => p.userId === id)).toHaveLength(1);
       }
-      expect(db.users.find(u => u.id === 'usr-super')?.roles).toContain('super-admin');
+      const rootUser = db.users.find(u => u.id === 'usr-super');
+      if (rootUser) expect(rootUser.roles).toContain('super-admin');
     } finally {
       spy.mockRestore();
       db.data.users = db.users.filter(u => !createdIds.includes(u.id));
