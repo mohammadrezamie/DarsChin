@@ -51,7 +51,7 @@ export const Register: React.FC = () => {
   const requestRegistrationOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^09\\d{9}$/.test(mobile)) return setError('شماره موبایل معتبر وارد کنید.');
+    if (!/^09\d{9}$/.test(mobile)) return setError('شماره موبایل معتبر وارد کنید.');
     if (!otpCaptchaToken) return setError('کد امنیتی را وارد کنید.');
     setIsLoading(true);
     try {
