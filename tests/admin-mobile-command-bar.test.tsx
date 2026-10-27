@@ -33,7 +33,7 @@ describe('compact accessible mobile administration shell', () => {
     expect(s).toContain('menuTriggerRef.current?.focus()');
     expect(s).toContain("event.key === 'Escape'");
     expect(s).toContain('z-30 flex min-w-0 items-center gap-3');
-    expect(s).toContain("isBrowserDemo ? 'top-0' : ''");
+    expect(s).toContain("isBrowserDemo ? 'top-0' : 'top-[68px]'");
   });
 
   it('compresses the title and moves the current section into the always-visible navigation', () => {
