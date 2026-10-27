@@ -3,6 +3,7 @@
 // ============================================================================
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   UploadCloud,
   Layers,
@@ -46,6 +47,7 @@ const studentTabs = [
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
   
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
   const [curriculumId, setCurriculumId] = useState<string | null>(null);
@@ -691,7 +693,7 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
-      <nav aria-label="بخش‌های میز کار دانشجو" className="sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden">
+      <nav aria-label="بخش‌های میز کار دانشجو" className={`sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden ${isBrowserDemo ? 'md:top-0' : ''}`}>
         <div ref={tabStripRef} className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
           {studentTabs.map(tab => {
             const TabIcon = tab.icon;
