@@ -17,9 +17,15 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function generateToken(user: Partial<User>): string {
-  const roles = Array.isArray(user.roles) ? user.roles : [user.roles || 'student'];
+  const persisted = db.users.find(row => row.id === user.id);
+  const identity = persisted || user;
+  const roles = Array.isArray(identity.roles) ? identity.roles : [identity.roles || 'student'];
+  const version = identity.sessionVersion ?? 0;
+  if (!Number.isSafeInteger(version) || version < 0) {
+    throw new Error('Invalid persisted user session version');
+  }
   return jwt.sign(
-    { id: user.id, mobile: user.mobile, roles, permissions: user.permissions || [], name: user.name },
+    { id: identity.id, mobile: identity.mobile, roles, permissions: identity.permissions || [], name: identity.name, sv: version },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -33,7 +39,7 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; roles?: UserRole[], permissions?: string[] };
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; sv?: unknown; roles?: UserRole[], permissions?: string[] };
     const user = db.users.find((u) => u.id === decoded.id);
     if (!user) {
       return res.status(401).json({ success: false, error: 'کاربر یافت نشد.' });
@@ -41,8 +47,13 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
     if (user.deactivatedAt) {
       return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال شده است.' });
     }
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'کاربر یافت نشد.' });
+    // Legacy JWTs have no sv claim: honor them only until the account's first
+    // password change. After that, even a stolen unexpired JWT is invalid.
+    const version = user.sessionVersion ?? 0;
+    if (!Number.isSafeInteger(version) || version < 0 ||
+        (decoded.sv !== undefined && (!Number.isSafeInteger(decoded.sv) || decoded.sv < 0)) ||
+        (decoded.sv ?? 0) !== version) {
+      return res.status(401).json({ success: false, error: 'نشست قبلی شما منقضی شده است؛ دوباره وارد شوید.' });
     }
 
     if (!Array.isArray(user.roles)) {
