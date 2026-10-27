@@ -15,7 +15,9 @@ interface AuthContextType {
     password: string,
     name: string,
     recoveryKey?: string,
-    captchaToken?: string
+    captchaToken?: string,
+    otpChallengeId?: string,
+    otpCode?: string
   ) => Promise<{ success: boolean; error?: string; recoveryKey?: string }>;
   recoverPassword: (
     mobile: string,
@@ -119,10 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: res.error || 'خطا در ورود به حساب کاربری.' };
   };
 
-  const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string) => {
+  const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string, otpChallengeId?: string, otpCode?: string) => {
     const res = await apiRequest<{ token: string; user: User & { recoveryKey?: string } }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken }),
+      body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken, otpChallengeId, otpCode }),
     });
     if (res.success && res.data) {
       setStoredToken(res.data.token);

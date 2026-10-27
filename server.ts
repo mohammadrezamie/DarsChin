@@ -70,7 +70,7 @@ async function startServer() {
 
   app.get('/api/security/challenge', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, data: turnstilePublicConfiguration() });
+    res.json({ success: true, data: { ...turnstilePublicConfiguration(), registrationOtpRequired: process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED === 'true' } });
   });
 
   // Throttle before CAPTCHA generation or expensive password/SMS handlers.

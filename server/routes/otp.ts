@@ -90,8 +90,8 @@ if (process.env.NODE_ENV === 'test') {
     });
 }
 
-function isSupportedOtpPurpose(value: unknown): value is 'login' | 'password_recovery' {
-    return value === 'login' || value === 'password_recovery';
+function isSupportedOtpPurpose(value: unknown): value is 'login' | 'registration' | 'password_recovery' {
+    return value === 'login' || value === 'password_recovery' || value === 'registration';
 }
 
 otpRouter.post('/send', async (req, res) => {
@@ -104,13 +104,19 @@ otpRouter.post('/send', async (req, res) => {
         typeof mobile !== 'string' ||
         typeof purpose !== 'string' ||
         !isSupportedOtpPurpose(purpose) ||
-        (!usingTurnstile && (typeof captchaId !== 'string' || !captchaId.trim() ||
+        (!usingTurnstile && !(typeof captchaToken === 'string' && captchaToken.startsWith('local:')) &&
+          (typeof captchaId !== 'string' || !captchaId.trim() ||
           typeof captchaValue !== 'string' || !captchaValue.trim()))
     ) {
         return res.status(400).json({ success: false, error: 'پارامترهای نامعتبر' });
     }
 
     mobile = normalizeIranianMobile(mobile);
+    // Do not issue unused sign-up SMS when account ownership verification is
+    // intentionally disabled for local/demo pilots.
+    if (purpose === 'registration' && process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED !== 'true') {
+        return res.status(400).json({ success: false, error: 'تأیید پیامکی ثبت‌نام در این محیط فعال نیست.' });
+    }
     if (!/^09\d{9}$/.test(mobile)) {
         return res.status(400).json({ success: false, error: 'شماره موبایل نامعتبر است.' });
     }
@@ -119,7 +125,11 @@ otpRouter.post('/send', async (req, res) => {
     if (usingTurnstile && !(await validateGuestChallenge(captchaToken, 'otp'))) {
       return res.status(403).json({ success: false, error: 'تأیید «من ربات نیستم» ناموفق بود.' });
     }
-    if (!usingTurnstile) {
+    if (!usingTurnstile && typeof captchaToken === 'string' && captchaToken.startsWith('local:')) {
+      if (!(await validateGuestChallenge(captchaToken, 'otp'))) {
+        return res.status(403).json({ success: false, error: 'کد امنیتی نامعتبر یا مصرف شده است.' });
+      }
+    } else if (!usingTurnstile) {
     const captcha = db.captchaChallenges.find(c => c.id === captchaId);
     if (!captcha || (captcha.action && captcha.action !== 'otp') || captcha.expiresAt <= Date.now() || captcha.consumedAt) {
         return res.status(400).json({ success: false, error: 'کپچای نامعتبر یا منقضی شده.' });
@@ -138,6 +148,12 @@ otpRouter.post('/send', async (req, res) => {
     // Consume CAPTCHA
     captcha.consumedAt = Date.now();
     db.save();
+    }
+
+    // A registration code may only go to an unregistered mobile. A valid
+    // login/recovery OTP never substitutes for proof of registration ownership.
+    if (purpose === 'registration' && db.users.some(u => normalizeIranianMobile(u.mobile) === mobile)) {
+        return res.status(409).json({ success: false, error: 'این شماره قبلاً ثبت‌نام شده است.' });
     }
 
     // Verify user state before sending SMS
@@ -217,6 +233,11 @@ otpRouter.post('/verify', (req, res) => {
         return res.status(400).json({ success: false, error: 'شماره موبایل یا کد تایید نامعتبر است.' });
     }
     
+    // Registration codes are exchanged only during POST /auth/register. The
+    // generic verify endpoint must not consume a code without creating an account.
+    if (purpose === 'registration') {
+        return res.status(400).json({ success: false, error: 'تأیید ثبت‌نام فقط در فرم ایجاد حساب انجام می‌شود.' });
+    }
     const challenge = db.otpChallenges.find(c => c.id === challengeId && c.mobile === mobile);
     if (!challenge || challenge.expiresAt <= Date.now() || challenge.consumedAt) {
         return res.status(400).json({ success: false, error: 'کد تایید نامعتبر یا منقضی شده است.' });
