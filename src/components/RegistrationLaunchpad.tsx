@@ -183,13 +183,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <div className="flex min-w-0 items-center gap-1.5 px-2 py-1.5 sm:gap-2">
           <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-slate-500 dark:text-slate-300">{step.effectiveRank}</span>
           <div className="min-w-0 flex-1 text-right">
-            <strong title={step.courseName} className="block line-clamp-2 break-words text-[13px] font-bold leading-5 text-slate-900 [overflow-wrap:anywhere] dark:text-slate-100">{step.courseName}</strong>
-            <span className="block truncate text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
-            </span>
-            <span className="block truncate text-[11px] leading-5 text-slate-600 dark:text-slate-300">
-              کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
-            </span>
+            <strong title={step.courseName} className="block break-words text-[13px] font-bold leading-5 text-slate-900 [overflow-wrap:anywhere] dark:text-slate-100">{step.courseName}</strong>
           </div>
           <div className="flex shrink-0 items-center justify-end gap-1">
             {sortMode ? <>
@@ -210,6 +204,14 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
             </button>
             </>}
           </div>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 px-3 pb-1.5 text-[11px] leading-5">
+            <span className="min-w-0 break-words text-slate-500 [overflow-wrap:anywhere] dark:text-slate-300">
+              {offering?.instructor||'استاد نامشخص'} · {time||'ساعت نامشخص'} · گروه {step.groupCode||'؟'}
+            </span>
+            <span className="min-w-0 break-all text-slate-600 dark:text-slate-300">
+              کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
+            </span>
           </div>
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-')||Boolean(step.groupCode && step.copyCode!==step.groupCode))&&
             <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
