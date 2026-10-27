@@ -63,3 +63,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [اصلاح UX پنل مدیریت موبایل: سربرگ فشرده، نوار بخش فعال و آزمون مرورگری](ADMIN_MOBILE_UX_20261027_FA.md) — گیت P0 ظاهر و دسترس‌پذیری.
 
 - [ابطال JWTهای قدیمی پس از تغییر رمز عبور یا بازیابی با OTP و حفظ نشست مرورگر فعلی](AUTH_SESSION_REVOCATION_FA.md) — گیت امنیت حساب پیش از پذیرش واقعی.
+
+- [اولویت جدید توسعهٔ بصری و تجربهٔ واقعی دانشجو: صف ثبت فشرده و حالت مستقل چیدمان، با گیت ۳۲۷ تست و مرورگر موبایل](REGISTRATION_QUEUE_MOBILE_UX_20261028_FA.md).
