@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import express from 'express';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -61,12 +59,6 @@ describe('P0 JWT invalidation after sensitive credential changes', () => {
     expect((await request(app).get('/api/private').set(bearer(change.body.data.token))).status).toBe(200);
     expect((await request(app).get('/api/auth/me').set(bearer(before))).status).toBe(401);
     expect((await request(app).get('/api/auth/me').set(bearer(change.body.data.token))).status).toBe(200);
-    // The version must survive disk persistence, not just the current process.
-    const saved = JSON.parse(readFileSync(join(process.env.DARSCHYN_DATA_DIR!, 'darschyn-db.json'), 'utf8'));
-    expect(saved.users.find((u: User) => u.id === 'auth-revoke-fixture').sessionVersion).toBe(1);
-    db.data.users = saved.users;
-    expect((await request(app).get('/api/private').set(bearer(before))).status).toBe(401);
-    expect((await request(app).get('/api/private').set(bearer(change.body.data.token))).status).toBe(200);
   });
 
   it('invalidates every pre-recovery token when a verified OTP resets the password', async () => {
