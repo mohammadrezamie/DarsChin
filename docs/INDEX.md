@@ -72,3 +72,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [طرح تازهٔ مالک: محصول دانشجو‌محور، موبایل اپ‌مانند/PWA، پنل مدیریت خصوصی، مدیریت مجوزها، XLSX، نقشهٔ گرافیکی پیش‌نیاز/هم‌نیاز و پیگیری معارف](ADMIN_GRAPH_MOBILE_PRODUCT_REDESIGN_FA.md) — **OWN-055**، اولویت P0 و تفکیک اجراشده از نقشهٔ راه.
 
 - [تحلیل کل زنجیره و نقشهٔ دوبعدی پیش‌نیاز و هم‌نیاز (گام اجرایی و موارد باقی‌مانده)](ADMIN_GRAPH_MOBILE_PRODUCT_REDESIGN_FA.md) — فقط پنل مدیر.
+
+- [مدیریت تمام کاربران برای روت، فیلتر نقش و Excel امن و ممیزی‌شده](ADMIN_USER_DIRECTORY_XLSX_FA.md) — در حال آزمون، هنوز منتشرنشده.
