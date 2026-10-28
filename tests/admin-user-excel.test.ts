@@ -54,6 +54,7 @@ beforeAll(async () => {
     userId:testStudentId, universityId:'u-test',campusId:'c-test',degreeLevelId:'d-test',
     majorId:'m-test',entryYearId:'e-test',isTrackSelected:false,desiredTrackIds:[],
     studentNumber:'STU-EXCEL-0148',
+    updatedAt:new Date().toISOString(),
   });
   const manager: User = {
     id:'usr-test-excel-manager',mobile:'09128884477',name:'مدیر آزمایشی',
