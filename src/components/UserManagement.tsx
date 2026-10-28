@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { apiRequest } from '../utils/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { apiRequest, getStoredToken } from '../utils/api';
 import { User } from '../types';
-import { Shield, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { Shield, User as UserIcon, ShieldAlert, Search, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminDemandAccessManager } from './AdminDemandAccessManager';
 
@@ -26,21 +26,27 @@ export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all'|'student'|'admin'|'super-admin'>('all');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const { user: currentUser } = useAuth();
+  const isRoot = !!currentUser?.roles?.includes('super-admin');
+  const isDemo = typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/');
 
   const fetchUsers = async () => {
     setLoading(true);
-    // Use the admin-management API to list admins
-    const res = await apiRequest<User[]>('/api/admin-management');
-    if (res.success && res.data) {
-      setUsers(res.data);
-    } else {
-      // Fallback if not admin.manage
-      const resFallback = await apiRequest<User[]>('/api/admin/users');
-      if (resFallback.success && resFallback.data) setUsers(resFallback.data);
-      else setError(resFallback.error || 'خطا در دریافت لیست کاربران');
+    setError('');
+    try {
+      const endpoint = isRoot ? '/api/admin/users' : '/api/admin-management';
+      const result = await apiRequest<User[]>(endpoint);
+      if (result.success && Array.isArray(result.data)) setUsers(result.data);
+      else setError(result.error || 'خطا در دریافت فهرست کاربران');
+    } catch {
+      setError('ارتباط با فهرست کاربران برقرار نشد.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
