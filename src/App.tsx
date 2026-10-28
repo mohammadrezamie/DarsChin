@@ -7,6 +7,7 @@ import { ExtensionModal } from './components/ExtensionModal';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { adminWorkspaceAccess } from './utils/admin-navigation';
 const Landing = lazy(() => import('./pages/Landing').then((module) => ({ default: module.Landing })));
 const PlannerDemo = lazy(() => import('./pages/PlannerDemo').then((module) => ({ default: module.PlannerDemo })));
 const DemoWorkspace = lazy(() => import('./pages/DemoWorkspace').then((module) => ({ default: module.DemoWorkspace })));
@@ -33,6 +34,15 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   }
 
   return <Outlet />;
+};
+
+/** A linkless route is not private by itself. Guard the synthetic admin demo too. */
+const AdminDemoGate: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div role="status" className="flex min-h-[65dvh] items-center justify-center p-6">در حال بررسی دسترسی…</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!adminWorkspaceAccess(user).isAdmin) return <Navigate to="/dashboard" replace />;
+  return <DemoWorkspace role="admin" />;
 };
 
 const DashboardLayout: React.FC = () => {
@@ -105,7 +115,7 @@ export default function App() {
               {/* Full-featured synthetic workspaces: no account, token, or backend required. */}
               <Route path="/demo" element={<PlannerDemo />} />
               <Route path="/demo/student" element={<DemoWorkspace role="student" />} />
-              <Route path="/demo/admin" element={<DemoWorkspace role="admin" />} />
+              <Route path="/demo/admin" element={<AdminDemoGate />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
