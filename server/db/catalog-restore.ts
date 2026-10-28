@@ -87,6 +87,15 @@ export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown
   const years = idSet(candidate.entryYears);
 
   // The restored catalogue itself must not contain dangling academic links.
+  ensureReferences(candidate.campuses.map(x => x.universityId), universities, 'دانشگاه واحدها');
+  ensureReferences(candidate.majors.map(x => x.degreeLevelId), levels, 'مقطع رشته‌ها');
+  ensureReferences(candidate.curricula.map(x => x.universityId), universities, 'دانشگاه چارت‌ها');
+  ensureReferences(candidate.curricula.map(x => x.campusId), campuses, 'واحد چارت‌ها');
+  ensureReferences(candidate.curricula.map(x => x.degreeLevelId), levels, 'مقطع چارت‌ها');
+  ensureReferences(candidate.curricula.map(x => x.majorId), majors, 'رشتهٔ چارت‌ها');
+  ensureReferences(candidate.curricula.map(x => x.entryYearId), years, 'ورودی چارت‌ها');
+  ensureReferences(candidate.academicRules.map(x => x.curriculumId), curricula, 'چارت قوانین آموزشی');
+  ensureReferences(candidate.academicRules.map(x => x.targetCourseId), courses, 'درس مقصد قوانین آموزشی');
   ensureReferences(candidate.curriculumCourses.map(x => x.courseId), courses, 'دروس چارت');
   ensureReferences(candidate.curriculumCourses.map(x => x.curriculumId), curricula, 'شناسهٔ چارت');
   ensureReferences(candidate.courseOfferings.map(x => x.courseId), courses, 'دروس گروه‌ها');
