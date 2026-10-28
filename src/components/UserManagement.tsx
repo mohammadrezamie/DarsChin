@@ -142,16 +142,18 @@ export const UserManagement: React.FC = () => {
             <tr>
               <th className="px-4 py-3 rounded-r-xl">نام کاربر</th>
               <th className="px-4 py-3">شماره موبایل</th>
+              {isRoot && <th className="px-4 py-3">شماره دانشجویی</th>}
               <th className="px-4 py-3">نقش فعلی</th>
               <th className="px-4 py-3">دسترسی‌ها (Delegation)</th>
               <th className="px-4 py-3 rounded-l-xl">عملیات نقش</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
-            {users.map(u => (
+            {filteredUsers.map(u => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
                 <td data-label="نام مدیر" className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
                 <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers"><span dir="ltr" className="inline-block text-left">{u.mobile}</span></td>
+                {isRoot && <td data-label="شماره دانشجویی" className="px-4 py-4 text-slate-500 darschin-numbers">{(u as User & {profile?: {studentNumber?: string}}).profile?.studentNumber || "—"}</td>}
                 <td data-label="نقش" className="px-4 py-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
                     getHighestRole(u.roles) === 'super-admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -188,7 +190,9 @@ export const UserManagement: React.FC = () => {
                   )}
                 </td>
                 <td data-label="تغییر نقش" className="px-4 py-4">
-                  {u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
+                  {!isRoot ? (
+                    <span className="text-xs text-slate-500">تغییر نقش فقط توسط مدیر ارشد</span>
+                  ) : u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
                     <span className="text-xs text-slate-400 italic">شما مالک (Root) هستید</span>
                   ) : (
                     <select
@@ -207,7 +211,7 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
-      <AdminDemandAccessManager admins={users} onChanged={fetchUsers} />
+      <AdminDemandAccessManager admins={users.filter(u => u.roles?.includes('admin') || u.roles?.includes('super-admin'))} onChanged={fetchUsers} />
     </div>
   );
 };
