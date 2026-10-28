@@ -46,6 +46,8 @@ import { AdminSupportPanel } from './AdminSupportPanel';
 import { AdminDiagnostics } from './AdminDiagnostics';
 import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
+import { ContextualHelp } from './ContextualHelp';
+import { adminSectionHelp } from '../help/admin-sections';
 import { AdminImportCenter } from './AdminImportCenter';
 import { DemandWorkspace } from './DemandWorkspace';
 import { AdminSmsCenter } from './AdminSmsCenter';
@@ -399,6 +401,7 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         <section aria-label="محتوای مدیریت" className="min-w-0 space-y-4">
+          <ContextualHelp key={activeTab} audience="admin" content={adminSectionHelp(activeTab)} />
           <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>

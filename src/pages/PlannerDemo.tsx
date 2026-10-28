@@ -69,7 +69,6 @@ export const PlannerDemo: React.FC = () => {
           <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">نسخهٔ ساختگیِ همان رابط کاربری دانشجو و مدیر برای بررسی تب‌ها، فرم‌ها و ذخیرهٔ محلی آماده است. به سرور وصل نمی‌شود.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link to="/demo/student" className="inline-flex min-h-11 items-center rounded-xl bg-blue-700 px-5 text-sm font-black text-white focus-visible:ring-2 focus-visible:ring-blue-500">آزمایش میز کار دانشجو</Link>
-            <Link to="/demo/admin" className="inline-flex min-h-11 items-center rounded-xl border border-blue-400 px-5 text-sm font-black text-blue-800 focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-200">آزمایش پنل مدیریت</Link>
           </div>
         </div>
 
