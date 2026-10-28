@@ -122,6 +122,8 @@ describe('P0 catalogue backup restore must protect live student data', () => {
       { ...uploaded(current), campuses: [{ id: 'foreign-campus' }] },
       { ...uploaded(current), academicTerms: [{ id: 'other-term' }] },
       { ...uploaded(current), curriculumCourses: [{ id: 'bad', courseId: 'missing', curriculumId: 'chart' }] },
+      { ...uploaded(current), curricula: [{ id: 'chart', universityId: 'missing', campusId: 'camp', degreeLevelId: 'deg', majorId: 'major', entryYearId: 'entry' }] },
+      { ...uploaded(current), academicRules: [{ id: 'r1', curriculumId: 'chart', targetCourseId: 'missing' }] },
     ]) {
       expect(() => prepareCatalogRestore(current, incoming)).toThrow(InvalidCatalogBackupError);
     }
