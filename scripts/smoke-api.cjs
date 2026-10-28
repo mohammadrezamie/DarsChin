@@ -159,6 +159,34 @@ async function main() {
     throw new Error('Authenticated demand survey endpoint was not available');
   }
 
+  // Exercise the REAL root-authorized backup/restore API on a disposable
+  // student-free production fixture. Never use this against a live database.
+  const adminBackup = await requestJson('/api/admin/backup', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (adminBackup.status !== 200 || !Array.isArray(adminBackup.body?.courses) ||
+      'smsSettings' in adminBackup.body ||
+      !Array.isArray(adminBackup.body?.smsHistory) || adminBackup.body.smsHistory.length !== 0) {
+    throw new Error('SECURITY: administrative backup leaked provider configuration or is malformed');
+  }
+  const submitRestore = (body) => requestJson('/api/admin/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const invalidRestore = await submitRestore({
+    ...adminBackup.body,
+    courses: [{ id: 'course-duplicate' }, { id: 'course-duplicate' }],
+  });
+  if (invalidRestore.status !== 400) {
+    throw new Error('SECURITY: invalid backup was not rejected before writing student data');
+  }
+  const validRestore = await submitRestore(adminBackup.body);
+  if (validRestore.status !== 200 ||
+      !validRestore.body?.message?.includes('برنامه‌ها')) {
+    throw new Error('Safe academic catalogue restore failed or hid its non-destructive scope');
+  }
+
   for (const previewPath of ['/demo/student', '/demo/admin']) {
     const response = await fetch(`${baseUrl}${previewPath}`, { signal: AbortSignal.timeout(2500) });
     const page = await response.text();
@@ -284,7 +312,7 @@ async function main() {
     throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
