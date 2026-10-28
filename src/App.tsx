@@ -14,6 +14,7 @@ const DemoWorkspace = lazy(() => import('./pages/DemoWorkspace').then((module) =
 const Login = lazy(() => import('./pages/auth/Login').then((module) => ({ default: module.Login })));
 const Register = lazy(() => import('./pages/auth/Register').then((module) => ({ default: module.Register })));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then((module) => ({ default: module.ForgotPassword })));
+const StudentGuide = lazy(() => import('./pages/StudentGuide').then((module) => ({ default: module.StudentGuide })));
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((module) => ({ default: module.StudentDashboard })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 
@@ -116,6 +117,7 @@ export default function App() {
               <Route path="/demo" element={<PlannerDemo />} />
               <Route path="/demo/student" element={<DemoWorkspace role="student" />} />
               <Route path="/demo/admin" element={<AdminDemoGate />} />
+              <Route path="/help" element={<StudentGuide />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
