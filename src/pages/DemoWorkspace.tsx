@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, FlaskConical, RotateCcw, ShieldCheck, GraduationCap, AlertTriangle } from 'lucide-react';
+import { ArrowRight, FlaskConical, RotateCcw, GraduationCap, AlertTriangle } from 'lucide-react';
 import { DemoAuthProvider } from '../context/AuthContext';
 import { resetBrowserDemo } from '../demo/mock-api';
 import { StudentDashboard } from '../components/StudentDashboard';
@@ -32,9 +32,6 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
               <ThemeToggle />
               <Link to="/demo/student" aria-current={role==='student'?'page':undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-blue-500 ${role==='student'?'bg-blue-700 text-white':'bg-white text-blue-800 dark:bg-slate-900 dark:text-blue-200'}`}>
                 <GraduationCap aria-hidden="true" className="h-4 w-4" /> دانشجو
-              </Link>
-              <Link to="/demo/admin" aria-current={role==='admin'?'page':undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-blue-500 ${role==='admin'?'bg-blue-700 text-white':'bg-white text-blue-800 dark:bg-slate-900 dark:text-blue-200'}`}>
-                <ShieldCheck aria-hidden="true" className="h-4 w-4" /> مدیر
               </Link>
               <Link to="/demo" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-100">
                 <ArrowRight aria-hidden="true" className="h-4 w-4" /> برنامه‌ریز ساده
