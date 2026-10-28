@@ -329,15 +329,35 @@ this.isInitialized = true;
   }
 
   public importBackup(importedData: Partial<DatabaseSchema>) {
-    // Preserve existing users so admin isn't locked out
-    const currentUsers = this.data.users;
-    this.data = {
-      ...this.data,
-      ...importedData,
-      users: currentUsers,
-    };
-    ensureReviewCollections(this.data);
-    this.save();
+    // A malformed admin upload must not corrupt the live in-memory database,
+    // overwrite credentials or silently discard unrelated collections.
+    if (!importedData || typeof importedData !== 'object' || Array.isArray(importedData)) {
+      throw new Error('Backup must be a JSON object.');
+    }
+    const protectedCollections = new Set(['users', 'otpChallenges', 'captchaChallenges', 'smsSettings', 'smsHistory', 'auditLogs', 'errorLogs']);
+    const next: DatabaseSchema = structuredClone(this.data);
+    for (const [key, value] of Object.entries(importedData)) {
+      if (protectedCollections.has(key)) continue;
+      if (!(key in next)) throw new Error(`Unknown backup collection: ${key}`);
+      const existing = next[key as keyof DatabaseSchema];
+      if (Array.isArray(existing) && !Array.isArray(value)) {
+        throw new Error(`Invalid backup collection: ${key}`);
+      }
+      if (Array.isArray(existing) && Array.isArray(value)) {
+        if (value.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+          throw new Error(`Invalid backup records: ${key}`);
+        }
+      }
+      if (key === 'academicSettings' && (!value || typeof value !== 'object' || Array.isArray(value))) {
+        throw new Error('Invalid academic settings in backup.');
+      }
+      (next as unknown as Record<string, unknown>)[key] = value;
+    }
+    ensureReviewCollections(next);
+    // Persist the complete candidate before publishing it to API readers.
+    // A disk/permission error leaves the previous live state untouched.
+    writeDurableJson(DB_FILE, next);
+    this.data = next;
     return this.data;
   }
 
