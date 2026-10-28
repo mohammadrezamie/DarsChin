@@ -30,6 +30,8 @@ import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
 import { StudentMobileDock } from './StudentMobileDock';
+import { ContextualHelp } from './ContextualHelp';
+import { studentSectionHelp } from '../help/student-sections';
 
 type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support';
 
@@ -749,6 +751,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Tab Content */}
       <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+        <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
         {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
