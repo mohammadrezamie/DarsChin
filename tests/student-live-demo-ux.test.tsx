@@ -24,10 +24,17 @@ describe('live demo product feedback acceptance',()=>{
     expect(html).toContain('ریاضی عمومی دو');
     expect(html).toContain('استاد نمونه');
     expect(html).toContain('07:30');
-    expect(html).toContain('انتقال ریاضی عمومی دو به بالا');
-    expect(html).toContain('انتقال ریاضی عمومی دو به پایین');
+    // On mobile copy and completion stay reachable; order controls appear
+    // only after the explicit "چیدمان" mode is enabled.
+    expect(html).not.toContain('انتقال ریاضی عمومی دو به بالا');
+    expect(html).not.toContain('انتقال ریاضی عمومی دو به پایین');
+    expect(html).toContain('چیدمان');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('کپی کد ریاضی عمومی دو');
-    expect(html).toContain('flex-nowrap');
+    expect(html).toContain('flex min-w-0 items-center gap-1.5');
+    expect(html).not.toContain('gap-y-1.5');
+    expect(html).toContain('h-11 w-11');
+    expect(html).toContain('min-w-0 rounded-xl border');
     expect(html).not.toContain('صف آمادهٔ ثبت درس در آموزشیار');
   });
   it('shows a real create-curriculum control in admin and keeps new charts drafts',()=>{

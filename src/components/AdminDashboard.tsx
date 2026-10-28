@@ -46,6 +46,8 @@ import { AdminSupportPanel } from './AdminSupportPanel';
 import { AdminDiagnostics } from './AdminDiagnostics';
 import { AdminAcademicSettings } from './AdminAcademicSettings';
 import { AdminAcademicRules } from './AdminAcademicRules';
+import { ContextualHelp } from './ContextualHelp';
+import { adminSectionHelp } from '../help/admin-sections';
 import { AdminImportCenter } from './AdminImportCenter';
 import { DemandWorkspace } from './DemandWorkspace';
 import { AdminSmsCenter } from './AdminSmsCenter';
@@ -77,6 +79,7 @@ export const AdminDashboard: React.FC = () => {
   const mobileDialogRef = useRef<HTMLDivElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -110,6 +113,28 @@ export const AdminDashboard: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileMenuOpen]);
+
+  // Cmd/Ctrl+K brings administrators straight to their destination. "/" works
+  // only outside editable controls, preserving normal typing in forms.
+  useEffect(() => {
+    const onNavigationShortcut = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const editable = event.target instanceof HTMLElement &&
+        (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName));
+      if (!((key === 'k' && (event.metaKey || event.ctrlKey)) ||
+          (event.key === '/' && !editable && !event.metaKey && !event.ctrlKey && !event.altKey))) return;
+      event.preventDefault();
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        desktopNavRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+      } else {
+        setMobileMenuOpen(true);
+        requestAnimationFrame(() =>
+          mobileDialogRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus());
+      }
+    };
+    document.addEventListener('keydown', onNavigationShortcut);
+    return () => document.removeEventListener('keydown', onNavigationShortcut);
+  }, []);
 
   // A department manager receives only the survey workspace, not global admin menus.
   const { isSuperAdmin, demandOnly, isAdmin } = adminWorkspaceAccess(user);
@@ -241,8 +266,9 @@ export const AdminDashboard: React.FC = () => {
           placeholder="جست‌وجوی بخش‌ها…"
           value={navigationSearch}
           onChange={event => setNavigationSearch(event.target.value)}
-          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-14 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
         />
+        <kbd aria-hidden="true" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">⌘ K</kbd>
       </div>
       {filteredNavGroups.length === 0 && (
         <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">بخشی با این عبارت پیدا نشد.</p>
@@ -278,40 +304,29 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page darschin-admin space-y-5">
-      <header className="relative overflow-hidden rounded-3xl border border-blue-300/10 bg-[#101c33] px-4 py-5 text-white shadow-lg shadow-slate-950/10 sm:px-7 sm:py-8">
+      <header className="relative overflow-hidden rounded-[1.25rem] border border-blue-300/10 bg-[#101c33] px-3.5 py-3.5 text-white shadow-lg shadow-slate-950/10 sm:px-6 sm:py-5">
         <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="relative flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-5">
           <div className="max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-blue-200">
+            <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold text-blue-200 sm:mb-3">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
                 <Shield aria-hidden="true" className="h-4 w-4" />
               </span>
-              DARSCHIN / CONTROL CENTER
+              سامانهٔ مدیریت آموزشی
             </div>
-            <h1 className="text-2xl font-black leading-[1.5] tracking-tight sm:text-3xl">مرکز مدیریت درس‌چین</h1>
-            <p className="mt-2 max-w-xl text-sm leading-7 text-slate-300">
+            <h1 className="text-xl font-extrabold leading-relaxed tracking-tight sm:text-2xl">مرکز مدیریت درس‌چین</h1>
+            <p className="mt-2 hidden max-w-xl text-sm leading-7 text-slate-300 sm:block">
               {demandOnly
                 ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
                 : 'داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.'}
             </p>
-            <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-blue-100">
+            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-blue-100 sm:mt-3 sm:px-3 sm:text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
               {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : demandOnly ? 'محدودهٔ مدیر گروه' : 'پنل مدیریتی'}
               {isSuperAdmin ? ' · مدیر ارشد' : ''}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              ref={menuTriggerRef}
-              type="button"
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:hidden"
-              aria-expanded={mobileMenuOpen}
-              aria-controls="admin-mobile-navigation"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu aria-hidden="true" className="h-5 w-5" />
-              بخش‌های مدیریت
-            </button>
             {!demandOnly && <button
               type="button"
               onClick={fetchStats}
@@ -325,8 +340,30 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </header>
 
+      {/* On a long admin table, the old header-only drawer trigger scrolled away.
+          Keep workspace switching reachable, with the actual section labelled. */}
+      <div aria-label="ناوبری سریع مدیریت"
+        className={`sticky z-30 flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 lg:hidden print:hidden ${isBrowserDemo ? 'top-0' : 'top-[68px]'}`}>
+        <button
+          ref={menuTriggerRef}
+          type="button"
+          aria-label="بازکردن فهرست بخش‌های مدیریت"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="admin-mobile-navigation"
+          onClick={() => setMobileMenuOpen(true)}
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:bg-blue-500">
+          <Menu aria-hidden="true" className="h-5 w-5" />
+          بخش‌ها
+        </button>
+        <div className="min-w-0 flex-1">
+          <span className="block text-[10px] leading-4 text-slate-500 dark:text-slate-400">در حال مدیریت</span>
+          <span className="block truncate text-xs font-extrabold text-slate-900 dark:text-white">{activeNavigation?.label || 'داشبورد و آمار'}</span>
+        </div>
+        <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" />
+      </div>
+
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-6">
-        <aside className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
+        <aside ref={desktopNavRef} className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
           <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
             بخش‌های مدیریت
             <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">انتخاب سریع بخش مورد نظر</p>
@@ -364,6 +401,7 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         <section aria-label="محتوای مدیریت" className="min-w-0 space-y-4">
+          <ContextualHelp key={activeTab} audience="admin" content={adminSectionHelp(activeTab)} />
           <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>

@@ -17,7 +17,7 @@ Links are provided on the homepage and `/login`. Browser-only demo state lives i
 ## SMS, human verification and GitHub layout
 
 - **Unified SMS center** for login/recovery codes and Niazpardaz: `/demo/admin?tab=sms-center` (browser-only fake settings) or the authorized real admin route. Private keys are set on the server only. See [Takin reference and DarsChin implementation](docs/TAKIN_REFERENCE_SMS_CAPTCHA_FA.md).
-- **«من ربات نیستم»** on guest sign-in/sign-up/OTP forms uses server-verified Cloudflare Turnstile **only when configured**. With the integration disabled, OTP retains the local SVG image captcha. Test access from Iran before enabling on the public domain.
+- **«من ربات نیستم»** on guest sign-in/sign-up/OTP forms uses server-verified Cloudflare Turnstile **only when configured**. With the integration disabled, guest login and registration now require the same **server-validated, single-use local SVG CAPTCHA** already used for OTP. Neither mode is a frontend-only checkbox; demo pages still use synthetic browser state. Test access from Iran before enabling on the public domain.
 - **Clean repository:** 22 one-off root scripts were preserved under `scripts/legacy/`; run `bun run repo:check` and read [repository structure](docs/REPOSITORY_STRUCTURE_FA.md).
 - **Separate domain on the same VPS as Takin:** use the existing Nginx and a different localhost port, without deploying a competing Caddy instance. See [shared-VPS/domain guide](docs/VPS_SHARED_DOMAIN_FA.md).
 

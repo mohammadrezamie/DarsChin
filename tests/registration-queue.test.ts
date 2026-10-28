@@ -78,6 +78,42 @@ describe('manual Educationalyar registration priority queue',()=>{
     expect(queue.steps).toHaveLength(3);
     expect(queue.steps.find(s=>s.courseId==='diff')?.warnings.join(' ')).toContain('چرخه');
   });
+  it('does not advertise synthetic DEMO codes as ready even when an offering is AVAILABLE',()=>{
+    for(const code of ['DEMO-101','demo_test']) {
+      const result=buildRegistrationQueue({
+        ...input([]),
+        evaluations:[{...diff,courseCode:code,rawCourseCode:code},math,physics],
+        selectedOfferingIds:['off-diff'],
+      });
+      expect(result.steps).toHaveLength(1);
+      expect(result.steps[0].copyCode).toBe(code); // visible for demo/manual inspection
+      expect(result.steps[0].ready).toBe(false);
+      expect(result.hasUnresolvedRules).toBe(true);
+      expect(result.steps[0].warnings.join(' ')).toContain('DEMO');
+    }
+  });
+  it('does not silently claim readiness when neither imported nor catalog code exists',()=>{
+    const result=buildRegistrationQueue({
+      ...input([]),
+      evaluations:[{...diff,rawCourseCode:'',courseCode:'---'},math,physics],
+      selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].copyCode).toBeNull();
+    expect(result.steps[0].ready).toBe(false);
+    expect(result.hasUnresolvedRules).toBe(true);
+    expect(result.steps[0].warnings.join(' ')).toContain('نامشخص');
+  });
+  it('retains real imported code as ready when eligibility and rules are clean',()=>{
+    const result=buildRegistrationQueue({
+      ...input([]),
+      evaluations:[{...diff,rawCourseCode:'410019'},math,physics],
+      selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].copyCode).toBe('410019');
+    expect(result.steps[0].ready).toBe(true);
+    expect(result.hasUnresolvedRules).toBe(false);
+  });
+
   it('prioritizes actual imported course codes but warns if only catalog code exists',()=>{
     const imported={...diff,rawCourseCode:'410019'};
     const q=buildRegistrationQueue({...input([]),evaluations:[imported,math,physics]});

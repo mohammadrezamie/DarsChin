@@ -143,6 +143,7 @@ export function evaluateStudentEligibility(
         courseCode: course.code,
         rawCourseCode: offering.rawCourseCode,
         courseName: course.name,
+        isExtraUnit: course.isExtraUnit === true,
         units: course.units,
       
         category: course.category,
@@ -176,6 +177,7 @@ export function evaluateStudentEligibility(
         courseCode: course.code,
         rawCourseCode: offering.rawCourseCode,
         courseName: course.name,
+        isExtraUnit: course.isExtraUnit === true,
         units: course.units,
         category: course.category,
         groupCode: offering.groupCode,
@@ -439,6 +441,7 @@ export function evaluateStudentEligibility(
       courseCode: course.code,
         rawCourseCode: offering.rawCourseCode,
       courseName: course.name,
+      isExtraUnit: course.isExtraUnit === true,
       units: course.units,
       category: firstCurrCourse?.categoryOverride || course.category,
       groupCode: offering.groupCode,

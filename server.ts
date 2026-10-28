@@ -23,12 +23,18 @@ import { adminRouter } from './server/routes/admin';
 import { adminManagementRouter } from './server/routes/admin-management';
 import { supportRouter } from './server/routes/support';
 import { logger } from './server/utils/logger';
+import { securityHeaders } from './server/middleware/security-headers';
+import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 
 async function startServer() {
   // Initialize and seed database
   await db.init(true);
 
   const app = express();
+  // Only the local reverse proxy may supply a client IP. Never use trust proxy
+  // = true: an Internet client could spoof X-Forwarded-For to evade limits.
+  app.set('trust proxy', process.env.NODE_ENV === 'production' ? 'loopback' : false);
+  const guestLimits = createGuestAbuseLimiters();
   const configuredPort = process.env.PORT ?? '3000';
   const PORT = Number.parseInt(configuredPort, 10);
   if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
@@ -39,6 +45,7 @@ async function startServer() {
   const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
   assertTurnstileConfiguration();
+  app.use(securityHeaders);
   // JSON Body Parser with limit for batch imports (2MB is sufficient for text data and prevents OOM)
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -63,12 +70,20 @@ async function startServer() {
 
   app.get('/api/security/challenge', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, data: turnstilePublicConfiguration() });
+    res.json({ success: true, data: { ...turnstilePublicConfiguration(), registrationOtpRequired: process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED === 'true' } });
   });
+
+  // Throttle before CAPTCHA generation or expensive password/SMS handlers.
+  // Each policy has its own counter. Health, static pages and logged-in
+  // application APIs are deliberately unaffected.
+  app.get('/api/auth/otp/captcha/generate', guestLimits.captcha);
+  app.post('/api/auth/login', guestLimits.login);
+  app.post('/api/auth/register', guestLimits.register);
+  app.post('/api/auth/otp/send', guestLimits.otpSend);
 
   // Register API routes
   app.use('/api/auth', authRouter);
-app.use('/api/auth/otp', otpRouter);
+  app.use('/api/auth/otp', otpRouter);
   app.use('/api/academic', academicRouter);
   app.use('/api/curriculum', curriculumRouter);
   app.use('/api/student', studentRouter);
@@ -157,4 +172,7 @@ app.use('/api/admin-management', adminManagementRouter);
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);
+  // A failed bootstrap must be visible to systemd, health gates and CI. A
+  // silent exit code 0 previously masked failures in the VPS service.
+  process.exitCode = 1;
 });

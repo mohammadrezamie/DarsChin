@@ -17,11 +17,16 @@ const environment = {
   NODE_ENV: 'production',
   HOST: '127.0.0.1',
   DARSCHYN_DATA_DIR: path.join(temporary, 'data'),
+  // Smoke bootstraps an intentionally empty disposable store. Real release
+  // instances should require the already-provisioned persistent DB.
+  DARSCHYN_REQUIRE_EXISTING_DB: 'false',
   JWT_SECRET: crypto.randomBytes(32).toString('hex'),
   DARSCHYN_RELEASE_SHA: testReleaseSha,
   ROOT_OWNER_MOBILE: rootMobile,
   ROOT_OWNER_PASSWORD: rootPassword,
   ROOT_OWNER_RECOVERY_KEY: crypto.randomBytes(32).toString('hex'),
+  // Exercise the real self-hosted fallback; never depend on a live CAPTCHA key.
+  TURNSTILE_ENABLED: 'false',
 };
 delete environment.NIAZPARDAZ_API_KEY;
 
@@ -106,13 +111,34 @@ async function main() {
   const missing = await requestJson('/api/not-a-real-route');
   if (missing.status !== 404 || missing.body.success !== false) throw new Error('API 404 contract failed');
 
-  const login = await requestJson('/api/auth/login', {
+  const sendLogin = (captchaToken) => requestJson('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mobile: rootMobile, password: rootPassword }),
+    body: JSON.stringify({ mobile: rootMobile, password: rootPassword, captchaToken }),
   });
+  const missingCaptcha = await sendLogin(undefined);
+  if (missingCaptcha.status !== 403) {
+    throw new Error('SECURITY: anonymous login accepted without a human challenge');
+  }
+  const generated = await requestJson('/api/auth/otp/captcha/generate?action=login');
+  if (generated.status !== 200 || typeof generated.body?.data?.id !== 'string' ||
+      typeof generated.body?.data?.svg !== 'string' ||
+      generated.body.data.answer !== undefined || generated.body.data.value !== undefined) {
+    throw new Error('Local CAPTCHA did not generate a safe public challenge');
+  }
+  // Only inspect this test process's disposable JSON fixture, never a real
+  // user's CAPTCHA answer and never print it into logs.
+  const database = JSON.parse(fs.readFileSync(path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json'), 'utf8'));
+  const issued = database.captchaChallenges.find(row => row.id === generated.body.data.id);
+  if (!issued || issued.action !== 'login' || typeof issued.value !== 'string') {
+    throw new Error('A login-scoped challenge was not persisted in the isolated fixture');
+  }
+  const captchaToken = `local:${issued.id}:${issued.value}`;
+  const login = await sendLogin(captchaToken);
   const token = login.body?.data?.token;
   if (login.status !== 200 || typeof token !== 'string') throw new Error('Synthetic root login failed');
+  const replay = await sendLogin(captchaToken);
+  if (replay.status !== 403) throw new Error('SECURITY: guest CAPTCHA token replay succeeded');
 
   // Production services must never permit the old "reset to sample data"
   // endpoint: that would overwrite real students and reintroduce known logins.
@@ -131,6 +157,34 @@ async function main() {
   });
   if (demandManager.status !== 200 || !Array.isArray(demandManager.body?.data)) {
     throw new Error('Authenticated demand survey endpoint was not available');
+  }
+
+  // Exercise the REAL root-authorized backup/restore API on a disposable
+  // student-free production fixture. Never use this against a live database.
+  const adminBackup = await requestJson('/api/admin/backup', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (adminBackup.status !== 200 || !Array.isArray(adminBackup.body?.courses) ||
+      'smsSettings' in adminBackup.body ||
+      !Array.isArray(adminBackup.body?.smsHistory) || adminBackup.body.smsHistory.length !== 0) {
+    throw new Error('SECURITY: administrative backup leaked provider configuration or is malformed');
+  }
+  const submitRestore = (body) => requestJson('/api/admin/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const invalidRestore = await submitRestore({
+    ...adminBackup.body,
+    courses: [{ id: 'course-duplicate' }, { id: 'course-duplicate' }],
+  });
+  if (invalidRestore.status !== 400) {
+    throw new Error('SECURITY: invalid backup was not rejected before writing student data');
+  }
+  const validRestore = await submitRestore(adminBackup.body);
+  if (validRestore.status !== 200 ||
+      !validRestore.body?.message?.includes('برنامه‌ها')) {
+    throw new Error('Safe academic catalogue restore failed or hid its non-destructive scope');
   }
 
   for (const previewPath of ['/demo/student', '/demo/admin']) {
@@ -165,7 +219,100 @@ async function main() {
     throw new Error('Sync job state did not survive a process restart');
   }
 
-  console.log('PASS: health, JSON 404, synthetic login, private demand API, disabled production reset, demo pages, and sync persistence.');
+  // Reproduce a fatal startup after initialization without touching the VPS.
+  // The previous entrypoint logged a failed bootstrap but exited with code 0,
+  // preventing systemd and deploy gates from recognizing the error.
+  await stopServer();
+  const invalidServer = spawn(process.execPath, [binary], {
+    cwd: root,
+    env: { ...environment, PORT: 'invalid-port' },
+    stdio: 'ignore',
+  });
+  const badStatus = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      invalidServer.kill('SIGKILL');
+      reject(new Error('Invalid startup did not exit within five seconds'));
+    }, 5000);
+    invalidServer.once('error', error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    invalidServer.once('exit', (code, signal) => {
+      clearTimeout(timeout);
+      resolve({ code, signal });
+    });
+  });
+  if (badStatus.code !== 1 || badStatus.signal !== null) {
+    throw new Error('SECURITY: failed server bootstrap returned success instead of exit code 1');
+  }
+
+  // Fail closed if the expected volume is unmounted / a wrong data path is
+  // configured. Never regenerate an empty database behind a student's back.
+  async function assertRejectedDatabaseBoot(dataDir, label) {
+    const child = spawn(process.execPath, [binary], {
+      cwd: root,
+      env: {
+        ...environment,
+        DARSCHYN_DATA_DIR: dataDir,
+        DARSCHYN_REQUIRE_EXISTING_DB: 'true',
+        PORT: String(port),
+      },
+      stdio: 'ignore',
+    });
+    const outcome = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        child.kill('SIGKILL');
+        reject(new Error(`${label} unexpectedly remained alive`));
+      }, 5000);
+      child.once('error', error => { clearTimeout(timeout); reject(error); });
+      child.once('exit', (code, signal) => { clearTimeout(timeout); resolve({ code, signal }); });
+    });
+    if (outcome.code !== 1 || outcome.signal !== null) {
+      throw new Error(`${label} must exit with status 1, not silently start an empty database`);
+    }
+  }
+
+  const missingStore = path.join(temporary, 'missing-store');
+  // Simulate an unmounted volume: neither the DB nor its directory exists.
+  await assertRejectedDatabaseBoot(missingStore, 'Missing mounted DB');
+  if (fs.existsSync(missingStore)) {
+    throw new Error('SECURITY: a detached data mountpoint was silently recreated');
+  }
+
+  const corruptStore = path.join(temporary, 'corrupt-store');
+  fs.mkdirSync(corruptStore);
+  const corruptFile = path.join(corruptStore, 'darschyn-db.json');
+  const invalidBytes = '{"users": [BROKEN-JSON';
+  fs.writeFileSync(corruptFile, invalidBytes);
+  await assertRejectedDatabaseBoot(corruptStore, 'Corrupt existing DB');
+  if (fs.readFileSync(corruptFile, 'utf8') !== invalidBytes) {
+    throw new Error('SECURITY: corrupt original data was overwritten instead of preserved');
+  }
+
+  // Production bootstrap must never turn an unrelated student into root
+  // because their mobile collides with ROOT_OWNER_MOBILE. Exercise the actual
+  // bundled Express startup, not only the pure identity resolver.
+  const collisionStore = path.join(temporary, 'root-number-collision');
+  fs.mkdirSync(collisionStore);
+  const collisionFile = path.join(collisionStore, 'darschyn-db.json');
+  const originalStore = JSON.parse(fs.readFileSync(
+    path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json'), 'utf8',
+  ));
+  originalStore.users.push({
+    id: 'usr-synthetic-collision',
+    mobile: rootMobile,
+    name: 'Synthetic account that must stay student',
+    roles: ['student'],
+    createdAt: new Date().toISOString(),
+  });
+  const collisionBytes = JSON.stringify(originalStore);
+  fs.writeFileSync(collisionFile, collisionBytes);
+  await assertRejectedDatabaseBoot(collisionStore, 'Root mobile/student identity collision');
+  if (fs.readFileSync(collisionFile, 'utf8') !== collisionBytes) {
+    throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
+  }
+
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 

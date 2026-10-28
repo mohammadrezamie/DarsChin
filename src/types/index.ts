@@ -8,6 +8,10 @@ export interface User {
   id: string;
   mobile: string;
   name: string;
+  /** Present only after server-verified SMS ownership during registration. */
+  mobileVerifiedAt?: string;
+  /** Incremented after password reset/change to revoke all previously issued JWTs. */
+  sessionVersion?: number;
   password?: string;
   recoveryKey?: string;
   roles: UserRole[];
@@ -40,6 +44,8 @@ export interface CaptchaChallenge {
   createdAt: number;
   expiresAt: number;
   attempts: number;
+  /** Prevent reusing an OTP CAPTCHA for guest login or registration. */
+  action?: 'login' | 'register' | 'otp';
   consumedAt?: number;
 }
 
@@ -436,6 +442,8 @@ export interface TrackEligibilityBreakdown {
 }
 
 export interface CourseEligibilityResult {
+  /** Taken from the actual course record; never inferred from the name. */
+  isExtraUnit?: boolean;
   offeringId: string;
   courseId: string;
   courseCode: string;

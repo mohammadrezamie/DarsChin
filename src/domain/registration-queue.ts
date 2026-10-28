@@ -154,9 +154,25 @@ export function buildRegistrationQueue(input: {
     const explicit = typeof o.rawCourseCode === 'string' ? o.rawCourseCode.trim() : '';
     const catalog = typeof o.courseCode === 'string' ? o.courseCode.trim() : '';
     const code = explicit || (catalog && catalog !== '---' ? catalog : '');
-    const problems = warnings.get(id) || [];
-    if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده؛ قبل از جست‌وجوی آموزشیار کد ارائه را کنترل کن.');
-    if (!code) problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    const problems = [...(warnings.get(id) || [])];
+    // A code is not permission to select an ineligible offering. Honor the
+    // evaluated eligibility report rather than inventing academic exceptions.
+    const blocked = !o.canSelect || !o.isEligible || o.overallStatus !== 'AVAILABLE';
+    if (blocked) {
+      unresolved.value = true;
+      problems.push(`این گروه در گزارش فعلی قابل اخذ نیست: ${o.primaryReason || 'نیازمند بررسی شرایط آموزشی است.'}`);
+    }
+    if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
+    if (!code) {
+      unresolved.value = true;
+      problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
+    }
+    // A synthetic demo code is visible as a sample only; it cannot be a
+    // quick-registration action in the real Educationalyar portal.
+    if (/^DEMO[-_]/i.test(code)) {
+      unresolved.value = true;
+      problems.push('این کد نمایشی DEMO است و برای ثبت واقعی در آموزشیار معتبر نیست.');
+    }
     const requestedRank = requested.indexOf(id) + 1;
     return {
       courseId: id, courseName: o.courseName,
@@ -166,7 +182,7 @@ export function buildRegistrationQueue(input: {
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
       dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
-      ready: !hasCycle && !problems.some(text =>
+      ready: !hasCycle && !blocked && !problems.some(text =>
         !text.startsWith('کد از کاتالوگ/تطبیق')),
     };
   });

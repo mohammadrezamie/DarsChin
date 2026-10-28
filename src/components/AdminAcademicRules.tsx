@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { Trash2, Plus, Server, Network } from 'lucide-react';
 import { RelationshipType, AcademicRuleNode, Course } from '../types';
+import { AdminDependencyMap } from './AdminDependencyMap';
 
 export const AdminAcademicRules: React.FC = () => {
   const [rules, setRules] = useState<any[]>([]);
@@ -63,6 +64,16 @@ export const AdminAcademicRules: React.FC = () => {
     } else {
       alert(res.error || 'خطا در ثبت قانون');
     }
+  };
+
+  /** Human-readable rule summary: never make administrators read internal JSON IDs. */
+  const describeExpression = (node: AcademicRuleNode): string => {
+    if (node.type === 'COURSE') {
+      const course = courses.find(item => item.id === node.courseId);
+      return course ? `${course.name} (${course.code})` : 'درس نامشخص';
+    }
+    const parts = (node.operands ?? []).map(describeExpression);
+    return parts.length ? `(${parts.join(node.operator === 'OR' ? ' یا ' : ' و ')})` : 'شرط خالی';
   };
 
   // --- Node Builder Component ---
@@ -147,7 +158,8 @@ export const AdminAcademicRules: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {!loading && <AdminDependencyMap rules={rules} courses={courses} curricula={curricula} />}
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Network className="text-blue-600" />
           مدیریت قوانین آکادمیک (پیش‌نیازها)
@@ -230,7 +242,7 @@ export const AdminAcademicRules: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {rules.map((rule) => (
-            <div key={rule.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div key={rule.id} className="min-w-0 flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-900">
               <div>
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-lg text-gray-800">{rule.targetCourseName}</h3>
@@ -239,9 +251,9 @@ export const AdminAcademicRules: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">چارت: {rule.curriculumName}</p>
-                <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 font-mono text-left" dir="ltr">
-                  {JSON.stringify(rule.expression, null, 2)}
-                </div>
+                <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-7 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  <strong>رابطهٔ ثبت‌شده: </strong>{describeExpression(rule.expression)}
+                </p>
               </div>
               <div className="mt-4 flex justify-end">
                 <button onClick={() => handleDelete(rule.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">

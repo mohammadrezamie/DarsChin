@@ -2,12 +2,14 @@
 // DARSCHYN (درس‌چین) - Mobile Number + Password Authentication Routes
 // ============================================================================
 import { Router } from 'express';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { requireGuestChallenge } from '../security/turnstile';
 import bcrypt from 'bcryptjs';
 import { db } from '../db/database';
 import { generateToken, AuthenticatedRequest, authenticate } from '../middleware/auth';
 import { User, UserRole } from '../../src/types';
 import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../auth/password-recovery';
+import { smsReadiness } from '../sms/service';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, changePasswordSchema, otpPasswordRecoverySchema } from '../schemas/auth';
 
@@ -52,7 +54,7 @@ function normalizeMobile(mobile: string): string {
 // ----------------------------------------------------------------------------
 authRouter.post('/register', requireGuestChallenge('register'), validate(registerSchema), (req, res) => {
   
-  let { mobile, password, name, recoveryKey } = req.body;
+  let { mobile, password, name, recoveryKey, otpChallengeId, otpCode } = req.body;
   mobile = normalizeMobile(mobile);
 
   if (!mobile || !/^09\d{9}$/.test(mobile)) {
@@ -85,23 +87,54 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     });
   }
 
+  // During verified-registration rollout, a CAPTCHA alone is insufficient:
+  // an attacker must not claim someone else's mobile without receiving SMS.
+  const otpRequired = process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED === 'true';
+  let verifiedRegistrationOtp: (typeof db.otpChallenges)[number] | undefined;
+  if (otpRequired) {
+    if (process.env.NODE_ENV === 'production' && !smsReadiness().canDeliver) {
+      return res.status(503).json({ success: false, error: 'ثبت‌نام پیامکی هنوز روی سرور فعال نشده است.' });
+    }
+    if (typeof otpChallengeId !== 'string' || typeof otpCode !== 'string' || !/^\d{6}$/.test(otpCode)) {
+      return res.status(400).json({ success: false, error: 'کد شش‌رقمی تأیید شماره موبایل الزامی است.' });
+    }
+    verifiedRegistrationOtp = db.otpChallenges.find(item =>
+      item.id === otpChallengeId && item.mobile === mobile && item.purpose === 'registration');
+    if (!verifiedRegistrationOtp || verifiedRegistrationOtp.expiresAt <= Date.now() ||
+        verifiedRegistrationOtp.consumedAt) {
+      return res.status(403).json({ success: false, error: 'کد ثبت‌نام نامعتبر یا منقضی شده است.' });
+    }
+    if (verifiedRegistrationOtp.attempts >= 5) {
+      return res.status(429).json({ success: false, error: 'تعداد تلاش برای کد تأیید به پایان رسیده است.' });
+    }
+    if (!bcrypt.compareSync(otpCode, verifiedRegistrationOtp.hashedOtp)) {
+      verifiedRegistrationOtp.attempts += 1;
+      db.save();
+      return res.status(403).json({ success: false, error: 'کد تأیید شماره موبایل اشتباه است.' });
+    }
+  }
+
   // Hash password securely
   const passwordHash = bcrypt.hashSync(password.trim(), 10);
-  const userRecoveryKey = recoveryKey?.trim() || `rec-${Math.random().toString(36).substring(2, 10)}`;
+  const userRecoveryKey = recoveryKey?.trim() || `rec-${randomBytes(24).toString('base64url')}`;
 
   // Public registration always creates a student. Root privileges are assigned only by trusted bootstrap.
   const roles: UserRole[] = ['student'];
 
   const newUser: User = {
-    id: `usr-${Date.now()}`,
+    id: `usr-${randomUUID()}`,
     mobile,
     name: name.trim(),
     password: passwordHash,
     recoveryKey: userRecoveryKey,
     roles,
+    ...(otpRequired ? { mobileVerifiedAt: new Date().toISOString() } : {}),
     createdAt: new Date().toISOString(),
   };
 
+  // Never commit the verified OTP separately before saving the new account.
+  // A retry cannot claim the same verified mobile with the same challenge.
+  if (verifiedRegistrationOtp) verifiedRegistrationOtp.consumedAt = Date.now();
   db.users.push(newUser);
 
   // Automatically initialize student academic profile
@@ -295,8 +328,10 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
     return res.status(400).json({ success: false, error: 'رمز عبور فعلی نادرست است.' });
   }
 
-  // Update password
+  // Invalidate every older JWT, including leaked tokens from other devices.
+  // The current browser receives a newly signed JWT after persistence.
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
 
   db.auditLogs.push({
     id: `log-${Date.now()}`,
@@ -312,7 +347,8 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
 
   res.json({
     success: true,
-    message: 'رمز عبور با موفقیت تغییر یافت.',
+    message: 'رمز عبور با موفقیت تغییر یافت. نشست‌های قبلی بسته شدند.',
+    data: { token: generateToken(user) },
   });
 });
 
@@ -348,6 +384,8 @@ authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, 
   }
 
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
+  // OTP recovery must revoke JWTs issued before the reset, not just passwords.
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
   failedLogins.delete(mobile);
 
   // A verified recovery challenge may reset a password only once.

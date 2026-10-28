@@ -11,13 +11,13 @@ function copyrightYear(): string {
     .format(new Date());
 }
 
-export const SiteFooter: React.FC = () => (
+export const SiteFooter: React.FC<{ withMobileDock?: boolean }> = ({ withMobileDock = false }) => (
   <footer
     dir="rtl"
     aria-label="مالکیت و اطلاعات شرکت سازندهٔ درس‌چین"
     className="mt-auto w-full border-t border-slate-800 bg-slate-950 text-slate-300"
   >
-    <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-center md:flex-row md:gap-8 md:px-6">
+    <div className={`mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-center md:flex-row md:gap-8 md:px-6 ${withMobileDock ? 'pb-28 md:pb-6' : ''}`}>
       <div className="min-w-0 shrink-0 text-center md:text-right">
         <p className="inline-flex items-center justify-center gap-2 text-base font-black text-white md:justify-start">
           <GraduationCap aria-hidden="true" className="h-5 w-5 text-blue-400" />

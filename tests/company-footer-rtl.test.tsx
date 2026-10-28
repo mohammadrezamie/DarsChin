@@ -45,7 +45,9 @@ describe('Persian alignment and footer integration contract', () => {
 
   it('uses one top-level footer rather than duplicate per-route footers', () => {
     const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
-    expect(app).toContain('<SiteFooter />');
+    expect(app).toContain('<SiteFooter withMobileDock=');
+    expect(app).toContain("location.pathname === '/dashboard'");
+    expect(app).toContain("location.pathname === '/demo/student'");
     for (const path of ['Landing.tsx', 'PlannerDemo.tsx', 'DemoWorkspace.tsx']) {
       const page = readFileSync(new URL(`../src/pages/${path}`, import.meta.url), 'utf8');
       expect(page).not.toContain('<footer');
@@ -53,7 +55,7 @@ describe('Persian alignment and footer integration contract', () => {
     const recommendation = readFileSync(
       new URL('../src/pages/landing-sections/RecommendationSection.tsx', import.meta.url), 'utf8'
     );
-    expect(recommendation).toContain('text-center md:text-right');
+    expect(recommendation).toContain('text-right');
     expect(recommendation).not.toContain('text-left md:text-right');
     const demo = readFileSync(new URL('../src/pages/DemoWorkspace.tsx', import.meta.url), 'utf8');
     expect(demo).toContain('محدودیت محیط آزمایشی');

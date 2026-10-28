@@ -15,7 +15,9 @@ interface AuthContextType {
     password: string,
     name: string,
     recoveryKey?: string,
-    captchaToken?: string
+    captchaToken?: string,
+    otpChallengeId?: string,
+    otpCode?: string
   ) => Promise<{ success: boolean; error?: string; recoveryKey?: string }>;
   recoverPassword: (
     mobile: string,
@@ -119,10 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: res.error || 'خطا در ورود به حساب کاربری.' };
   };
 
-  const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string) => {
+  const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string, otpChallengeId?: string, otpCode?: string) => {
     const res = await apiRequest<{ token: string; user: User & { recoveryKey?: string } }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken }),
+      body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken, otpChallengeId, otpCode }),
     });
     if (res.success && res.data) {
       setStoredToken(res.data.token);
@@ -144,12 +146,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    const res = await apiRequest<{ message: string }>('/api/auth/change-password', {
+    const res = await apiRequest<{ message: string; token: string }>('/api/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+    if (res.success && typeof res.data?.token === 'string' && res.data.token) {
+      // Keep this browser signed in; revoke the older token everywhere else.
+      setStoredToken(res.data.token);
+      return { success: true, message: res.data.message || 'رمز عبور با موفقیت تغییر یافت.' };
+    }
     if (res.success) {
-      return { success: true, message: res.data?.message || 'رمز عبور با موفقیت تغییر یافت.' };
+      // An old/API-incompatible response cannot leave a now-revoked token on
+      // disk and misleadingly tell the student their session remains valid.
+      setStoredToken(null);
+      setUser(null);
+      return { success: true, message: 'رمز عبور تغییر یافت. لطفاً دوباره وارد شوید.' };
     }
     return { success: false, error: res.error || 'خطا در تغییر رمز عبور.' };
   };

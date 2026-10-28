@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { LayoutDashboard, Users, Activity, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, Settings, BookOpen } from 'lucide-react';
 
 export const DashboardShowcaseSection: React.FC = () => {
   return (
