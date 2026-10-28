@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import { db } from '../db/database';
+import { InvalidCatalogBackupError } from '../db/catalog-restore';
 import { authenticate, requireAdmin, requirePermission, requireSuperAdmin } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateRoleSchema, updateAcademicSettingsSchema, overrideFinalSemesterSchema } from '../schemas/admin';
@@ -57,7 +58,7 @@ adminRouter.post('/restore', authenticate, requirePermission('backup.manage'), (
   } catch (err: unknown) {
     // Validation errors are bad uploads, never unexpected 500 failures. Do
     // not leak filesystem paths or operational details on write errors.
-    if (err instanceof Error && /(فهرست|ساختار|شناسه|بازیابی|فایل پشتیبان)/.test(err.message)) {
+    if (err instanceof InvalidCatalogBackupError) {
       return res.status(400).json({ success: false, error: err.message });
     }
     res.status(500).json({ success: false, error: 'ذخیرهٔ فایل پشتیبان ناموفق بود؛ وضعیت داده‌ها را پیش از تلاش مجدد بررسی کنید.' });
