@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiRequest, getStoredToken } from '../utils/api';
+import { apiRequest } from '../utils/api';
+import { downloadUserExcel } from '../utils/user-excel-download';
 import { User } from '../types';
 import { Shield, User as UserIcon, ShieldAlert, Search, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -80,15 +81,61 @@ export const UserManagement: React.FC = () => {
     else alert(res.error || 'شما مجاز به تخصیص این دسترسی نیستید.');
   };
 
+  const filteredUsers = useMemo(() => {
+    const text = search.trim().toLocaleLowerCase('fa').replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+    return users.filter(user => {
+      const profile = (user as User & {profile?: {studentNumber?: string}}).profile;
+      const fields = [user.name, user.mobile, profile?.studentNumber || ''].join(' ')
+        .toLocaleLowerCase('fa').replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+      return (roleFilter === 'all' || user.roles?.includes(roleFilter)) &&
+        (!text || fields.includes(text));
+    });
+  }, [users, search, roleFilter]);
+
+  const handleExcel = async () => {
+    if (!isRoot || isDemo || exporting) return;
+    setExporting(true);
+    setExportError('');
+    try { await downloadUserExcel(roleFilter); }
+    catch (error) { setExportError(error instanceof Error ? error.message : 'دریافت فایل ناموفق بود.'); }
+    finally { setExporting(false); }
+  };
+
   if (loading) return <div className="p-8 text-center">در حال بارگذاری...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
     <div dir="rtl" className="darschin-surface min-w-0 p-4 sm:p-6">
       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-        <ShieldAlert className="w-5 h-5 text-red-500" /> مدیریت مدیران (دسترسی‌ها)
+        <ShieldAlert className="w-5 h-5 text-red-500" /> {isRoot ? 'فهرست کاربران و مجوزها' : 'مدیریت مدیران مجاز'}
       </h3>
       
+      <div className="mb-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_170px_auto] sm:items-end">
+        <label className="min-w-0 text-sm font-bold text-slate-700 dark:text-slate-200">
+          جست‌وجوی کاربر
+          <span className="mt-2 flex h-12 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-950">
+            <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="نام، موبایل، شماره دانشجویی" className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none dark:text-white" />
+          </span>
+        </label>
+        <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+          نوع دسترسی
+          <select value={roleFilter} onChange={e=>setRoleFilter(e.target.value as typeof roleFilter)}
+            className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            <option value="all">همه</option><option value="student">دانشجو</option>
+            <option value="admin">مدیر</option><option value="super-admin">مدیر ارشد</option>
+          </select>
+        </label>
+        {isRoot && !isDemo && <button type="button" disabled={exporting} onClick={handleExcel}
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white disabled:opacity-60">
+          <Download aria-hidden="true" className="h-4 w-4" />{exporting ? 'در حال خروجی‌گیری…' : 'دانلود Excel'}
+        </button>}
+      </div>
+      <p role="status" className="mb-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
+        {filteredUsers.length.toLocaleString('fa-IR')} کاربر از {users.length.toLocaleString('fa-IR')} رکورد
+      </p>
+      {exportError && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{exportError}</p>}
       <div className="darschin-scroll-x">
         <table className="darschin-people-table w-full min-w-[680px] text-sm text-right">
           <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
