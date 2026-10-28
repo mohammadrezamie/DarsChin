@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookOpen, CalendarDays, Layers3, MoreHorizontal, Sparkles, MessageCircle, Zap } from 'lucide-react';
 
 export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 'recommendations' | 'passed' | 'demand' | 'support';
@@ -48,8 +49,8 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
         return;
       }
       if (event.key !== 'Tab') return;
-      const buttons = Array.from(sheetRef.current?.querySelectorAll<HTMLButtonElement>(
-        'button:not([disabled])',
+      const buttons = Array.from(sheetRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href]',
       ) ?? []);
       if (!buttons.length) return;
       const first = buttons[0], last = buttons[buttons.length - 1];
@@ -141,6 +142,11 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
                   </button>
                 );
               })}
+              <Link to="/help" onClick={() => setExpanded(false)}
+                className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-right text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                <BookOpen aria-hidden="true" className="h-5 w-5 shrink-0" />
+                <span className="min-w-0"><span className="block text-sm font-extrabold">راهنمای استفاده</span><span className="block text-xs leading-6">آموزش همهٔ بخش‌ها و پاسخ سؤال‌های متداول</span></span>
+              </Link>
             </div>
           </div>
         </div>
