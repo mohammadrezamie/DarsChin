@@ -93,6 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                     <Link to="/admin" aria-current={activeTab === 'admin' ? 'page' : undefined}
                       className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'admin' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>پنل مدیریت</Link>
                   )}
+                  <Link to="/help" className="flex min-h-10 items-center rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">راهنما</Link>
                   <button type="button" onClick={() => setExtModalOpen(true)} className="min-h-10 rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">افزونه کروم</button>
                 </nav>
               )}
@@ -140,6 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                 className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">میز کار دانشجو</Link>
               {canManage && <Link to="/admin" onClick={closeMenu} aria-current={activeTab === 'admin' ? 'page' : undefined}
                 className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
+              <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
               <button type="button" onClick={() => { closeMenu(); setExtModalOpen(true); }}
                 className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">افزونه کروم</button>
               {onOpenPasswordChange && <button type="button" onClick={() => { closeMenu(); onOpenPasswordChange(); }}
