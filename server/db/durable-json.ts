@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
  * This is not a cross-process transaction system. More than one Node worker
  * requires a shared transactional database instead of this JSON store.
  */
-export function writeDurableJson(filePath: string, data: unknown): void {
+export function writeDurableJson(filePath: string, data: unknown, onReplaced?: () => void): void {
   const directory = path.dirname(filePath);
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   // JSON.stringify may throw (e.g. cyclic data). Do this before touching disk.
@@ -30,6 +30,10 @@ export function writeDurableJson(filePath: string, data: unknown): void {
     fs.closeSync(fd);
     fd = undefined;
     fs.renameSync(temporary, filePath);
+    // The new file is visible after rename. Notify an in-memory importer
+    // *before* flushing the directory, so even a late fsync failure cannot
+    // make the next save silently roll back the already-replaced file.
+    onReplaced?.();
 
     // On POSIX, flushing the directory makes the rename durable across a
     // power failure. Windows cannot always open a directory as a file.

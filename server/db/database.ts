@@ -9,6 +9,7 @@ import { getInitialSeedData } from './seed';
 import path from 'path';
 import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
 import { resolveBootstrapRoot } from './root-identity';
+import { prepareCatalogRestore } from './catalog-restore';
 import {
   User,
   University,
@@ -325,19 +326,28 @@ this.isInitialized = true;
     safeData.users = safeData.users.map(({ password, recoveryKey, ...user }) => user);
     safeData.otpChallenges = [];
     safeData.captchaChallenges = [];
+    // Administrative backup downloads must never export SMS provider secrets.
+    // SMS delivery history is personally identifying and is not required to
+    // restore the academic catalogue.
+    delete safeData.smsSettings;
+    safeData.smsHistory = [];
     return safeData;
   }
 
-  public importBackup(importedData: Partial<DatabaseSchema>) {
-    // Preserve existing users so admin isn't locked out
-    const currentUsers = this.data.users;
-    this.data = {
-      ...this.data,
-      ...importedData,
-      users: currentUsers,
-    };
-    ensureReviewCollections(this.data);
-    this.save();
+  public importBackup(importedData: unknown) {
+    // Browser uploads are for verified academic catalogues only, not disaster
+    // recovery. Never let a stale backup overwrite active students, passwords,
+    // JWT session versions, demand responses, OTP or SMS provider settings.
+    const candidate = prepareCatalogRestore(this.data, importedData);
+    this.ensureDataDir();
+    // The previous implementation mutated this.data BEFORE writing the file:
+    // a disk/rename error left the live process serving unsaved, divergent data.
+    // Publish the candidate only after atomic rename. A later directory-fsync
+    // failure can signal an uncertain durable write, but live memory still
+    // matches the new file visible on disk.
+    writeDurableJson(DB_FILE, candidate, () => {
+      this.data = candidate;
+    });
     return this.data;
   }
 

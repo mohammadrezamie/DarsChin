@@ -298,7 +298,8 @@ export function getInitialSeedData(): DatabaseSchema {
     { id: 'pr-16', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-telecom', targetCourseId: 'crs-fpga', expression: { type: 'COURSE', courseId: 'crs-comp-arch' } },
     
     { id: 'pr-17', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-power-1', expression: { type: 'COURSE', courseId: 'crs-circ-2' } },
-    { id: 'pr-18', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-power', targetCourseId: 'crs-power-lab', expression: { type: 'COURSE', courseId: 'crs-power-1' } },
+    // No demo course with id crs-power-lab exists; do not publish a dangling
+    // made-up prerequisite before the owner supplies verified course data.
     
     { id: 'cr-1', relationshipType: 'COREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-lab', expression: { type: 'COURSE', courseId: 'crs-circ-1' } }
   ];
@@ -616,7 +617,10 @@ export function getInitialSeedData(): DatabaseSchema {
 
   return {
     users,
-    universities: [],
+    // Demo-only university identity: all demo campuses and curricula below
+    // reference this ID. Without it the student onboarding dropdown is empty.
+    // These are illustrative records, NOT official university policy data.
+    universities: [{ id: 'univ-azad', name: 'دانشگاه آزاد اسلامی', code: 'IAU', active: true }],
     provinces,
     campuses,
     degreeLevels,
