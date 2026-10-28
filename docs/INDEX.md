@@ -65,3 +65,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [ابطال JWTهای قدیمی پس از تغییر رمز عبور یا بازیابی با OTP و حفظ نشست مرورگر فعلی](AUTH_SESSION_REVOCATION_FA.md) — گیت امنیت حساب پیش از پذیرش واقعی.
 
 - [اولویت جدید توسعهٔ بصری و تجربهٔ واقعی دانشجو: صف ثبت فشرده و حالت مستقل چیدمان، با گیت ۳۲۷ تست و مرورگر موبایل](REGISTRATION_QUEUE_MOBILE_UX_20261028_FA.md).
+
+- [گیت بازگردانی امن کاتالوگ آموزشی، حفظ برنامهٔ دانشجو، امنیت بکاپ و اصلاح دادهٔ دمو](CATALOG_RESTORE_SAFETY_FA.md) — P0 حفظ داده، تست خطای دیسک و تمایز بازیابی وب با بازیابی فاجعه‌ای.
