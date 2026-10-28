@@ -9,6 +9,8 @@ import type { DatabaseSchema } from './database';
  * Full database disaster recovery remains an offline, operator-controlled
  * process with verified backups and a write freeze.
  */
+export class InvalidCatalogBackupError extends Error {}
+
 export const CATALOG_RESTORE_COLLECTIONS = [
   'universities', 'provinces', 'campuses', 'degreeLevels', 'majors',
   'tracks', 'entryYears', 'academicTerms', 'curricula', 'courses',
@@ -32,16 +34,16 @@ function idSet(collection: readonly unknown[]): Set<string> {
 
 function ensureReferences(references: readonly (string | null | undefined)[], ids: ReadonlySet<string>, label: string): void {
   if (references.some(ref => typeof ref !== 'string' || !ids.has(ref))) {
-    throw new Error(`بازیابی فهرست آموزشی با داده‌های موجود سازگار نیست: ${label}.`);
+    throw new InvalidCatalogBackupError(`بازیابی فهرست آموزشی با داده‌های موجود سازگار نیست: ${label}.`);
   }
 }
 
 export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown): DatabaseSchema {
-  if (!isRecord(incoming)) throw new Error('ساختار فایل پشتیبان معتبر نیست.');
+  if (!isRecord(incoming)) throw new InvalidCatalogBackupError('ساختار فایل پشتیبان معتبر نیست.');
 
   for (const name of REQUIRED_COLLECTIONS) {
     if (!Array.isArray(incoming[name])) {
-      throw new Error(`فهرست ضروری «${name}» در فایل پشتیبان وجود ندارد.`);
+      throw new InvalidCatalogBackupError(`فهرست ضروری «${name}» در فایل پشتیبان وجود ندارد.`);
     }
   }
   const candidate: DatabaseSchema = { ...current };
@@ -49,12 +51,12 @@ export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown
   for (const name of CATALOG_RESTORE_COLLECTIONS) {
     const value = incoming[name];
     if (value === undefined) continue;
-    if (!Array.isArray(value)) throw new Error(`فهرست «${name}» باید آرایه باشد.`);
+    if (!Array.isArray(value)) throw new InvalidCatalogBackupError(`فهرست «${name}» باید آرایه باشد.`);
 
     const ids = new Set<string>();
     for (const entry of value) {
       if (!isRecord(entry) || typeof entry.id !== 'string' || !entry.id.trim() || ids.has(entry.id)) {
-        throw new Error(`شناسهٔ نامعتبر یا تکراری در «${name}» موجود است.`);
+        throw new InvalidCatalogBackupError(`شناسهٔ نامعتبر یا تکراری در «${name}» موجود است.`);
       }
       ids.add(entry.id);
     }
@@ -64,14 +66,14 @@ export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown
 
   if (incoming.academicSettings !== undefined) {
     if (!isRecord(incoming.academicSettings)) {
-      throw new Error('ساختار تنظیمات آموزشی در فایل پشتیبان معتبر نیست.');
+      throw new InvalidCatalogBackupError('ساختار تنظیمات آموزشی در فایل پشتیبان معتبر نیست.');
     }
     // Preserve current policy unless a separate, reviewed policy change occurs.
     // A backup from another term must not silently change unit limits.
   }
 
   if (candidate.courses.length === 0 || candidate.curricula.length === 0) {
-    throw new Error('فایل پشتیبان بدون درس یا چارت معتبر قابل جایگزینی نیست.');
+    throw new InvalidCatalogBackupError('فایل پشتیبان بدون درس یا چارت معتبر قابل جایگزینی نیست.');
   }
 
   const courses = idSet(candidate.courses);
@@ -95,9 +97,15 @@ export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown
   // catalogue backup. Student data is always preserved, not overwritten.
   ensureReferences(current.studentPlans?.flatMap(x => x.selectedOfferingIds) ?? [], offerings, 'برنامهٔ جاری دانشجویان');
   ensureReferences(current.studentPassedCourses.map(x => x.courseId), courses, 'درس‌های گذرانده‌شده');
-  ensureReferences(current.studentProfiles.flatMap(x => [
-    x.universityId, x.campusId, x.degreeLevelId, x.majorId, x.entryYearId,
-  ]), new Set([...universities, ...campuses, ...levels, ...majors, ...years]), 'پروفایل آموزشی دانشجویان');
+  ensureReferences(current.studentProfiles.map(x => x.universityId), universities, 'دانشگاه دانشجویان');
+  ensureReferences(current.studentProfiles.map(x => x.campusId), campuses, 'واحد دانشجویان');
+  ensureReferences(current.studentProfiles.map(x => x.degreeLevelId), levels, 'مقطع دانشجویان');
+  ensureReferences(current.studentProfiles.map(x => x.majorId), majors, 'رشتهٔ دانشجویان');
+  ensureReferences(current.studentProfiles.map(x => x.entryYearId), years, 'ورودی دانشجویان');
+  ensureReferences(current.studentProfiles.flatMap(x => x.currentTermId ? [x.currentTermId] : []), terms, 'ترم دانشجویان');
+  ensureReferences(current.studentPlans?.map(x => x.termId) ?? [], terms, 'ترم برنامهٔ دانشجویان');
+  ensureReferences(current.demandSurveys.map(x => x.targetTermId), terms, 'ترم نیازسنجی');
+  ensureReferences(current.demandSurveys.map(x => x.majorId), majors, 'رشتهٔ نیازسنجی');
   ensureReferences(current.demandSurveys.flatMap(x => x.courseIds), courses, 'نیازسنجی‌های فعال/ثبت‌شده');
 
   // All non-catalogue collections (users and session versions, plans,
