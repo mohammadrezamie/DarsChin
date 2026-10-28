@@ -21,24 +21,24 @@ export const DashboardShowcaseSection: React.FC = () => {
             <GraduationCap className="h-4 w-4" aria-hidden="true" /> ابزارهای دانشجو
           </span>
           <h2 id="student-tools-title" className="text-[clamp(1.75rem,5vw,2.8rem)] font-black leading-[1.6] text-slate-950 dark:text-white">
-            هر کاری برای برنامه‌ریزی ترم لازم داری، همین‌جاست
+            میز کار دانشجو؛ هر کاری برای برنامه‌ریزی ترم لازم داری، همین‌جاست
           </h2>
           <p className="mt-3 text-sm leading-8 text-slate-600 sm:text-base dark:text-slate-300">
             درس‌چین مسیر انتخاب واحد را ساده‌تر می‌کند؛ بدون اینکه مجبور باشی بین جدول‌های طولانی و کدهای پراکنده سردرگم شوی.
           </p>
         </div>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           {features.map(({ icon: Icon, title, description }, index) => (
             <motion.article key={title}
               initial={reducedMotion ? false : { opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
               transition={{ delay: reducedMotion ? 0 : index * 0.05 }}
-              className="min-w-0 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-900/5 dark:border-slate-800 dark:bg-slate-950/80">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              className="min-w-0 rounded-3xl border border-slate-200 bg-white/90 p-3 shadow-sm transition sm:p-5 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-900/5 dark:border-slate-800 dark:bg-slate-950/80">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center sm:mb-4 sm:h-12 sm:w-12 rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                 <Icon className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-950 dark:text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{description}</p>
+              <h3 className="text-xs font-extrabold leading-6 text-slate-950 sm:text-base dark:text-white">{title}</h3>
+              <p className="mt-2 text-xs leading-6 text-slate-600 sm:text-sm sm:leading-7 dark:text-slate-300">{description}</p>
             </motion.article>
           ))}
         </div>
