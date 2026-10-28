@@ -7,6 +7,7 @@ import { ExtensionModal } from './components/ExtensionModal';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { SiteFooter } from './components/SiteFooter';
 import { adminWorkspaceAccess } from './utils/admin-navigation';
 const Landing = lazy(() => import('./pages/Landing').then((module) => ({ default: module.Landing })));
 const PlannerDemo = lazy(() => import('./pages/PlannerDemo').then((module) => ({ default: module.PlannerDemo })));
@@ -81,9 +82,9 @@ const AppRouteShell: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const location = useLocation();
 
   return (
-    <div dir="rtl" className="darschin-app-shell min-h-dvh">
+    <div dir="rtl" className="darschin-app-shell flex min-h-dvh flex-col">
       <a href="#darschin-page-content" className="darschin-skip-link">رفتن به محتوای اصلی</a>
-      <div id="darschin-page-content" tabIndex={-1} className="min-h-dvh">
+      <div id="darschin-page-content" tabIndex={-1} className="min-w-0 flex-1">
         <AppErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={
             <div dir="rtl" role="status" aria-live="polite" className="mx-auto flex min-h-[65dvh] max-w-6xl flex-col justify-center gap-5 px-4 py-16 sm:px-6">
@@ -101,6 +102,7 @@ const AppRouteShell: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </Suspense>
         </AppErrorBoundary>
       </div>
+      <SiteFooter withMobileDock={location.pathname === '/dashboard' || location.pathname === '/demo/student'} />
     </div>
   );
 };

@@ -196,9 +196,9 @@ export const PlannerDemo: React.FC = () => {
           </section>
         </div>
       </main>
-      <footer className="border-t border-slate-200 px-4 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <aside role="note" className="border-t border-slate-200 px-4 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
         محیط دمو · اطلاعات نمونه · ذخیرهٔ محلی روی همین دستگاه، نه پایگاه دادهٔ درس‌چین
-      </footer>
+      </aside>
     </div>
   );
 };

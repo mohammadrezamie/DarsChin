@@ -170,7 +170,6 @@
 .darschin-page { min-inline-size: 0; text-align: right; }
 .darschin-page > * { min-inline-size: 0; }
 .darschin-page :where(section, article, form) { min-inline-size: 0; }
-.darschin-page :where(h1, h2, h3, h4, p) { text-align: right; }
 .darschin-page :where(input, textarea, select) { max-inline-size: 100%; }
 .darschin-page :where(.rounded-3xl, .rounded-2xl) { background-clip: padding-box; }
 /* Text alignment follows the RTL document. Do not override deliberate centered
