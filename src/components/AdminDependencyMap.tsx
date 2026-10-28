@@ -13,6 +13,7 @@ interface Props {
 export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula }) => {
   const [curriculumId, setCurriculumId] = useState('');
   const [assigned, setAssigned] = useState<string[]>([]);
+  const [loadedChartId, setLoadedChartId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState('');
@@ -25,9 +26,10 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
   }, [curricula, curriculumId]);
 
   useEffect(() => {
-    if (!curriculumId) { setAssigned([]); return; }
+    if (!curriculumId) { setAssigned([]); setLoadedChartId(''); return; }
     let alive = true;
     setAssigned([]);
+    setLoadedChartId('');
     setLoading(true);
     setError('');
     setSelectedId('');
@@ -39,6 +41,7 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
           return;
         }
         setAssigned(response.data.courses.map(row => row.courseId));
+        setLoadedChartId(curriculumId);
       })
       .catch(() => { if (alive) setError('ارتباط با سرویس چارت برقرار نشد.'); })
       .finally(() => { if (alive) setLoading(false); });
@@ -46,8 +49,10 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
   }, [curriculumId]);
 
   const courseNames = useMemo(() => new Map(courses.map(course => [course.id, course.name])), [courses]);
-  const analysis = useMemo(() => analyzeCurriculumDependencies(curriculumId, assigned, rules),
-    [curriculumId, assigned, rules]);
+  // Never render another curriculum's previous response while selection changes.
+  const verifiedAssigned = loadedChartId === curriculumId ? assigned : [];
+  const analysis = useMemo(() => analyzeCurriculumDependencies(curriculumId, verifiedAssigned, rules),
+    [curriculumId, loadedChartId, assigned, rules]);
   const ranking = analysis.insights;
   const connected = new Set(analysis.edges.flatMap(edge => [edge.from, edge.to]));
   const visibleIds = ranking.map(item => item.courseId).filter(id => connected.has(id)).slice(0, 36);
