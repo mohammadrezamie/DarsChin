@@ -14,8 +14,7 @@ const getHighestRole = (roles?: string[]) => {
 
 const AVAILABLE_PERMISSIONS = [
   { id: 'admin.panel.access', label: 'دسترسی پنل' },
-  { id: 'admin.manage', label: 'مدیریت مدیران' },
-  { id: 'admin.create', label: 'ایجاد مدیر' },
+  // Root-only responsibilities are not delegable permissions.
   { id: 'system.settings.manage', label: 'تنظیمات سیستم' },
   { id: 'student.access', label: 'دسترسی دانشجویی' },
   { id: 'demand.manage', label: 'ساخت و مدیریت نیازسنجیِ محدودهٔ اختصاصی' },
@@ -41,8 +40,7 @@ export const UserManagement: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const endpoint = isRoot ? '/api/admin/users' : '/api/admin-management';
-      const result = await apiRequest<User[]>(endpoint);
+      const result = await apiRequest<User[]>('/api/admin/users');
       if (result.success && Array.isArray(result.data)) setUsers(result.data);
       else setError(result.error || 'خطا در دریافت فهرست کاربران');
     } catch {

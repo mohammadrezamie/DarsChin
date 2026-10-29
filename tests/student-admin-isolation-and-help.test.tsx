@@ -34,6 +34,9 @@ describe('student-first product and private management contract', () => {
     expect(adminWorkspaceAccess({ roles: ['student'], permissions: [] }).isAdmin).toBe(false);
     expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['admin.panel.access'] }).isAdmin).toBe(true);
     expect(read('src/pages/auth/Login.tsx')).toContain('adminWorkspaceAccess(result.user).isAdmin');
+    const management = read('src/components/UserManagement.tsx');
+    expect(management).not.toContain("id: 'admin.create'");
+    expect(management).not.toContain("id: 'admin.manage'");
     expect(adminWorkspaceAccess({ roles: ['student'], permissions: ['admin.panel.access'] }).isAdmin).toBe(false);
   });
 
