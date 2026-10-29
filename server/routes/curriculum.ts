@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
+import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
 import { validate } from '../middleware/validate';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
@@ -261,26 +262,6 @@ curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.man
   res.json({ success: true, data: enriched });
 });
 
-// Helper for cycle detection
-function hasCycle(targetCourseId, expression, allRules, visited = new Set()) {
-  if (visited.has(targetCourseId)) return true;
-  visited.add(targetCourseId);
-  
-  const sourceCourseIds = extractSourceCourseIds(expression);
-  for (const sourceId of sourceCourseIds) {
-    if (sourceId === targetCourseId) return true; // Direct self-reference
-    
-    // Check downstream
-    const sourceRules = allRules.filter(r => r.targetCourseId === sourceId);
-    for (const sr of sourceRules) {
-      if (hasCycle(targetCourseId, sr.expression, allRules, new Set(visited))) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 // Admin: Add Academic Rule
 curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
   const {
@@ -294,13 +275,52 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     notes,
   } = req.body;
 
-  // Cycle Detection
-  if (hasCycle(targetCourseId, expression, db.data.academicRules)) {
-    return res.status(400).json({ success: false, error: 'تعریف این قانون باعث ایجاد حلقه (Circular Dependency) می‌شود و مجاز نیست.' });
+  const chart = db.curricula.find(item => item.id === curriculumId && item.status !== 'archived');
+  if (!chart) {
+    return res.status(404).json({ success: false, error: 'چارت انتخابی یافت نشد یا بایگانی شده است.' });
+  }
+  // Relationships must remain inside their chart/cohort, not be accepted
+  // merely because a course exists somewhere in the global catalogue.
+  if ((majorId && majorId !== chart.majorId) ||
+      (entryYearId && entryYearId !== chart.entryYearId) ||
+      (trackId && !db.tracks.some(track => track.id === trackId && track.majorId === chart.majorId && track.active))) {
+    return res.status(400).json({ success: false, error: 'حوزهٔ قانون با چارت انتخابی مطابقت ندارد.' });
+  }
+  const assignedCourseIds = [...new Set(db.curriculumCourses
+    .filter(item => item.curriculumId === curriculumId && item.active !== false)
+    .map(item => item.courseId))];
+  const allowedCourses = new Set(assignedCourseIds);
+  const sourceIds = extractSourceCourseIds(expression);
+  if (!allowedCourses.has(targetCourseId) || !sourceIds.length ||
+      sourceIds.some(id => !allowedCourses.has(id))) {
+    return res.status(400).json({
+      success: false,
+      error: 'درس هدف و همهٔ درس‌های مرتبط باید در چارت انتخابی حضور داشته باشند.',
+    });
+  }
+
+  // Validate the entire existing prerequisite graph plus the new edge.
+  // The old recursive guard accidentally rejected valid A→B→C chains,
+  // and traversed rules belonging to unrelated charts and corequisites.
+  // Corequisites may be reciprocal; only prerequisites form the DAG.
+  if (relationshipType === 'PREREQUISITE') {
+    const candidate = {
+      id: 'candidate', curriculumId, targetCourseId,
+      relationshipType, expression,
+    };
+    const analysis = analyzeCurriculumDependencies(
+      curriculumId, assignedCourseIds, [...db.academicRules, candidate]
+    );
+    if (!analysis.valid) {
+      return res.status(400).json({
+        success: false,
+        error: analysis.errors[0] || 'زنجیرهٔ پیش‌نیازها معتبر نیست.',
+      });
+    }
   }
 
   const newRule = {
-    id: `rule-${Date.now()}`,
+    id: `rule-${randomUUID()}`,
     curriculumId,
     entryYearId: entryYearId || null,
     majorId: majorId || null,
