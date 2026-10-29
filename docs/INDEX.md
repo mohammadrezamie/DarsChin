@@ -80,3 +80,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [ویرایشگر بصری پیش‌نیاز و هم‌نیاز](ADMIN_GRAPH_MOBILE_PRODUCT_REDESIGN_FA.md) — وضعیت اجرای کارگاه اتصال، اعتبارسنجی کل زنجیره، مرزهای سه‌بعدی و تست‌ها در OWN-059 فایل [تصمیم‌های مالک](OWNER_DECISIONS_FA.md) ثبت شده است.
 
 - **[قرارداد قطعی جریان مرحله‌ای دانشجو و ثبت تمام الزامات مهم مالک](STUDENT_GUIDED_JOURNEY_REQUIREMENTS_FA.md)** — P0، سوابق پاس/مردودی، سقف واحد، سبد علاقه‌مندی مستقل، استاد/تداخل و صف ثبت، همراه با وضعیت انجام و گیت پذیرش.
+
+- [قرارداد جداسازی مدیریت و روت یکتا، حساب دوپنلی](ROOT_ONLY_ADMIN_STUDENT_PRIVACY_20261030_FA.md) — OWN-068؛ گیت QA و مرج باز.
