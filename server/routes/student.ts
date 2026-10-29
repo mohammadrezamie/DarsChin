@@ -117,9 +117,12 @@ studentRouter.get('/passed-courses', authenticate, (req: AuthenticatedRequest, r
   let totalUnits = 0;
   const categorySummary: Record<string, number> = {};
 
+  const countedPassed = new Set<string>();
   const enrichedList = userPassed.map((p) => {
     const course = db.courses.find((c) => c.id === p.courseId);
-    if (course) {
+    const passed = p.status !== 'FAILED' && p.status !== 'ABSENT' && (p.grade === undefined || p.grade >= 10);
+    if (course && passed && !countedPassed.has(p.courseId)) {
+      countedPassed.add(p.courseId);
       totalUnits += course.units;
       categorySummary[course.category] = (categorySummary[course.category] || 0) + course.units;
     }
@@ -148,14 +151,16 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
   }
 
   const existing = db.studentPassedCourses.find(
-    (spc) => spc.userId === userId && spc.courseId === courseId
+    (spc) => spc.userId === userId && spc.courseId === courseId &&
+      spc.status !== 'FAILED' && spc.status !== 'ABSENT' &&
+      (spc.grade === undefined || spc.grade >= 10)
   );
   if (existing) {
     return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
   }
 
   const newEntry: StudentPassedCourse = {
-    id: `spc-${Date.now()}`,
+    id: 'spc-' + crypto.randomUUID(),
     userId,
     courseId,
     grade: grade !== undefined && grade !== '' ? Number(grade) : undefined,
@@ -189,7 +194,9 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
   }
 
   const existingCourseIds = new Set(
-    db.studentPassedCourses.filter((spc) => spc.userId === userId).map((spc) => spc.courseId)
+    db.studentPassedCourses.filter((spc) => spc.userId === userId &&
+      spc.status !== 'FAILED' && spc.status !== 'ABSENT' &&
+      (spc.grade === undefined || spc.grade >= 10)).map((spc) => spc.courseId)
   );
 
   let addedCount = 0;
@@ -201,6 +208,7 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
           id: `spc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           userId,
           courseId: cid,
+          status: 'PASSED',
           passedAt: new Date().toISOString(),
         });
         existingCourseIds.add(cid);
