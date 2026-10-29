@@ -79,7 +79,7 @@ adminManagementRouter.post('/', authenticate, requirePermission('admin.create'),
   const { name, mobile, password, permissions, roles } = req.body;
   if (roles !== undefined && (!Array.isArray(roles) || roles.length === 0 ||
     roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
-    return res.status(403).json({ success: false, error: 'ایجاد نقش مدیر ارشد یا نقش نامعتبر مجاز نیست.' });
+    return res.status(403).json({ success: false, error: 'ایجاد مدیر ارشد یا تخصیص نقش نامعتبر مجاز نیست.' });
   }
   if (!name || !mobile || !password) {
     return res.status(400).json({ success: false, error: 'نام، موبایل و رمز عبور الزامی است.' });
@@ -148,7 +148,7 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
   if (req.body.roles !== undefined && (!Array.isArray(req.body.roles) ||
     req.body.roles.length === 0 ||
     req.body.roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
-    return res.status(403).json({ success: false, error: 'ایجاد نقش مدیر ارشد یا نقش نامعتبر مجاز نیست.' });
+    return res.status(403).json({ success: false, error: 'ایجاد مدیر ارشد یا تخصیص نقش نامعتبر مجاز نیست.' });
   }
 
   // A delegated admin cannot manage someone they didn't create, UNLESS they are super-admin
