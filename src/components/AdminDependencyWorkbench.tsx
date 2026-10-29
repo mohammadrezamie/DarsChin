@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, GitBranch, Link2, MousePointer2, RotateCcw, Search, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, GitBranch, Link2, MousePointer2, RotateCcw, Search, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import type { AcademicRule, Course, Curriculum } from '../types';
 import { apiRequest } from '../utils/api';
-import { analyzeCurriculumDependencies } from '../domain/course-dependency-insights';
-import { assessDependencyDraft, type VisualRelationship } from '../domain/dependency-editor';
+import { analyzeCurriculumDependencies, type DependencyEdge } from '../domain/course-dependency-insights';
+import { assessDependencyDraft, findRemovableDirectDependency, type VisualRelationship } from '../domain/dependency-editor';
 
 interface ChartAssignment {
   courseId: string;
@@ -40,6 +40,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const [zoom, setZoom] = useState(1);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [selectedExisting, setSelectedExisting] = useState<DependencyEdge | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!curricula.some(chart => chart.id === curriculumId)) {
@@ -51,6 +53,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     setSourceId('');
     setTargetId('');
     setFeedback('');
+    setSelectedExisting(null);
+    setDeleteConfirm(false);
     setAssignments([]);
     setLoadedId('');
     setFetchError('');
@@ -84,6 +88,9 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const assessment = useMemo(() => assessDependencyDraft(
     curriculumId, courseIds, rules, sourceId, targetId, kind,
   ), [curriculumId, courseIds, rules, sourceId, targetId, kind]);
+  const selectedRule = selectedExisting ? findRemovableDirectDependency(
+    rules, curriculumId, selectedExisting.from, selectedExisting.to, selectedExisting.kind,
+  ) : null;
 
   const layout = useMemo(() => {
     const terms = new Map<number, string[]>();
@@ -116,11 +123,43 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const nameOf = (id: string) => courseMap.get(id)?.name ?? 'درس نامشخص';
   const choose = (id: string) => {
     setFeedback('');
+    setSelectedExisting(null);
+    setDeleteConfirm(false);
     if (!sourceId || targetId) {
       setSourceId(id);
       setTargetId('');
     } else if (sourceId !== id) {
       setTargetId(id);
+    }
+  };
+
+  const selectExistingEdge = (edge: DependencyEdge) => {
+    setSelectedExisting(edge);
+    setSourceId('');
+    setTargetId('');
+    setDeleteConfirm(false);
+    setFeedback('');
+  };
+
+  const removeSelectedLink = async () => {
+    if (!selectedRule || saving || loadedId !== curriculumId) return;
+    setSaving(true);
+    setFeedback('');
+    const response = await apiRequest('/api/curriculum/rules/' + encodeURIComponent(selectedRule.id), { method: 'DELETE' });
+    if (!response.success) {
+      setFeedback(response.error || 'اتصال حذف نشد.');
+      setSaving(false);
+      return;
+    }
+    try {
+      await onChanged();
+      setSelectedExisting(null);
+      setDeleteConfirm(false);
+      setFeedback('اتصال از چارت حذف شد؛ وابستگی‌های باقی‌مانده به‌روزرسانی شدند.');
+    } catch {
+      setFeedback('حذف روی سرور انجام شد، اما نقشه تازه نشد. صفحه را بارگذاری مجدد کنید.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -251,15 +290,22 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       const from = layout.positions.get(edge.from);
                       const to = layout.positions.get(edge.to);
                       if (!from || !to) return null;
-                      return <path key={edge.kind + edge.from + edge.to}
-                        d={'M' + (from.x + NODE_WIDTH) + ' ' + (from.y + NODE_HEIGHT / 2) +
-                          ' C' + (from.x + NODE_WIDTH + 28) + ' ' + (from.y + NODE_HEIGHT / 2) +
-                          ' ' + (to.x - 24) + ' ' + (to.y + NODE_HEIGHT / 2) +
-                          ' ' + to.x + ' ' + (to.y + NODE_HEIGHT / 2)}
-                        fill="none" stroke={edge.kind === 'PREREQUISITE' ? '#2563eb' : '#d97706'}
-                        strokeWidth={2} strokeOpacity={.7}
-                        strokeDasharray={edge.kind === 'COREQUISITE' || edge.optional ? '6 5' : undefined}
-                        markerEnd={edge.kind === 'PREREQUISITE' ? 'url(#visual-editor-arrow)' : undefined} />;
+                      const d = 'M' + (from.x + NODE_WIDTH) + ' ' + (from.y + NODE_HEIGHT / 2) +
+                        ' C' + (from.x + NODE_WIDTH + 28) + ' ' + (from.y + NODE_HEIGHT / 2) +
+                        ' ' + (to.x - 24) + ' ' + (to.y + NODE_HEIGHT / 2) +
+                        ' ' + to.x + ' ' + (to.y + NODE_HEIGHT / 2);
+                      const selected = selectedExisting?.from === edge.from &&
+                        selectedExisting?.to === edge.to && selectedExisting?.kind === edge.kind;
+                      return <React.Fragment key={edge.kind + edge.from + edge.to}>
+                        <path d={d} fill="none"
+                          stroke={edge.kind === 'PREREQUISITE' ? '#2563eb' : '#d97706'}
+                          strokeWidth={selected ? 4 : 2} strokeOpacity={selected ? 1 : .7}
+                          strokeDasharray={edge.kind === 'COREQUISITE' || edge.optional ? '6 5' : undefined}
+                          markerEnd={edge.kind === 'PREREQUISITE' ? 'url(#visual-editor-arrow)' : undefined} />
+                        <path d={d} fill="none" stroke="transparent" strokeWidth={18}
+                          style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                          onClick={() => selectExistingEdge(edge)} />
+                      </React.Fragment>;
                     })}
                     {pending && start && end && <path
                       d={'M' + (start.x + NODE_WIDTH) + ' ' + (start.y + NODE_HEIGHT / 2) +
@@ -277,7 +323,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       aria-pressed={picked}
                       title={(course?.name ?? '') + ' (' + (course?.code ?? '') + ')'}
                       onClick={() => choose(id)}
-                      onDragStart={event => { event.dataTransfer.setData('text/plain', id); setSourceId(id); setTargetId(''); }}
+                      onDragStart={event => { event.dataTransfer.setData('text/plain', id); setSourceId(id); setTargetId(''); setSelectedExisting(null); setDeleteConfirm(false); }}
                       onDragOver={event => event.preventDefault()}
                       onDrop={event => {
                         event.preventDefault();
@@ -301,6 +347,66 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {analysis.edges.length > 0 && (
+            <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+              <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-slate-800 dark:text-white">
+                مدیریت اتصال‌های ثبت‌شده ({analysis.edges.length.toLocaleString('fa-IR')})
+              </summary>
+              <p className="mb-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
+                برای مشاهده یا حذف یک اتصال، روی خط داخل نقشه یا نام رابطه در این فهرست بزن.
+              </p>
+              <div className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2" role="list">
+                {analysis.edges.filter(edge => !filter || [nameOf(edge.from), nameOf(edge.to)]
+                  .some(name => name.toLocaleLowerCase('fa').includes(filter))).map(edge => {
+                  const selected = selectedExisting?.kind === edge.kind &&
+                    selectedExisting.from === edge.from && selectedExisting.to === edge.to;
+                  return <button type="button" role="listitem" key={edge.kind + edge.from + edge.to}
+                    aria-pressed={selected} onClick={() => selectExistingEdge(edge)}
+                    className={'min-h-11 rounded-xl border px-3 py-2 text-right text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
+                      (selected ? 'border-indigo-500 bg-indigo-50 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200' :
+                        'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200')}>
+                    {nameOf(edge.from)} — {edge.kind === 'PREREQUISITE' ? 'پیش‌نیازِ' : 'هم‌نیازِ'} — {nameOf(edge.to)}
+                  </button>;
+                })}
+              </div>
+            </details>
+          )}
+          {selectedExisting && (
+            <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="font-extrabold leading-7 text-amber-950 dark:text-amber-100">
+                {nameOf(selectedExisting.from)} — {selectedExisting.kind === 'PREREQUISITE' ? 'پیش‌نیازِ' : 'هم‌نیازِ'} — {nameOf(selectedExisting.to)}
+              </p>
+              {selectedRule ? (
+                <>
+                  {!deleteConfirm ? (
+                    <button type="button" disabled={saving} onClick={() => setDeleteConfirm(true)}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300">
+                      <Trash2 size={16} aria-hidden="true" /> حذف همین اتصال
+                    </button>
+                  ) : (
+                    <div role="group" aria-label="تأیید حذف اتصال" className="space-y-2">
+                      <p className="text-sm leading-7 text-rose-800 dark:text-rose-200">
+                        این رابطه از قوانین چارت حذف شود؟ این عمل فقط همین قانون مستقل را پاک می‌کند.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={saving} onClick={() => setDeleteConfirm(false)}
+                          className="min-h-11 rounded-xl border border-slate-300 px-4 text-xs font-bold dark:border-slate-600">انصراف</button>
+                        <button type="button" disabled={saving} onClick={() => void removeSelectedLink()}
+                          className="min-h-11 rounded-xl bg-rose-700 px-4 text-xs font-bold text-white disabled:opacity-50">
+                          {saving ? 'در حال حذف…' : 'تأیید حذف اتصال'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p role="status" className="text-xs leading-7 text-amber-900 dark:text-amber-200">
+                  این اتصال از قانون ترکیبی یا چند قانون مشترک آمده است؛ حذف آن از اینجا امن نیست. برای اصلاح از ویرایشگر پیشرفتهٔ قوانین استفاده کن.
+                </p>
+              )}
             </div>
           )}
 
