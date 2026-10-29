@@ -363,13 +363,14 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                   .some(name => name.toLocaleLowerCase('fa').includes(filter))).map(edge => {
                   const selected = selectedExisting?.kind === edge.kind &&
                     selectedExisting.from === edge.from && selectedExisting.to === edge.to;
-                  return <button type="button" role="listitem" key={edge.kind + edge.from + edge.to}
-                    aria-pressed={selected} onClick={() => selectExistingEdge(edge)}
-                    className={'min-h-11 rounded-xl border px-3 py-2 text-right text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
+                  return <div role="listitem" key={edge.kind + edge.from + edge.to}>
+                    <button type="button" aria-pressed={selected} onClick={() => selectExistingEdge(edge)}
+                    className={'min-h-11 w-full rounded-xl border px-3 py-2 text-right text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
                       (selected ? 'border-indigo-500 bg-indigo-50 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200' :
                         'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200')}>
                     {nameOf(edge.from)} — {edge.kind === 'PREREQUISITE' ? 'پیش‌نیازِ' : 'هم‌نیازِ'} — {nameOf(edge.to)}
-                  </button>;
+                    </button>
+                  </div>;
                 })}
               </div>
             </details>
