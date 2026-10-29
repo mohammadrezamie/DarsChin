@@ -30,6 +30,7 @@ describe('student-first product and private management contract', () => {
     expect(app).toContain('const AdminDemoGate');
     expect(app).toContain('if (!user) return <Navigate to="/login" replace />');
     expect(app).toContain('if (!adminWorkspaceAccess(user).isAdmin)');
+    expect(app).toContain("allowedRoles?.includes('admin') && !adminWorkspaceAccess(user).isAdmin");
     expect(app).toContain('<Route path="/demo/admin" element={<AdminDemoGate />} />');
     expect(adminWorkspaceAccess({ roles: ['student'], permissions: [] }).isAdmin).toBe(false);
     expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['admin.panel.access'] }).isAdmin).toBe(true);

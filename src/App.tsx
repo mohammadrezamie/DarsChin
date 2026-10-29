@@ -26,13 +26,13 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const hasRole = user.roles?.some(role => allowedRoles.includes(role)) || user.roles?.includes('super-admin');
-    const hasPermission = user.permissions?.includes('admin.panel.access');
-    
-    if (allowedRoles.includes('admin') && (!hasRole && !hasPermission)) {
-      return <Navigate to="/dashboard" replace />;
-    }
+  // Route protection must match the role + scoped permission gate used by
+  // the administrator navbar, dashboard and private demo.
+  if (allowedRoles?.includes('admin') && !adminWorkspaceAccess(user).isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  if (allowedRoles?.includes('student') && !user.roles?.includes('student')) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;
