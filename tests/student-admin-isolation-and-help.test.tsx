@@ -65,7 +65,10 @@ describe('student-first product and private management contract', () => {
     expect(manifest.short_name).toBe('درس‌چین');
     expect(manifest.dir).toBe('rtl');
     expect(manifest.display).toBe('standalone');
-    expect(manifest.start_url).toBe('/');
+    expect(manifest.start_url).toBe('/dashboard?tab=offerings');
+    expect(manifest.shortcuts.map((shortcut: { url: string }) => shortcut.url))
+      .toEqual(expect.arrayContaining(['/dashboard?tab=schedule', '/dashboard?tab=registration']));
+    expect(manifest.shortcuts.some((shortcut: { url: string }) => shortcut.url.includes('admin'))).toBe(false);
     expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({src:'/app-icon.svg'})]));
     expect(read('index.html')).toContain('rel="manifest" href="/manifest.webmanifest"');
     expect(read('public/app-icon.svg')).toContain('<svg');

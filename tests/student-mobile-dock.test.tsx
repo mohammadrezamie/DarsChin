@@ -62,7 +62,8 @@ describe('real student mobile workspace dock', () => {
     const demo = source('src/pages/DemoWorkspace.tsx');
     const student = source('src/components/StudentDashboard.tsx');
     expect(demo).not.toContain('md:sticky md:top-0');
-    expect(student).toContain("useLocation().pathname.startsWith('/demo/')");
+    expect(student).toContain('const location = useLocation();');
+    expect(student).toContain("location.pathname.startsWith('/demo/')");
     expect(student).toContain("isBrowserDemo ? 'md:top-0' : ''");
     expect(student).toContain('sticky top-[68px]');
   });

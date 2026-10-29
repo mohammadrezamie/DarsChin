@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-liquid-glass !rounded-none !border-x-0 !border-t-0 border-b transition-colors print:hidden">
+      <header className="darschin-global-nav sticky top-0 z-40 bg-liquid-glass !rounded-none !border-x-0 !border-t-0 border-b transition-colors print:hidden">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-2">
             {/* RTL: the first flex item appears at the RIGHT edge. */}

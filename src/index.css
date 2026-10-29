@@ -383,3 +383,20 @@
   .darschin-skip-link,
   .darschin-demo-entry { border: 1px solid CanvasText; }
 }
+
+
+/* Native-sized PWA shell: leave the status bar and home gesture unobstructed. */
+@media (max-width: 767px) {
+  .darschin-global-nav {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .darschin-mobile-home {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+@media (display-mode: standalone) and (max-width: 767px) {
+  .darschin-global-nav {
+    box-shadow: 0 3px 18px -13px rgb(15 23 42 / 35%);
+  }
+}
