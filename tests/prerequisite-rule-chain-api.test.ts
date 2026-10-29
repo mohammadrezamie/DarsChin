@@ -83,6 +83,15 @@ describe('server-side long-chain prerequisite editing', () => {
     expect(db.academicRules.filter(rule => rule.curriculumId === chartA)).toHaveLength(before);
   });
 
+  it('rejects duplicate direct links even when submitted without the graphical UI', async () => {
+    const [a, b] = ids;
+    const original = db.academicRules.filter(rule => rule.curriculumId === chartA).length;
+    const repeated = await add(chartA, a, b);
+    expect(repeated.status).toBe(409);
+    expect(repeated.body.error).toMatch(/قبلاً/);
+    expect(db.academicRules.filter(rule => rule.curriculumId === chartA)).toHaveLength(original);
+  });
+
   it('keeps charts independent and permits reciprocal corequisites', async () => {
     const [a, b, c] = ids;
     // This edge would create a cycle if the server mixed chart A's B→C with chart B.
@@ -90,6 +99,23 @@ describe('server-side long-chain prerequisite editing', () => {
     expect((await add(chartB, a, b, 'COREQUISITE')).status).toBe(200);
     expect((await add(chartB, b, a, 'COREQUISITE')).status).toBe(200);
     expect(db.academicRules.filter(rule => rule.curriculumId === chartB)).toHaveLength(3);
+  });
+
+  it('deletes only the selected direct link and enforces permission', async () => {
+    const [a, b] = ids;
+    const selected = db.academicRules.find(rule =>
+      rule.curriculumId === chartA && rule.targetCourseId === b &&
+      rule.expression.type === 'COURSE' && rule.expression.courseId === a);
+    expect(selected).toBeDefined();
+    const before = db.academicRules.filter(rule => rule.curriculumId === chartA).length;
+    const forbidden = await request(app).delete('/api/curriculum/rules/' + selected!.id);
+    expect(forbidden.status).toBe(401);
+    const response = await request(app).delete('/api/curriculum/rules/' + selected!.id)
+      .set('Authorization', authorization);
+    expect(response.status).toBe(200);
+    expect(db.academicRules.filter(rule => rule.curriculumId === chartA)).toHaveLength(before - 1);
+    expect(db.academicRules.some(rule => rule.curriculumId === chartA &&
+      rule.expression.type === 'COURSE' && rule.expression.courseId === b)).toBe(true);
   });
 
   it('does not let an unauthenticated user publish an academic rule', async () => {
