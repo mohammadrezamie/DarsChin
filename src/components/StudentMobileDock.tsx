@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, CalendarDays, Layers3, MoreHorizontal, Sparkles, MessageCircle, Zap } from 'lucide-react';
 
-export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 'recommendations' | 'passed' | 'demand' | 'support';
+export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 'recommendations' | 'wishlist' | 'passed' | 'demand' | 'support';
 
 const PRIMARY = [
   { id: 'offerings', label: 'دروس', icon: Layers3 },
