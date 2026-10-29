@@ -145,10 +145,14 @@ studentRouter.get('/passed-courses', authenticate, (req: AuthenticatedRequest, r
 
 studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const { courseId, grade, termId } = req.body;
+  const { courseId, grade, termId, status } = req.body;
 
   if (!courseId) {
     return res.status(400).json({ success: false, error: 'شناسه درس مشخص نشده است.' });
+  }
+
+  if (!db.courses.some(course => course.id === courseId && course.active)) {
+    return res.status(400).json({ success: false, error: 'این درس در کاتالوگ فعال وجود ندارد.' });
   }
 
   const existing = db.studentPassedCourses.find(
@@ -164,8 +168,8 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
     id: 'spc-' + randomUUID(),
     userId,
     courseId,
-    grade: grade !== undefined && grade !== '' ? Number(grade) : undefined,
-    status: (grade !== undefined && grade !== '' && Number(grade) < 10) ? 'FAILED' : 'PASSED',
+    grade,
+    status: status || (grade !== undefined && grade < 10 ? 'FAILED' : 'PASSED'),
     termId: termId || undefined,
     passedAt: new Date().toISOString(),
   };
@@ -186,9 +190,21 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
     return res.status(400).json({ success: false, error: 'لیست شناسه‌های دروس باید آرایه باشد.' });
   }
 
+  // Validate every ID before mutating the account. Never lose historical
+  // failures/absences when replacing the current PASSED checklist.
+  if (courseIds.length > 500 || courseIds.some((id: unknown) =>
+    typeof id !== 'string' || !db.courses.some(course => course.id === id && course.active))) {
+    return res.status(400).json({ success: false, error: 'فهرست دروس حاوی درس نامعتبر یا بیش از حد مجاز است.' });
+  }
+
   if (replaceAll) {
+    const retainedPassed = new Set(courseIds);
     for (let i = db.studentPassedCourses.length - 1; i >= 0; i--) {
-      if (db.studentPassedCourses[i].userId === userId) {
+      const record = db.studentPassedCourses[i];
+      const isPassed = record.status !== 'FAILED' && record.status !== 'ABSENT' &&
+        (record.grade === undefined || record.grade >= 10);
+      // Preserve grade, term and original attempt ID for each retained success.
+      if (record.userId === userId && isPassed && !retainedPassed.has(record.courseId)) {
         db.studentPassedCourses.splice(i, 1);
       }
     }
@@ -206,7 +222,7 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
       const course = db.courses.find((c) => c.id === cid);
       if (course) {
         db.studentPassedCourses.push({
-          id: `spc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          id: 'spc-' + randomUUID(),
           userId,
           courseId: cid,
           status: 'PASSED',

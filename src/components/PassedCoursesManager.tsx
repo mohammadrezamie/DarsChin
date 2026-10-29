@@ -43,6 +43,8 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
 
   const [selectedCourseIdToAdd, setSelectedCourseIdToAdd] = useState('');
   const [gradeInput, setGradeInput] = useState('');
+  const [attemptStatus, setAttemptStatus] = useState<'PASSED' | 'FAILED' | 'ABSENT'>('FAILED');
+  const [attemptError, setAttemptError] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -77,13 +79,15 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
   const handleAddPassedCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourseIdToAdd) return;
+    setAttemptError('');
     setAdding(true);
 
     const res = await apiRequest('/api/student/passed-courses', {
       method: 'POST',
       body: JSON.stringify({
         courseId: selectedCourseIdToAdd,
-        grade: gradeInput ? parseFloat(gradeInput) : undefined,
+        grade: gradeInput.trim() ? Number(gradeInput) : undefined,
+        status: attemptStatus,
       }),
     });
 
@@ -91,10 +95,11 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
     if (res.success) {
       setSelectedCourseIdToAdd('');
       setGradeInput('');
+      setAttemptStatus('FAILED');
       await fetchPassedData();
       if (onPassedCoursesChanged) onPassedCoursesChanged();
     } else {
-      alert(res.error || 'خطا در ثبت درس پاس‌شده.');
+      setAttemptError(res.error || 'این سابقه ذخیره نشد. دوباره تلاش کنید.');
     }
   };
 
@@ -173,6 +178,48 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
         <span className="text-slate-600 dark:text-slate-300">· {totalUnits} واحد گذرانده‌شده</span>
         <span className="text-xs text-slate-500 dark:text-slate-400">فقط درس‌هایی را علامت بزن که واقعاً گذرانده‌ای.</span>
       </div>
+
+      {/* Advanced, optional attempt history; the one-tap checklist stays the default. */}
+      <details className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+        <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-amber-950 dark:text-amber-200">
+          ثبت مردودی، غیبت یا قبولی با نمره
+        </summary>
+        <p className="mb-3 text-xs leading-6 text-amber-900 dark:text-amber-200">
+          مثال: ممکن است «سیگنال‌وسیستم» را قبول شده باشی اما «ریاضی مهندسی» را مردود شده باشی.
+          هر تلاش را جدا ثبت کن؛ مردودی باعث نمی‌شود درس قبولی به‌طور خودکار حذف شود.
+        </p>
+        <form onSubmit={handleAddPassedCourse} className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(8rem,1fr)_minmax(7rem,1fr)_auto] md:items-end">
+          <label className="space-y-1 text-xs font-semibold">
+            <span>نام درس</span>
+            <select required value={selectedCourseIdToAdd} onChange={e => setSelectedCourseIdToAdd(e.target.value)}
+              className="min-h-11 w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 text-slate-900 dark:border-amber-800 dark:bg-slate-900 dark:text-white">
+              <option value="">انتخاب درس</option>
+              {availableToPass.map(course => <option key={course.id} value={course.id}>{course.name} · {course.code}</option>)}
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-semibold">
+            <span>نتیجهٔ این تلاش</span>
+            <select value={attemptStatus} onChange={e => { setAttemptStatus(e.target.value as 'PASSED' | 'FAILED' | 'ABSENT'); if (e.target.value === 'ABSENT') setGradeInput(''); }}
+              className="min-h-11 w-full rounded-xl border border-amber-200 bg-white px-3 text-slate-900 dark:border-amber-800 dark:bg-slate-900 dark:text-white">
+              <option value="FAILED">مردود شدم</option>
+              <option value="PASSED">قبول شدم</option>
+              <option value="ABSENT">غیبت داشتم</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-semibold">
+            <span>نمره (اختیاری)</span>
+            <input type="number" inputMode="decimal" min="0" max="20" step="0.01"
+              disabled={attemptStatus === 'ABSENT'}
+              value={gradeInput} onChange={e => setGradeInput(e.target.value)} placeholder="مثلاً ۸٫۵"
+              className="min-h-11 w-full rounded-xl border border-amber-200 bg-white px-3 text-slate-900 disabled:opacity-50 dark:border-amber-800 dark:bg-slate-900 dark:text-white" />
+          </label>
+          <button type="submit" disabled={adding || !selectedCourseIdToAdd}
+            className="min-h-11 rounded-xl bg-amber-700 px-4 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50">
+            {adding ? 'در حال ثبت…' : 'ثبت این تلاش'}
+          </button>
+        </form>
+        {attemptError && <p role="alert" className="mt-2 rounded-xl border border-rose-300 bg-rose-50 p-2 text-xs text-rose-900 dark:bg-rose-950/40 dark:text-rose-200">{attemptError}</p>}
+      </details>
 
       {/* Main Container with Tabs */}
       <div className="p-5 sm:p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-4">
