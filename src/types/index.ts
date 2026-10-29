@@ -328,6 +328,10 @@ export interface StudentPlan {
   /** New clients store ordered course IDs; old plans may contain numeric priority ranks. */
   coursePriorities?: string[] | Record<string, number>;
   offeringPriorities?: Record<string, string[]>;
+  /** Non-binding course interests; independent of selected offering IDs and academic unit ceilings. */
+  wishlistCourseIds?: string[];
+  /** Saved place in the guided flow (0..6), scoped to the active academic term. */
+  journeyStep?: number;
   updatedAt: string;
 }
 
