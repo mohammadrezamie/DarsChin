@@ -76,3 +76,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [مدیریت تمام کاربران برای روت، فیلتر نقش و Excel امن و ممیزی‌شده](ADMIN_USER_DIRECTORY_XLSX_FA.md) — PR #60 وارد main شده؛ استقرار VPS/پذیرش واقعی جداگانه تأیید نشده.
 
 - **ممیزی ۲۰۲۶/۱۰/۲۹ و اصلاح زنجیرهٔ ثبت پیش‌نیاز در API:** [OWN-058](OWNER_DECISIONS_FA.md) — اجرای تست شاخه و مرج هنوز الزامی است؛ ویرایشگر سه‌بعدی/بازسازی پنل تحویل نشده‌اند.
+
+- [ویرایشگر بصری پیش‌نیاز و هم‌نیاز](ADMIN_GRAPH_MOBILE_PRODUCT_REDESIGN_FA.md) — وضعیت اجرای کارگاه اتصال، اعتبارسنجی کل زنجیره، مرزهای سه‌بعدی و تست‌ها در OWN-059 فایل [تصمیم‌های مالک](OWNER_DECISIONS_FA.md) ثبت شده است.

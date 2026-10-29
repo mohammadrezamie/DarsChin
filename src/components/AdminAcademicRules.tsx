@@ -3,6 +3,7 @@ import { apiRequest } from '../utils/api';
 import { Trash2, Plus, Server, Network } from 'lucide-react';
 import { RelationshipType, AcademicRuleNode, Course } from '../types';
 import { AdminDependencyMap } from './AdminDependencyMap';
+import { AdminDependencyWorkbench } from './AdminDependencyWorkbench';
 
 export const AdminAcademicRules: React.FC = () => {
   const [rules, setRules] = useState<any[]>([]);
@@ -25,8 +26,8 @@ export const AdminAcademicRules: React.FC = () => {
     notes: '',
   });
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     const [rulesRes, coursesRes, curRes] = await Promise.all([
       apiRequest('/api/curriculum/rules'),
       apiRequest('/api/academic/courses'),
@@ -46,7 +47,7 @@ export const AdminAcademicRules: React.FC = () => {
     if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
     const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
     if (res.success) {
-      fetchData();
+      await fetchData(true);
     } else {
       alert(res.error || 'خطا در حذف');
     }
@@ -60,7 +61,7 @@ export const AdminAcademicRules: React.FC = () => {
     const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
     if (res.success) {
       setIsAdding(false);
-      fetchData();
+      await fetchData(true);
     } else {
       alert(res.error || 'خطا در ثبت قانون');
     }
@@ -158,7 +159,13 @@ export const AdminAcademicRules: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {!loading && <AdminDependencyMap rules={rules} courses={courses} curricula={curricula} />}
+      {!loading && <>
+        <AdminDependencyWorkbench rules={rules} courses={courses} curricula={curricula} onChanged={() => fetchData(true)} />
+        <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-slate-800 dark:text-white">نمای تحلیلی و رتبه‌بندی کل زنجیرهٔ پیش‌نیازها</summary>
+          <div className="pt-3"><AdminDependencyMap rules={rules} courses={courses} curricula={curricula} /></div>
+        </details>
+      </>}
       <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Network className="text-blue-600" />
