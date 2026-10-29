@@ -98,8 +98,15 @@ academicRouter.get('/campuses', (req, res) => {
 
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body;
-  if (!name || !code) {
-    return res.status(400).json({ success: false, error: 'انتخاب دانشگاه و درج نام و کد واحد الزامی است.' });
+  if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ success: false, error: 'نام و کد واحد دانشگاهی الزامی است.' });
+  }
+  if (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId && u.active)) {
+    return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر و فعال نیست.' });
+  }
+  if (provinceId != null && provinceId !== '' &&
+      (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId && p.active))) {
+    return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر و فعال نیست.' });
   }
   const newCampus: Campus = {
     id: `camp-${Date.now()}`,
@@ -117,8 +124,16 @@ academicRouter.put('/campuses/:id', authenticate, requirePermission('system.sett
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
   const { universityId, provinceId, type, name, code, active } = req.body;
+  if (universityId !== undefined &&
+      (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId))) {
+    return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر نیست.' });
+  }
+  if (provinceId !== undefined && provinceId !== null && provinceId !== '' &&
+      (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId))) {
+    return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر نیست.' });
+  }
   if (universityId) db.campuses[idx].universityId = universityId;
-  if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId;
+  if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId || null;
   if (type) db.campuses[idx].type = type;
   if (name) db.campuses[idx].name = name.trim();
   if (code) db.campuses[idx].code = code.trim().toUpperCase();
@@ -150,6 +165,12 @@ academicRouter.post('/degrees', authenticate, requirePermission('system.settings
 
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { degreeLevelId, name, code, active = true } = req.body;
+  if (typeof degreeLevelId !== 'string' || !db.degreeLevels.some(degree => degree.id === degreeLevelId && degree.active)) {
+    return res.status(400).json({ success: false, error: 'مقطع تحصیلی معتبر و فعال انتخاب کنید.' });
+  }
+  if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ success: false, error: 'عنوان و کد رشته الزامی است.' });
+  }
   const newMajor: Major = { id: `maj-${Date.now()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
   db.majors.push(newMajor);
   db.save();
@@ -158,6 +179,12 @@ academicRouter.post('/majors', authenticate, requirePermission('system.settings.
 
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { majorId, name, code, active = true } = req.body;
+  if (typeof majorId !== 'string' || !db.majors.some(major => major.id === majorId && major.active)) {
+    return res.status(400).json({ success: false, error: 'رشتهٔ مرتبط معتبر و فعال انتخاب کنید.' });
+  }
+  if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ success: false, error: 'عنوان و کد گرایش الزامی است.' });
+  }
   const newTrack: Track = { id: `trk-${Date.now()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
   db.tracks.push(newTrack);
   db.save();
