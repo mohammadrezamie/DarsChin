@@ -3,6 +3,8 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+import { userDirectoryXlsx } from '../utils/user-excel';
 import { db } from '../db/database';
 import { InvalidCatalogBackupError } from '../db/catalog-restore';
 import { authenticate, requireAdmin, requirePermission, requireSuperAdmin } from '../middleware/auth';
@@ -82,6 +84,45 @@ adminRouter.post('/reset-seed', authenticate, requirePermission('system.settings
 });
 
 
+// Root-only export of students/managers as a genuine XLSX. The audit record
+// includes filter and count, never the exported phone numbers or names.
+adminRouter.get('/users/export.xlsx', authenticate, requireSuperAdmin, (req: any, res) => {
+  const role = req.query.role ?? 'all';
+  if (typeof role !== 'string' || !['all','student','admin','super-admin'].includes(role)) {
+    return res.status(400).json({ success: false, error: 'فیلتر نقش نامعتبر است.' });
+  }
+  const chosen = db.users.filter(u => role === 'all' || u.roles.includes(role as 'student' | 'admin' | 'super-admin'));
+  if (chosen.length > 20_000) {
+    return res.status(413).json({ success: false, error: 'خروجی بزرگ است؛ ابتدا نقش کاربران را محدود کنید.' });
+  }
+  try {
+    const profiles = new Map(db.studentProfiles.map(p => [p.userId, p.studentNumber ?? '']));
+    const buffer = userDirectoryXlsx(chosen.map(u => ({
+      name: u.name ?? '',
+      mobile: u.mobile ?? '',
+      studentNumber: profiles.get(u.id) ?? '',
+      roles: (u.roles ?? []).join('، '),
+      verified: u.mobileVerifiedAt ? 'تأییدشده' : 'تأییدنشده',
+      permissions: (u.permissions ?? []).join('، '),
+    })));
+    db.auditLogs.push({
+      id: 'audit-user-export-' + randomUUID(),
+      adminId: req.user.id, action: 'USER_DIRECTORY_EXPORTED',
+      entityType: 'USER', entityId: 'user-directory',
+      details: JSON.stringify({ role, count: chosen.length, format: 'xlsx' }),
+      createdAt: new Date().toISOString(),
+    });
+    db.save();
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="darschin-users.xlsx"');
+    return res.send(buffer);
+  } catch {
+    return res.status(500).json({ success: false, error: 'آماده‌سازی خروجی کاربران ناموفق بود.' });
+  }
+});
+
 // Super Admin: Get Users
 adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
   try {
@@ -104,18 +145,16 @@ adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
 adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(updateRoleSchema), (req, res) => {
   try {
     const { role } = req.body;
-    if (!['student', 'admin', 'super-admin'].includes(role)) {
+    if (!['student', 'admin'].includes(role)) {
       return res.status(400).json({ success: false, error: 'نقش انتخاب‌شده نامعتبر است.' });
     }
     const u = db.users.find((x) => x.id === req.params.id);
     if (!u) return res.status(404).json({ success: false, error: 'کاربر مورد نظر یافت نشد.' });
-    if (u.mobile === '09911902465') {
+    if (u.id === 'usr-super' || u.roles?.includes('super-admin')) {
       return res.status(403).json({ success: false, error: 'تغییر نقش مدیر ارشد اصلی سامانه امکان‌پذیر نیست.' });
     }
     u.roles =
-      role === 'super-admin'
-        ? ['super-admin', 'admin', 'student']
-        : role === 'admin'
+      role === 'admin'
         ? ['admin', 'student']
         : ['student'];
     db.save();

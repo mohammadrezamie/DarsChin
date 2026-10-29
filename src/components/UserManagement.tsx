@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../utils/api';
+import { downloadUserExcel } from '../utils/user-excel-download';
 import { User } from '../types';
-import { Shield, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { Shield, User as UserIcon, ShieldAlert, Search, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminDemandAccessManager } from './AdminDemandAccessManager';
 
@@ -26,21 +27,29 @@ export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all'|'student'|'admin'|'super-admin'>('all');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const { user: currentUser } = useAuth();
+  const isRoot = !!currentUser?.roles?.includes('super-admin');
+  const isDemo = typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/');
 
   const fetchUsers = async () => {
     setLoading(true);
-    // Use the admin-management API to list admins
-    const res = await apiRequest<User[]>('/api/admin-management');
-    if (res.success && res.data) {
-      setUsers(res.data);
-    } else {
-      // Fallback if not admin.manage
-      const resFallback = await apiRequest<User[]>('/api/admin/users');
-      if (resFallback.success && resFallback.data) setUsers(resFallback.data);
-      else setError(resFallback.error || 'خطا در دریافت لیست کاربران');
+    setError('');
+    try {
+      const endpoint = isRoot ? '/api/admin/users' : '/api/admin-management';
+      const result = await apiRequest<User[]>(endpoint);
+      if (result.success && Array.isArray(result.data)) setUsers(result.data);
+      else setError(result.error || 'خطا در دریافت فهرست کاربران');
+    } catch {
+      setError('ارتباط با فهرست کاربران برقرار نشد.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -74,31 +83,85 @@ export const UserManagement: React.FC = () => {
     else alert(res.error || 'شما مجاز به تخصیص این دسترسی نیستید.');
   };
 
+  const filteredUsers = useMemo(() => {
+    const text = search.trim().toLocaleLowerCase('fa').replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+    return users.filter(user => {
+      const profile = (user as User & {profile?: {studentNumber?: string}}).profile;
+      const fields = [user.name, user.mobile, profile?.studentNumber || ''].join(' ')
+        .toLocaleLowerCase('fa').replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+      return (roleFilter === 'all' || user.roles?.includes(roleFilter)) &&
+        (!text || fields.includes(text));
+    });
+  }, [users, search, roleFilter]);
+
+  // Keep this pilot view compact on phones; server-side paging remains an
+  // explicit scalability gate when the user directory grows substantially.
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleExcel = async () => {
+    if (!isRoot || isDemo || exporting) return;
+    setExporting(true);
+    setExportError('');
+    try { await downloadUserExcel(roleFilter); }
+    catch (error) { setExportError(error instanceof Error ? error.message : 'دریافت فایل ناموفق بود.'); }
+    finally { setExporting(false); }
+  };
+
   if (loading) return <div className="p-8 text-center">در حال بارگذاری...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
     <div dir="rtl" className="darschin-surface min-w-0 p-4 sm:p-6">
       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-        <ShieldAlert className="w-5 h-5 text-red-500" /> مدیریت مدیران (دسترسی‌ها)
+        <ShieldAlert className="w-5 h-5 text-red-500" /> {isRoot ? 'فهرست کاربران و مجوزها' : 'مدیریت مدیران مجاز'}
       </h3>
       
+      <div className="mb-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_170px_auto] sm:items-end">
+        <label className="min-w-0 text-sm font-bold text-slate-700 dark:text-slate-200">
+          جست‌وجوی کاربر
+          <span className="mt-2 flex h-12 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-950">
+            <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <input type="search" value={search} onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+              placeholder="نام، موبایل، شماره دانشجویی" className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none dark:text-white" />
+          </span>
+        </label>
+        <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+          نوع دسترسی
+          <select value={roleFilter} onChange={e=>{ setRoleFilter(e.target.value as typeof roleFilter); setPage(1); }}
+            className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            <option value="all">همه</option><option value="student">دانشجو</option>
+            <option value="admin">مدیر</option><option value="super-admin">مدیر ارشد</option>
+          </select>
+        </label>
+        {isRoot && !isDemo && <button type="button" disabled={exporting} onClick={handleExcel}
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white disabled:opacity-60">
+          <Download aria-hidden="true" className="h-4 w-4" />{exporting ? 'در حال خروجی‌گیری…' : 'دانلود Excel'}
+        </button>}
+      </div>
+      <p role="status" className="mb-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
+        {filteredUsers.length.toLocaleString('fa-IR')} کاربر از {users.length.toLocaleString('fa-IR')} رکورد · صفحهٔ {currentPage.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')}
+      </p>
+      {exportError && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{exportError}</p>}
       <div className="darschin-scroll-x">
         <table className="darschin-people-table w-full min-w-[680px] text-sm text-right">
           <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <tr>
               <th className="px-4 py-3 rounded-r-xl">نام کاربر</th>
               <th className="px-4 py-3">شماره موبایل</th>
+              {isRoot && <th className="px-4 py-3">شماره دانشجویی</th>}
               <th className="px-4 py-3">نقش فعلی</th>
               <th className="px-4 py-3">دسترسی‌ها (Delegation)</th>
               <th className="px-4 py-3 rounded-l-xl">عملیات نقش</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
-            {users.map(u => (
+            {visibleUsers.map(u => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
                 <td data-label="نام مدیر" className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
                 <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers"><span dir="ltr" className="inline-block text-left">{u.mobile}</span></td>
+                {isRoot && <td data-label="شماره دانشجویی" className="px-4 py-4 text-slate-500 darschin-numbers">{(u as User & {profile?: {studentNumber?: string}}).profile?.studentNumber || "—"}</td>}
                 <td data-label="نقش" className="px-4 py-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
                     getHighestRole(u.roles) === 'super-admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -135,7 +198,9 @@ export const UserManagement: React.FC = () => {
                   )}
                 </td>
                 <td data-label="تغییر نقش" className="px-4 py-4">
-                  {u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
+                  {!isRoot ? (
+                    <span className="text-xs text-slate-500">تغییر نقش فقط توسط مدیر ارشد</span>
+                  ) : u.roles?.includes('super-admin') && u.id === currentUser?.id ? (
                     <span className="text-xs text-slate-400 italic">شما مالک (Root) هستید</span>
                   ) : (
                     <select
@@ -145,7 +210,6 @@ export const UserManagement: React.FC = () => {
                     >
                       <option value="student">تنزل به دانشجو</option>
                       <option value="admin">ارتقا به مدیر سیستم</option>
-                      {currentUser?.roles?.includes('super-admin') && <option value="super-admin">ارتقا به مدیر ارشد</option>}
                     </select>
                   )}
                 </td>
@@ -154,7 +218,30 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
-      <AdminDemandAccessManager admins={users} onChanged={fetchUsers} />
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950">
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+          نمایش در هر صفحه
+          <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}
+            className="h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+            <option value={25}>۲۵</option><option value={50}>۵۰</option><option value={100}>۱۰۰</option>
+          </select>
+        </label>
+        <nav aria-label="صفحه‌بندی فهرست کاربران" className="flex items-center gap-2">
+          <button type="button" disabled={currentPage <= 1}
+            onClick={() => setPage(current => Math.max(1, current - 1))}
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900">قبلی</button>
+          <span className="text-xs tabular-nums text-slate-600 dark:text-slate-300">{currentPage.toLocaleString('fa-IR')} / {totalPages.toLocaleString('fa-IR')}</span>
+          <button type="button" disabled={currentPage >= totalPages}
+            onClick={() => setPage(current => Math.min(totalPages, current + 1))}
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900">بعدی</button>
+        </nav>
+      </div>
+      {filteredUsers.length === 0 && (
+        <p role="status" className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          کاربری با این جست‌وجو یا نقش پیدا نشد. فیلترها را تغییر بده.
+        </p>
+      )}
+      <AdminDemandAccessManager admins={users.filter(u => u.roles?.includes('admin') || u.roles?.includes('super-admin'))} onChanged={fetchUsers} />
     </div>
   );
 };
