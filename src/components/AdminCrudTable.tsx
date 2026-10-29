@@ -330,7 +330,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             {item[c.key] ? 'فعال' : 'غیرفعال'}
                           </span>
                         ) : (
-                          <span className="font-medium" title={c.lookupEndpoint ? String(item[c.key] ?? '') : undefined}>
+                          <span className="font-medium">
                             {adminColumnDisplay(c, item[c.key], getOptions(c), Boolean(c.lookupEndpoint && !lookupOptions[c.key]))}
                           </span>
                         )
