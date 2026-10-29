@@ -51,6 +51,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
   const offered = useMemo(() => new Set(evaluations.map(e => e.courseId)), [evaluations]);
   const recByCourse = useMemo(() => new Map(recommendations.map(r => [r.courseId, r])), [recommendations]);
   const selected = wishlistCourseIds.map(id => byId.get(id)).filter((c): c is BasketCourse => !!c);
+  const outdatedIds = wishlistCourseIds.filter(id => !byId.has(id));
   const totalUnits = selected.reduce((n, c) => n + c.units, 0);
   const normalized = search.trim().toLocaleLowerCase('fa');
   const available = catalog.filter(c => !wishlistCourseIds.includes(c.id) &&
@@ -87,6 +88,15 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
 
       {saveError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs dark:border-rose-900 dark:bg-rose-950/30">{saveError}</p>}
       {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{error}</p>}
+      {!loading && !error && outdatedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <p>{outdatedIds.length.toLocaleString('fa-IR')} درس سبد متعلق به چارت فعلی نیست یا قبلاً پاس شده؛ هیچ‌چیز خودکار پاک نشده است.</p>
+          <button type="button" disabled={saving} onClick={() => void mutate(selected.map(item => item.id))}
+            className="min-h-11 rounded-xl border border-amber-400 px-3 font-bold focus-visible:ring-2 focus-visible:ring-amber-500">
+            پاک‌کردن موارد نامعتبر
+          </button>
+        </div>
+      )}
       {loading && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">در حال دریافت درس‌های چارت…</p>}
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
