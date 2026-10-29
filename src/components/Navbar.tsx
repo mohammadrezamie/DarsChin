@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
     <>
       <header className="sticky top-0 z-40 bg-liquid-glass !rounded-none !border-x-0 !border-t-0 border-b transition-colors print:hidden">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between gap-2">
+          <div className="flex h-14 items-center justify-between gap-2 md:h-16">
             {/* RTL: the first flex item appears at the RIGHT edge. */}
             <div className="flex min-w-0 items-center gap-2 sm:gap-6">
               {user && (
@@ -142,8 +142,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
               {canManage && <Link to="/admin" onClick={closeMenu} aria-current={activeTab === 'admin' ? 'page' : undefined}
                 className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
               <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
-              <button type="button" onClick={() => { closeMenu(); setExtModalOpen(true); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">افزونه کروم</button>
               {onOpenPasswordChange && <button type="button" onClick={() => { closeMenu(); onOpenPasswordChange(); }}
                 className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
               <button type="button" onClick={() => { closeMenu(); logout(); }}
