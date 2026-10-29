@@ -26,12 +26,17 @@ import {
   Bookmark,
 } from 'lucide-react';
 import { CourseCategory, EligibilityStatus, CourseEligibilityResult } from '../types';
+import { basketOfferingCoverage, orderedBasketOfferings } from '../domain/student-offering-basket';
 
 interface OfferingsListProps {
   evaluations: CourseEligibilityResult[];
   selectedOfferingIds: string[];
   onToggleScheduleOffering: (offeringId: string) => void;
   onOpenProfileModal: () => void;
+  /** Course IDs, never offering IDs. This is a nonbinding preference basket. */
+  wishlistCourseIds?: string[];
+  initiallyShowWishlist?: boolean;
+  onOpenWishlist?: () => void;
   coursePriorities?: Record<string, number>;
   onUpdateCoursePriority?: (courseId: string, direction: 'up' | 'down') => void;
   offeringPriorities?: Record<string, string[]>; // courseId -> array of offeringIds in priority order
@@ -43,12 +48,16 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   selectedOfferingIds,
   onToggleScheduleOffering,
   onOpenProfileModal,
+  wishlistCourseIds = [],
+  initiallyShowWishlist = false,
+  onOpenWishlist,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'AVAILABLE' | 'BLOCKED' | 'ALREADY_PASSED' | 'NEEDS_REVIEW'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
   const [isCopyModalOpen, setCopyModalOpen] = useState(false);
+  const [basketOnly, setBasketOnly] = useState(initiallyShowWishlist && wishlistCourseIds.length > 0);
 
   // Group evaluations by course
   const groupedCourses = useMemo(() => {
@@ -91,9 +100,14 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
     return Array.from(map.values());
   }, [evaluations]);
 
-  // Filtered grouped courses
+  const basketCoverage = useMemo(() => basketOfferingCoverage(wishlistCourseIds, groupedCourses.map(g => g.courseId)),
+    [wishlistCourseIds, groupedCourses]);
+  const relevantGroups = useMemo(() => orderedBasketOfferings(groupedCourses, wishlistCourseIds, basketOnly),
+    [groupedCourses, wishlistCourseIds, basketOnly]);
+
+  // Filtered grouped courses; basket filtering never modifies eligibility.
   const filteredGroups = useMemo(() => {
-    return groupedCourses.filter((grp) => {
+    return relevantGroups.filter((grp) => {
       const matchesSearch =
         !searchQuery.trim() ||
         grp.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -117,7 +131,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
 
       return matchesSearch && matchesStatus && matchesCat;
     });
-  }, [groupedCourses, searchQuery, statusFilter, categoryFilter]);
+  }, [relevantGroups, searchQuery, statusFilter, categoryFilter]);
 
   const toggleCourseExpand = (cId: string) => {
     setExpandedCourseIds((prev) => ({ ...prev, [cId]: !prev[cId] }));
@@ -164,6 +178,24 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
 
   return (
     <div className="space-y-4">
+      {wishlistCourseIds.length > 0 && (
+        <section aria-label="انتقال سبد علاقه‌مندی به انتخاب گروه" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/30">
+          <p className="font-bold text-indigo-950 dark:text-indigo-100">از سبد علاقه‌مندی تا انتخاب گروه واقعی</p>
+          <p className="mt-1 text-xs leading-7 text-indigo-900 dark:text-indigo-200">
+            {basketCoverage.offered.toLocaleString('fa-IR')} درس از {wishlistCourseIds.length.toLocaleString('fa-IR')} علاقه‌مندی، گروه ارائه‌شده دارد.
+            {basketCoverage.missing.length > 0 && ' ' + basketCoverage.missing.length.toLocaleString('fa-IR') + ' درس هنوز گروهی در داده‌های فعلی ندارد.'}
+            {' '}وجود گروه به‌معنی مجازبودن ثبت نیست؛ پیش‌نیاز، سقف و تداخل جدا بررسی می‌شوند.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" aria-pressed={basketOnly} onClick={() => setBasketOnly(!basketOnly)}
+              className="min-h-11 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
+              {basketOnly ? 'نمایش همهٔ درس‌ها' : 'فقط درس‌های سبد من'}
+            </button>
+            {onOpenWishlist && <button type="button" onClick={onOpenWishlist}
+              className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-100">ویرایش سبد علاقه‌مندی</button>}
+          </div>
+        </section>
+      )}
       {/* Search & Filter Controls */}
       <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-4">
         <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -227,7 +259,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            همه دروس ({groupedCourses.length})
+            همه دروس ({relevantGroups.length})
           </button>
           <button
             onClick={() => setStatusFilter('AVAILABLE')}
@@ -237,7 +269,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                 : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
             }`}
           >
-            قابل اخذ ({groupedCourses.filter((g) => g.overallStatus === 'AVAILABLE').length})
+            قابل اخذ ({relevantGroups.filter((g) => g.overallStatus === 'AVAILABLE').length})
           </button>
           <button
             onClick={() => setStatusFilter('BLOCKED')}
@@ -247,7 +279,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                 : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100'
             }`}
           >
-            دارای پیش‌نیاز ({groupedCourses.filter((g) => g.overallStatus.startsWith('BLOCKED')).length})
+            دارای پیش‌نیاز ({relevantGroups.filter((g) => g.overallStatus.startsWith('BLOCKED')).length})
           </button>
           <button
             onClick={() => setStatusFilter('ALREADY_PASSED')}
@@ -257,7 +289,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
             }`}
           >
-            قبلاً پاس‌شده ({groupedCourses.filter((g) => g.overallStatus === 'ALREADY_PASSED').length})
+            قبلاً پاس‌شده ({relevantGroups.filter((g) => g.overallStatus === 'ALREADY_PASSED').length})
           </button>
         </div>
       </div>
