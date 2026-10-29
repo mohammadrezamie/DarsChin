@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
@@ -160,7 +161,7 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
   }
 
   const newEntry: StudentPassedCourse = {
-    id: 'spc-' + crypto.randomUUID(),
+    id: 'spc-' + randomUUID(),
     userId,
     courseId,
     grade: grade !== undefined && grade !== '' ? Number(grade) : undefined,
