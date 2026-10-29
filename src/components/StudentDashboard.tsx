@@ -288,7 +288,10 @@ export const StudentDashboard: React.FC = () => {
       }
       setProfile(profileRes.data.profile);
       setWishlistCourseIds(Array.isArray(planRes.data.wishlistCourseIds) ? planRes.data.wishlistCourseIds : []);
-      setJourneyStep(Number.isInteger(planRes.data.journeyStep) && planRes.data.journeyStep! >= 0 && planRes.data.journeyStep! <= 6 ? planRes.data.journeyStep! : 0);
+      // Existing users with a saved final plan keep their familiar workspace;
+      // only genuinely new planning sessions start at the first wizard step.
+      setJourneyStep(Number.isInteger(planRes.data.journeyStep) && planRes.data.journeyStep! >= 0 && planRes.data.journeyStep! <= 6
+        ? planRes.data.journeyStep! : planRes.data.selectedOfferingIds.length > 0 ? 6 : 0);
       setJourneyReady(true);
       setCurriculumId(profileRes.data.curriculum?.id || null);
       const planned = planRes.data.selectedOfferingIds;
