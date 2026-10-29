@@ -619,6 +619,7 @@ export const AdminDashboard: React.FC = () => {
             description="واحدهای جامع، استانی، بین‌الملل و مستقل"
             endpoint="/api/academic/campuses"
             columns={[
+              { key: 'universityId', label: 'دانشگاه', type: 'select', required: true, lookupEndpoint: '/api/academic/universities' },
               { key: 'name', label: 'نام واحد دانشگاهی' },
               { key: 'code', label: 'کد واحد' },
               {
@@ -631,7 +632,7 @@ export const AdminDashboard: React.FC = () => {
                   { label: 'واحد بین‌الملل', value: 'INTERNATIONAL' },
                 ],
               },
-              { key: 'provinceId', label: 'استان', type: 'select', required: true, lookupEndpoint: '/api/academic/provinces' },
+              { key: 'provinceId', label: 'استان (اختیاری)', type: 'select', lookupEndpoint: '/api/academic/provinces' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
