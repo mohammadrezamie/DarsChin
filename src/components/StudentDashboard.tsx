@@ -280,11 +280,11 @@ export const StudentDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (user && user.roles?.includes('student')) void fetchDashboardData();
+    if (user) void fetchDashboardData();
   }, [user]);
 
   useEffect(() => {
-    if (!user?.id || !user.roles.includes('student')) return;
+    if (!user?.id) return;
     let mounted = true;
     const loadDemandHints = async () => {
       const surveys = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
@@ -301,7 +301,7 @@ export const StudentDashboard: React.FC = () => {
   }, [user?.id, activeTab]);
 
   useEffect(() => {
-    if (!user?.id || !user.roles.includes('student')) return;
+    if (!user?.id) return;
     const checkActivation = async () => {
       const list = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
       setDemandSurveyAvailable(Boolean(list.success && list.data?.some(s => s.status === 'OPEN')));
@@ -595,7 +595,7 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  if (!user || !user.roles?.includes('student')) {
+  if (!user) {
     return (
       <div className="p-8 text-center text-slate-500 text-xs">
         لطفاً ابتدا به عنوان دانشجو وارد سامانه شوید.
