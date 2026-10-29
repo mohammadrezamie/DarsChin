@@ -73,4 +73,6 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 
 - [تحلیل کل زنجیره و نقشهٔ دوبعدی پیش‌نیاز و هم‌نیاز (گام اجرایی و موارد باقی‌مانده)](ADMIN_GRAPH_MOBILE_PRODUCT_REDESIGN_FA.md) — فقط پنل مدیر.
 
-- [مدیریت تمام کاربران برای روت، فیلتر نقش و Excel امن و ممیزی‌شده](ADMIN_USER_DIRECTORY_XLSX_FA.md) — در حال آزمون، هنوز منتشرنشده.
+- [مدیریت تمام کاربران برای روت، فیلتر نقش و Excel امن و ممیزی‌شده](ADMIN_USER_DIRECTORY_XLSX_FA.md) — PR #60 وارد main شده؛ استقرار VPS/پذیرش واقعی جداگانه تأیید نشده.
+
+- **ممیزی ۲۰۲۶/۱۰/۲۹ و اصلاح زنجیرهٔ ثبت پیش‌نیاز در API:** [OWN-058](OWNER_DECISIONS_FA.md) — اجرای تست شاخه و مرج هنوز الزامی است؛ ویرایشگر سه‌بعدی/بازسازی پنل تحویل نشده‌اند.
