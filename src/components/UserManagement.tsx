@@ -31,6 +31,8 @@ export const UserManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<'all'|'student'|'admin'|'super-admin'>('all');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const { user: currentUser } = useAuth();
   const isRoot = !!currentUser?.roles?.includes('super-admin');
   const isDemo = typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/');
@@ -92,6 +94,12 @@ export const UserManagement: React.FC = () => {
     });
   }, [users, search, roleFilter]);
 
+  // Keep this pilot view compact on phones; server-side paging remains an
+  // explicit scalability gate when the user directory grows substantially.
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const handleExcel = async () => {
     if (!isRoot || isDemo || exporting) return;
     setExporting(true);
@@ -115,13 +123,13 @@ export const UserManagement: React.FC = () => {
           جست‌وجوی کاربر
           <span className="mt-2 flex h-12 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-950">
             <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
-            <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
+            <input type="search" value={search} onChange={e=>{ setSearch(e.target.value); setPage(1); }}
               placeholder="نام، موبایل، شماره دانشجویی" className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none dark:text-white" />
           </span>
         </label>
         <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
           نوع دسترسی
-          <select value={roleFilter} onChange={e=>setRoleFilter(e.target.value as typeof roleFilter)}
+          <select value={roleFilter} onChange={e=>{ setRoleFilter(e.target.value as typeof roleFilter); setPage(1); }}
             className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option value="all">همه</option><option value="student">دانشجو</option>
             <option value="admin">مدیر</option><option value="super-admin">مدیر ارشد</option>
@@ -133,7 +141,7 @@ export const UserManagement: React.FC = () => {
         </button>}
       </div>
       <p role="status" className="mb-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
-        {filteredUsers.length.toLocaleString('fa-IR')} کاربر از {users.length.toLocaleString('fa-IR')} رکورد
+        {filteredUsers.length.toLocaleString('fa-IR')} کاربر از {users.length.toLocaleString('fa-IR')} رکورد · صفحهٔ {currentPage.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')}
       </p>
       {exportError && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{exportError}</p>}
       <div className="darschin-scroll-x">
@@ -149,7 +157,7 @@ export const UserManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
-            {filteredUsers.map(u => (
+            {visibleUsers.map(u => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
                 <td data-label="نام مدیر" className="px-4 py-4 font-medium text-slate-900 dark:text-slate-100">{u.name}</td>
                 <td data-label="شماره تماس" className="px-4 py-4 text-slate-500 darschin-numbers"><span dir="ltr" className="inline-block text-left">{u.mobile}</span></td>
@@ -210,6 +218,29 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950">
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+          نمایش در هر صفحه
+          <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}
+            className="h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+            <option value={25}>۲۵</option><option value={50}>۵۰</option><option value={100}>۱۰۰</option>
+          </select>
+        </label>
+        <nav aria-label="صفحه‌بندی فهرست کاربران" className="flex items-center gap-2">
+          <button type="button" disabled={currentPage <= 1}
+            onClick={() => setPage(current => Math.max(1, current - 1))}
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900">قبلی</button>
+          <span className="text-xs tabular-nums text-slate-600 dark:text-slate-300">{currentPage.toLocaleString('fa-IR')} / {totalPages.toLocaleString('fa-IR')}</span>
+          <button type="button" disabled={currentPage >= totalPages}
+            onClick={() => setPage(current => Math.min(totalPages, current + 1))}
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900">بعدی</button>
+        </nav>
+      </div>
+      {filteredUsers.length === 0 && (
+        <p role="status" className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          کاربری با این جست‌وجو یا نقش پیدا نشد. فیلترها را تغییر بده.
+        </p>
+      )}
       <AdminDemandAccessManager admins={users.filter(u => u.roles?.includes('admin') || u.roles?.includes('super-admin'))} onChanged={fetchUsers} />
     </div>
   );
