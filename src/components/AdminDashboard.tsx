@@ -615,7 +615,7 @@ export const AdminDashboard: React.FC = () => {
         {/* 3. CAMPUSES / UNITS */}
         {activeTab === 'campuses' && (
           <AdminCrudTable
-            title="مدیریت واحدهای دانشگاهی (Campuses & Units)"
+            title="مدیریت واحدهای دانشگاهی"
             description="واحدهای جامع، استانی، بین‌الملل و مستقل"
             endpoint="/api/academic/campuses"
             columns={[
@@ -626,9 +626,9 @@ export const AdminDashboard: React.FC = () => {
                 label: 'نوع واحد',
                 type: 'select',
                 options: [
-                  { label: 'واحد استان (PROVINCE_UNIT)', value: 'PROVINCE_UNIT' },
-                  { label: 'واحد جامع مستقل (COMPREHENSIVE_INDEPENDENT)', value: 'COMPREHENSIVE_INDEPENDENT' },
-                  { label: 'واحد بین‌الملل (INTERNATIONAL)', value: 'INTERNATIONAL' },
+                  { label: 'واحد استانی', value: 'PROVINCE_UNIT' },
+                  { label: 'واحد جامع مستقل', value: 'COMPREHENSIVE_INDEPENDENT' },
+                  { label: 'واحد بین‌الملل', value: 'INTERNATIONAL' },
                 ],
               },
               { key: 'provinceId', label: 'استان', type: 'select', required: true, lookupEndpoint: '/api/academic/provinces' },
