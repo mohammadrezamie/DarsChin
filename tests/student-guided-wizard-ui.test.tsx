@@ -22,6 +22,8 @@ describe('guided seven-step student workflow', () => {
     expect(html).toContain('از ۷');
     expect(html).toContain('disabled');
     expect(html).not.toContain('پنل مدیریت');
+    // Seven short progress bars must remain usable touch targets in app-style mobile mode.
+    expect(html).toContain('min-h-11 min-w-0 items-center justify-center');
   });
 
   it('shows the server-calculated effective unit limit without hardcoded regulatory promises', () => {

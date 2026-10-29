@@ -54,9 +54,10 @@ export const StudentJourneyStepper: React.FC<Props> = ({
             onClick={() => onStep(index)} title={item.title}
             aria-label={'مرحلهٔ ' + (index + 1).toLocaleString('fa-IR') + ': ' + item.title}
             aria-current={index === step ? 'step' : undefined}
-            className={'min-h-4 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
-              (index <= step ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-200 dark:bg-slate-700') +
-              (index > step ? ' opacity-70' : '')}>
+            className={'flex min-h-11 min-w-0 items-center justify-center rounded-xl px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
+              (index > step ? 'cursor-not-allowed opacity-65' : '')}>
+            <span aria-hidden="true" className={'block h-2 w-full rounded-full ' +
+              (index <= step ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-200 dark:bg-slate-700')} />
             <span className="sr-only">{item.title}</span>
           </button>
         ))}
