@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, BookOpen, CheckCircle2, Circle, GraduationCap, ListChecks } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, GraduationCap } from 'lucide-react';
 import type { AcademicLimitInfo, StudentAcademicProfile } from '../types';
 
 export const STUDENT_JOURNEY_STEPS = [
