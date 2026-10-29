@@ -28,6 +28,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
   const [catalog, setCatalog] = useState<BasketCourse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -60,10 +61,11 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
 
   const mutate = async (ids: string[]) => {
     if (saving || loading || error) return;
+    setSaveError('');
     setSaving(true);
     const saved = await onSave(ids);
     setSaving(false);
-    if (!saved) setError('سبد ذخیره نشد؛ تغییر قبلی حفظ شده است. دوباره تلاش کن.');
+    if (!saved) setSaveError('سبد ذخیره نشد؛ تغییر قبلی حفظ شده است. دوباره تلاش کن.');
   };
 
   return (
@@ -83,6 +85,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
         </div>
       </header>
 
+      {saveError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs dark:border-rose-900 dark:bg-rose-950/30">{saveError}</p>}
       {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{error}</p>}
       {loading && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">در حال دریافت درس‌های چارت…</p>}
 
