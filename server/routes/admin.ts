@@ -145,18 +145,16 @@ adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
 adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(updateRoleSchema), (req, res) => {
   try {
     const { role } = req.body;
-    if (!['student', 'admin', 'super-admin'].includes(role)) {
+    if (!['student', 'admin'].includes(role)) {
       return res.status(400).json({ success: false, error: 'نقش انتخاب‌شده نامعتبر است.' });
     }
     const u = db.users.find((x) => x.id === req.params.id);
     if (!u) return res.status(404).json({ success: false, error: 'کاربر مورد نظر یافت نشد.' });
-    if (u.mobile === '09911902465') {
+    if (u.id === 'usr-super' || u.roles?.includes('super-admin')) {
       return res.status(403).json({ success: false, error: 'تغییر نقش مدیر ارشد اصلی سامانه امکان‌پذیر نیست.' });
     }
     u.roles =
-      role === 'super-admin'
-        ? ['super-admin', 'admin', 'student']
-        : role === 'admin'
+      role === 'admin'
         ? ['admin', 'student']
         : ['student'];
     db.save();
