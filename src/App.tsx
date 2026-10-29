@@ -128,7 +128,8 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
               <Route element={<DashboardLayout />}>
-                <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+                {/* Every authenticated user, including delegated admins, keeps a student workspace. */}
+                <Route element={<ProtectedRoute />}>
                   <Route path="/dashboard" element={<StudentDashboard />} />
                 </Route>
                 <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
