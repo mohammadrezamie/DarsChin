@@ -25,7 +25,7 @@ interface DemoStore {
   registrationDemoVersion?: number;
   collections: Record<string, Row[]>;
   profile: StudentAcademicProfile;
-  plan: { selectedOfferingIds: string[]; coursePriorities: string[]; offeringPriorities: Record<string, string[]> };
+  plan: { selectedOfferingIds: string[]; coursePriorities: string[]; offeringPriorities: Record<string, string[]>; wishlistCourseIds?: string[]; journeyStep?: number };
   passed: Row[];
   tickets: Row[];
   messages: Row[];
@@ -146,7 +146,7 @@ function initialStore(): DemoStore {
       entryYearId: entryYear.id, isTrackSelected: false, desiredTrackIds: [],
       currentTermId: semester.id, studentNumber: '1403123456', previousTermGpa: null, updatedAt: now(),
     },
-    plan: { selectedOfferingIds: ['off-math2', 'off-physics'], coursePriorities: [], offeringPriorities: {} },
+    plan: { selectedOfferingIds: ['off-math2', 'off-physics'], coursePriorities: [], offeringPriorities: {}, wishlistCourseIds: [], journeyStep: 0 },
     passed: [],
     tickets: [{
       id: 'demo-ticket-1', userId: 'demo-student',
@@ -552,6 +552,41 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     }) as ApiResponse<T>;
   }
   if (path === '/api/eligibility/evaluate' && method === 'POST') return good(demoEvaluation(s)) as ApiResponse<T>;
+  // Synthetic-only guided student journey, strictly local to this browser.
+  // Never treat this demonstration as proof of real university eligibility.
+  if (path === '/api/student/wishlist/catalog' && method === 'GET') {
+    const assignments = s.collections['/api/curriculum-courses'] || [];
+    const seen = new Set<string>();
+    const records = assignments.filter(cc => cc.curriculumId === (s.collections['/api/curriculum'] || []).find(x => x.entryYearId === s.profile.entryYearId)?.id)
+      .map(cc => {
+        const course = currentCourses(s).find(row => row.id === cc.courseId);
+        return { course, cc };
+      }).filter(({course}) => Boolean(course && !s.passed.some(p => p.courseId === course?.id &&
+        p.status !== 'FAILED' && p.status !== 'ABSENT' && (p.grade === undefined || p.grade >= 10))))
+      .filter(({course}) => {
+        if (!course || seen.has(course.id)) return false;
+        seen.add(course.id); return true;
+      }).map(({course, cc}) => ({
+        id: course!.id, name: course!.name, code: course!.code, units: course!.units,
+        category: course!.category, suggestedSemester: cc.suggestedSemester,
+      }));
+    return good(records) as ApiResponse<T>;
+  }
+  if (path === '/api/student/wishlist' && method === 'PUT') {
+    const ids = data.courseIds;
+    const allValid = Array.isArray(ids) && ids.length <= 200 && ids.every((v: unknown) =>
+      typeof v === 'string' && currentCourses(s).some(c => c.id === v && c.active !== false));
+    if (!allValid || new Set(ids).size !== ids.length) return fail('سبد درس‌های نمونه معتبر نیست.');
+    s.plan.wishlistCourseIds = [...ids];
+    saveStore(s);
+    return good({ wishlistCourseIds: s.plan.wishlistCourseIds }) as ApiResponse<T>;
+  }
+  if (path === '/api/student/journey' && method === 'PUT') {
+    if (!Number.isInteger(data.step) || data.step < 0 || data.step > 6) return fail('مرحلهٔ درخواستی معتبر نیست.');
+    s.plan.journeyStep = data.step;
+    saveStore(s);
+    return good({ step: s.plan.journeyStep }) as ApiResponse<T>;
+  }
   if (path === '/api/student/plan') {
     if (method === 'GET') {
       cleanDemoPlan(s);
