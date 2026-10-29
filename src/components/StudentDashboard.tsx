@@ -3,7 +3,7 @@
 // ============================================================================
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   UploadCloud,
   Layers,
@@ -30,6 +30,7 @@ import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
 import { StudentMobileDock } from './StudentMobileDock';
+import { parseStudentWorkspace, studentWorkspaceParams } from '../domain/student-workspace-navigation';
 import { ContextualHelp } from './ContextualHelp';
 import { studentSectionHelp } from '../help/student-sections';
 
@@ -50,6 +51,7 @@ const studentTabs = [
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
   const [curriculumId, setCurriculumId] = useState<string | null>(null);
@@ -71,7 +73,12 @@ export const StudentDashboard: React.FC = () => {
     courseName: string;
     messages: string[];
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<StudentTab>('offerings');
+  // URL is the source of truth: back/forward, reload and installed app shortcuts
+  // return students to their actual workspace without storing academic data.
+  const activeTab: StudentTab = parseStudentWorkspace(searchParams.get('tab'));
+  const setActiveTab = (tab: StudentTab) => {
+    setSearchParams(current => studentWorkspaceParams(current, tab), { preventScrollReset: true });
+  };
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
@@ -595,8 +602,42 @@ export const StudentDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
+      {/* App-first mobile workspace header; desktop retains the full overview. */}
+      <section aria-label="میز کار موبایل دانشجو"
+        className="darschin-student-app-header relative overflow-hidden rounded-[1.35rem] border border-indigo-100 bg-gradient-to-l from-white via-blue-50 to-indigo-50 p-3 shadow-sm md:hidden dark:border-indigo-900 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/50">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold text-slate-500 dark:text-slate-400">سلام، {user.name}</p>
+            <h1 className="mt-1 text-lg font-black leading-7 text-slate-950 dark:text-white">
+              {studentTabs.find(tab => tab.id === activeTab)?.short}
+            </h1>
+            <p className="mt-1 text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+              {selectedOfferingIds.length.toLocaleString('fa-IR')} گروه در برنامهٔ من
+              {(timeConflicts.length + prerequisiteConflicts.length) > 0
+                ? ' · ' + (timeConflicts.length + prerequisiteConflicts.length).toLocaleString('fa-IR') + ' هشدار'
+                : ''}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" onClick={() => setProfileModalOpen(true)}
+              aria-label="پروندهٔ تحصیلی" title="پروندهٔ تحصیلی"
+              className="inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+              پرونده
+            </button>
+            <button type="button" onClick={() => setImportModalOpen(true)}
+              aria-label="دریافت دروس" title="دریافت دروس"
+              className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300">
+              <UploadCloud aria-hidden="true" className="h-4 w-4" /> دریافت
+            </button>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] leading-5 text-amber-800 dark:text-amber-300">
+          چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.
+        </p>
+      </section>
+
       {/* Header Panel */}
-      <div className="darschin-surface relative min-w-0 overflow-hidden rounded-[1.35rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
+      <div className="hidden md:block darschin-surface relative min-w-0 overflow-hidden rounded-[1.35rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
