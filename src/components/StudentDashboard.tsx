@@ -738,7 +738,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {!isBrowserDemo && journeyReady && (
+      {journeyReady && (
         <StudentJourneyStepper step={journeyStep} busy={journeyBusy} hasProfile={!!profile}
           hasCurriculum={!!curriculumId} academicLimits={academicLimits} profile={profile}
           wishlistCount={wishlistCourseIds.length} onOpenProfile={() => setProfileModalOpen(true)}
@@ -846,7 +846,7 @@ export const StudentDashboard: React.FC = () => {
       {/* Tab Content */}
       <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
-        {!isBrowserDemo && journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
+        {journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
           <div className="mx-auto max-w-xl rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
             <h3 className="text-base font-bold text-indigo-950 dark:text-indigo-100">
               {journeyStep === 0 ? 'از پروندهٔ خودت شروع کن' : 'شرایط انتخاب واحدت را بررسی کن'}
