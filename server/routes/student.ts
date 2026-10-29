@@ -198,10 +198,13 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
   }
 
   if (replaceAll) {
+    const retainedPassed = new Set(courseIds);
     for (let i = db.studentPassedCourses.length - 1; i >= 0; i--) {
       const record = db.studentPassedCourses[i];
-      if (record.userId === userId && record.status !== 'FAILED' &&
-          record.status !== 'ABSENT' && (record.grade === undefined || record.grade >= 10)) {
+      const isPassed = record.status !== 'FAILED' && record.status !== 'ABSENT' &&
+        (record.grade === undefined || record.grade >= 10);
+      // Preserve grade, term and original attempt ID for each retained success.
+      if (record.userId === userId && isPassed && !retainedPassed.has(record.courseId)) {
         db.studentPassedCourses.splice(i, 1);
       }
     }
