@@ -20,12 +20,13 @@ interface Props {
   academicLimits: AcademicLimitInfo | null;
   profile: StudentAcademicProfile | null;
   wishlistCount: number;
+  selectedGroupCount?: number;
   onOpenProfile: () => void;
   onStep: (step: number) => void;
 }
 
 export const StudentJourneyStepper: React.FC<Props> = ({
-  step, busy, hasProfile, hasCurriculum, academicLimits, profile, wishlistCount,
+  step, busy, hasProfile, hasCurriculum, academicLimits, profile, wishlistCount, selectedGroupCount = 0,
   onOpenProfile, onStep,
 }) => {
   const current = STUDENT_JOURNEY_STEPS[Math.min(6, Math.max(0, step))];
@@ -78,14 +79,16 @@ export const StudentJourneyStepper: React.FC<Props> = ({
         الان {wishlistCount.toLocaleString('fa-IR')} درس در سبد علاقه‌مندی داری. این سبد سقف واحد انتخاب نهایی را مصرف نمی‌کند.
       </p>}
       {step === 5 && <p className="mt-3 rounded-xl bg-indigo-50 p-3 text-xs leading-7 text-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
-        گروه‌ها و استادان واقعی را بر اساس دادهٔ موجود بررسی کن. اگر گروه در سامانه ارائه نشده، نمی‌توان آن را ثبت‌شده دانست.
+        گروه‌های درس‌های سبدت را به ترتیب اولویت می‌بینی؛ استاد، زمان و تداخل را بررسی کن. فقط گروه‌های واقعاً مجاز را می‌توانی وارد برنامهٔ نهایی کنی. اکنون {selectedGroupCount.toLocaleString('fa-IR')} گروه انتخاب کرده‌ای.
       </p>}
+      {step === 4 && wishlistCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">حداقل یک درس را به سبد علاقه‌مندی اضافه کن تا سراغ گروه‌ها بروی.</p>}
+      {step === 5 && selectedGroupCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">برای آماده‌سازی صف ثبت، اول حداقل یک گروه مجاز را انتخاب کن.</p>}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {(step === 0 || step === 2) && <button type="button" onClick={onOpenProfile}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-xs font-bold text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
           <BookOpen className="h-4 w-4" aria-hidden="true" /> اصلاح پرونده
         </button>}
-        {step < 6 ? <button type="button" disabled={busy || (step === 0 && (!hasProfile || !hasCurriculum)) || (step === 2 && !academicLimits)}
+        {step < 6 ? <button type="button" disabled={busy || (step === 0 && (!hasProfile || !hasCurriculum)) || (step === 2 && !academicLimits) || (step === 4 && wishlistCount === 0) || (step === 5 && selectedGroupCount === 0)}
           onClick={() => onStep(step + 1)}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50">
           {busy ? 'در حال ذخیره…' : step === 0 ? 'پرونده‌ام را بررسی و تأیید کردم' :

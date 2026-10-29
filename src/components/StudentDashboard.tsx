@@ -211,7 +211,7 @@ export const StudentDashboard: React.FC = () => {
     });
   };
 
-  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'wishlist', 'schedule', 'registration'];
+  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'wishlist', 'offerings', 'registration'];
   const updateJourney = async (next: number) => {
     if (journeyBusy || !user || next < 0 || next > 6) return;
     setJourneyBusy(true);
@@ -744,7 +744,8 @@ export const StudentDashboard: React.FC = () => {
       {journeyReady && (
         <StudentJourneyStepper step={journeyStep} busy={journeyBusy} hasProfile={!!profile}
           hasCurriculum={!!curriculumId} academicLimits={academicLimits} profile={profile}
-          wishlistCount={wishlistCourseIds.length} onOpenProfile={() => setProfileModalOpen(true)}
+          wishlistCount={wishlistCourseIds.length} selectedGroupCount={selectedOfferingIds.length}
+          onOpenProfile={() => setProfileModalOpen(true)}
           onStep={step => void updateJourney(step)} />
       )}
 
@@ -877,6 +878,9 @@ export const StudentDashboard: React.FC = () => {
                 selectedOfferingIds={selectedOfferingIds}
                 onToggleScheduleOffering={handleToggleScheduleOffering}
                 onOpenProfileModal={() => setProfileModalOpen(true)}
+                wishlistCourseIds={wishlistCourseIds}
+                initiallyShowWishlist={journeyStep === 5}
+                onOpenWishlist={() => navigateWorkspace('wishlist')}
               />
             )}
             
