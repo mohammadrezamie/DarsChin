@@ -13,10 +13,29 @@ export const updateProfileSchema = z.object({
   previousTermGpa: z.number().min(0).max(20).nullable().optional(),
 });
 
+// Course attempts are historical facts. A failed/absent prerequisite must not
+// become PASSED merely because a downstream course has been completed.
+const studentGrade = z.union([
+  z.number(),
+  z.string().trim().regex(/^(?:20(?:\\.0+)?|1?\\d(?:\\.\\d+)?|0(?:\\.\\d+)?)$/, 'نمره باید بین صفر و بیست باشد.'),
+]).transform(value => Number(value)).pipe(z.number().finite().min(0).max(20));
+
 export const addPassedCourseSchema = z.object({
   courseId: z.string().min(1, 'شناسه درس الزامی است'),
-  grade: z.union([z.string(), z.number()]).optional(),
+  grade: studentGrade.optional(),
+  status: z.enum(['PASSED', 'FAILED', 'ABSENT']).optional(),
   termId: z.string().optional(),
+}).superRefine((attempt, ctx) => {
+  const status = attempt.status || (attempt.grade !== undefined && attempt.grade < 10 ? 'FAILED' : 'PASSED');
+  if (status === 'ABSENT' && attempt.grade !== undefined) {
+    ctx.addIssue({ code: 'custom', path: ['grade'], message: 'برای غیبت نمره ثبت نکنید.' });
+  }
+  if (status === 'PASSED' && attempt.grade !== undefined && attempt.grade < 10) {
+    ctx.addIssue({ code: 'custom', path: ['status'], message: 'نمرهٔ کمتر از ۱۰ با وضعیت قبولی سازگار نیست.' });
+  }
+  if (status === 'FAILED' && attempt.grade !== undefined && attempt.grade >= 10) {
+    ctx.addIssue({ code: 'custom', path: ['status'], message: 'نمرهٔ ۱۰ یا بیشتر با وضعیت مردودی سازگار نیست.' });
+  }
 });
 
 export const batchPassedCoursesSchema = z.object({
