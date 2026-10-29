@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AcademicRule } from '../src/types';
-import { assessDependencyDraft } from '../src/domain/dependency-editor';
+import { assessDependencyDraft, findRemovableDirectDependency } from '../src/domain/dependency-editor';
 
 const ids = ['a', 'b', 'c', 'd', 'e'];
 const rule = (source: string, target: string, curriculumId = 'chart'): AcademicRule => ({
@@ -62,5 +62,40 @@ describe('visual admin dependency editor: safe draft links', () => {
     const outcome = assessDependencyDraft('chart', ids, [broken], 'a', 'c', 'PREREQUISITE');
     expect(outcome.valid).toBe(false);
     expect(outcome.error).toContain('خطاهای روابط فعلی');
+  });
+});
+
+
+describe('safe visual graph unlink', () => {
+  it('resolves one ordinary standalone prerequisite rule', () => {
+    const direct = rule('a', 'b');
+    expect(findRemovableDirectDependency([direct], 'chart', 'a', 'b', 'PREREQUISITE')?.id).toBe(direct.id);
+  });
+
+  it('never deletes an OR/AND group when a drawn edge is selected', () => {
+    const mixed: AcademicRule = {
+      id: 'compound', curriculumId: 'chart', targetCourseId: 'b',
+      relationshipType: 'PREREQUISITE',
+      expression: { type: 'GROUP', operator: 'OR', operands: [
+        { type: 'COURSE', courseId: 'a' },
+        { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'c' }] },
+      ] },
+    };
+    expect(findRemovableDirectDependency([mixed], 'chart', 'a', 'b', 'PREREQUISITE')).toBeNull();
+    expect(findRemovableDirectDependency([mixed], 'chart', 'c', 'b', 'PREREQUISITE')).toBeNull();
+  });
+
+  it('never guesses which rule to delete when scoped rules share an edge', () => {
+    const a = rule('a', 'b');
+    const b = { ...a, id: 'scoped', trackId: 'track-1' };
+    expect(findRemovableDirectDependency([a, b], 'chart', 'a', 'b', 'PREREQUISITE')).toBeNull();
+  });
+
+  it('keeps corequisites, different directions and different curricula separate', () => {
+    const direct = rule('a', 'b');
+    const other = rule('a', 'b', 'other');
+    expect(findRemovableDirectDependency([direct, other], 'chart', 'a', 'b', 'COREQUISITE')).toBeNull();
+    expect(findRemovableDirectDependency([direct, other], 'chart', 'b', 'a', 'PREREQUISITE')).toBeNull();
+    expect(findRemovableDirectDependency([direct, other], 'other', 'a', 'b', 'PREREQUISITE')?.id).toBe(other.id);
   });
 });

@@ -1,4 +1,4 @@
-import type { AcademicRule } from '../types';
+import type { AcademicRule, AcademicRuleNode } from '../types';
 import { analyzeCurriculumDependencies } from './course-dependency-insights';
 
 export type VisualRelationship = 'PREREQUISITE' | 'COREQUISITE';
@@ -58,4 +58,33 @@ export function assessDependencyDraft(
   return after.valid
     ? { valid: true, error: '' }
     : { valid: false, error: after.errors.join(' ') || 'رابطهٔ پیشنهادی معتبر نیست.' };
+}
+
+
+function containsSource(node: AcademicRuleNode, courseId: string): boolean {
+  if (node.type === 'COURSE') return node.courseId === courseId;
+  return (node.operands ?? []).some(child => containsSource(child, courseId));
+}
+
+/**
+ * A drawn edge might come from an OR/AND clause or from several scoped rules.
+ * Never delete any underlying rule from a visual click unless the edge maps
+ * uniquely to ONE standalone rule; compound policies require advanced review.
+ */
+export function findRemovableDirectDependency(
+  rules: readonly AcademicRule[],
+  curriculumId: string,
+  sourceId: string,
+  targetId: string,
+  relationshipType: VisualRelationship,
+): AcademicRule | null {
+  const sources = rules.filter(rule =>
+    rule.curriculumId === curriculumId &&
+    rule.targetCourseId === targetId &&
+    rule.relationshipType === relationshipType &&
+    containsSource(rule.expression, sourceId));
+  return sources.length === 1 &&
+    sources[0].expression.type === 'COURSE' &&
+    sources[0].expression.courseId === sourceId
+    ? sources[0] : null;
 }

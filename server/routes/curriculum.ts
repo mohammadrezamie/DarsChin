@@ -299,6 +299,20 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     });
   }
 
+  // A concurrent tab or another administrator may bypass the visual
+  // preview; reject identical standalone edges at the API boundary too.
+  if (expression.type === 'COURSE' && db.academicRules.some(rule =>
+    rule.curriculumId === curriculumId &&
+    rule.targetCourseId === targetCourseId &&
+    rule.relationshipType === relationshipType &&
+    rule.expression.type === 'COURSE' &&
+    rule.expression.courseId === expression.courseId &&
+    (rule.entryYearId || null) === (entryYearId || null) &&
+    (rule.majorId || null) === (majorId || null) &&
+    (rule.trackId || null) === (trackId || null))) {
+    return res.status(409).json({ success: false, error: 'این رابطه قبلاً در همین چارت ثبت شده است.' });
+  }
+
   // Validate the entire existing prerequisite graph plus the new edge.
   // The old recursive guard accidentally rejected valid A→B→C chains,
   // and traversed rules belonging to unrelated charts and corequisites.
