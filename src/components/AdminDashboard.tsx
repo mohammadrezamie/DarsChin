@@ -631,7 +631,7 @@ export const AdminDashboard: React.FC = () => {
                   { label: 'واحد بین‌الملل (INTERNATIONAL)', value: 'INTERNATIONAL' },
                 ],
               },
-              { key: 'provinceId', label: 'شناسه استان' },
+              { key: 'provinceId', label: 'استان', type: 'select', required: true, lookupEndpoint: '/api/academic/provinces' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
@@ -660,7 +660,7 @@ export const AdminDashboard: React.FC = () => {
             columns={[
               { key: 'name', label: 'عنوان رشته' },
               { key: 'code', label: 'کد رشته' },
-              { key: 'degreeLevelId', label: 'شناسه مقطع' },
+              { key: 'degreeLevelId', label: 'مقطع تحصیلی', type: 'select', required: true, lookupEndpoint: '/api/academic/degrees' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
@@ -675,7 +675,7 @@ export const AdminDashboard: React.FC = () => {
             columns={[
               { key: 'name', label: 'عنوان گرایش' },
               { key: 'code', label: 'کد گرایش' },
-              { key: 'majorId', label: 'شناسه رشته' },
+              { key: 'majorId', label: 'رشتهٔ مرتبط', type: 'select', required: true, lookupEndpoint: '/api/academic/majors' },
               { key: 'active', label: 'وضعیت', type: 'boolean' },
             ]}
           />
