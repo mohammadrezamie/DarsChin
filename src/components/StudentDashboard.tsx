@@ -61,6 +61,7 @@ export const StudentDashboard: React.FC = () => {
   const [recommendations, setRecommendations] = useState<CourseRecommendation[]>([]);
   const [demandCourseIds, setDemandCourseIds] = useState<string[]>([]);
   const [demandSurveyAvailable, setDemandSurveyAvailable] = useState(false);
+  const [demandChecked, setDemandChecked] = useState(false);
   const [selectedOfferingIds, setSelectedOfferingIds] = useState<string[]>([]);
   const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
@@ -290,6 +291,7 @@ export const StudentDashboard: React.FC = () => {
       const open = surveys.data?.find(item => item.status === 'OPEN');
       if (!mounted) return;
       setDemandSurveyAvailable(!!open);
+      setDemandChecked(true);
       if (!open) { setDemandCourseIds([]); return; }
       const prior = await apiRequest<{courseIds:string[]} | null>(`/api/demand/surveys/${open.id}/response`);
       if (mounted) setDemandCourseIds(prior.data?.courseIds || []);
@@ -303,14 +305,15 @@ export const StudentDashboard: React.FC = () => {
     const checkActivation = async () => {
       const list = await apiRequest<{id:string;status:string}[]>('/api/demand/surveys');
       setDemandSurveyAvailable(Boolean(list.success && list.data?.some(s => s.status === 'OPEN')));
+      setDemandChecked(true);
     };
     window.addEventListener('focus', checkActivation);
     return () => window.removeEventListener('focus', checkActivation);
   }, [user?.id]);
 
   useEffect(() => {
-    if (!demandSurveyAvailable && activeTab === 'demand') setActiveTab('offerings');
-  }, [demandSurveyAvailable, activeTab]);
+    if (demandChecked && !demandSurveyAvailable && activeTab === 'demand') setActiveTab('offerings');
+  }, [demandChecked, demandSurveyAvailable, activeTab]);
 
   // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
   const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
