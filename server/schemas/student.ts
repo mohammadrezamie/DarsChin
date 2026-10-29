@@ -38,3 +38,7 @@ export const planSelectSchema = z.object({
   offeringId: z.string().min(1, 'شناسه گروه درسی الزامی است'),
   action: z.enum(['add', 'remove']),
 });
+
+/** Interest basket is deliberately separate from final academic enrollment. */
+export const updateWishlistSchema = z.object({ courseIds: z.array(z.string().min(1).max(150)).max(200).refine(items => new Set(items).size === items.length, 'درس تکراری در سبد قرار دارد.') }).strict();
+export const updateJourneySchema = z.object({ step: z.number().int().min(0).max(6) }).strict();

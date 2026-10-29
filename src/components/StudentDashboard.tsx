@@ -31,6 +31,8 @@ import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
 import { StudentMobileDock } from './StudentMobileDock';
+import { StudentWishlistBuilder } from './StudentWishlistBuilder';
+import { StudentJourneyStepper } from './StudentJourneyStepper';
 import { ContextualHelp } from './ContextualHelp';
 import { studentSectionHelp } from '../help/student-sections';
 
@@ -43,6 +45,7 @@ const studentTabs = [
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
   { id: 'registration', label: 'صف سریع ثبت دروس', short: 'صف ثبت', icon: Zap },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
+  { id: 'wishlist', label: 'سبد علاقه‌مندی', short: 'سبد من', icon: BookOpen },
   { id: 'passed', label: 'دروس پاس‌شده', short: 'پاس‌شده‌ها', icon: BookOpen },
   { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
   { id: 'support', label: 'پشتیبانی و گزارش خطا', short: 'پشتیبانی', icon: MessageCircle },
@@ -65,6 +68,10 @@ export const StudentDashboard: React.FC = () => {
   const [selectedOfferingIds, setSelectedOfferingIds] = useState<string[]>([]);
   const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
+  const [wishlistCourseIds, setWishlistCourseIds] = useState<string[]>([]);
+  const [journeyStep, setJourneyStep] = useState(0);
+  const [journeyReady, setJourneyReady] = useState(false);
+  const [journeyBusy, setJourneyBusy] = useState(false);
 
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
@@ -204,9 +211,37 @@ export const StudentDashboard: React.FC = () => {
     });
   };
 
+  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'wishlist', 'schedule', 'registration'];
+  const updateJourney = async (next: number) => {
+    if (journeyBusy || !user || next < 0 || next > 6) return;
+    setJourneyBusy(true);
+    const res = await apiRequest('/api/student/journey', { method: 'PUT', body: JSON.stringify({ step: next }) });
+    setJourneyBusy(false);
+    if (!res.success) { setPlanError(res.error || 'گام جدید ذخیره نشد؛ دوباره تلاش کن.'); return; }
+    setJourneyStep(next);
+    navigateWorkspace(stageDestination[next]);
+  };
+
+  const saveWishlist = async (ids: string[]): Promise<boolean> => {
+    const res = await apiRequest('/api/student/wishlist', { method: 'PUT', body: JSON.stringify({ courseIds: ids }) });
+    if (!res.success) { setPlanError(res.error || 'سبد علاقه‌مندی ذخیره نشد.'); return false; }
+    setWishlistCourseIds(ids);
+    setPlanError(null);
+    return true;
+  };
+
+  // When arriving from the account dashboard without a specific deep link, resume
+  // the saved onboarding step. Explicit PWA shortcuts/manual tabs keep their URL.
+  useEffect(() => {
+    if (!isBrowserDemo && journeyReady && journeyStep > 0 && !searchParams.has('tab')) {
+      navigateWorkspace(stageDestination[journeyStep], true);
+    }
+  }, [journeyReady, journeyStep, isBrowserDemo, location.search]);
+
   const fetchDashboardData = async () => {
     const version = ++evaluationVersionRef.current;
     setLoading(true);
+    setJourneyReady(false);
     setLoadError(null);
     // Never carry a prior student's selection or private academic summary into
     // a newly authenticated student's workspace while requests are pending.
@@ -220,12 +255,14 @@ export const StudentDashboard: React.FC = () => {
       setSelectedOfferingIds([]);
       setCoursePriorities([]);
       setOfferingPriorities({});
+      setWishlistCourseIds([]);
+      setJourneyStep(0);
     }
     try {
       // Resolve saved selections before calculating eligibility on reload.
       const [profileRes, planRes] = await Promise.all([
         apiRequest<{ profile: StudentAcademicProfile; curriculum?: { id: string } | null }>('/api/student/profile'),
-        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]> }>('/api/student/plan'),
+        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]>; wishlistCourseIds?: string[]; journeyStep?: number }>('/api/student/plan'),
       ]);
       if (version !== evaluationVersionRef.current) return;
       // Both responses are required before evaluating a plan. Never silently
@@ -238,6 +275,8 @@ export const StudentDashboard: React.FC = () => {
         setSelectedOfferingIds([]);
         setCoursePriorities([]);
         setOfferingPriorities({});
+        setWishlistCourseIds([]);
+        setJourneyStep(0);
         setEvaluations([]);
         setRecommendations([]);
         setAcademicLimits(null);
@@ -248,6 +287,12 @@ export const StudentDashboard: React.FC = () => {
         return;
       }
       setProfile(profileRes.data.profile);
+      setWishlistCourseIds(Array.isArray(planRes.data.wishlistCourseIds) ? planRes.data.wishlistCourseIds : []);
+      // Existing users with a saved final plan keep their familiar workspace;
+      // only genuinely new planning sessions start at the first wizard step.
+      setJourneyStep(Number.isInteger(planRes.data.journeyStep) && planRes.data.journeyStep! >= 0 && planRes.data.journeyStep! <= 6
+        ? planRes.data.journeyStep! : planRes.data.selectedOfferingIds.length > 0 ? 6 : 0);
+      setJourneyReady(true);
       setCurriculumId(profileRes.data.curriculum?.id || null);
       const planned = planRes.data.selectedOfferingIds;
       setSelectedOfferingIds(planned);
@@ -696,6 +741,13 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
+      {journeyReady && (
+        <StudentJourneyStepper step={journeyStep} busy={journeyBusy} hasProfile={!!profile}
+          hasCurriculum={!!curriculumId} academicLimits={academicLimits} profile={profile}
+          wishlistCount={wishlistCourseIds.length} onOpenProfile={() => setProfileModalOpen(true)}
+          onStep={step => void updateJourney(step)} />
+      )}
+
       {/* Global Conflict Warning Banner */}
       {timeConflicts.length > 0 && (
         <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 print:hidden">
@@ -797,7 +849,22 @@ export const StudentDashboard: React.FC = () => {
       {/* Tab Content */}
       <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
-        {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
+        {journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
+          <div className="mx-auto max-w-xl rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
+            <h3 className="text-base font-bold text-indigo-950 dark:text-indigo-100">
+              {journeyStep === 0 ? 'از پروندهٔ خودت شروع کن' : 'شرایط انتخاب واحدت را بررسی کن'}
+            </h3>
+            <p className="mt-2 text-sm leading-8 text-indigo-900 dark:text-indigo-200">
+              {journeyStep === 0
+                ? 'بعد از بررسی مشخصات، درس‌هایی که واقعاً پاس کرده‌ای را ثبت می‌کنی. جدول گروه‌ها و انتخاب نهایی در مراحل بعد می‌آیند.'
+                : 'سقف واحد و شرایط این نیمسال در راهنمای بالا نمایش داده شده‌اند. پس از تأیید، پیشنهادهای درسی را می‌بینی.'}
+            </p>
+            <button type="button" onClick={() => setProfileModalOpen(true)}
+              className="mt-3 min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
+              بررسی یا اصلاح پرونده
+            </button>
+          </div>
+        ) : loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
@@ -813,6 +880,11 @@ export const StudentDashboard: React.FC = () => {
               />
             )}
             
+            {activeTab === 'wishlist' && (
+              <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
+                evaluations={evaluations} recommendations={recommendations} onSave={saveWishlist} />
+            )}
+
             {activeTab === 'recommendations' && (
               <RecommendationsPanel
                 recommendations={recommendations}

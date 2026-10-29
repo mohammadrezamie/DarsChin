@@ -3,7 +3,7 @@
  * Keep the parser strict: invalid parameters must never reveal an admin route.
  */
 export const STUDENT_WORKSPACE_IDS = [
-  'offerings', 'schedule', 'registration', 'recommendations', 'passed', 'demand', 'support',
+  'offerings', 'schedule', 'registration', 'recommendations', 'wishlist', 'passed', 'demand', 'support',
 ] as const;
 
 export type StudentWorkspaceId = typeof STUDENT_WORKSPACE_IDS[number];

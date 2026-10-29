@@ -99,7 +99,8 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
   };
 
   const handleToggleCoursePassed = async (courseId: string) => {
-    const existing = passedCourses.find((pc) => pc.courseId === courseId);
+    const existing = passedCourses.find((pc) => pc.courseId === courseId &&
+      pc.status !== 'FAILED' && pc.status !== 'ABSENT' && (pc.grade === undefined || pc.grade >= 10));
     if (existing) {
       // Remove it
       const res = await apiRequest(`/api/student/passed-courses/${existing.id}`, {
@@ -138,7 +139,9 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
   };
 
   // Filter available courses not yet passed for the dropdown
-  const passedIds = new Set(passedCourses.map((pc) => pc.courseId));
+  const isPassedAttempt = (pc: EnrichedPassedCourse) => pc.status !== 'FAILED' && pc.status !== 'ABSENT' &&
+    (pc.grade === undefined || pc.grade >= 10);
+  const passedIds = new Set(passedCourses.filter(isPassedAttempt).map((pc) => pc.courseId));
   const availableToPass = allCourses.filter((c) => !passedIds.has(c.id));
 
   // Filter current passed list by search query & category
@@ -166,7 +169,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
         <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-300"/>
-        <span className="font-bold text-slate-900 dark:text-white">{passedCourses.length} درس پاس‌شده</span>
+        <span className="font-bold text-slate-900 dark:text-white">{passedIds.size} درس پاس‌شده</span>
         <span className="text-slate-600 dark:text-slate-300">· {totalUnits} واحد گذرانده‌شده</span>
         <span className="text-xs text-slate-500 dark:text-slate-400">فقط درس‌هایی را علامت بزن که واقعاً گذرانده‌ای.</span>
       </div>
@@ -177,7 +180,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
           <div className="flex items-center gap-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-emerald-600" />
-              فهرست دروس پاس‌شدهٔ من
+              سوابق قبولی و مردودی من
             </h3>
             <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs">
               <button
@@ -244,10 +247,13 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
               {checklistCourses.map((course) => {
                 const isPassed = passedIds.has(course.id);
                 return (
-                  <div
+                  <button type="button"
                     key={course.id}
-                    onClick={() => handleToggleCoursePassed(course.id)}
-                    className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 ${
+                    aria-pressed={isPassed}
+                    aria-label={(isPassed ? 'حذف قبولی ' : 'ثبت قبولی ') + course.name}
+                    disabled={adding}
+                    onClick={() => void handleToggleCoursePassed(course.id)}
+                    className={`w-full p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 text-right focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 ${
                       isPassed
                         ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 shadow-xs'
                         : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500'
@@ -279,7 +285,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                     >
                       {isPassed ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -314,13 +320,13 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                       </span>
                     </td>
                     <td className="py-2.5 px-3 font-mono">
-                      {pc.grade !== undefined && pc.grade !== null ? pc.grade : 'قبول (بدون نمره)'}
+                      {isPassedAttempt(pc) ? (pc.grade !== undefined && pc.grade !== null ? 'قبول · ' + pc.grade : 'قبول (بدون نمره)') : (pc.grade !== undefined && pc.grade !== null ? 'مردود · ' + pc.grade : 'مردود/غیبت')}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => handleRemove(pc.id)}
                         className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                        title="حذف از دروس پاس‌شده"
+                        title="حذف این سابقهٔ درسی"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
