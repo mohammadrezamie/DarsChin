@@ -15,7 +15,7 @@ const read = (p: string) => readFileSync(resolve(process.cwd(),p),'utf8');
 
 describe('student-first product and private management contract', () => {
   it('does not advertise administration in public landing, showcase, or student demo', () => {
-    for (const path of ['src/pages/Landing.tsx','src/pages/PlannerDemo.tsx','src/pages/DemoWorkspace.tsx']) {
+    for (const path of ['src/pages/Landing.tsx','src/pages/PlannerDemo.tsx','src/pages/DemoWorkspace.tsx','src/pages/auth/Login.tsx']) {
       expect(read(path)).not.toContain('to="/demo/admin"');
     }
     const html = renderToStaticMarkup(<MemoryRouter><DashboardShowcaseSection /></MemoryRouter>);
@@ -33,6 +33,8 @@ describe('student-first product and private management contract', () => {
     expect(app).toContain('<Route path="/demo/admin" element={<AdminDemoGate />} />');
     expect(adminWorkspaceAccess({ roles: ['student'], permissions: [] }).isAdmin).toBe(false);
     expect(adminWorkspaceAccess({ roles: ['admin'], permissions: ['admin.panel.access'] }).isAdmin).toBe(true);
+    expect(read('src/pages/auth/Login.tsx')).toContain('adminWorkspaceAccess(result.user).isAdmin');
+    expect(adminWorkspaceAccess({ roles: ['student'], permissions: ['admin.panel.access'] }).isAdmin).toBe(false);
   });
 
   it('has a public student-only searchable guide with useful help sections and FAQ', () => {

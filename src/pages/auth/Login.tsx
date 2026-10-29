@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { GuestHumanCheck } from '../../components/GuestHumanCheck';
-import { apiRequest } from '../../utils/api';
+import { adminWorkspaceAccess } from '../../utils/admin-navigation';
 
 export const Login: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
@@ -41,10 +41,8 @@ export const Login: React.FC = () => {
       const result = await login(mobile, password, captchaToken);
       if (result.success) {
         // Route by the authenticated user's role; never treat a result object as a boolean.
-        const isAdmin = result.user?.roles?.includes('super-admin') ||
-          result.user?.roles?.includes('admin') ||
-          result.user?.permissions?.includes('admin.panel.access');
-        navigate(isAdmin ? '/admin' : '/dashboard', { replace: true });
+        const canManage = adminWorkspaceAccess(result.user).isAdmin;
+        navigate(canManage ? '/admin' : '/dashboard', { replace: true });
       } else {
         setError(result.error || 'شماره موبایل یا رمز عبور اشتباه است.');
       }
@@ -79,9 +77,8 @@ export const Login: React.FC = () => {
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-900 dark:bg-blue-950/40">
           <h3 className="text-base font-black text-blue-900 dark:text-blue-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
           <p className="mt-1 text-xs leading-6 text-blue-800 dark:text-blue-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-blue-700 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
-            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-blue-300 bg-white px-2 text-center text-sm font-bold text-blue-900 dark:bg-slate-900 dark:text-blue-100">ورود دمو مدیر</Link>
+          <div className="mt-3">
+            <Link to="/demo/student" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-700 px-3 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
           </div>
         </div>
       </div>
