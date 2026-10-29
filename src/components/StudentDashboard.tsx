@@ -3,7 +3,8 @@
 // ============================================================================
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { studentWorkspaceFromSearch, type StudentWorkspaceId } from '../utils/student-workspace-navigation';
 import {
   UploadCloud,
   Layers,
@@ -33,7 +34,7 @@ import { StudentMobileDock } from './StudentMobileDock';
 import { ContextualHelp } from './ContextualHelp';
 import { studentSectionHelp } from '../help/student-sections';
 
-type StudentTab = 'offerings' | 'recommendations' | 'schedule' | 'registration' | 'demand' | 'passed' | 'support';
+type StudentTab = StudentWorkspaceId;
 
 const studentTabs = [
   // Put the student's primary mobile journey first; all other workspaces
@@ -49,7 +50,9 @@ const studentTabs = [
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
-  const isBrowserDemo = useLocation().pathname.startsWith('/demo/');
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isBrowserDemo = location.pathname.startsWith('/demo/');
   
   const [profile, setProfile] = useState<StudentAcademicProfile | null>(null);
   const [curriculumId, setCurriculumId] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export const StudentDashboard: React.FC = () => {
     courseName: string;
     messages: string[];
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<StudentTab>('offerings');
+  const [activeTab, setActiveTab] = useState<StudentTab>(() => studentWorkspaceFromSearch(location.search));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
@@ -175,8 +178,24 @@ export const StudentDashboard: React.FC = () => {
     if (Math.abs(delta) > 1) strip.scrollBy({ left: delta, behavior: 'auto' });
   }, [activeTab]);
 
-  const selectMobileWorkspace = (tab: StudentTab) => {
+  const navigateWorkspace = (tab: StudentTab, replace = false) => {
     setActiveTab(tab);
+    if (searchParams.get('tab') !== tab) {
+      setSearchParams(previous => {
+        const next = new URLSearchParams(previous);
+        next.set('tab', tab);
+        return next;
+      }, { replace });
+    }
+  };
+
+  // The browser back button and PWA shortcut links control the same student tab.
+  useEffect(() => {
+    setActiveTab(studentWorkspaceFromSearch(location.search));
+  }, [location.search]);
+
+  const selectMobileWorkspace = (tab: StudentTab) => {
+    navigateWorkspace(tab);
     // A deliberate bottom-dock action should reveal the selected content
     // above the dock instead of leaving the student at a distant scroll point.
     requestAnimationFrame(() => {
@@ -302,8 +321,8 @@ export const StudentDashboard: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!demandSurveyAvailable && activeTab === 'demand') setActiveTab('offerings');
-  }, [demandSurveyAvailable, activeTab]);
+    if (!loading && !demandSurveyAvailable && activeTab === 'demand') navigateWorkspace('offerings', true);
+  }, [loading, demandSurveyAvailable, activeTab]);
 
   // Serialize plan writes: simultaneous controls must never overwrite a newer plan.
   const runPlanMutation = async (request: () => Promise<{ success: boolean; error?: string }>) => {
@@ -595,8 +614,34 @@ export const StudentDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
+      {/* Compact app home header: the desktop hero remains a separate layout. */}
+      <section className="darschin-mobile-home relative min-w-0 overflow-hidden rounded-2xl border border-blue-200/75 bg-gradient-to-bl from-white via-blue-50 to-indigo-50 px-3.5 py-3.5 shadow-sm dark:border-blue-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/35 md:hidden print:hidden" aria-label="ابزارهای سریع دانشجو">
+        <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-extrabold text-slate-950 dark:text-white">سلام، {user.name} 👋</h2>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">برنامهٔ این ترم، همیشه دم دستت</p>
+          </div>
+          <button type="button" onClick={() => selectMobileWorkspace('schedule')} aria-label="مشاهدهٔ برنامهٔ انتخابی"
+            className="inline-flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border border-blue-200 bg-white/90 px-3 text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-slate-800 dark:text-blue-200">
+            <strong className="text-sm tabular-nums">{selectedOfferingIds.length.toLocaleString('fa-IR')}</strong>
+            <span className="text-[10px] font-bold">گروه من</span>
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setProfileModalOpen(true)}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-extrabold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+            پروندهٔ تحصیلی
+          </button>
+          <button type="button" onClick={() => setImportModalOpen(true)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-xs font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            <UploadCloud aria-hidden="true" className="h-4 w-4" /> دریافت دروس
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-amber-800 dark:text-amber-300">چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</p>
+      </section>
+
       {/* Header Panel */}
-      <div className="darschin-surface relative min-w-0 overflow-hidden rounded-[1.35rem] border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
+      <div className="darschin-surface relative hidden min-w-0 overflow-hidden rounded-[1.35rem] md:block border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
@@ -707,7 +752,7 @@ export const StudentDashboard: React.FC = () => {
                 ref={element => { tabButtonsRef.current[tab.id] = element; }}
                 disabled={tab.id === 'demand' && !demandSurveyAvailable}
                 title={tab.id === 'demand' && !demandSurveyAvailable ? 'پس از بازکردن نیازسنجی توسط مدیر گروه فعال می‌شود' : undefined}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigateWorkspace(tab.id)}
                 aria-current={current ? 'page' : undefined}
                 className={`flex min-h-11 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
                   ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
@@ -776,7 +821,7 @@ export const StudentDashboard: React.FC = () => {
                 onToggleScheduleOffering={handleToggleScheduleOffering}
                 demandCourseIds={demandCourseIds}
                 demandSurveyAvailable={demandSurveyAvailable}
-                onOpenDemand={() => setActiveTab('demand')}
+                onOpenDemand={() => navigateWorkspace('demand')}
               />
             )}
 
@@ -805,7 +850,7 @@ export const StudentDashboard: React.FC = () => {
                 coursePriorities={coursePriorities}
                 profile={profile}
                 curriculumId={curriculumId}
-                onEditPriorities={() => setActiveTab('schedule')}
+                onEditPriorities={() => navigateWorkspace('schedule')}
                 onReorderCourses={handleReorderCourses}
               />
             )}
