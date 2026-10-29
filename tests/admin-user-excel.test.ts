@@ -65,6 +65,36 @@ beforeAll(async () => {
   db.save();
 });
 
+describe('single reserved root and delegated role boundaries', () => {
+  it('never permits creating another root or demoting the reserved root', async () => {
+    const rootId = 'usr-super';
+    const studentId = testStudentId;
+    const oldRoot = db.users.find(u => u.id === rootId);
+    const beforeRootRoles = [...(oldRoot?.roles ?? [])];
+    const rejectElevation = await request(app).put(`/api/admin/users/${studentId}/role`)
+      .set('Authorization', `Bearer ${rootToken}`).send({role:'super-admin'});
+    expect(rejectElevation.status).toBe(400);
+    expect(db.users.find(u => u.id === studentId)?.roles).toEqual(['student']);
+
+    const rejectDemotion = await request(app).put(`/api/admin/users/${rootId}/role`)
+      .set('Authorization', `Bearer ${rootToken}`).send({role:'student'});
+    expect(rejectDemotion.status).toBe(403);
+    expect(db.users.find(u => u.id === rootId)?.roles).toEqual(beforeRootRoles);
+    expect(db.users.filter(u => u.roles.includes('super-admin'))).toHaveLength(1);
+  });
+
+  it('delegates ordinary admin access without creating a second root identity', async () => {
+    const result = await request(app).put(`/api/admin/users/${testStudentId}/role`)
+      .set('Authorization', `Bearer ${rootToken}`).send({role:'admin'});
+    expect(result.status).toBe(200);
+    expect(db.users.find(u=>u.id===testStudentId)?.roles).toEqual(['admin','student']);
+    const undo = await request(app).put(`/api/admin/users/${testStudentId}/role`)
+      .set('Authorization', `Bearer ${rootToken}`).send({role:'student'});
+    expect(undo.status).toBe(200);
+    expect(db.users.find(u=>u.id===testStudentId)?.roles).toEqual(['student']);
+  });
+});
+
 describe('Excel export API boundaries', () => {
   it('blocks anonymous and delegated management from exporting all users', async () => {
     expect((await request(app).get('/api/admin/users/export.xlsx')).status).toBe(401);
