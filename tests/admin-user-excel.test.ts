@@ -4,6 +4,7 @@ import request from 'supertest';
 import AdmZip from 'adm-zip';
 import { db } from '../server/db/database';
 import { adminRouter } from '../server/routes/admin';
+import { adminManagementRouter } from '../server/routes/admin-management';
 import { generateToken } from '../server/middleware/auth';
 import { userDirectoryXlsx } from '../server/utils/user-excel';
 import type { User } from '../src/types';
@@ -37,6 +38,7 @@ describe('root-only Excel directory and spreadsheet safety', () => {
 const app = express();
 app.use(express.json());
 app.use('/api/admin', adminRouter);
+app.use('/api/admin-management', adminManagementRouter);
 const testStudentId = 'usr-test-excel-student-20261028';
 let rootToken = '';
 let adminToken = '';
@@ -92,6 +94,39 @@ describe('single reserved root and delegated role boundaries', () => {
       .set('Authorization', `Bearer ${rootToken}`).send({role:'student'});
     expect(undo.status).toBe(200);
     expect(db.users.find(u=>u.id===testStudentId)?.roles).toEqual(['student']);
+  });
+});
+
+describe('root uniqueness across ALL administrator APIs', () => {
+  it('rejects creating a second root even when a root session makes the request', async () => {
+    const before = db.users.filter(u => u.roles.includes('super-admin')).length;
+    const response = await request(app).post('/api/admin-management')
+      .set('Authorization', `Bearer ${rootToken}`)
+      .send({ name: 'Another root attempt', mobile: '09123334488',
+        password: 'synthetic-only-password', roles: ['super-admin'] });
+    expect(response.status).toBe(403);
+    expect(db.users.filter(u => u.roles.includes('super-admin'))).toHaveLength(before);
+    expect(db.users.some(u => u.mobile === '09123334488')).toBe(false);
+  });
+
+  it('rejects root demotion or mutation from administrator editing API', async () => {
+    const root = db.users.find(u => u.id === 'usr-super')!;
+    const before = { name: root.name, roles: [...root.roles] };
+    const response = await request(app).put('/api/admin-management/usr-super')
+      .set('Authorization', `Bearer ${rootToken}`)
+      .send({ name: 'Unauthorized root rename', roles: ['student'] });
+    expect(response.status).toBe(403);
+    expect(db.users.find(u=>u.id==='usr-super')?.name).toBe(before.name);
+    expect(db.users.find(u=>u.id==='usr-super')?.roles).toEqual(before.roles);
+  });
+
+  it('rejects promoting an existing manager via management update API', async () => {
+    const managerId = 'usr-test-excel-manager';
+    const response = await request(app).put(`/api/admin-management/${managerId}`)
+      .set('Authorization', `Bearer ${rootToken}`)
+      .send({ roles: ['admin','super-admin'] });
+    expect(response.status).toBe(403);
+    expect(db.users.find(u=>u.id===managerId)?.roles).toEqual(['admin']);
   });
 });
 
