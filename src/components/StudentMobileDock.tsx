@@ -142,6 +142,16 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
                   </button>
                 );
               })}
+              <details className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm dark:border-indigo-800 dark:bg-indigo-950/30">
+                <summary className="min-h-11 cursor-pointer py-2 font-extrabold text-indigo-900 dark:text-indigo-100">
+                  اضافه‌کردن درس‌چین به صفحهٔ اصلی گوشی
+                </summary>
+                <div className="space-y-2 border-t border-indigo-200 pt-3 text-xs leading-7 text-indigo-950 dark:border-indigo-800 dark:text-indigo-100">
+                  <p><strong>آیفون (Safari):</strong> منوی اشتراک‌گذاری را باز کن و «Add to Home Screen» را انتخاب کن.</p>
+                  <p><strong>اندروید (Chrome):</strong> منوی مرورگر را باز کن و «Install app» یا «Add to Home screen» را بزن.</p>
+                  <p className="text-[11px] text-indigo-700 dark:text-indigo-300">پس از افزودن، سامانه در پنجرهٔ مستقل باز می‌شود؛ برای دریافت اطلاعات درسی به اتصال اینترنت نیاز داری.</p>
+                </div>
+              </details>
               <Link to="/help" onClick={() => setExpanded(false)}
                 className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-right text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
                 <BookOpen aria-hidden="true" className="h-5 w-5 shrink-0" />
