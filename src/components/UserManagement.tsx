@@ -202,7 +202,6 @@ export const UserManagement: React.FC = () => {
                     >
                       <option value="student">تنزل به دانشجو</option>
                       <option value="admin">ارتقا به مدیر سیستم</option>
-                      {currentUser?.roles?.includes('super-admin') && <option value="super-admin">ارتقا به مدیر ارشد</option>}
                     </select>
                   )}
                 </td>
