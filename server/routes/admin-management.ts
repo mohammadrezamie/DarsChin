@@ -77,6 +77,10 @@ adminManagementRouter.put('/:id/demand-scopes', authenticate, requireSuperAdmin,
 // Create new admin
 adminManagementRouter.post('/', authenticate, requirePermission('admin.create'), (req: any, res) => {
   const { name, mobile, password, permissions, roles } = req.body;
+  if (roles !== undefined && (!Array.isArray(roles) || roles.length === 0 ||
+    roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
+    return res.status(403).json({ success: false, error: 'ایجاد نقش مدیر ارشد یا نقش نامعتبر مجاز نیست.' });
+  }
   if (!name || !mobile || !password) {
     return res.status(400).json({ success: false, error: 'نام، موبایل و رمز عبور الزامی است.' });
   }
@@ -99,16 +103,8 @@ adminManagementRouter.post('/', authenticate, requirePermission('admin.create'),
   const allowedRoles: UserRole[] = ['admin', 'student'];
   const userRoles: UserRole[] = roles ? roles.filter((r: any) => allowedRoles.includes(r)) : ['admin'];
 
-  // Ensure super-admin can't be created by regular admin
-  if (req.body.roles && req.body.roles.includes('super-admin')) {
-      if (!req.user.roles.includes('super-admin')) {
-          return res.status(403).json({ success: false, error: 'دسترسی ایجاد مدیر ارشد را ندارید.' });
-      }
-      userRoles.push('super-admin');
-  }
-
   const newUser: User = {
-    id: `usr-${Date.now()}`,
+    id: `usr-${randomUUID()}`,
     name,
     mobile,
     password: bcrypt.hashSync(password, 10),
@@ -144,6 +140,16 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
 
   const target = db.users.find(u => u.id === req.params.id);
   if (!target) return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
+  // Even the root session must not produce another privileged identity or
+  // modify the reserved root from a delegated-user editing workflow.
+  if (target.id === 'usr-super' || target.roles.includes('super-admin')) {
+    return res.status(403).json({ success: false, error: 'هویت مدیر ارشد در این مسیر قابل ویرایش نیست.' });
+  }
+  if (req.body.roles !== undefined && (!Array.isArray(req.body.roles) ||
+    req.body.roles.length === 0 ||
+    req.body.roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
+    return res.status(403).json({ success: false, error: 'ایجاد نقش مدیر ارشد یا نقش نامعتبر مجاز نیست.' });
+  }
 
   // A delegated admin cannot manage someone they didn't create, UNLESS they are super-admin
   if (!isSuper && target.createdBy !== req.user.id) {
@@ -171,7 +177,6 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
   if (roles) {
       const allowedRoles: UserRole[] = ['admin', 'student'];
       const userRoles: UserRole[] = roles.filter((r: any) => allowedRoles.includes(r));
-      if (roles.includes('super-admin') && isSuper) userRoles.push('super-admin');
       target.roles = userRoles;
   }
 
