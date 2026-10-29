@@ -17,7 +17,7 @@ export const updateProfileSchema = z.object({
 // become PASSED merely because a downstream course has been completed.
 const studentGrade = z.union([
   z.number(),
-  z.string().trim().regex(/^(?:20(?:\\.0+)?|1?\\d(?:\\.\\d+)?|0(?:\\.\\d+)?)$/, 'نمره باید بین صفر و بیست باشد.'),
+  z.string().trim().regex(/^(?:20(?:\.0+)?|1?\d(?:\.\d+)?)$/, 'نمره باید بین صفر و بیست باشد.'),
 ]).transform(value => Number(value)).pipe(z.number().finite().min(0).max(20));
 
 export const addPassedCourseSchema = z.object({
