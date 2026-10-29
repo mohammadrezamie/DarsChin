@@ -48,7 +48,8 @@ const AdminDemoGate: React.FC = () => {
 };
 
 const DashboardLayout: React.FC = () => {
-  const { user } = useAuth();
+  const location = useLocation();
+  const isStudentWorkspace = location.pathname === '/dashboard';
   const [isPasswordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [isExtModalOpen, setExtModalOpen] = useState(false);
 
@@ -61,7 +62,9 @@ const DashboardLayout: React.FC = () => {
         onOpenProfile={() => {}}
         onOpenPasswordChange={() => setPasswordChangeOpen(true)}
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className={isStudentWorkspace
+        ? "mx-auto w-full max-w-7xl min-w-0 px-2.5 pb-3 pt-3 sm:px-6 md:px-8 md:py-6"
+        : "mx-auto w-full max-w-7xl min-w-0 px-4 py-6 sm:px-6 lg:px-8"}>
         <Outlet />
       </main>
 
