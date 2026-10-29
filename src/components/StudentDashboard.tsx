@@ -230,6 +230,14 @@ export const StudentDashboard: React.FC = () => {
     return true;
   };
 
+  // When arriving from the account dashboard without a specific deep link, resume
+  // the saved onboarding step. Explicit PWA shortcuts/manual tabs keep their URL.
+  useEffect(() => {
+    if (!isBrowserDemo && journeyReady && journeyStep > 0 && !searchParams.has('tab')) {
+      navigateWorkspace(stageDestination[journeyStep], true);
+    }
+  }, [journeyReady, journeyStep, isBrowserDemo, location.search]);
+
   const fetchDashboardData = async () => {
     const version = ++evaluationVersionRef.current;
     setLoading(true);
@@ -838,7 +846,22 @@ export const StudentDashboard: React.FC = () => {
       {/* Tab Content */}
       <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
-        {loading && activeTab !== 'demand' && activeTab !== 'support' ? (
+        {!isBrowserDemo && journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
+          <div className="mx-auto max-w-xl rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
+            <h3 className="text-base font-bold text-indigo-950 dark:text-indigo-100">
+              {journeyStep === 0 ? 'از پروندهٔ خودت شروع کن' : 'شرایط انتخاب واحدت را بررسی کن'}
+            </h3>
+            <p className="mt-2 text-sm leading-8 text-indigo-900 dark:text-indigo-200">
+              {journeyStep === 0
+                ? 'بعد از بررسی مشخصات، درس‌هایی که واقعاً پاس کرده‌ای را ثبت می‌کنی. جدول گروه‌ها و انتخاب نهایی در مراحل بعد می‌آیند.'
+                : 'سقف واحد و شرایط این نیمسال در راهنمای بالا نمایش داده شده‌اند. پس از تأیید، پیشنهادهای درسی را می‌بینی.'}
+            </p>
+            <button type="button" onClick={() => setProfileModalOpen(true)}
+              className="mt-3 min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
+              بررسی یا اصلاح پرونده
+            </button>
+          </div>
+        ) : loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
             <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
