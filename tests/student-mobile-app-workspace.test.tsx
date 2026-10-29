@@ -34,6 +34,20 @@ describe('standalone mobile-first student experience', () => {
     expect(dashboard).toContain('demandChecked && !demandSurveyAvailable');
   });
 
+  it('preserves the student workspace for root and delegated admins without exposing admin to students', () => {
+    const app = source('src/App.tsx');
+    const dashboard = source('src/components/StudentDashboard.tsx');
+    const navbar = source('src/components/Navbar.tsx');
+    expect(app).toContain('<Route element={<ProtectedRoute />}>');
+    expect(app).toContain('<Route path="/dashboard" element={<StudentDashboard />} />');
+    expect(app).toContain('<Route element={<ProtectedRoute allowedRoles={[\'admin\']} />}>');
+    expect(dashboard).not.toContain("!user.roles.includes('student')");
+    expect(dashboard).not.toContain("!user.roles?.includes('student')");
+    expect(dashboard).toContain('if (user) void fetchDashboardData()');
+    expect(navbar).toContain('{canManage &&');
+    expect(navbar).toContain('to="/admin"');
+  });
+
   it('keeps desktop and admin spacing while reducing student-mobile web chrome', () => {
     const app = source('src/App.tsx');
     const navbar = source('src/components/Navbar.tsx');
