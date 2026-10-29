@@ -8,7 +8,21 @@ export interface Column {
   type?: 'text' | 'number' | 'boolean' | 'select';
   options?: { label: string; value: string }[];
   lookupEndpoint?: string;
+  /** Foreign-key selection must be explicit; never silently submit a placeholder. */
+  required?: boolean;
 }
+
+/** Present a human title instead of raw relational UUIDs in every admin row. */
+export function adminColumnDisplay(column: Column, value: unknown, options: { label: string; value: string }[], lookupLoading = false): string {
+  if (value === undefined || value === null || value === '') return '—';
+  if (column.type === 'select') {
+    const match = options.find(option => option.value === String(value));
+    if (match) return match.label;
+    if (column.lookupEndpoint) return lookupLoading ? 'در حال دریافت عنوان…' : 'مرجع موجود نیست';
+  }
+  return String(value);
+}
+
 
 interface AdminCrudTableProps {
   title: string;
@@ -33,10 +47,11 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
       void apiRequest<any[]>(column.lookupEndpoint!).then(response => {
         if (!active) return;
         const choices = response.success && Array.isArray(response.data)
-          ? response.data.filter(row => row && row.id && row.active !== false).map(row => ({
+          ? response.data.filter(row => row && row.id).map(row => ({
               value: String(row.id),
-              label: String(row.name || row.code || row.id) +
-                (row.code ? ' · ' + String(row.code) : ''),
+              label: String(row.name || row.year || row.code || 'بدون عنوان') +
+                (row.code ? ' · ' + String(row.code) : '') +
+                (row.active === false ? ' (غیرفعال)' : ''),
             }))
           : [];
         setLookupOptions(previous => ({ ...previous, [column.key]: choices }));
@@ -71,6 +86,12 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   };
 
   const handleSave = async (id: string) => {
+    const missingRelation = columns.find(column => column.required && column.lookupEndpoint &&
+      !getOptions(column).some(choice => choice.value === String(editForm[column.key] ?? '')));
+    if (missingRelation) {
+      alert('لطفاً «' + missingRelation.label + '» را از فهرست نام‌ها انتخاب کنید.');
+      return;
+    }
     setSaving(true);
     const isNew = id === 'new';
     const method = isNew ? 'POST' : 'PUT';
@@ -100,7 +121,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
     const initialForm: any = {};
     columns.forEach(c => {
       if (c.type === 'boolean') initialForm[c.key] = true;
-      else if (c.type === 'select') initialForm[c.key] = getOptions(c)[0]?.value || '';
+      else if (c.type === 'select') initialForm[c.key] = c.required ? '' : getOptions(c)[0]?.value || '';
       else initialForm[c.key] = '';
     });
     setEditingId('new');
@@ -112,7 +133,9 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
     const query = searchQuery.toLowerCase();
     return columns.some(col => {
       const val = item[col.key];
-      return val !== undefined && val !== null && String(val).toLowerCase().includes(query);
+      return val !== undefined && val !== null &&
+        (String(val).toLowerCase().includes(query) ||
+          adminColumnDisplay(col, val, getOptions(col)).toLowerCase().includes(query));
     });
   });
 
@@ -203,6 +226,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                         value={editForm[c.key] || ''}
                         onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                       >
+                        {c.required && <option value="">انتخاب {c.label}</option>}
                         {getOptions(c).map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
@@ -281,6 +305,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             value={editForm[c.key] || ''}
                             onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                           >
+                            {c.required && <option value="">انتخاب {c.label}</option>}
                             {getOptions(c).map((opt) => (
                               <option key={opt.value} value={opt.value}>
                                 {opt.label}
@@ -305,7 +330,9 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             {item[c.key] ? 'فعال' : 'غیرفعال'}
                           </span>
                         ) : (
-                          <span className="font-medium">{item[c.key] !== undefined ? String(item[c.key]) : '---'}</span>
+                          <span className="font-medium" title={c.lookupEndpoint ? String(item[c.key] ?? '') : undefined}>
+                            {adminColumnDisplay(c, item[c.key], getOptions(c), Boolean(c.lookupEndpoint && !lookupOptions[c.key]))}
+                          </span>
                         )
                       )}
                     </td>
