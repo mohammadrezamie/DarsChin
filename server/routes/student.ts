@@ -101,7 +101,8 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     selectedTrackId: nextTrackSelected
       ? (selectedTrackId !== undefined ? selectedTrackId : previous?.selectedTrackId ?? null)
       : null,
-    desiredTrackIds: desiredTrackIds ?? previous?.desiredTrackIds ?? [],
+    desiredTrackIds: desiredTrackIds ?? (isTrackSelected === false && previous?.isTrackSelected
+      ? [] : previous?.desiredTrackIds ?? []),
     currentTermId: currentTermId ?? previous?.currentTermId ??
       db.academicTerms.find(term => term.isCurrent)?.id ?? '',
     studentNumber: previous?.studentNumber,

@@ -132,3 +132,39 @@ describe('student track selector is accessible and bounded to the selected major
     expect(code).toContain('برای این رشته گرایشی تعریف نشده');
   });
 });
+
+
+describe('new academic profile reference boundaries',()=>{
+  it('rejects nonexistent campus, major, term or track without changing the stored record',async()=>{
+    const previous=JSON.stringify(db.studentProfiles.find(p=>p.userId===existingId));
+    const invalid=[
+      {campusId:'missing-campus-xyz'},
+      {majorId:'missing-major-xyz'},
+      {degreeLevelId:'missing-degree-xyz'},
+      {entryYearId:'missing-year-xyz'},
+      {currentTermId:'missing-term-xyz'},
+      {isTrackSelected:true,selectedTrackId:'foreign-or-disabled-track'},
+      {isTrackSelected:false,desiredTrackIds:['foreign-or-disabled-track']},
+    ];
+    for(const body of invalid){
+      const result=await request(app).put('/api/student/profile').set(auth(existingId)).send(body);
+      expect(result.status,JSON.stringify(body)).toBe(400);
+      expect(JSON.stringify(db.studentProfiles.find(p=>p.userId===existingId))).toBe(previous);
+    }
+  });
+
+  it('still saves a GPA-only edit without resetting the old academic identity',async()=>{
+    const scope=db.studentProfiles.find(p=>p.userId===existingId)!;
+    const originalScope={campusId:scope.campusId,majorId:scope.majorId,entryYearId:scope.entryYearId};
+    const response=await request(app).put('/api/student/profile').set(auth(existingId))
+      .send({previousTermGpa:17.25});
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({...originalScope,previousTermGpa:17.25});
+  });
+
+  it('actually loads provinces from metadata into the editable selector',()=>{
+    const source=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
+    expect(source).toContain('setProvinces(metaRes.data.provinces || [])');
+    expect(source).toContain("setCampusId('');");
+  });
+});
