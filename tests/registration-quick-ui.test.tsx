@@ -107,7 +107,7 @@ describe('compact manual Educationalyar registration queue', () => {
       preferredCourseIds: ['test-course'], rules: [prerequisite],
       passedCourses: [], profile: { majorId: 'ee', entryYearId: '1403', selectedTrackId: null },
     });
-    expect(queue.steps[0].copyCode).toBe('410100');
+    expect(queue.steps[0].copyCode).toBe('410100_02');
     expect(queue.steps[0].ready).toBe(false);
     const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
     expect(source).toContain('s.ready&&!activeDoneIds.includes(s.offeringId)');

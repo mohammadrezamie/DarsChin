@@ -2,6 +2,7 @@ import type {
   AcademicRule, AcademicRuleNode, CourseEligibilityResult, StudentAcademicProfile,
   StudentPassedCourse,
 } from '../types';
+import { verifiedOfferingGroupCopyCode } from './offering-code';
 
 /**
  * Planning aid for the *manual* Educationalyar registration workflow.
@@ -11,7 +12,9 @@ import type {
 export interface RegistrationStep {
   courseId: string;
   courseName: string;
-  /** Code displayed by the catalog or actually seen on the imported offering. */
+  /** Full manual-registration code (rawCourseCode_groupCode) when verified;
+   * otherwise the unverified raw/catalog code shown read-only.
+   */
   copyCode: string | null;
   /** The code came from an offering import, not necessarily an official portal confirmation. */
   codeFromOffering: boolean;
@@ -153,7 +156,10 @@ export function buildRegistrationQueue(input: {
     const o = selected.get(id)!;
     const explicit = typeof o.rawCourseCode === 'string' ? o.rawCourseCode.trim() : '';
     const catalog = typeof o.courseCode === 'string' ? o.courseCode.trim() : '';
-    const code = explicit || (catalog && catalog !== '---' ? catalog : '');
+    // This is the SAME group-code format used by the offering browser.
+    // A plain catalog code may be displayed, but never offered for quick copy.
+    const verifiedCode = verifiedOfferingGroupCopyCode(o);
+    const code = verifiedCode || explicit || (catalog && catalog !== '---' ? catalog : '');
     const problems = [...(warnings.get(id) || [])];
     // A code is not permission to select an ineligible offering. Honor the
     // evaluated eligibility report rather than inventing academic exceptions.
@@ -165,6 +171,10 @@ export function buildRegistrationQueue(input: {
     if (!explicit) {
       unresolved.value = true;
       problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
+    }
+    if (!o.groupCode?.trim()) {
+      unresolved.value = true;
+      problems.push('شمارهٔ گروه ارائه مشخص نیست؛ کپی سریع تا تأیید گروه غیرفعال است.');
     }
     if (!code) {
       unresolved.value = true;
@@ -185,7 +195,7 @@ export function buildRegistrationQueue(input: {
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
       dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
-      ready: !hasCycle && !blocked && Boolean(explicit) && !problems.length,
+      ready: !hasCycle && !blocked && Boolean(verifiedCode) && !problems.length,
     };
   });
   return { steps, hasCycle, hasUnresolvedRules: unresolved.value };

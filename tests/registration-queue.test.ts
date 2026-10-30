@@ -109,7 +109,7 @@ describe('manual Educationalyar registration priority queue',()=>{
       evaluations:[{...diff,rawCourseCode:'410019'},math,physics],
       selectedOfferingIds:['off-diff'],
     });
-    expect(result.steps[0].copyCode).toBe('410019');
+    expect(result.steps[0].copyCode).toBe('410019_01');
     expect(result.steps[0].ready).toBe(true);
     expect(result.hasUnresolvedRules).toBe(false);
   });
@@ -117,7 +117,7 @@ describe('manual Educationalyar registration priority queue',()=>{
   it('prioritizes actual imported course codes but warns if only catalog code exists',()=>{
     const imported={...diff,rawCourseCode:'410019'};
     const q=buildRegistrationQueue({...input([]),evaluations:[imported,math,physics]});
-    expect(q.steps[0].copyCode).toBe('410019');
+    expect(q.steps[0].copyCode).toBe('410019_01');
     expect(q.steps[0].codeFromOffering).toBe(true);
     expect(q.steps[1].codeFromOffering).toBe(false);
     expect(q.steps[1].warnings.join(' ')).toContain('تأیید نشده');
@@ -148,5 +148,26 @@ describe('quick copy never treats catalog-only codes as verified group codes',()
     });
     expect(result.steps[0].ready).toBe(true);
     expect(result.steps[0].copyCode).toBe('410019');
+  });
+});
+
+
+describe('full group copy format is identical across planning and offered-course views',()=>{
+  it('returns the verified raw course + section code only for the matching selected group',()=>{
+    const valid={...diff,rawCourseCode:'410019',groupCode:'03'};
+    const result=buildRegistrationQueue({
+      ...input([]),evaluations:[valid,math,physics],selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].copyCode).toBe('410019_03');
+    expect(result.steps[0].ready).toBe(true);
+  });
+  it('blocks copy when the selected group number is missing, even if course code is imported',()=>{
+    const result=buildRegistrationQueue({
+      ...input([]),evaluations:[{...diff,rawCourseCode:'410019',groupCode:''},math,physics],
+      selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].copyCode).toBe('410019');
+    expect(result.steps[0].ready).toBe(false);
+    expect(result.steps[0].warnings.join(' ')).toContain('شمارهٔ گروه ارائه مشخص نیست');
   });
 });
