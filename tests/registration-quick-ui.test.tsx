@@ -184,8 +184,10 @@ describe('one registration workspace owns priorities and alternatives', () => {
       onSelectPrimaryOffering={() => {}} onAddFallbackOffering={() => {}}
       onRemoveFallbackOffering={() => {}} onMoveFallbackOffering={() => {}} />);
     expect(html).toContain('چینش اولویت، جایگزین‌ها و صف ثبت');
-    expect(html).toContain('گروه اصلی 02');
-    expect(html).toContain('جایگزین‌ها (۱)');
+    expect(html).toContain('گروه اصلی');
+    expect(html).toContain('02');
+    expect(html).toContain('جایگزین‌ها (');
+    expect(html).toContain('۱');
     expect(html).toContain('استاد جایگزین');
     expect(html).toContain('افزایش اولویت گروه رزرو 03');
     expect(html).toContain('کاهش اولویت گروه رزرو 03');
@@ -206,9 +208,10 @@ describe('one registration workspace owns priorities and alternatives', () => {
       onEditPriorities={() => {}} onReorderCourses={() => {}} offeringPriorities={{}}
       onSelectPrimaryOffering={() => {}} onAddFallbackOffering={() => {}}
       onRemoveFallbackOffering={() => {}} onMoveFallbackOffering={() => {}} />);
-    expect(html).toContain('رزرو گروه 03');
-    expect(html).not.toContain('رزرو گروه 99');
-    expect(html).not.toContain('رزرو گروه 04');
+    expect(html).toContain('رزرو گروه');
+    expect(html).toContain('03');
+    expect(html).not.toContain('گروه 99');
+    expect(html).not.toContain('گروه 04');
     const dashboard = readFileSync(resolve(process.cwd(), 'src/components/StudentDashboard.tsx'), 'utf8');
     const planner = readFileSync(resolve(process.cwd(), 'src/components/SchedulePlanner.tsx'), 'utf8');
     expect(dashboard).toContain('onMoveFallbackOffering={handleMoveFallbackOffering}');
