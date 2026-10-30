@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
-import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
+import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
 import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
@@ -492,30 +492,27 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   }
 
   const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-  let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
-  if (!plan) {
-    plan = {
-      id: `plan-${userId}-${currentTermId}`,
-      userId,
-      termId: currentTermId,
-      selectedOfferingIds: [],
-      coursePriorities: {},
-      offeringPriorities: {},
-      updatedAt: new Date().toISOString(),
-    };
-    db.studentPlans.push(plan);
-  }
+  // Validate first, then persist. A failed add or a no-op remove must not
+  // manufacture a new empty plan in the student's private database.
+  const existingPlan = db.studentPlans.find(p => p.userId === userId && p.termId === currentTermId);
+  const plan: StudentPlan = existingPlan ?? {
+    id: `plan-${userId}-${currentTermId}`,
+    userId, termId: currentTermId, selectedOfferingIds: [],
+    coursePriorities: [], offeringPriorities: {}, updatedAt: new Date().toISOString(),
+  };
 
   if (action === 'remove') {
-    plan.selectedOfferingIds = plan.selectedOfferingIds.filter((id) => id !== offeringId);
-    plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
-      .filter(id => plan.selectedOfferingIds.includes(id));
-    plan.updatedAt = new Date().toISOString();
-    db.save();
+    if (existingPlan && plan.selectedOfferingIds.includes(offeringId)) {
+      plan.selectedOfferingIds = plan.selectedOfferingIds.filter(id => id !== offeringId);
+      plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
+        .filter(id => plan.selectedOfferingIds.includes(id));
+      plan.updatedAt = new Date().toISOString();
+      db.save();
+    }
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
-      success: true,
-      action: 'removed',
-      selectedOfferingIds: plan.selectedOfferingIds,
+      success: true, action: 'removed', selectedOfferingIds: plan.selectedOfferingIds,
+      plan,
     });
   }
 
@@ -534,8 +531,25 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   const relevantOfferings = db.courseOfferings.filter(
     (o) => o.termId === currentTermId && o.campusId === profile.campusId && o.active
   );
-  const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
+  const passedCourses = db.studentPassedCourses.filter(spc => spc.userId === userId);
+  const targetCourse = db.courses.find(c => c.id === targetOffering.courseId);
+  const currentSelectedOfferings = db.courseOfferings.filter(o =>
+    plan.selectedOfferingIds.includes(o.id));
+  const sameCourseExistingOffering = currentSelectedOfferings.find(o =>
+    o.courseId === targetOffering.courseId && o.id !== targetOffering.id);
+  const candidateIds = [
+    ...plan.selectedOfferingIds.filter(id => id !== sameCourseExistingOffering?.id),
+    ...(!plan.selectedOfferingIds.includes(offeringId) ? [offeringId] : []),
+  ];
 
+  const referenceError = validateRegistrationPlanReferences({
+    selectedOfferingIds: candidateIds,
+    currentTermId, campusId: profile.campusId, offerings: db.courseOfferings,
+  });
+  if (referenceError) return res.status(400).json({ success: false, error: referenceError });
+
+  // Evaluate the COMPLETE candidate combination. Existing corequisite choices
+  // must remain consistent and the replacement belongs to the same chart/term.
   const report = evaluateStudentEligibility({
     studentProfile: profile,
     curriculum,
@@ -543,47 +557,33 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     allCourses: db.courses,
     tracks: db.tracks,
     academicRules: db.academicRules,
-    
     passedCourses,
     currentOfferings: relevantOfferings,
-    plannedOfferingIdsInSameTerm: plan.selectedOfferingIds,
+    plannedOfferingIdsInSameTerm: candidateIds,
   });
-
-  const offeringEval = report.results.find((r: any) => r.offeringId === offeringId);
-  if (!offeringEval) {
+  const invalidIds = candidateIds.filter(id => {
+    const item = report.results.find(row => row.offeringId === id);
+    return !item || !item.canSelect || !item.isEligible || item.overallStatus !== 'AVAILABLE';
+  });
+  if (invalidIds.length) {
+    const offeringEval = report.results.find(row => row.offeringId === offeringId);
     return res.status(400).json({
       success: false,
-      error: 'امکان ارزیابی تطبیقی این درس وجود ندارد.',
-    });
-  }
-
-  if (!offeringEval.canSelect || !offeringEval.isEligible || offeringEval.overallStatus !== 'AVAILABLE') {
-    return res.status(400).json({
-      success: false,
-      error: `این درس غیرقابل اخذ است: ${offeringEval.primaryReason || 'پیش‌نیاز یا شرایط لازم احراز نشده است.'}`,
-      details: {
+      error: invalidIds.includes(offeringId)
+        ? `این درس غیرقابل اخذ است: ${offeringEval?.primaryReason || 'پیش‌نیاز یا شرایط لازم احراز نشده است.'}`
+        : 'تغییر گروه، اعتبار ترکیب نهایی دروس و هم‌نیازهای برنامه را مخدوش می‌کند.',
+      invalidIds,
+      details: offeringEval && invalidIds.includes(offeringId) ? {
         overallStatus: offeringEval.overallStatus,
         primaryReason: offeringEval.primaryReason,
         missingPrerequisites: offeringEval.missingPrerequisites,
         missingCorequisites: offeringEval.missingCorequisites,
-      },
+      } : undefined,
     });
   }
 
-  // The add endpoint and whole-plan endpoint enforce the SAME configured
-  // limit. A name containing a religious-course keyword is never an exemption.
+  // The add endpoint and whole-plan endpoint enforce the same configured limit.
   const academicLimits = db.calculateStudentAcademicLimits(userId);
-  const targetCourse = db.courses.find(c => c.id === targetOffering.courseId);
-  const currentSelectedOfferings = db.courseOfferings.filter(o =>
-    plan!.selectedOfferingIds.includes(o.id)
-  );
-  const sameCourseExistingOffering = currentSelectedOfferings.find(o =>
-    o.courseId === targetOffering.courseId && o.id !== targetOffering.id
-  );
-  const candidateIds = [
-    ...plan.selectedOfferingIds.filter(id => id !== sameCourseExistingOffering?.id),
-    ...(!plan.selectedOfferingIds.includes(offeringId) ? [offeringId] : []),
-  ];
   const candidateUnits = countRegistrationPlanUnits(candidateIds, db.courseOfferings, db.courses);
   if (!Number.isFinite(academicLimits.effectiveMaxUnits) ||
       candidateUnits > academicLimits.effectiveMaxUnits) {
@@ -593,17 +593,9 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     });
   }
 
-  // If a different section of this course was already selected, replace it in selectedOfferingIds
-  // and keep it as an alternative in offeringPriorities
-  if (sameCourseExistingOffering) {
-    plan.selectedOfferingIds = plan.selectedOfferingIds.filter(
-      (id) => id !== sameCourseExistingOffering.id
-    );
-  }
-
-  if (!plan.selectedOfferingIds.includes(offeringId)) {
-    plan.selectedOfferingIds.push(offeringId);
-  }
+  if (!existingPlan) db.studentPlans.push(plan);
+  // One course has exactly one main section; preserve the old main as fallback.
+  plan.selectedOfferingIds = candidateIds;
 
   // Update offeringPriorities for this course
   if (!plan.offeringPriorities) plan.offeringPriorities = {};
@@ -621,6 +613,7 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   plan.updatedAt = new Date().toISOString();
   db.save();
 
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({
     success: true,
     action: 'added',
