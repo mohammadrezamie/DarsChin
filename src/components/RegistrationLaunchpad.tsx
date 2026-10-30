@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap, Layers3, ArrowRightLeft, Plus, Trash2 } from 'lucide-react';
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
@@ -18,10 +18,16 @@ interface Props {
   curriculumId: string | null;
   onEditPriorities: () => void;
   onReorderCourses: (orderedCourseIds: string[]) => void | boolean | Promise<void | boolean>;
+  offeringPriorities?: Record<string, string[]>;
+  onSelectPrimaryOffering?: (courseId: string, offeringId: string) => void;
+  onAddFallbackOffering?: (courseId: string, offeringId: string) => void;
+  onRemoveFallbackOffering?: (courseId: string, offeringId: string) => void;
+  onMoveFallbackOffering?: (courseId: string, offeringId: string, direction: -1 | 1) => void;
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
   evaluations,selectedOfferingIds,coursePriorities,profile,curriculumId,onEditPriorities,onReorderCourses,
+  offeringPriorities={},onSelectPrimaryOffering,onAddFallbackOffering,onRemoveFallbackOffering,onMoveFallbackOffering,
 }) => {
   const [rules,setRules]=useState<AcademicRule[]>([]);
   const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
@@ -36,6 +42,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Default to the student's real task: see a course and copy its code.
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
+  const [expandedAlternatives,setExpandedAlternatives]=useState<string|null>(null);
   const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
@@ -141,10 +148,10 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 dark:border-blue-900 dark:bg-blue-950/40">
       <div className="min-w-0">
         <h2 className="flex items-center gap-2 text-base font-bold text-blue-950 dark:text-blue-100">
-          <Zap className="h-4 w-4"/> صف سریع ثبت دروس
+          <Zap className="h-4 w-4"/> چینش اولویت، جایگزین‌ها و صف ثبت
         </h2>
         <p className="mt-0.5 text-xs leading-6 text-blue-800 dark:text-blue-300">
-          {queue.steps.length} درس · {activeDoneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
+          {queue.steps.length} درس · {activeDoneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده · اولویت و رزرو در همین فهرست
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -157,12 +164,12 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           className={`min-h-11 rounded-lg border px-3 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-45 ${sortMode?'border-blue-700 bg-blue-700 text-white':'border-blue-300 text-blue-900 dark:text-blue-100'}`}>
           {sortMode?'اتمام چیدمان':'چیدمان'}
         </button>
-        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-blue-300 px-3 text-xs font-bold text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-100">برنامه</button>
+        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-blue-300 px-3 text-xs font-bold text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-100">تقویم کلاس‌ها</button>
       </div>
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-      این فهرست ثبت خودکار در آموزشیار نیست؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
+      همین فهرست برای چینش اولویت، گروه اصلی، رزروها و کپی کد است. ثبت رسمی در آموزشیار دستی است؛ پس از ثبت واقعی هر درس تیک بزن.
     </p>
     {loading&&<p role="status" className="text-xs text-slate-600 dark:text-slate-300"><RefreshCw aria-hidden="true" className="ml-1 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>در حال تطبیق قوانین… کپی سریع پس از بررسی فعال می‌شود.</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -176,6 +183,12 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         const done=activeDoneIds.includes(step.courseId);
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
         const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));
+        const courseOfferings=evaluations.filter(row=>row.courseId===step.courseId);
+        const alternativeIds=[...new Set(offeringPriorities[step.courseId]||[])].filter(id=>id!==step.offeringId);
+        const alternatives=alternativeIds.map(id=>courseOfferings.find(row=>row.offeringId===id))
+          .filter((row):row is CourseEligibilityResult=>Boolean(row));
+        const availableAlternatives=courseOfferings.filter(row=>row.offeringId!==step.offeringId &&
+          !alternativeIds.includes(row.offeringId) && row.canSelect && row.isEligible && row.overallStatus==='AVAILABLE');
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
         return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
@@ -213,6 +226,54 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
+          <details className="border-t border-slate-100 px-3 py-1 text-xs dark:border-slate-800"
+            open={expandedAlternatives===step.courseId}
+            onToggle={event=>setExpandedAlternatives(event.currentTarget.open?step.courseId:prev=>prev===step.courseId?null:prev)}>
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-bold text-blue-700 dark:text-blue-300">
+              <Layers3 aria-hidden="true" className="h-4 w-4"/>
+              گروه اصلی {step.groupCode||'نامشخص'} · جایگزین‌ها ({alternatives.length.toLocaleString('fa-IR')})
+            </summary>
+            <div className="space-y-2 pb-3">
+              {alternatives.map((alt,i)=>(
+                <div key={alt.offeringId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="min-w-0 flex-1 leading-6 text-slate-700 dark:text-slate-200">
+                    <strong>رزرو {i+1} · گروه {alt.groupCode}</strong>
+                    <span> · {alt.instructor||'استاد نامشخص'} · {alt.dayOfWeek} {alt.startTime}–{alt.endTime}</span>
+                    {(!alt.canSelect||!alt.isEligible||alt.overallStatus!=='AVAILABLE')&&
+                      <span className="block text-amber-700 dark:text-amber-300">این گروه فعلاً قابل اخذ نیست؛ دوباره بررسی کن.</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    {onMoveFallbackOffering&&<>
+                      <button type="button" onClick={()=>onMoveFallbackOffering(step.courseId,alt.offeringId,-1)} disabled={i===0}
+                        aria-label={`افزایش اولویت گروه رزرو ${alt.groupCode}`}
+                        className="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 disabled:opacity-30 dark:border-slate-700"><ArrowUp className="h-4 w-4"/></button>
+                      <button type="button" onClick={()=>onMoveFallbackOffering(step.courseId,alt.offeringId,1)} disabled={i===alternatives.length-1}
+                        aria-label={`کاهش اولویت گروه رزرو ${alt.groupCode}`}
+                        className="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 disabled:opacity-30 dark:border-slate-700"><ArrowDown className="h-4 w-4"/></button>
+                    </>}
+                    {onSelectPrimaryOffering&&<button type="button" disabled={!alt.canSelect||!alt.isEligible||alt.overallStatus!=='AVAILABLE'}
+                      onClick={()=>onSelectPrimaryOffering(step.courseId,alt.offeringId)}
+                      className="min-h-11 rounded-lg border border-blue-300 px-2 font-bold text-blue-800 disabled:opacity-40 dark:border-blue-700 dark:text-blue-200">
+                      <ArrowRightLeft className="ml-1 inline h-3.5 w-3.5"/> اصلی
+                    </button>}
+                    {onRemoveFallbackOffering&&<button type="button" onClick={()=>onRemoveFallbackOffering(step.courseId,alt.offeringId)}
+                      aria-label={`حذف گروه رزرو ${alt.groupCode}`} className="grid h-11 w-11 place-items-center rounded-lg border border-rose-200 text-rose-600 dark:border-rose-900">
+                      <Trash2 className="h-4 w-4"/>
+                    </button>}
+                  </div>
+                </div>
+              ))}
+              {alternatives.length===0&&<p className="text-slate-500 dark:text-slate-400">فعلاً گروه رزروی برای این درس تعیین نکرده‌ای.</p>}
+              {onAddFallbackOffering&&availableAlternatives.length>0&&
+                <div className="flex flex-wrap gap-2">
+                  {availableAlternatives.map(alt=><button type="button" key={alt.offeringId}
+                    onClick={()=>onAddFallbackOffering(step.courseId,alt.offeringId)}
+                    className="min-h-11 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-right text-xs font-bold text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                    <Plus className="ml-1 inline h-3.5 w-3.5"/> رزرو گروه {alt.groupCode} · {alt.instructor||'استاد نامشخص'}
+                  </button>)}
+                </div>}
+            </div>
+          </details>
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-')||Boolean(step.groupCode && step.copyCode!==step.groupCode))&&
             <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
               <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>
