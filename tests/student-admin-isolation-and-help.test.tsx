@@ -42,6 +42,9 @@ describe('student-first product and private management contract', () => {
     const auth = read('src/context/AuthContext.tsx');
     expect(auth).toContain('const [isLoading, setIsLoading] = useState(true)');
     expect(auth).not.toContain('useState(!getStoredToken())');
+    expect(auth).toContain("window.location.pathname === '/demo/student'");
+    expect(auth).not.toContain("window.location.pathname.startsWith('/demo/')");
+    expect(auth).toContain('/demo/admin is private');
   });
 
   it('has a public student-only searchable guide with useful help sections and FAQ', () => {

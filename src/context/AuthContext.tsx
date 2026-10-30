@@ -96,9 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Browser-only demo pages must not refresh any existing real session.
-    // DemoAuthProvider supplies an independent synthetic identity below.
-    if (window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/')) {
+    // Only fully public demo workspaces bypass real session loading.
+    // /demo/admin is private: its AdminDemoGate MUST wait for /api/auth/me.
+    // DemoAuthProvider supplies a synthetic identity within public workspaces.
+    if (window.location.pathname === '/demo' || window.location.pathname === '/demo/student') {
       setIsLoading(false);
       return;
     }
