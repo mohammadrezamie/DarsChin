@@ -1,4 +1,3 @@
-import { calculateAcademicLimits } from './academic-policy';
 // ============================================================================
 // DARSCHYN (درس‌چین) - Core Eligibility Engine (Deterministic Rule-Based)
 // ============================================================================
@@ -232,7 +231,9 @@ export function evaluateStudentEligibility(
         (r) =>
           r.curriculumId === curriculum.id &&
           r.targetCourseId === course.id &&
-          (r.trackId === null || r.trackId === undefined || r.trackId === trackId)
+          (r.trackId === null || r.trackId === undefined || r.trackId === trackId) &&
+          (!r.majorId || r.majorId === studentProfile.majorId) &&
+          (!r.entryYearId || r.entryYearId === studentProfile.entryYearId)
       );
 
       
@@ -247,34 +248,28 @@ export function evaluateStudentEligibility(
         isCorequisite: boolean,
         isContextualRetake: boolean
       ): { passed: boolean; missing: Array<{ id: string; name: string; code: string }>; reasons: string[] } => {
-        if (!node) return { passed: true, missing: [], reasons: [] };
+        if (!node) return { passed: false, missing: [], reasons: ['شرط آموزشی فاقد ساختار معتبر است؛ بررسی مدیر آموزش لازم است.'] };
         if (node.type === 'COURSE') {
           const reqCourse = coursesMap.get(node.courseId);
-          if (!reqCourse) return { passed: true, missing: [], reasons: [] };
+          if (!reqCourse) return {
+            passed: false,
+            missing: [{ id: String(node.courseId || 'unknown'), name: 'درس تعریف‌نشده', code: '---' }],
+            reasons: ['مرجع شرط آموزشی در کاتالوگ پیدا نشد؛ تا اصلاح داده اخذ این درس تأیید نمی‌شود.'],
+          };
 
           const isPassed = passedCourseIdsSet.has(reqCourse.id);
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
           const wasFailed = passedCourses.some(p => p.courseId === reqCourse.id && (p.status === 'FAILED' || (p.grade !== undefined && p.grade < 10)));
 
-          // Final Semester Rule Bypass
-          const { isFinalSemester } = calculateAcademicLimits(
-            studentProfile,
-            allCourses,
-            curriculumCourses,
-            passedCourses,
-            { finalSemesterRuleEnabled: true, finalSemesterThresholdUnits: 24, normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24, summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24 } as any
-          );
-          if (isFinalSemester) {
-             return { passed: true, missing: [], reasons: [] };
-          }
-
+          // Final-term status never automatically waives a prerequisite.
+          // An exception requires its own explicitly configured, reviewed rule.
           if (isCorequisite) {
             // Corequisite logic
             if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
             return { passed: false, missing: [{ id: reqCourse.id, name: reqCourse.name, code: reqCourse.code }], reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید در همین ترم اخذ شود یا قبلاً پاس شده باشد.`] };
           }
           
-          if (isContextualRetake || wasFailed) {
+          if (isContextualRetake && wasFailed) {
             // IAU Failed Prerequisite Exception (acts as corequisite)
             if (isPassed || isPlannedInSameTerm) return { passed: true, missing: [], reasons: [] };
             return {
@@ -284,7 +279,7 @@ export function evaluateStudentEligibility(
             };
           }
 
-          console.log('Eval:', {courseId: reqCourse.id, isPassed, isFinalSemester, wasFailed, isContextualRetake, isCorequisite}); // Normal Prerequisite
+          // Default prerequisite: a genuine previous pass is required.
           if (isPassed) return { passed: true, missing: [], reasons: [] };
           return {
             passed: false,
@@ -292,7 +287,7 @@ export function evaluateStudentEligibility(
             reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`],
           };
         } else if (node.type === 'GROUP') {
-          if (!node.operands || node.operands.length === 0) return { passed: true, missing: [], reasons: [] };
+          if (!Array.isArray(node.operands) || node.operands.length === 0) return { passed: false, missing: [], reasons: ['گروه شروط آموزشی خالی یا نامعتبر است.'] };
           
           if (node.operator === 'OR') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
@@ -318,7 +313,7 @@ export function evaluateStudentEligibility(
             };
           }
         }
-        return { passed: true, missing: [], reasons: [] };
+        return { passed: false, missing: [], reasons: ['نوع شرط آموزشی ناشناخته است.'] };
       };
 
       for (const rule of applicableRules) {
