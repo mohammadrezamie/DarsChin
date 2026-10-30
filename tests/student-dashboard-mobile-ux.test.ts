@@ -122,3 +122,15 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).toContain("disabled={planStatus === 'saving'}");
   });
 });
+
+
+describe('student registration marks do not leak across asynchronous account transitions',()=>{
+  it('serializes manual registration marks with whole-plan writes and discards stale responses',()=>{
+    const dash=source('src/components/StudentDashboard.tsx');
+    expect(dash).toContain('planMutationRef.current || registrationMarkLock.current');
+    expect(dash).toContain('const identityAtStart = registrationIdentityRef.current;');
+    expect(dash).toContain('revisionAtStart !== evaluationVersionRef.current');
+    expect(dash).toContain('setRegisteredOfferingIds([]);\n      setClearConfirmOpen(false);');
+    expect(dash).not.toContain('setRegisteredOfferingIds([]);\n      setRegisteredOfferingIds(null);');
+  });
+});

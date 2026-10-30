@@ -70,6 +70,9 @@ export const StudentDashboard: React.FC = () => {
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
   const [registeredOfferingIds, setRegisteredOfferingIds] = useState<string[] | null>(null);
   const registrationMarkLock = useRef(false);
+  // Track the *current* identity and term across renders. Async responses
+  // from a previous profile/term must never update the new student's marks.
+  const registrationIdentityRef = useRef('');
   const [wishlistCourseIds, setWishlistCourseIds] = useState<string[]>([]);
   const [journeyStep, setJourneyStep] = useState(0);
   const [journeyReady, setJourneyReady] = useState(false);
@@ -98,6 +101,7 @@ export const StudentDashboard: React.FC = () => {
   const clearDialogRef = useRef<HTMLDivElement>(null);
   const clearCancelRef = useRef<HTMLButtonElement>(null);
   const conflictOpen = Boolean(conflictWarning);
+  registrationIdentityRef.current = `${user?.id || 'signed-out'}|${profile?.currentTermId || 'no-term'}`;
 
   // An academic warning must stay usable when the browser is zoomed or a
   // keyboard is attached: lock underlying scroll and contain keyboard focus.
@@ -257,7 +261,6 @@ export const StudentDashboard: React.FC = () => {
       setSelectedOfferingIds([]);
       setCoursePriorities([]);
       setOfferingPriorities({});
-      setRegisteredOfferingIds([]);
       setRegisteredOfferingIds(null);
       setWishlistCourseIds([]);
       setJourneyStep(0);
@@ -382,7 +385,7 @@ export const StudentDashboard: React.FC = () => {
       setPlanError('برنامه هنوز به‌طور معتبر بارگذاری نشده است. ابتدا دریافت دوباره اطلاعات را انجام دهید.');
       return false;
     }
-    if (planMutationRef.current) {
+    if (planMutationRef.current || registrationMarkLock.current) {
       setPlanError('تغییر قبلی هنوز در حال ثبت است. پس از پایان ذخیره‌سازی دوباره تلاش کنید.');
       return false;
     }
@@ -434,10 +437,14 @@ export const StudentDashboard: React.FC = () => {
     if (loading || loadError || planMutationRef.current || registrationMarkLock.current ||
         !selectedOfferingIds.includes(offeringId)) return false;
     registrationMarkLock.current = true;
+    const identityAtStart = registrationIdentityRef.current;
+    const revisionAtStart = evaluationVersionRef.current;
     try {
       const result = await apiRequest<{ registeredOfferingIds: string[] }>('/api/student/registration-progress', {
         method: 'PUT', body: JSON.stringify({ offeringId, registered }),
       });
+      if (identityAtStart !== registrationIdentityRef.current ||
+          revisionAtStart !== evaluationVersionRef.current) return false;
       if (!result.success || !Array.isArray(result.data?.registeredOfferingIds)) {
         setPlanError(result.error || 'علامت ثبت در سرور ذخیره نشد.');
         return false;
@@ -446,7 +453,10 @@ export const StudentDashboard: React.FC = () => {
       setPlanError(null);
       return true;
     } catch {
-      setPlanError('ارتباط با سرور برای علامت ثبت برقرار نشد.');
+      if (identityAtStart === registrationIdentityRef.current &&
+          revisionAtStart === evaluationVersionRef.current) {
+        setPlanError('ارتباط با سرور برای علامت ثبت برقرار نشد.');
+      }
       return false;
     } finally {
       registrationMarkLock.current = false;
@@ -697,6 +707,7 @@ export const StudentDashboard: React.FC = () => {
       setSelectedOfferingIds([]);
       setCoursePriorities([]);
       setOfferingPriorities({});
+      setRegisteredOfferingIds([]);
       setClearConfirmOpen(false);
       // Recalculate eligibility against the cleared server-side plan.
       void fetchDashboardData();

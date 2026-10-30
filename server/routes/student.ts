@@ -361,6 +361,7 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
     db.save();
   }
 
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({ success: true, data: plan });
 });
 
@@ -472,6 +473,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
     .filter(id => plan.selectedOfferingIds.includes(id));
   db.save();
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({ success: true, data: plan });
 });
 

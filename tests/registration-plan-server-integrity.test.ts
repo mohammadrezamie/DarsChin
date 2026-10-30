@@ -207,3 +207,15 @@ describe('account-and-term-isolated manual group registration marks',()=>{
     expect(plan.registeredOfferingIds).toEqual([]);
   });
 });
+
+
+describe('private registration responses never permit shared HTTP caching',()=>{
+  it('marks the plan GET and plan PUT as private, no-store',async()=>{
+    const get=await request(app).get('/api/student/plan').set(token());
+    expect(get.status).toBe(200);
+    expect(get.headers['cache-control']).toBe('private, no-store');
+    const put=await request(app).put('/api/student/plan').set(token()).send({selectedOfferingIds:[]});
+    expect(put.status).toBe(200);
+    expect(put.headers['cache-control']).toBe('private, no-store');
+  });
+});
