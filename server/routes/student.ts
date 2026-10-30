@@ -10,7 +10,7 @@ import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
 import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
-import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema } from '../schemas/student';
+import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema, registrationProgressSchema } from '../schemas/student';
 
 export const studentRouter = Router();
 
@@ -364,6 +364,27 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
   res.json({ success: true, data: plan });
 });
 
+// A mark means "I manually registered this specific group"; it is never
+// an official university confirmation. Keep it private to user and term.
+studentRouter.put('/registration-progress', authenticate, validate(registrationProgressSchema), (req: AuthenticatedRequest, res) => {
+  const userId = req.user!.id;
+  const termId = currentStudentTerm(userId);
+  const plan = db.studentPlans.find(p => p.userId === userId && p.termId === termId);
+  const { offeringId, registered } = req.body as { offeringId: string; registered: boolean };
+  if (!plan || !plan.selectedOfferingIds.includes(offeringId)) {
+    return res.status(409).json({ success: false, error: 'این گروه در برنامهٔ فعلی شما انتخاب نشده است؛ وضعیت ثبت نمی‌تواند تغییر کند.' });
+  }
+  const selected = new Set(plan.selectedOfferingIds);
+  const previous = (plan.registeredOfferingIds || []).filter(id => selected.has(id));
+  plan.registeredOfferingIds = registered
+    ? [...new Set([...previous, offeringId])]
+    : previous.filter(id => id !== offeringId);
+  plan.updatedAt = new Date().toISOString();
+  db.save();
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({ success: true, data: { registeredOfferingIds: plan.registeredOfferingIds } });
+});
+
 // Update whole plan (e.g. sync priorities or offerings)
 studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
@@ -447,6 +468,9 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
     plan.updatedAt = new Date().toISOString();
   }
 
+  // Never transfer a "registered" mark onto a different main group.
+  plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
+    .filter(id => plan.selectedOfferingIds.includes(id));
   db.save();
   res.json({ success: true, data: plan });
 });
@@ -482,6 +506,8 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
 
   if (action === 'remove') {
     plan.selectedOfferingIds = plan.selectedOfferingIds.filter((id) => id !== offeringId);
+    plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
+      .filter(id => plan.selectedOfferingIds.includes(id));
     plan.updatedAt = new Date().toISOString();
     db.save();
     return res.json({
@@ -588,7 +614,8 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     ]),
   ];
   plan.offeringPriorities[targetOffering.courseId] = updatedCourseOfferings;
-
+  plan.registeredOfferingIds = (plan.registeredOfferingIds || [])
+    .filter(id => plan.selectedOfferingIds.includes(id));
   plan.updatedAt = new Date().toISOString();
   db.save();
 

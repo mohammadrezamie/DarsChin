@@ -58,6 +58,11 @@ export const updatePlanSchema = z.object({
     .refine(ids => new Set(ids).size === ids.length, 'گروه تکراری در جایگزین‌ها وجود دارد.')).optional(),
 });
 
+export const registrationProgressSchema = z.object({
+  offeringId: z.string().min(1).max(150),
+  registered: z.boolean(),
+}).strict();
+
 export const planSelectSchema = z.object({
   offeringId: z.string().min(1, 'شناسه گروه درسی الزامی است'),
   action: z.enum(['add', 'remove']),
