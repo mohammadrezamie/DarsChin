@@ -42,9 +42,8 @@ describe('academic progress must never borrow another student chart',()=>{
     const valid=db.calculateStudentAcademicLimits(id);
     const chart=original.curricula.find(c=>c.status==='active'&&c.campusId===matching.campusId &&
       c.majorId===matching.majorId&&c.degreeLevelId===matching.degreeLevelId&&c.entryYearId===matching.entryYearId)!;
-    const units=original.curriculumCourses.filter(cc=>cc.curriculumId===chart.id)
-      .map(cc=>original.courses.find(c=>c.id===cc.courseId)).filter(Boolean)
-      .reduce((sum,c)=>sum+(c?.units||0),0);
+    const ids=new Set(original.curriculumCourses.filter(cc=>cc.curriculumId===chart.id).map(cc=>cc.courseId));
+    const units=original.courses.filter(c=>ids.has(c.id)).reduce((sum,c)=>sum+(c.units||0),0);
     expect(valid.totalCurriculumUnits).toBe(units);
   });
 
