@@ -79,6 +79,14 @@ export function requirePermission(permission: string) {
       return next(); // root owner bypass
     }
 
+    // Every administrative permission also requires an active administrator
+    // role. Revoking the role must take effect even if a legacy permission
+    // string remains on a persisted student record.
+    const roleRequired = permission === 'student.access' ? 'student' : 'admin';
+    if (!roles.includes(roleRequired)) {
+      return res.status(403).json({ success: false, error: 'نقش کاربری مجاز برای این عملیات وجود ندارد.' });
+    }
+
     if (!permissions.includes(permission)) {
       return res.status(403).json({
         success: false,
@@ -92,7 +100,7 @@ export function requirePermission(permission: string) {
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const roles = Array.isArray(req.user?.roles) ? req.user.roles : [];
   const permissions = req.user?.permissions || [];
-  if (!roles.includes('super-admin') && !permissions.includes('admin.panel.access')) {
+  if (!roles.includes('super-admin') && (!roles.includes('admin') || !permissions.includes('admin.panel.access'))) {
     return res.status(403).json({
       success: false,
       error: 'دسترسی غیرمجاز. فقط مدیران سامانه مجاز به انجام این عملیات هستند.',

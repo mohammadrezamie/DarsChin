@@ -140,11 +140,20 @@ adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, re
   if (roles) {
     target.roles = roles.includes('admin') ? ['student', 'admin'] : ['student'];
   }
+  if (!target.roles.includes('admin')) {
+    // Prevent stale privileged grants on demoted student accounts, even when
+    // roles and permissions were changed in the same request.
+    target.permissions = [];
+    target.demandScopes = [];
+  }
 
   if (password && password.trim() !== '') {
       target.password = bcrypt.hashSync(password, 10);
   }
 
+  // A profile or permission update can change login/authority; force a
+  // fresh token rather than leaving old browser sessions apparently valid.
+  target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
     id: `log-${Date.now()}`,
     adminId: req.user.id,
@@ -177,6 +186,8 @@ adminManagementRouter.delete('/:id', authenticate, requireSuperAdmin, (req: any,
       target.deactivatedBy = req.user.id;
   }
 
+  // Reactivation must not revive a JWT issued before deactivation.
+  target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
     id: `log-${Date.now()}`,
     adminId: req.user.id,
