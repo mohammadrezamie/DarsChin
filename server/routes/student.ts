@@ -57,6 +57,7 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
       c.entryYearId === profile!.entryYearId
   ) || null;
 
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({
     success: true,
     data: {
@@ -82,21 +83,29 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     previousTermGpa,
   } = req.body;
 
-  let idx = db.studentProfiles.findIndex((p) => p.userId === userId);
+  const idx = db.studentProfiles.findIndex(p => p.userId === userId);
+  const previous = idx === -1 ? null : db.studentProfiles[idx];
+  // PATCH-like semantics: changing just a term, GPA or desired track must
+  // NEVER silently reset university/campus/major/entry-year or saved student ID.
+  // Preserve deliberate null (clear GPA/track); only undefined means omitted.
+  const nextTrackSelected = isTrackSelected ?? previous?.isTrackSelected ?? false;
   const updatedProfile: StudentAcademicProfile = {
     userId,
-    universityId: universityId || db.universities[0]?.id || '',
-    campusId: campusId || db.campuses[0]?.id || '',
-    degreeLevelId: degreeLevelId || db.degreeLevels[0]?.id || '',
-    majorId: majorId || db.majors[0]?.id || '',
-    entryYearId: entryYearId || db.entryYears[0]?.id || '',
-    isTrackSelected: Boolean(isTrackSelected),
-    selectedTrackId: isTrackSelected ? selectedTrackId : null,
-    desiredTrackIds: Array.isArray(desiredTrackIds) ? desiredTrackIds : [],
-    currentTermId: currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || '',
-    // Student identifier was collected for demand planning; profile edits must preserve it.
-    studentNumber: idx !== -1 ? db.studentProfiles[idx].studentNumber : undefined,
-    previousTermGpa: previousTermGpa !== undefined ? Number(previousTermGpa) : null,
+    universityId: universityId ?? previous?.universityId ?? db.universities[0]?.id ?? '',
+    campusId: campusId ?? previous?.campusId ?? db.campuses[0]?.id ?? '',
+    degreeLevelId: degreeLevelId ?? previous?.degreeLevelId ?? db.degreeLevels[0]?.id ?? '',
+    majorId: majorId ?? previous?.majorId ?? db.majors[0]?.id ?? '',
+    entryYearId: entryYearId ?? previous?.entryYearId ?? db.entryYears[0]?.id ?? '',
+    isTrackSelected: nextTrackSelected,
+    selectedTrackId: nextTrackSelected
+      ? (selectedTrackId !== undefined ? selectedTrackId : previous?.selectedTrackId ?? null)
+      : null,
+    desiredTrackIds: desiredTrackIds ?? previous?.desiredTrackIds ?? [],
+    currentTermId: currentTermId ?? previous?.currentTermId ??
+      db.academicTerms.find(term => term.isCurrent)?.id ?? '',
+    studentNumber: previous?.studentNumber,
+    previousTermGpa: previousTermGpa !== undefined
+      ? previousTermGpa : previous?.previousTermGpa ?? null,
     updatedAt: new Date().toISOString(),
   };
 
@@ -107,6 +116,7 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
   }
 
   db.save();
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({ success: true, data: updatedProfile });
 });
 
