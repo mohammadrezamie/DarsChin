@@ -24,11 +24,14 @@ interface Props {
   onAddFallbackOffering?: (courseId: string, offeringId: string) => void;
   onRemoveFallbackOffering?: (courseId: string, offeringId: string) => void;
   onMoveFallbackOffering?: (courseId: string, offeringId: string, direction: -1 | 1) => void;
+  registeredOfferingIds?: string[] | null;
+  onToggleRegistered?: (offeringId: string, registered: boolean) => Promise<boolean>;
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
   evaluations,selectedOfferingIds,coursePriorities,profile,curriculumId,onEditPriorities,onReorderCourses,
   offeringPriorities={},onSelectPrimaryOffering,onAddFallbackOffering,onRemoveFallbackOffering,onMoveFallbackOffering,
+  registeredOfferingIds,onToggleRegistered,
 }) => {
   const [rules,setRules]=useState<AcademicRule[]>([]);
   const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
@@ -40,6 +43,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const [verifiedContextKey,setVerifiedContextKey]=useState<string|null>(null);
   const [copyNotice,setCopyNotice]=useState<{contextKey:string;message:string}|null>(null);
   const [reordering,setReordering]=useState(false);
+  const [markingRegistered,setMarkingRegistered]=useState(false);
   // Default to the student's real task: see a course and copy its code.
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
@@ -50,7 +54,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Async clipboard/reorder responses from another account never show on this one.
   const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:'';
   const setCopyState=(message:string)=>setCopyNotice({contextKey:academicContextKey,message});
-  const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
+  // Browser-only demos keep their own local marks. Real accounts read them
+  // from the server, keyed to the exact offering rather than the course.
+  const progressKey=`darschin-reg-progress-v2-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
   const [doneIds,setDoneIds]=useState<string[]>([]);
   // Wait for hydration of this exact term/chart before persisting; otherwise the
   // initial [] state could overwrite a student's previously checked progress.
@@ -58,8 +64,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   useEffect(()=>{setSortMode(false);},[profile?.userId,profile?.currentTermId]);
   // Never render completion marks from the previous student's session during
   // the render immediately after switching profiles.
-  const progressReady=progressLoadedKey===progressKey;
-  const activeDoneIds=progressReady?doneIds:[];
+  const progressReady=onToggleRegistered ? Array.isArray(registeredOfferingIds) : progressLoadedKey===progressKey;
+  const activeDoneIds=onToggleRegistered ? (registeredOfferingIds||[]) : progressReady?doneIds:[];
 
   useEffect(()=>{
     try {
@@ -114,15 +120,31 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&
     verifiedContextKey===academicContextKey&&!loading&&!error;
   const stepIds=queue.steps.map(s=>s.courseId);
-  const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!activeDoneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!activeDoneIds.includes(id))):undefined;
+  const doneCourseIds=new Set(queue.steps.filter(s=>activeDoneIds.includes(s.offeringId)).map(s=>s.courseId));
+  const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!activeDoneIds.includes(s.offeringId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!doneCourseIds.has(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyTextWithFallback(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[academicContextKey]);
-  const toggleDone=(id:string)=>{
-    if(!progressReady)return;
-    setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const toggleDone=async(id:string)=>{
+    if(!progressReady||markingRegistered)return;
+    const registered=!activeDoneIds.includes(id);
+    if (onToggleRegistered) {
+      setMarkingRegistered(true);
+      try {
+        if (!(await onToggleRegistered(id,registered))) {
+          setCopyState('وضعیت ثبت در سرور ذخیره نشد؛ علامت قبلی حفظ شد.');
+        }
+      } catch {
+        setCopyState('خطای ارتباط در ذخیرهٔ علامت ثبت؛ دوباره تلاش کن.');
+      } finally {
+        setMarkingRegistered(false);
+      }
+      return;
+    }
+    // Synthetic demo only; never present this local mark as an official result.
+    setDoneIds(prev=>registered?[...new Set([...prev,id])]:prev.filter(x=>x!==id));
   };
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
@@ -152,7 +174,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <Zap className="h-4 w-4"/> چینش اولویت، جایگزین‌ها و صف ثبت
         </h2>
         <p className="mt-0.5 text-xs leading-6 text-blue-800 dark:text-blue-300">
-          {queue.steps.length} درس · {activeDoneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده · اولویت و رزرو در همین فهرست
+          {queue.steps.length} درس · {queue.steps.filter(s=>activeDoneIds.includes(s.offeringId)).length} ثبت‌شده · اولویت و رزرو در همین فهرست
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -170,7 +192,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-      همین فهرست برای چینش اولویت، گروه اصلی، رزروها و کپی کد است. ثبت رسمی در آموزشیار دستی است؛ پس از ثبت واقعی هر درس تیک بزن.
+      همین فهرست برای چینش اولویت، گروه اصلی، رزروها و کپی کد است. تیک ثبت فقط علامت شخصیِ همان گروه است؛ ثبت و تأیید رسمی در آموزشیار انجام می‌شود.
     </p>
     {loading&&<p role="status" className="text-xs text-slate-600 dark:text-slate-300"><RefreshCw aria-hidden="true" className="ml-1 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>در حال تطبیق قوانین… کپی سریع پس از بررسی فعال می‌شود.</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -181,9 +203,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
     <ol id="registration-queue-list" className="space-y-1.5" aria-label="ترتیب ثبت دروس">
       {queue.steps.map((step,index)=>{
-        const done=activeDoneIds.includes(step.courseId);
+        const done=activeDoneIds.includes(step.offeringId);
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
-        const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));
+        const locked=step.dependencyCourseIds.some(id=>!doneCourseIds.has(id));
         const courseOfferings=evaluations.filter(row=>row.courseId===step.courseId);
         const alternativeIds=[...new Set(offeringPriorities[step.courseId]||[])].filter(id=>id!==step.offeringId);
         const alternatives=alternativeIds.map(id=>courseOfferings.find(row=>row.offeringId===id))
@@ -211,7 +233,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-4 w-4"/><span className="hidden sm:inline">کپی</span>
             </button>
-            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!progressReady||(!done&&locked)} aria-pressed={done}
+            <button type="button" onClick={()=>void toggleDone(step.offeringId)} disabled={!progressReady||markingRegistered||(!done&&locked)} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
