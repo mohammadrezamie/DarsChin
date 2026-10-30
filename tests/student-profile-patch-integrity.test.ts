@@ -117,3 +117,18 @@ describe('the student academic identity survives partial edits', () => {
     expect(code).not.toContain("universityId || 'univ-azad'");
   });
 });
+
+
+describe('student track selector is accessible and bounded to the selected major',()=>{
+  it('supports a track-free major and invalidates stale track choices when major or degree changes',()=>{
+    const code=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
+    expect(code).toContain('filteredTracks.length > 0 &&');
+    expect(code).toContain('validTrackIds.has(id)');
+    expect(code).toContain('desiredTrackIds.filter(id => validTrackIds.has(id))');
+    expect(code).toContain('setSelectedTrackId(\'\');');
+    expect(code).toContain('setDesiredTrackIds([]);');
+    expect(code).toContain('onChange={() => toggleDesiredTrack(track.id)}');
+    expect(code).not.toContain('onChange={() => {}}');
+    expect(code).toContain('برای این رشته گرایشی تعریف نشده');
+  });
+});

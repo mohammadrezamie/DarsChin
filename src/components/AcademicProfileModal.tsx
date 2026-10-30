@@ -144,13 +144,15 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       return;
     }
 
-    if (isTrackSelected && !selectedTrackId) {
+    const validTrackIds = new Set(filteredTracks.map(track => track.id));
+    if (isTrackSelected && !validTrackIds.has(selectedTrackId)) {
       setMessage({ type: 'error', text: 'لطفاً گرایش رسمی انتخاب‌شده خود را مشخص نمایید.' });
       setSaving(false);
       return;
     }
 
-    if (!isTrackSelected && desiredTrackIds.length === 0) {
+    if (!isTrackSelected && filteredTracks.length > 0 &&
+        !desiredTrackIds.some(id => validTrackIds.has(id))) {
       setMessage({ type: 'error', text: 'لطفاً حداقل یک گرایش مدنظر جهت بررسی وضعیت چارت انتخاب نمایید.' });
       setSaving(false);
       return;
@@ -168,7 +170,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       currentTermId: currentTermId || terms.find((t) => t.isCurrent)?.id,
       isTrackSelected,
       selectedTrackId: isTrackSelected ? selectedTrackId : null,
-      desiredTrackIds: isTrackSelected ? [] : desiredTrackIds,
+      desiredTrackIds: isTrackSelected ? [] : desiredTrackIds.filter(id => validTrackIds.has(id)),
       previousTermGpa: previousTermGpa.trim() === '' ? null : Number(previousTermGpa),
     };
 
@@ -299,7 +301,11 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileDegree"
                   value={degreeLevelId}
-                  onChange={(e) => setDegreeLevelId(e.target.value)}
+                  onChange={(e) => {
+                    setDegreeLevelId(e.target.value);
+                    setMajorId(''); setSelectedTrackId(''); setDesiredTrackIds([]);
+                    setIsTrackSelected(false);
+                  }}
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
@@ -320,7 +326,11 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileMajor"
                   value={majorId}
-                  onChange={(e) => setMajorId(e.target.value)}
+                  onChange={(e) => {
+                    setMajorId(e.target.value);
+                    setSelectedTrackId(''); setDesiredTrackIds([]);
+                    setIsTrackSelected(false);
+                  }}
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
@@ -464,14 +474,16 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                     </button>
                   </div>
 
+                  {filteredTracks.length === 0 && <p className="text-xs text-slate-600 dark:text-slate-300">
+                    برای این رشته گرایشی تعریف نشده؛ نیازی به انتخاب گرایش نیست.
+                  </p>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {filteredTracks.map((track) => {
                       const isChecked = desiredTrackIds.includes(track.id);
                       return (
-                        <div
+                        <label
                           key={track.id}
-                          onClick={() => toggleDesiredTrack(track.id)}
-                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          className={`flex min-h-11 items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
                             isChecked
                               ? 'bg-white dark:bg-slate-800 border-blue-500 text-blue-900 dark:text-blue-200'
                               : 'bg-white/50 dark:bg-slate-850 border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
@@ -480,11 +492,11 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            onChange={() => {}}
+                            onChange={() => toggleDesiredTrack(track.id)}
                             className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
                           />
                           <span className="text-xs font-medium">{track.name}</span>
-                        </div>
+                        </label>
                       );
                     })}
                   </div>
