@@ -6,8 +6,8 @@ export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 're
 
 const PRIMARY = [
   { id: 'offerings', label: 'دروس', icon: Layers3 },
-  { id: 'schedule', label: 'برنامه', icon: CalendarDays },
-  { id: 'registration', label: 'صف ثبت', icon: Zap },
+  { id: 'registration', label: 'چینش و ثبت', icon: Zap },
+  { id: 'schedule', label: 'تقویم', icon: CalendarDays },
 ] as const;
 
 const SECONDARY = [

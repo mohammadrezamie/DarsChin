@@ -42,8 +42,8 @@ const studentTabs = [
   // Put the student's primary mobile journey first; all other workspaces
   // remain reachable via the same horizontal nav without a vertical menu.
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
-  { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
-  { id: 'registration', label: 'صف سریع ثبت دروس', short: 'صف ثبت', icon: Zap },
+  { id: 'registration', label: 'چینش اولویت، جایگزین‌ها و صف ثبت', short: 'چینش و ثبت', icon: Zap },
+  { id: 'schedule', label: 'تقویم هفتگی و تداخل‌ها', short: 'تقویم', icon: Calendar },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'wishlist', label: 'سبد علاقه‌مندی', short: 'سبد من', icon: BookOpen },
   { id: 'passed', label: 'دروس پاس‌شده', short: 'پاس‌شده‌ها', icon: BookOpen },
@@ -465,6 +465,18 @@ export const StudentDashboard: React.FC = () => {
     if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
       setOfferingPriorities(newOfferingPriorities);
     }
+  };
+
+  // Move reserve groups in the same ranked registration queue.
+  const handleMoveFallbackOffering = async (courseId: string, offeringId: string, direction: -1 | 1) => {
+    const primary = selectedOfferingIds.find(id => evaluations.some(e => e.offeringId === id && e.courseId === courseId));
+    const ordered = [...new Set(offeringPriorities[courseId] || [])].filter(id => id !== primary);
+    const from = ordered.indexOf(offeringId);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= ordered.length) return;
+    [ordered[from], ordered[to]] = [ordered[to], ordered[from]];
+    const next = { ...offeringPriorities, [courseId]: primary ? [primary, ...ordered] : ordered };
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, next)) setOfferingPriorities(next);
   };
 
   // Remove a fallback offering from a course
@@ -903,6 +915,7 @@ export const StudentDashboard: React.FC = () => {
 
             {activeTab === 'schedule' && (
               <SchedulePlanner
+                calendarOnly
                 evaluations={evaluations}
                 selectedOfferingIds={selectedOfferingIds}
                 coursePriorities={coursePriorities}
@@ -928,6 +941,11 @@ export const StudentDashboard: React.FC = () => {
                 curriculumId={curriculumId}
                 onEditPriorities={() => navigateWorkspace('schedule')}
                 onReorderCourses={handleReorderCourses}
+                offeringPriorities={offeringPriorities}
+                onSelectPrimaryOffering={handleSelectPrimaryOffering}
+                onAddFallbackOffering={handleAddFallbackOffering}
+                onRemoveFallbackOffering={handleRemoveFallbackOffering}
+                onMoveFallbackOffering={handleMoveFallbackOffering}
               />
             )}
 

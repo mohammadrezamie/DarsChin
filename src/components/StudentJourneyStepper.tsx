@@ -9,7 +9,7 @@ export const STUDENT_JOURNEY_STEPS = [
   { title: 'پیشنهادهای مهم', description: 'درس‌های مجاز و اولویت‌دار را با دلیل ببین.' },
   { title: 'سبد علاقه‌مندی', description: 'هر تعداد درس را برای بررسی کنار بگذار؛ هنوز انتخاب نهایی نیست.' },
   { title: 'گروه و تداخل', description: 'استاد، روز کلاس و امتحان و گروه‌های جایگزین را مقایسه کن.' },
-  { title: 'صف آمادهٔ ثبت', description: 'ترتیب درس‌ها و کدهای ثبت را مرور کن.' },
+  { title: 'چینش و صف ثبت', description: 'در یک فهرست، اولویت درس‌ها، گروه اصلی، جایگزین‌ها و کد ثبت را تنظیم کن.' },
 ] as const;
 
 interface Props {
@@ -94,7 +94,7 @@ export const StudentJourneyStepper: React.FC<Props> = ({
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50">
           {busy ? 'در حال ذخیره…' : step === 0 ? 'پرونده‌ام را بررسی و تأیید کردم' :
             step === 1 ? 'سوابق ثبت‌شده را بررسی کردم' : step === 2 ? 'شرایط را دیدم؛ پیشنهادها' :
-            step === 3 ? 'ساخت سبد علاقه‌مندی' : step === 4 ? 'مقایسهٔ استاد و گروه' : 'رفتن به صف ثبت'}
+            step === 3 ? 'ساخت سبد علاقه‌مندی' : step === 4 ? 'مقایسهٔ استاد و گروه' : 'چینش اولویت و آماده‌سازی ثبت'}
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         </button> : <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-5 w-5" /> همهٔ بخش‌ها را مرور کردی. برنامهٔ نهایی همچنان باید با قوانین و اطلاعات واقعی بررسی شود.
