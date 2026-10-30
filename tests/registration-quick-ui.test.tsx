@@ -190,6 +190,8 @@ describe('one registration workspace owns priorities and alternatives', () => {
     expect(html).toContain('افزایش اولویت گروه رزرو 03');
     expect(html).toContain('کاهش اولویت گروه رزرو 03');
     expect(html).toContain('حذف گروه رزرو 03');
+    expect(html).toContain('کپی کد گروه رزرو 03');
+    expect(html).toContain('کپی رزرو');
     expect(html).toContain('کپی کد مدارهای الکتریکی');
     expect(html).toContain('تقویم کلاس‌ها');
   });

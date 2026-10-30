@@ -4,6 +4,7 @@ import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, Stu
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
 import { copyTextWithFallback } from '../utils/clipboard';
+import { verifiedOfferingGroupCopyCode } from '../domain/offering-code';
 
 interface ChartRules {
   curriculum: { id: string; name: string; version: string };
@@ -243,6 +244,13 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                       <span className="block text-amber-700 dark:text-amber-300">این گروه فعلاً قابل اخذ نیست؛ دوباره بررسی کن.</span>}
                   </div>
                   <div className="flex flex-wrap items-center gap-1">
+                    <button type="button" disabled={!rulesReady||!progressReady||!step.ready||locked||!verifiedOfferingGroupCopyCode(alt)}
+                      onClick={()=>void copy(verifiedOfferingGroupCopyCode(alt),`رزرو گروه ${alt.groupCode}`)}
+                      aria-label={`کپی کد گروه رزرو ${alt.groupCode}`}
+                      title="کپی کد گروه رزرو پس از تأیید شرایط"
+                      className="min-h-11 rounded-lg border border-blue-200 px-2 font-bold text-blue-700 disabled:opacity-40 dark:border-blue-800 dark:text-blue-200">
+                      <ClipboardCopy className="ml-1 inline h-3.5 w-3.5"/> کپی رزرو
+                    </button>
                     {onMoveFallbackOffering&&<>
                       <button type="button" onClick={()=>onMoveFallbackOffering(step.courseId,alt.offeringId,-1)} disabled={i===0}
                         aria-label={`افزایش اولویت گروه رزرو ${alt.groupCode}`}
