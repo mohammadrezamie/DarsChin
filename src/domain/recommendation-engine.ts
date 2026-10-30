@@ -34,7 +34,7 @@ export function generateCourseRecommendations(
     allCourses,
     academicRules,
     eligibilityResults,
-    approximateStudentSemester = 3,
+    approximateStudentSemester,
   } = context;
 
   const coursesMap = new Map<string, Course>(allCourses.map((c) => [c.id, c]));
@@ -114,15 +114,20 @@ export function generateCourseRecommendations(
     }
 
     // 3. Semester Alignment
-    const semDifference = Math.abs(suggestedSem - approximateStudentSemester);
-    if (semDifference === 0) {
-      score += 15;
-      reasons.push(`دقیقاً متناسب با ترم ${suggestedSem} تحصیلی شما`);
-    } else if (suggestedSem < approximateStudentSemester) {
-      score += 10;
-      reasons.push(`درس عقب‌افتاده از ترم‌های گذشته (پیشنهاد شده برای ترم ${suggestedSem})`);
-    } else {
-      score += 2;
+    // Only award semester alignment points when the student's actual semester
+    // has been supplied. A default "third semester" invents personalization.
+    if (typeof approximateStudentSemester === 'number' &&
+        Number.isInteger(approximateStudentSemester) && approximateStudentSemester > 0) {
+      const semDifference = Math.abs(suggestedSem - approximateStudentSemester);
+      if (semDifference === 0) {
+        score += 15;
+        reasons.push(`مطابق ترم ${suggestedSem} در دادهٔ پروندهٔ تحصیلی`);
+      } else if (suggestedSem < approximateStudentSemester) {
+        score += 10;
+        reasons.push(`درس پیشنهادی برای ترم ${suggestedSem} در چارت؛ از ترم فعلی عقب‌تر است`);
+      } else {
+        score += 2;
+      }
     }
 
     // Determine Priority Tag

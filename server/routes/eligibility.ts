@@ -89,7 +89,7 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       allCourses: db.courses,
       academicRules: db.academicRules,
       eligibilityResults: report.results,
-      approximateStudentSemester: 3,
+      // Do not invent a third-semester standing for every student.
     });
 
     // Calculate real-time academic limits & final semester eligibility

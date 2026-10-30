@@ -191,4 +191,32 @@ describe('academic rule references and exceptional retakes fail safely by defaul
     input.academicRules=[{...rule({type:'COURSE',courseId:'a'}),entryYearId:'other-entry'}];
     expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(true);
   });
+
+  test('rejects a disabled catalog course even when its offering is active',()=>{
+    const input=context();
+    input.allCourses.find(c=>c.id==='b')!.active=false;
+    const result=evaluateStudentEligibility(input).results[0];
+    expect(result.canSelect).toBe(false);
+    expect(result.overallStatus).toBe('NEEDS_REVIEW');
+    expect(result.primaryReason).toContain('غیرفعال');
+  });
+
+  test('does not use a disabled chart-course association to authorize enrollment',()=>{
+    const input=context();
+    input.curriculumCourses.find(cc=>cc.courseId==='b')!.active=false;
+    const result=evaluateStudentEligibility(input).results[0];
+    expect(result.canSelect).toBe(false);
+    expect(result.overallStatus).toBe('NOT_IN_CURRICULUM');
+  });
+
+  test('rejects an unknown group operator even when the operand is passed',()=>{
+    const input=context();
+    input.passedCourses=[{id:'synthetic-passed-a',userId:input.studentProfile.userId,
+      courseId:'a',status:'PASSED',grade:18,passedAt:'2026-01-01'}];
+    input.academicRules=[rule({type:'GROUP',operator:'WRONG',operands:[{type:'COURSE',courseId:'a'}]} as any)];
+    const result=evaluateStudentEligibility(input).results[0];
+    expect(result.canSelect).toBe(false);
+    expect(result.primaryReason).toContain('عملگر');
+  });
+
 });
