@@ -73,6 +73,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       const [metaRes, profileRes] = await Promise.all([
         apiRequest<{
           universities: University[];
+          provinces: Province[];
           campuses: Campus[];
           degreeLevels: DegreeLevel[];
           majors: Major[];
