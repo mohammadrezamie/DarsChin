@@ -78,6 +78,11 @@ describe('wishlist-to-offerings student handoff', () => {
     expect(verifiedOfferingGroupCopyCode(valid)).toBe('410100_02');
     expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: undefined })).toBeNull();
     expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: 'DEMO-410100' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: '---' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: 'TEST-410100' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: 'نامشخص' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: 'N/A' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, groupCode: '؟' })).toBeNull();
     expect(verifiedOfferingGroupCopyCode({ ...valid, groupCode: '' })).toBeNull();
     expect(verifiedOfferingGroupCopyCode({ ...valid, canSelect: false })).toBeNull();
     expect(verifiedOfferingGroupCopyCode({ ...valid, overallStatus: 'NEEDS_REVIEW' })).toBeNull();

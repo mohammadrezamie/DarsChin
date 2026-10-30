@@ -12,7 +12,11 @@ export function verifiedOfferingGroupCopyCode(
 ): string | null {
   const raw = typeof offering.rawCourseCode === 'string' ? offering.rawCourseCode.trim() : '';
   const group = typeof offering.groupCode === 'string' ? offering.groupCode.trim() : '';
-  if (!raw || !group || /^DEMO[-_]/i.test(raw) || /^DEMO[-_]/i.test(group) ||
+  // Sources sometimes import placeholders as nonempty strings; these are
+  // NOT verified registration identifiers. Never guess a numeric format.
+  const placeholder = (value: string) =>
+    /^(?:[-_./?؟]+|(?:DEMO|TEST|PLACEHOLDER)(?:[-_].*)?|N\\/?A|NULL|UNDEFINED|UNKNOWN|نامشخص|بدون\\s*کد)$/i.test(value);
+  if (!raw || !group || placeholder(raw) || placeholder(group) ||
       !offering.canSelect || !offering.isEligible || offering.overallStatus !== 'AVAILABLE') {
     return null;
   }
