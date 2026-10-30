@@ -271,7 +271,9 @@ function currentOfferings(s: DemoStore): CourseOffering[] {
 function isUsableOffering(s: DemoStore, offeringId: unknown): boolean {
   if (typeof offeringId !== 'string') return false;
   const offering = currentOfferings(s).find(o => o.id === offeringId && o.active !== false);
-  return Boolean(offering && currentCourses(s).some(c => c.id === offering.courseId && c.active !== false));
+  return Boolean(offering && offering.termId === s.profile.currentTermId &&
+    offering.campusId === s.profile.campusId &&
+    currentCourses(s).some(c => c.id === offering.courseId && c.active !== false));
 }
 
 /** Keep the local student plan coherent after demo admin disables/deletes offerings. */

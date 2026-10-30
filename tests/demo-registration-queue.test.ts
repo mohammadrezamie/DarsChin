@@ -74,3 +74,23 @@ describe('browser demo registration parity with the server plan',()=>{
     }
   });
 });
+
+
+describe('demo academic scope is not weaker than the real plan scope',()=>{
+  it('restricts group selections to the demo student campus and semester',async()=>{
+    const api=await browserDemoRequest<any>('/api/student/plan');
+    expect(api.data.selectedOfferingIds).toContain('off-math2');
+    const changed=await browserDemoRequest<any>('/api/offerings/off-math2',{
+      method:'PUT',body:JSON.stringify({termId:'foreign-term'}),
+    });
+    // The demo catalog editor may reject changing term identity; if it accepts
+    // the edit, the student plan MUST refuse the foreign-term offering.
+    if(changed.success){
+      const invalid=await browserDemoRequest<any>('/api/student/plan',{
+        method:'PUT',body:JSON.stringify({selectedOfferingIds:['off-math2']}),
+      });
+      expect(invalid.success).toBe(false);
+      expect((await browserDemoRequest<any>('/api/student/plan')).data.selectedOfferingIds).not.toContain('off-math2');
+    }
+  });
+});
