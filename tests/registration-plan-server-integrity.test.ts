@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { db, type DatabaseSchema } from '../server/db/database';
 import { studentRouter } from '../server/routes/student';
 import { generateToken } from '../server/middleware/auth';
-import { validateRegistrationPlanReferences } from '../server/domain/registration-plan-integrity';
+import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../server/domain/registration-plan-integrity';
 import { updatePlanSchema } from '../server/schemas/student';
 import type { CourseOffering, StudentAcademicProfile, User } from '../src/types';
 
@@ -132,6 +132,23 @@ describe('one unified registration queue has integrity at the write boundary', (
     const route = readFileSync(resolve(process.cwd(), 'server/routes/student.ts'), 'utf8');
     expect(route).toContain('...(sameCourseExistingOffering ? [sameCourseExistingOffering.id] : [])');
     expect(route).toContain('plannedOfferingIdsInSameTerm: selectedOfferingIds');
+  });
+
+  it('counts only explicit extra-unit metadata, not similar words in a course title', () => {
+    const courses = [
+      { id: courseId, units: 3, name: 'وصایا / title alone is NOT a rule', isExtraUnit: false },
+      { id: 'explicit-extra', units: 2, name: 'درس آزمایشی', isExtraUnit: true },
+    ] as any;
+    const extra: CourseOffering = { ...main, id: 'extra-group', courseId: 'explicit-extra' };
+    expect(countRegistrationPlanUnits([main.id, extra.id], [main, extra], courses)).toBe(3);
+    expect(countRegistrationPlanUnits([main.id, reserve.id], [main, reserve], courses)).toBe(3);
+    expect(countRegistrationPlanUnits([main.id], [main], [{ ...courses[0], isExtraUnit: true }])).toBe(0);
+    const endpoint = readFileSync(resolve(process.cwd(), 'server/routes/student.ts'), 'utf8');
+    expect(endpoint).toContain('const countedUnits = countRegistrationPlanUnits(selectedOfferingIds');
+    expect(endpoint).toContain('const candidateUnits = countRegistrationPlanUnits(candidateIds');
+    expect(endpoint).not.toContain("c?.name.includes('وصایا')");
+    expect(endpoint).not.toContain("targetCourse?.name.includes('انس')");
+    expect(endpoint).not.toContain('ترم تابستان (۸ واحد)');
   });
 
   it('does not trust a foreign-course reserve even when all groups are in the same term', () => {
