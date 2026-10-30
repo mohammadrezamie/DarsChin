@@ -20,24 +20,21 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
   let profile = db.studentProfiles.find((p) => p.userId === userId);
 
   if (!profile) {
-    // Create initial profile if doesn't exist
-    const defaultUniv = db.universities[0];
-    const defaultCampus = db.campuses[0];
-    const defaultDeg = db.degreeLevels[0];
-    const defaultMaj = db.majors[0];
-    const defaultYear = db.entryYears.find((y) => y.year === 1403) || db.entryYears[0];
-    const defaultTerm = db.academicTerms.find((t) => t.isCurrent) || db.academicTerms[0];
-
+    // Keep the university for the current Azad-only pilot, but NEVER guess
+    // a campus, major, degree, entry year or prospective tracks for a new
+    // account. The guided profile step must require the student's real choice.
+    const pilotUniversity = db.universities[0];
+    const defaultTerm = db.academicTerms.find(t => t.isCurrent);
     profile = {
       userId,
-      universityId: defaultUniv?.id || '',
-      campusId: defaultCampus?.id || '',
-      degreeLevelId: defaultDeg?.id || '',
-      majorId: defaultMaj?.id || '',
-      entryYearId: defaultYear?.id || '',
+      universityId: pilotUniversity?.id || '',
+      campusId: '',
+      degreeLevelId: '',
+      majorId: '',
+      entryYearId: '',
       isTrackSelected: false,
       selectedTrackId: null,
-      desiredTrackIds: db.tracks.filter((t) => t.majorId === defaultMaj?.id).map((t) => t.id),
+      desiredTrackIds: [],
       currentTermId: defaultTerm?.id || '',
       updatedAt: new Date().toISOString(),
     };
@@ -73,6 +70,7 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
   const {
     universityId,
     campusId,
+    provinceId,
     degreeLevelId,
     majorId,
     entryYearId,
@@ -90,12 +88,14 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
   // Preserve deliberate null (clear GPA/track); only undefined means omitted.
   const nextTrackSelected = isTrackSelected ?? previous?.isTrackSelected ?? false;
   const updatedProfile: StudentAcademicProfile = {
+    ...previous, // Preserve privileged/admin metadata and opaque stable profile fields.
     userId,
     universityId: universityId ?? previous?.universityId ?? db.universities[0]?.id ?? '',
-    campusId: campusId ?? previous?.campusId ?? db.campuses[0]?.id ?? '',
-    degreeLevelId: degreeLevelId ?? previous?.degreeLevelId ?? db.degreeLevels[0]?.id ?? '',
-    majorId: majorId ?? previous?.majorId ?? db.majors[0]?.id ?? '',
-    entryYearId: entryYearId ?? previous?.entryYearId ?? db.entryYears[0]?.id ?? '',
+    campusId: campusId ?? previous?.campusId ?? '',
+    provinceId: provinceId !== undefined ? (provinceId || null) : previous?.provinceId ?? null,
+    degreeLevelId: degreeLevelId ?? previous?.degreeLevelId ?? '',
+    majorId: majorId ?? previous?.majorId ?? '',
+    entryYearId: entryYearId ?? previous?.entryYearId ?? '',
     isTrackSelected: nextTrackSelected,
     selectedTrackId: nextTrackSelected
       ? (selectedTrackId !== undefined ? selectedTrackId : previous?.selectedTrackId ?? null)

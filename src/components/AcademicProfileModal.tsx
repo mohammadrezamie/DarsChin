@@ -96,6 +96,8 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       if (profileRes.success && profileRes.data?.profile) {
         const p = profileRes.data.profile;
         setUniversityId(p.universityId || '');
+        setProvinceId(p.provinceId || '');
+        setPreviousTermGpa(p.previousTermGpa == null ? '' : String(p.previousTermGpa));
         setCampusId(p.campusId || '');
         setDegreeLevelId(p.degreeLevelId || '');
         setMajorId(p.majorId || '');
@@ -135,7 +137,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
     setMessage(null);
 
     // Validation
-    if (!campusId || !degreeLevelId || !majorId || !entryYearId) {
+    if (!universityId || !campusId || !degreeLevelId || !majorId || !entryYearId) {
       setMessage({ type: 'error', text: 'لطفاً تمامی مشخصات اصلی پرونده تحصیلی را مشخص فرمایید.' });
       setSaving(false);
       return;
@@ -154,7 +156,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
     }
 
     const payload: Partial<StudentAcademicProfile> = {
-      universityId: universityId || 'univ-azad',
+      universityId,
 
 
       provinceId,
@@ -166,7 +168,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       isTrackSelected,
       selectedTrackId: isTrackSelected ? selectedTrackId : null,
       desiredTrackIds: isTrackSelected ? [] : desiredTrackIds,
-      previousTermGpa: previousTermGpa ? parseFloat(previousTermGpa) : null,
+      previousTermGpa: previousTermGpa.trim() === '' ? null : Number(previousTermGpa),
     };
 
     const res = await apiRequest('/api/student/profile', {
