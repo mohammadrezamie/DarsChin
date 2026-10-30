@@ -14,7 +14,9 @@ const app = express();
 app.use(express.json());
 app.use('/api/student', studentRouter);
 const userId = 'test-reg-plan-integrity-20261030';
+const freshUserId = 'test-reg-plan-rejected-write-20261030';
 const token = () => ({ Authorization: 'Bearer ' + generateToken({ id: userId }) });
+const freshToken = () => ({ Authorization: 'Bearer ' + generateToken({ id: freshUserId }) });
 let original: DatabaseSchema;
 let profile: StudentAcademicProfile;
 let courseId: string;
@@ -53,8 +55,8 @@ beforeAll(async () => {
   // Clone collections: never mutate users/students in the seed snapshot.
   db.data = {
     ...original,
-    users: [...original.users, user],
-    studentProfiles: [...original.studentProfiles, profile],
+    users: [...original.users, user, { ...user, id: freshUserId, mobile: '09908888087' }],
+    studentProfiles: [...original.studentProfiles, profile, { ...profile, userId: freshUserId }],
     studentPlans: [...(original.studentPlans || [])],
     courseOfferings: [...original.courseOfferings, main, reserve],
   };
@@ -217,5 +219,45 @@ describe('private registration responses never permit shared HTTP caching',()=>{
     const put=await request(app).put('/api/student/plan').set(token()).send({selectedOfferingIds:[]});
     expect(put.status).toBe(200);
     expect(put.headers['cache-control']).toBe('private, no-store');
+  });
+});
+
+
+describe('single group selection cannot write an invalid or incomplete plan', () => {
+  it('does not create an empty plan for a rejected add or remove on a new student account', async () => {
+    expect(db.studentPlans.some(p => p.userId === freshUserId)).toBe(false);
+    const invalid = await request(app).post('/api/student/plan/select').set(freshToken())
+      .send({ offeringId: 'completely-missing-offering', action: 'add' });
+    expect(invalid.status).toBe(404);
+    expect(db.studentPlans.some(p => p.userId === freshUserId)).toBe(false);
+    const remove = await request(app).post('/api/student/plan/select').set(freshToken())
+      .send({ offeringId: 'completely-missing-offering', action: 'remove' });
+    expect(remove.status).toBe(200);
+    expect(remove.body.data).toBeUndefined();
+    expect(remove.body.selectedOfferingIds).toEqual([]);
+    expect(remove.headers['cache-control']).toBe('private, no-store');
+    expect(db.studentPlans.some(p => p.userId === freshUserId)).toBe(false);
+  });
+
+  it('rejects a foreign-campus group on add without persisting a new student plan', async () => {
+    const foreign: CourseOffering = { ...main, id: 'rejected-foreign-campus-on-add', campusId: 'campus-not-the-student' };
+    db.courseOfferings.push(foreign);
+    const response = await request(app).post('/api/student/plan/select').set(freshToken())
+      .send({ offeringId: foreign.id, action: 'add' });
+    expect(response.status).toBe(400);
+    expect(db.studentPlans.some(p => p.userId === freshUserId)).toBe(false);
+  });
+
+  it('evaluates the complete candidate selection before changing the persisted array', () => {
+    const endpoint = readFileSync(resolve(process.cwd(), 'server/routes/student.ts'), 'utf8');
+    const start = endpoint.indexOf("studentRouter.post('/plan/select'");
+    const block = endpoint.slice(start);
+    expect(block).toContain('plannedOfferingIdsInSameTerm: candidateIds');
+    expect(block).toContain('const invalidIds = candidateIds.filter');
+    expect(block).toContain('if (!existingPlan) db.studentPlans.push(plan);');
+    expect(block.indexOf('if (invalidIds.length)')).toBeLessThan(block.indexOf('db.studentPlans.push(plan);'));
+    expect(block.indexOf('const candidateUnits')).toBeLessThan(block.indexOf('db.studentPlans.push(plan);'));
+    expect(block).toContain('plan.selectedOfferingIds = candidateIds;');
+    expect(block).toContain("res.setHeader('Cache-Control', 'private, no-store');");
   });
 });
