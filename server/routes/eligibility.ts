@@ -14,7 +14,12 @@ export const eligibilityRouter = Router();
 eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { plannedCourseIds = [] } = req.body;
+    const { plannedCourseIds = [] } = req.body || {};
+    if (!Array.isArray(plannedCourseIds) || plannedCourseIds.length > 500 ||
+        plannedCourseIds.some((id: unknown) => typeof id !== 'string' || !id.trim()) ||
+        new Set(plannedCourseIds).size !== plannedCourseIds.length) {
+      return res.status(400).json({ success: false, error: 'فهرست گروه‌های انتخابی برای تحلیل معتبر نیست.' });
+    }
 
     // Get student profile
     const profile = db.studentProfiles.find((p) => p.userId === userId);
@@ -26,12 +31,14 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     }
 
     // Find student's curriculum
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
+    const curriculum = db.curricula.find(c =>
+      c.status === 'active' &&
+      c.universityId === profile.universityId &&
+      c.campusId === profile.campusId &&
+      c.degreeLevelId === profile.degreeLevelId &&
+      c.majorId === profile.majorId &&
+      c.entryYearId === profile.entryYearId
+    );
 
     if (!curriculum) {
       return res.status(400).json({
@@ -40,12 +47,22 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       });
     }
 
-    // Filter relevant offerings for the term and campus
-    const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-    const relevantOfferings = db.courseOfferings.filter(
-      (o) => o.termId === currentTermId && o.active
+    // Scope the entire analysis, including its inputs, to this student's
+    // campus and current term. Other campuses are not interchangeable.
+    const currentTermId = profile.currentTermId || db.academicTerms.find(t => t.isCurrent)?.id;
+    if (!currentTermId || !db.academicTerms.some(t => t.id === currentTermId)) {
+      return res.status(409).json({ success: false, error: 'نیمسال تحصیلی فعلی در پرونده مشخص نیست.' });
+    }
+    const relevantOfferings = db.courseOfferings.filter(o =>
+      o.termId === currentTermId && o.campusId === profile.campusId && o.active === true
     );
-    console.log("EVAL Offerings count:", relevantOfferings.length, "TermId:", currentTermId);
+    const allowedOfferingIds = new Set(relevantOfferings.map(o => o.id));
+    if (plannedCourseIds.some((id: string) => !allowedOfferingIds.has(id))) {
+      return res.status(400).json({
+        success: false,
+        error: 'فهرست تحلیل فقط می‌تواند شامل گروه‌های همین پردیس و نیمسال باشد.',
+      });
+    }
     
 
     // Get student passed courses
@@ -66,7 +83,6 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     });
 
     // Also compute recommendations for eligible courses
-    console.log("Eval Res count:", report?.results?.length);
     const recommendations = generateCourseRecommendations({
       curriculum,
       curriculumCourses: db.curriculumCourses,
@@ -79,6 +95,7 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     // Calculate real-time academic limits & final semester eligibility
     const academicLimits = db.calculateStudentAcademicLimits(userId);
 
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       success: true,
       data: {
@@ -96,7 +113,8 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
         },
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+  } catch {
+    // Academic records and implementation details must not be echoed to clients.
+    return res.status(500).json({ success: false, error: 'تحلیل دروس به خطا خورد؛ دوباره تلاش کنید.' });
   }
 });
