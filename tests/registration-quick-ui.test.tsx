@@ -168,3 +168,51 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toMatch(/<\/div><details class="w-full border-t/);
   });
 });
+
+
+describe('one registration workspace owns priorities and alternatives', () => {
+  const reserve = {
+    ...offering, offeringId: 'test-reserve-1', groupCode: '03',
+    instructor: 'استاد جایگزین', dayOfWeek: 'دوشنبه',
+  };
+  it('shows primary, reserve promotion, reserve reorder and code copy on one course row', () => {
+    const html = renderToStaticMarkup(<RegistrationLaunchpad
+      evaluations={[offering, reserve]} selectedOfferingIds={[offering.offeringId]}
+      coursePriorities={[offering.courseId]} profile={profile}
+      curriculumId="chart-example" onEditPriorities={() => {}}
+      onReorderCourses={() => {}} offeringPriorities={{ [offering.courseId]: [offering.offeringId, reserve.offeringId] }}
+      onSelectPrimaryOffering={() => {}} onAddFallbackOffering={() => {}}
+      onRemoveFallbackOffering={() => {}} onMoveFallbackOffering={() => {}} />);
+    expect(html).toContain('چینش اولویت، جایگزین‌ها و صف ثبت');
+    expect(html).toContain('گروه اصلی 02');
+    expect(html).toContain('جایگزین‌ها (۱)');
+    expect(html).toContain('استاد جایگزین');
+    expect(html).toContain('افزایش اولویت گروه رزرو 03');
+    expect(html).toContain('کاهش اولویت گروه رزرو 03');
+    expect(html).toContain('حذف گروه رزرو 03');
+    expect(html).toContain('کپی کد مدارهای الکتریکی');
+    expect(html).toContain('تقویم کلاس‌ها');
+  });
+
+  it('offers only eligible unchosen alternatives from the same course', () => {
+    const other = { ...offering, offeringId: 'other-course', courseId: 'other-course', groupCode: '99' };
+    const blocked = { ...reserve, offeringId: 'blocked', groupCode: '04',
+      canSelect: false, isEligible: false, overallStatus: 'BLOCKED_PREREQUISITE' as const };
+    const html = renderToStaticMarkup(<RegistrationLaunchpad
+      evaluations={[offering, reserve, other, blocked]} selectedOfferingIds={[offering.offeringId]}
+      coursePriorities={[offering.courseId]} profile={profile} curriculumId="chart-example"
+      onEditPriorities={() => {}} onReorderCourses={() => {}} offeringPriorities={{}}
+      onSelectPrimaryOffering={() => {}} onAddFallbackOffering={() => {}}
+      onRemoveFallbackOffering={() => {}} onMoveFallbackOffering={() => {}} />);
+    expect(html).toContain('رزرو گروه 03');
+    expect(html).not.toContain('رزرو گروه 99');
+    expect(html).not.toContain('رزرو گروه 04');
+    const dashboard = readFileSync(resolve(process.cwd(), 'src/components/StudentDashboard.tsx'), 'utf8');
+    const planner = readFileSync(resolve(process.cwd(), 'src/components/SchedulePlanner.tsx'), 'utf8');
+    expect(dashboard).toContain('onMoveFallbackOffering={handleMoveFallbackOffering}');
+    expect(dashboard).toContain('<SchedulePlanner\n                calendarOnly');
+    expect(planner).toContain("calendarOnly ? 'timetable' : 'priorities'");
+    expect(planner).toContain("!calendarOnly && activePlannerTab === 'priorities'");
+    expect(dashboard).toContain('...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : [])');
+  });
+});

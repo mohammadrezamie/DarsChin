@@ -424,6 +424,9 @@ export const StudentDashboard: React.FC = () => {
   // Select primary offering for a course (promotes offering to primary)
   const handleSelectPrimaryOffering = async (courseId: string, offeringId: string) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
+    // The new main group must be eligible in the current server evaluation.
+    const replacement = evaluations.find(e => e.offeringId === offeringId && e.courseId === courseId);
+    if (!replacement?.canSelect || !replacement.isEligible || replacement.overallStatus !== 'AVAILABLE') return;
     const currentPrimary = selectedOfferingIds.find((id) => {
       const e = evaluations.find((ev) => ev.offeringId === id);
       return (e?.courseId || e?.courseCode) === courseId;
@@ -437,7 +440,10 @@ export const StudentDashboard: React.FC = () => {
 
     const updatedOfferingList = [
       offeringId,
-      ...currentCourseOfferings.filter((id) => id !== offeringId),
+      ...new Set([
+        ...currentCourseOfferings.filter(id => id !== offeringId),
+        ...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : []),
+      ]),
     ];
     const newOfferingPriorities = {
       ...offeringPriorities,
@@ -456,7 +462,9 @@ export const StudentDashboard: React.FC = () => {
   // Add a fallback offering for a course
   const handleAddFallbackOffering = async (courseId: string, offeringId: string) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
-    if (currentCourseOfferings.includes(offeringId)) return;
+    const candidate = evaluations.find(e => e.offeringId === offeringId && e.courseId === courseId);
+    if (!candidate?.canSelect || !candidate.isEligible || candidate.overallStatus !== 'AVAILABLE' ||
+        selectedOfferingIds.includes(offeringId) || currentCourseOfferings.includes(offeringId)) return;
 
     const newOfferingPriorities = {
       ...offeringPriorities,

@@ -17,8 +17,8 @@ describe('real student mobile workspace dock', () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('بخش‌های بیشتر میز کار');
     expect(html).toContain('دروس');
-    expect(html).toContain('برنامه');
-    expect(html).toContain('صف ثبت');
+    expect(html).toContain('تقویم');
+    expect(html).toContain('چینش و ثبت');
     expect(html).toContain('min-h-14');
     expect(html).toContain('grid-cols-4');
     expect(html).toContain('safe-area-inset-bottom');
