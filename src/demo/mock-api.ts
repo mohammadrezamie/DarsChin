@@ -276,13 +276,24 @@ function isUsableOffering(s: DemoStore, offeringId: unknown): boolean {
 
 /** Keep the local student plan coherent after demo admin disables/deletes offerings. */
 function cleanDemoPlan(s: DemoStore): void {
+  const offerings = currentOfferings(s);
+  const byId = new Map(offerings.map(offering => [offering.id, offering]));
   const valid = (ids: unknown): string[] =>
-    Array.isArray(ids) ? [...new Set(ids.filter(id => isUsableOffering(s, id)))] : [];
+    Array.isArray(ids) ? [...new Set(ids.filter(id => typeof id === 'string' && isUsableOffering(s, id)))] : [];
 
-  s.plan.selectedOfferingIds = valid(s.plan.selectedOfferingIds);
+  // Historical browser records may contain two sections of one course.
+  // Keep the FIRST selected main group; the other belongs in alternatives.
+  const usedCourses = new Set<string>();
+  s.plan.selectedOfferingIds = valid(s.plan.selectedOfferingIds).filter(id => {
+    const courseId = byId.get(id)?.courseId;
+    if (!courseId || usedCourses.has(courseId)) return false;
+    usedCourses.add(courseId);
+    return true;
+  });
   s.plan.offeringPriorities = Object.fromEntries(
     Object.entries(s.plan.offeringPriorities || {})
-      .map(([courseId, ids]) => [courseId, valid(ids)] as const)
+      .map(([courseId, ids]) => [courseId,
+        valid(ids).filter(id => byId.get(id)?.courseId === courseId)] as const)
       .filter(([courseId, ids]) => ids.length > 0 && currentCourses(s).some(c => c.id === courseId && c.active !== false)),
   );
   s.plan.coursePriorities = (s.plan.coursePriorities || []).filter(
@@ -594,12 +605,35 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     }
     if (method === 'PUT') {
       if (data.selectedOfferingIds !== undefined &&
-        (!Array.isArray(data.selectedOfferingIds) || data.selectedOfferingIds.some((id: unknown) => !isUsableOffering(s, id)))) {
-        return fail('یکی از گروه‌های انتخاب‌شده دیگر در دمو فعال یا موجود نیست.');
+        (!Array.isArray(data.selectedOfferingIds) ||
+          data.selectedOfferingIds.some((id: unknown) => typeof id !== 'string' || !isUsableOffering(s, id)) ||
+          new Set(data.selectedOfferingIds).size !== data.selectedOfferingIds.length)) {
+        return fail('یکی از گروه‌های انتخابی دمو نامعتبر، تکراری یا غیرفعال است.');
+      }
+      if (Array.isArray(data.selectedOfferingIds)) {
+        const selectedCourses = data.selectedOfferingIds.map((id: string) =>
+          currentOfferings(s).find(offering => offering.id === id)?.courseId);
+        if (new Set(selectedCourses).size !== selectedCourses.length) {
+          return fail('از یک درس نمی‌توان دو گروه اصلی هم‌زمان انتخاب کرد؛ گروه دیگر را رزرو کن.');
+        }
+      }
+      if (data.offeringPriorities !== undefined) {
+        if (!data.offeringPriorities || Array.isArray(data.offeringPriorities) ||
+            typeof data.offeringPriorities !== 'object') {
+          return fail('فهرست اولویت گروه‌های دمو نامعتبر است.');
+        }
+        for (const [courseId, ids] of Object.entries(data.offeringPriorities)) {
+          if (!Array.isArray(ids) || ids.some((id: unknown) => typeof id !== 'string' ||
+              !isUsableOffering(s, id) ||
+              currentOfferings(s).find(o => o.id === id)?.courseId !== courseId) ||
+              new Set(ids).size !== ids.length) {
+            return fail('گروه‌های رزرو باید فعال، غیرتکراری و متعلق به همان درس باشند.');
+          }
+        }
       }
       s.plan = {
         ...s.plan, ...data,
-        selectedOfferingIds: Array.isArray(data.selectedOfferingIds) ? [...new Set(data.selectedOfferingIds)] : s.plan.selectedOfferingIds,
+        selectedOfferingIds: Array.isArray(data.selectedOfferingIds) ? [...data.selectedOfferingIds] : s.plan.selectedOfferingIds,
       };
       cleanDemoPlan(s);
       saveStore(s);
@@ -614,8 +648,21 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return fail('این گروه درسی در داده‌های فعلی دمو موجود یا فعال نیست.');
     }
     const old = s.plan.selectedOfferingIds;
-    s.plan.selectedOfferingIds = data.action === 'remove' ? old.filter(x=>x !== data.offeringId)
-      : [...new Set([...old, data.offeringId])];
+    if (data.action === 'remove') {
+      s.plan.selectedOfferingIds = old.filter(id => id !== data.offeringId);
+    } else {
+      const selected = currentOfferings(s).find(o => o.id === data.offeringId)!;
+      const displaced = old.find(id =>
+        id !== selected.id && currentOfferings(s).some(o => o.id === id && o.courseId === selected.courseId));
+      s.plan.selectedOfferingIds = [
+        ...old.filter(id => id !== displaced && id !== selected.id), selected.id,
+      ];
+      const previous = s.plan.offeringPriorities[selected.courseId] || [];
+      s.plan.offeringPriorities[selected.courseId] = [
+        selected.id,
+        ...new Set([...previous.filter(id => id !== selected.id), ...(displaced ? [displaced] : [])]),
+      ];
+    }
     cleanDemoPlan(s);
     saveStore(s);
     return good(s.plan) as ApiResponse<T>;

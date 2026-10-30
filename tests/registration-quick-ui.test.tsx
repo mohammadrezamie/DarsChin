@@ -238,3 +238,13 @@ describe('manual registration marks are tied to a specific group, not its course
     expect(dashboard).toContain('setRegisteredOfferingIds(prev=>prev?.filter(id=>newSelected.includes(id)) ?? null)');
   });
 });
+
+
+describe('native compact group disclosure',()=>{
+  it('uses a non-controlled details element and resets row identity on account or term change',()=>{
+    const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
+    expect(component).toContain('key={`${academicContextKey}|${step.courseId}`}');
+    expect(component).toContain('<details className="border-t border-slate-100 px-3 py-1 text-xs dark:border-slate-800">');
+    expect(component).not.toContain('onToggle={event=>setExpandedAlternatives');
+  });
+});

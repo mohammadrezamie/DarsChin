@@ -47,7 +47,6 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Default to the student's real task: see a course and copy its code.
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
-  const [expandedAlternatives,setExpandedAlternatives]=useState<string|null>(null);
   const reorderLock=useRef(false);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
@@ -213,7 +212,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         const availableAlternatives=courseOfferings.filter(row=>row.offeringId!==step.offeringId &&
           !alternativeIds.includes(row.offeringId) && row.canSelect && row.isEligible && row.overallStatus==='AVAILABLE');
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
-        return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
+        return <li key={`${academicContextKey}|${step.courseId}`} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
           <div className="flex min-w-0 items-center gap-1.5 px-2 py-1.5 sm:gap-2">
@@ -249,9 +248,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
-          <details className="border-t border-slate-100 px-3 py-1 text-xs dark:border-slate-800"
-            open={expandedAlternatives===step.courseId}
-            onToggle={event=>setExpandedAlternatives(event.currentTarget.open?step.courseId:prev=>prev===step.courseId?null:prev)}>
+          <details className="border-t border-slate-100 px-3 py-1 text-xs dark:border-slate-800">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-bold text-blue-700 dark:text-blue-300">
               <Layers3 aria-hidden="true" className="h-4 w-4"/>
               گروه اصلی {step.groupCode||'نامشخص'} · جایگزین‌ها ({alternatives.length.toLocaleString('fa-IR')})

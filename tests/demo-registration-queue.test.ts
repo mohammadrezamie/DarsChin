@@ -41,3 +41,36 @@ describe('isolated real-panel Educationalyar launchpad demo',()=>{
     expect(create(history.passedCourses).steps.map(s=>s.courseId)).toEqual(['diff','math2']);
   });
 });
+
+
+describe('browser demo registration parity with the server plan',()=>{
+  it('swaps the selected main group and retains the old one as a fallback',async()=>{
+    const saved=await browserDemoRequest<any>('/api/student/plan/select',{
+      method:'POST',body:JSON.stringify({offeringId:'off-math2-alt',action:'add'}),
+    });
+    expect(saved.success).toBe(true);
+    expect(saved.data.selectedOfferingIds).toContain('off-math2-alt');
+    expect(saved.data.selectedOfferingIds).not.toContain('off-math2');
+    expect(saved.data.offeringPriorities.math2).toEqual(['off-math2-alt','off-math2']);
+    const reloaded=(await browserDemoRequest<any>('/api/student/plan')).data;
+    expect(reloaded.offeringPriorities.math2).toEqual(['off-math2-alt','off-math2']);
+  });
+  it('refuses two primary groups of one course without altering the saved plan',async()=>{
+    const before=(await browserDemoRequest<any>('/api/student/plan')).data.selectedOfferingIds;
+    const rejected=await browserDemoRequest<any>('/api/student/plan',{
+      method:'PUT',body:JSON.stringify({selectedOfferingIds:[...before,'off-math2-alt']}),
+    });
+    expect(rejected.success).toBe(false);
+    expect((await browserDemoRequest<any>('/api/student/plan')).data.selectedOfferingIds).toEqual(before);
+  });
+  it('refuses wrong-course reserve IDs and duplicate reserves without silent rewriting',async()=>{
+    const before=(await browserDemoRequest<any>('/api/student/plan')).data.offeringPriorities;
+    for(const priorities of [{math2:['off-physics']},{math2:['off-math2-alt','off-math2-alt']}]){
+      const rejected=await browserDemoRequest<any>('/api/student/plan',{
+        method:'PUT',body:JSON.stringify({offeringPriorities:priorities}),
+      });
+      expect(rejected.success).toBe(false);
+      expect((await browserDemoRequest<any>('/api/student/plan')).data.offeringPriorities).toEqual(before);
+    }
+  });
+});
