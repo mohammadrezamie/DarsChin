@@ -190,3 +190,44 @@ describe('private student routes and active selector constraints',()=>{
     expect(source).toContain('terms.filter(t => t.active !== false)');
   });
 });
+
+
+describe('administrative final-semester approval is never transferred to another academic identity',()=>{
+  it('invalidates a prior override after entry-year change without deleting the administrative note',async()=>{
+    const actual=db.studentProfiles.find(p=>p.userId===existingId)!;
+    const snapshot={...actual};
+    const reference=db.entryYears.find(y=>y.active);
+    if(!reference)throw new Error('Fixture needs an active entry year');
+    const next={...reference,id:'synthetic-entry-year-for-expiry',year:1499,active:true};
+    db.entryYears.push(next);
+    try{
+      actual.isFinalSemesterOverride=true;
+      actual.finalSemesterNotes='Synthetic approved scope';
+      const result=await request(app).put('/api/student/profile').set(auth(existingId))
+        .send({entryYearId:next.id});
+      expect(result.status).toBe(200);
+      expect(result.body.data.entryYearId).toBe(next.id);
+      expect(result.body.data.isFinalSemesterOverride).toBeNull();
+      expect(result.body.data.finalSemesterNotes).toBe('Synthetic approved scope');
+    }finally{Object.assign(actual,snapshot);}
+  });
+  it('clears a stale previous-term GPA after term change and expires old admin approval',async()=>{
+    const actual=db.studentProfiles.find(p=>p.userId===existingId)!;
+    const snapshot={...actual};
+    const reference=db.academicTerms.find(t=>t.active);
+    if(!reference)throw new Error('Fixture needs an active term');
+    const next={...reference,id:'synthetic-term-for-expiry',active:true,isCurrent:false};
+    db.academicTerms.push(next);
+    try{
+      actual.previousTermGpa=18;
+      actual.isFinalSemesterOverride=true;
+      const response=await request(app).put('/api/student/profile').set(auth(existingId))
+        .send({currentTermId:next.id});
+      expect(response.status).toBe(200);
+      expect(response.body.data.previousTermGpa).toBeNull();
+      expect(response.body.data.isFinalSemesterOverride).toBeNull();
+      const modal=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
+      expect(modal).toContain("setPreviousTermGpa('');");
+    }finally{Object.assign(actual,snapshot);}
+  });
+});

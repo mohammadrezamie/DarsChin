@@ -380,7 +380,12 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileCurrentTerm"
                   value={currentTermId}
-                  onChange={(e) => setCurrentTermId(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value !== currentTermId) {
+                      setPreviousTermGpa('');
+                    }
+                    setCurrentTermId(e.target.value);
+                  }}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
                   {terms.filter(t => t.active !== false).map((t) => (

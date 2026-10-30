@@ -118,6 +118,23 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     updatedAt: new Date().toISOString(),
   };
 
+  // Administrative final-term overrides are tied to the approved identity
+  // and term; never reuse one after a student switches academic scope.
+  // Preserve the note as history, but require a fresh decision from education.
+  const academicScopeChanged = Boolean(previous) &&
+    (['universityId', 'campusId', 'degreeLevelId', 'majorId', 'entryYearId'] as const)
+      .some(field => previous![field] !== updatedProfile[field]);
+  const semesterChanged = Boolean(previous) &&
+    previous!.currentTermId !== updatedProfile.currentTermId;
+  if (academicScopeChanged || semesterChanged) {
+    updatedProfile.isFinalSemesterOverride = null;
+  }
+  // "Previous semester GPA" refers to the currently selected term.
+  // Changing that term must not silently carry a GPA for a different period.
+  if (semesterChanged && previousTermGpa === undefined) {
+    updatedProfile.previousTermGpa = null;
+  }
+
   // Only a deliberate academic-identity change requires cross-reference
   // validation. GPA-only edits must not rewrite or reject old student records.
   const identityFields = [
