@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { CourseCategory, EligibilityStatus, CourseEligibilityResult } from '../types';
 import { basketOfferingCoverage, orderedBasketOfferings } from '../domain/student-offering-basket';
+import { verifiedOfferingGroupCopyCode } from '../domain/offering-code';
+import { copyTextWithFallback } from '../utils/clipboard';
 
 interface OfferingsListProps {
   evaluations: CourseEligibilityResult[];
@@ -56,7 +58,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'AVAILABLE' | 'BLOCKED' | 'ALREADY_PASSED' | 'NEEDS_REVIEW'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
-  const [isCopyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [basketOnly, setBasketOnly] = useState(initiallyShowWishlist && wishlistCourseIds.length > 0);
 
   // Group evaluations by course
@@ -175,9 +177,19 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   };
 
   const selectedOfferingsList = evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
+  const copyableSelectedCodes = selectedOfferingsList.map(verifiedOfferingGroupCopyCode);
+  const canCopySelected = selectedOfferingIds.length > 0 &&
+    selectedOfferingsList.length === selectedOfferingIds.length &&
+    copyableSelectedCodes.every((code): code is string => code !== null);
+  const handleCopy = async (value: string, label: string) => {
+    const copied = await copyTextWithFallback(value);
+    setCopyNotice(copied ? `${label} کپی شد؛ ثبت در آموزشیار همچنان دستی است.` :
+      'کپی خودکار ممکن نشد؛ پس از بررسی، کد را دستی بردار.');
+  };
 
   return (
     <div className="space-y-4">
+      {copyNotice && <p role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">{copyNotice}</p>}
       {wishlistCourseIds.length > 0 && (
         <section aria-label="انتقال سبد علاقه‌مندی به انتخاب گروه" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/30">
           <p className="font-bold text-indigo-950 dark:text-indigo-100">از سبد علاقه‌مندی تا انتخاب گروه واقعی</p>
@@ -230,14 +242,11 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
             </select>
 
             {selectedOfferingIds.length > 0 && (
-              <button
-                onClick={() => {
-    const codes = selectedOfferingsList.map(o => o.rawCourseCode + '_' + o.groupCode).join('\n');
-    navigator.clipboard.writeText(codes).then(() => {
-      alert('کد دروس کپی شد.');
-    });
-  }}
-                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0"
+              <button type="button"
+                disabled={!canCopySelected}
+                title={canCopySelected ? 'کپی کدهای تأییدشده برای ثبت دستی' : 'کپی فقط برای گروه مجاز با کد واردشدهٔ معتبر امکان‌پذیر است'}
+                onClick={() => void handleCopy(copyableSelectedCodes.join('\n'), 'کد گروه‌های انتخابی')}
+                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>کپی برای آموزشیار ({selectedOfferingIds.length})</span>
@@ -387,6 +396,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                       {grp.sections.map((section, sIdx) => {
                         const isSelected = selectedOfferingIds.includes(section.offeringId);
                         const isSelectable = section.canSelect;
+                        const copyCode = verifiedOfferingGroupCopyCode(section);
 
                         return (
                           <div
@@ -414,14 +424,11 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
 
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigator.clipboard.writeText(section.rawCourseCode + '_' + section.groupCode);
-                                      alert('کد درس کپی شد.');
-                                    }}
-                                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
-                                    title="کپی کد درس"
+                                  <button type="button" disabled={!copyCode}
+                                    onClick={() => { if (copyCode) void handleCopy(copyCode, 'کد درس'); }}
+                                    aria-label={`کپی کد ${section.courseName} گروه ${section.groupCode}`}
+                                    className="grid min-h-11 min-w-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-200 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-700"
+                                    title={copyCode ? 'کپی برای ثبت دستی در آموزشیار' : 'کد واردشده یا مجازبودن گروه تأیید نشده است'}
                                   >
                                     <Copy className="w-3.5 h-3.5" />
                                   </button>

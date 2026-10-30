@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { basketOfferingCoverage, orderedBasketOfferings } from '../src/domain/student-offering-basket';
+import { verifiedOfferingGroupCopyCode } from '../src/domain/offering-code';
 import { OfferingsList } from '../src/components/OfferingsList';
 import { StudentJourneyStepper } from '../src/components/StudentJourneyStepper';
 import type { CourseEligibilityResult } from '../src/types';
@@ -70,6 +71,24 @@ describe('wishlist-to-offerings student handoff', () => {
     expect(allowed).toContain('اکنون ۱ گروه');
     expect(allowed).not.toContain('حداقل یک گروه مجاز');
     expect(source('src/components/StudentDashboard.tsx')).toContain("'wishlist', 'offerings', 'registration'");
+  });
+
+  it('copies only verified eligible group codes, never catalog or synthetic codes', () => {
+    const valid = { ...sample('math'), rawCourseCode: ' 410100 ', groupCode: '02' };
+    expect(verifiedOfferingGroupCopyCode(valid)).toBe('410100_02');
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: undefined })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, rawCourseCode: 'DEMO-410100' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, groupCode: '' })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, canSelect: false })).toBeNull();
+    expect(verifiedOfferingGroupCopyCode({ ...valid, overallStatus: 'NEEDS_REVIEW' })).toBeNull();
+    const html = renderToStaticMarkup(<OfferingsList evaluations={[sample('blocked','BLOCKED_PREREQUISITE')]}
+      selectedOfferingIds={['off-blocked']} onToggleScheduleOffering={() => {}} onOpenProfileModal={() => {}} />);
+    expect(html).toContain('کپی فقط برای گروه مجاز');
+    expect(html).toContain('disabled');
+    const offeringSource = source('src/components/OfferingsList.tsx');
+    expect(offeringSource).toContain('copyTextWithFallback');
+    expect(offeringSource).not.toContain('navigator.clipboard.writeText(');
+    expect(offeringSource).not.toContain('rawCourseCode +');
   });
 
   it('never bypasses eligibility checks from the new basket-only filter', () => {
