@@ -63,7 +63,7 @@ describe('student-first product and private management contract', () => {
   it('provides role-specific contextual help rather than mixing administrator instructions into student screens', () => {
     const student = renderToStaticMarkup(<ContextualHelp content={studentSectionHelp.schedule} audience="student" />);
     const admin = renderToStaticMarkup(<ContextualHelp content={adminSectionHelp('academic-rules')} audience="admin" />);
-    expect(student).toContain('برنامهٔ هفتگی و تداخل‌سنج');
+    expect(student).toContain('تقویم هفتگی و تداخل‌سنج');
     expect(student).toContain('href="/help"');
     expect(student).not.toContain('پیش‌نویس');
     expect(admin).toContain('پیش‌نیاز و هم‌نیاز');
