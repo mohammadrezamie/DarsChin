@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { evaluateStudentEligibility } from '../src/domain/eligibility-engine';
 import { calculateAcademicLimits } from '../src/domain/academic-policy';
-import { Course, StudentAcademicProfile, CurriculumCourse, StudentPassedCourse, CourseOffering, AcademicPolicySettings, AcademicRule } from '../src/types';
+import { Course, StudentAcademicProfile, CurriculumCourse, StudentPassedCourse, CourseOffering, AcademicPolicySettings, AcademicRule, Track } from '../src/types';
 
 describe('IAU Academic Policy & Rules Engine', () => {
   
@@ -147,7 +147,7 @@ describe('academic rule references and exceptional retakes fail safely by defaul
       {id:'a',name:'Prerequisite',code:'A',units:3,category:'پایه',active:true},
       {id:'b',name:'Dependent',code:'B',units:3,category:'تخصصی',active:true},
     ] as Course[],
-    tracks:[],
+    tracks:[] as Track[],
     currentOfferings:[{id:'off-b',courseId:'b',termId:'t1',campusId:'camp1',groupCode:'01',
       instructor:'Synthetic',dayOfWeek:'شنبه',startTime:'08:00',endTime:'10:00',
       capacity:20,enrolledCount:0,active:true,source:'manual'}] as CourseOffering[],
@@ -217,6 +217,41 @@ describe('academic rule references and exceptional retakes fail safely by defaul
     const result=evaluateStudentEligibility(input).results[0];
     expect(result.canSelect).toBe(false);
     expect(result.primaryReason).toContain('عملگر');
+  });
+
+
+  test('blocks an official track from another major even for a common subject',()=>{
+    const input=context();
+    input.studentProfile.isTrackSelected=true;
+    input.studentProfile.selectedTrackId='outside-track';
+    input.tracks=[{id:'outside-track',majorId:'another-major',code:'OUT',
+      name:'Other-major track',active:true}];
+    const res=evaluateStudentEligibility(input).results[0];
+    expect(res.overallStatus).toBe('NEEDS_REVIEW');
+    expect(res.canSelect).toBe(false);
+    expect(res.primaryReason).toContain('گرایش');
+  });
+
+  test('blocks a disabled or absent declared track, but accepts the correctly scoped active one',()=>{
+    const input=context();
+    input.studentProfile.isTrackSelected=true;
+    input.studentProfile.selectedTrackId='own-track';
+    input.tracks=[{id:'own-track',majorId:'m1',code:'OWN',name:'Track',active:false}];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
+    input.tracks[0].active=true;
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(true);
+    input.studentProfile.selectedTrackId=null;
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
+  });
+
+  test('does not require an invented track for a major without tracks',()=>{
+    const input=context();
+    input.studentProfile.isTrackSelected=false;
+    input.studentProfile.desiredTrackIds=[];
+    input.tracks=[];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(true);
+    input.studentProfile.desiredTrackIds=['someone-elses-track'];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
   });
 
 });
