@@ -84,13 +84,20 @@ export function evaluateStudentEligibility(
     }
   }
 
-  // Determine active track context
+  // Do not let an invalid/disabled/foreign-major track silently bypass
+  // scoped track rules. Majors with no tracks are still valid without one.
+  const activeMajorTrackIds = tracks.filter(t =>
+    t.majorId === studentProfile.majorId && t.active !== false).map(t => t.id);
+  const allowedTrackIds = new Set(activeMajorTrackIds);
+  const desiredIds = Array.isArray(studentProfile.desiredTrackIds)
+    ? studentProfile.desiredTrackIds : [];
+  const invalidTrackSelection = studentProfile.isTrackSelected
+    ? !studentProfile.selectedTrackId || !allowedTrackIds.has(studentProfile.selectedTrackId)
+    : desiredIds.some(id => !allowedTrackIds.has(id));
   const isTrackOfficiallySelected = studentProfile.isTrackSelected && !!studentProfile.selectedTrackId;
   let targetTrackIds: string[] = isTrackOfficiallySelected
     ? [studentProfile.selectedTrackId!]
-    : studentProfile.desiredTrackIds && studentProfile.desiredTrackIds.length > 0
-    ? studentProfile.desiredTrackIds
-    : tracks.filter((t) => t.majorId === studentProfile.majorId).map((t) => t.id);
+    : desiredIds.length > 0 ? desiredIds : activeMajorTrackIds;
   
   if (targetTrackIds.length === 0) {
     targetTrackIds = ['generic'];
@@ -133,6 +140,27 @@ export function evaluateStudentEligibility(
           : 'شناسه این درس در پایگاه داده دروس تعریف نشده است.'],
         missingPrerequisites: [],
         missingCorequisites: [],
+      });
+      needsReviewCount++;
+      continue;
+    }
+
+    // Existing malformed track selections are not an academic permission.
+    // Keep the offering visible for correction, never selectable.
+    if (invalidTrackSelection) {
+      results.push({
+        offeringId: offering.id, courseId: course.id, courseCode: course.code,
+        rawCourseCode: offering.rawCourseCode, courseName: course.name,
+        isExtraUnit: course.isExtraUnit === true,
+        units: course.units, category: course.category, groupCode: offering.groupCode,
+        instructor: offering.instructor, dayOfWeek: offering.dayOfWeek,
+        startTime: offering.startTime, endTime: offering.endTime,
+        capacity: offering.capacity, enrolledCount: offering.enrolledCount,
+        enrolledCountKnown: offering.enrolledCountKnown, examDate: offering.examDate,
+        overallStatus: 'NEEDS_REVIEW', isEligible: false, canSelect: false,
+        primaryReason: 'گرایش انتخاب‌شده در پرونده، فعال و متعلق به همین رشته نیست؛ پرونده را اصلاح کن.',
+        allReasons: ['گرایش رسمی یا گرایش‌های دلخواه باید از گرایش‌های فعال همین رشته انتخاب شوند.'],
+        missingPrerequisites: [], missingCorequisites: [],
       });
       needsReviewCount++;
       continue;
