@@ -10,9 +10,9 @@ describe('modernization regression guards for existing academic/admin workflows'
     const type = src('src/types/index.ts');
     const resultPart = type.slice(type.indexOf('export interface CourseEligibilityResult {'));
     expect(resultPart).toContain('isExtraUnit?: boolean');
-    // Previously the planner referenced this value but all three known-course
-    // evaluation branches omitted it, silently treating extra units as regular.
-    expect(engine.match(/isExtraUnit: course\.isExtraUnit === true/g)).toHaveLength(3);
+    // All four known-course projections (including the inactive-course safety
+    // branch) must preserve authoritative extra-unit metadata.
+    expect(engine.match(/isExtraUnit: course\.isExtraUnit === true/g)).toHaveLength(4);
     expect(engine).not.toContain("isExtraUnit: course.name.includes(");
   });
 
