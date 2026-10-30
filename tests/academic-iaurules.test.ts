@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from 'vitest';
-import { evaluateStudentEligibility } from '../src/domain/eligibility-engine';
+import { evaluateStudentEligibility, type EligibilityContext } from '../src/domain/eligibility-engine';
 import { calculateAcademicLimits } from '../src/domain/academic-policy';
 import { Course, StudentAcademicProfile, CurriculumCourse, StudentPassedCourse, CourseOffering, AcademicPolicySettings, AcademicRule, Track } from '../src/types';
 
@@ -132,7 +132,7 @@ describe('IAU Academic Policy & Rules Engine', () => {
 
 
 describe('academic rule references and exceptional retakes fail safely by default',()=>{
-  const context = () => ({
+  const context = (): EligibilityContext => ({
     studentProfile: {
       userId:'unverified-rule-test',universityId:'univ1',campusId:'camp1',
       degreeLevelId:'d1',majorId:'m1',entryYearId:'e1',
@@ -140,8 +140,8 @@ describe('academic rule references and exceptional retakes fail safely by defaul
     } as StudentAcademicProfile,
     curriculum: {id:'curr1',name:'Synthetic chart'} as any,
     curriculumCourses: [
-      {id:'cc1',curriculumId:'curr1',courseId:'a',classification:'MAJOR_REQUIRED',termCode:1},
-      {id:'cc2',curriculumId:'curr1',courseId:'b',classification:'MAJOR_REQUIRED',termCode:2},
+      {id:'cc1',curriculumId:'curr1',courseId:'a',classification:'MAJOR_REQUIRED',suggestedSemester:1},
+      {id:'cc2',curriculumId:'curr1',courseId:'b',classification:'MAJOR_REQUIRED',suggestedSemester:2},
     ] as CurriculumCourse[],
     allCourses: [
       {id:'a',name:'Prerequisite',code:'A',units:3,category:'پایه',active:true},
