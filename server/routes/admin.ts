@@ -153,7 +153,7 @@ adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(upd
     if (u.id === 'usr-super' || u.roles?.includes('super-admin')) {
       return res.status(403).json({ success: false, error: 'تغییر نقش مدیر ارشد اصلی سامانه امکان‌پذیر نیست.' });
     }
-    u.roles = role === 'admin' ? ['student', 'admin'] : ['student'];
+    u.roles = role === 'admin' ? ['admin', 'student'] : ['student'];
     if (role === 'student') {
       // Drop delegated administrative authority and PII access scopes.
       u.permissions = [];

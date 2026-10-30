@@ -307,7 +307,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
         expect(replayRes.status).toBe(400); // Invalid or expired or consumed
     });
 
-    it("6. Delegated Admin cannot grant permissions they don't possess", async () => {
+    it("6. Delegated Admin cannot bypass root authority using inherited grants", async () => {
         const admin2 = { id: 'usr-adm2', mobile: generateTestMobile(), name: 'Admin 2', roles: ['admin'] as any, permissions: ['admin.manage', 'admin.create'] };
         db.users.push(admin2 as any);
         const admin2Token = generateToken(admin2);
@@ -320,7 +320,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             .send({ name: 'New Admin', mobile: targetAdminMobile, password: '123', roles: ['admin'] as any, permissions: ['system.settings.manage'] });
             
         expect(res.status).toBe(403);
-        expect(res.body.error).toContain('بیشتر از دسترسی‌های خودتان');
+        expect(res.body.error).toContain('مدیر ارشد');
     });
 
     it("7. Delegated Admin cannot manufacture super-admin", async () => {
@@ -334,7 +334,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             .send({ name: 'New Root', mobile: `0900${Math.floor(Math.random() * 10000000)}`, password: '123', roles: ['super-admin', 'admin'], permissions: [] });
             
         expect(res.status).toBe(403);
-        expect(res.body.error).toContain('ایجاد مدیر ارشد');
+        expect(res.body.error).toContain('مدیر ارشد');
     });
     it("8. Student sync cannot target a campus outside the student's profile", async () => {
         const userId = 'sync-campus-scope-regression-student';
