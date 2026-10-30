@@ -86,6 +86,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
 
       if (metaRes.success && metaRes.data) {
         setUniversities(metaRes.data.universities);
+        setProvinces(metaRes.data.provinces || []);
         setCampuses(metaRes.data.campuses);
         setDegreeLevels(metaRes.data.degreeLevels);
         setMajors(metaRes.data.majors);
@@ -260,7 +261,10 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 <select
                   id="selectProfileProvince"
                   value={provinceId}
-                  onChange={(e) => setProvinceId(e.target.value)}
+                  onChange={(e) => {
+                    setProvinceId(e.target.value);
+                    setCampusId('');
+                  }}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
                   <option value="">-- همه واحدها / واحدهای مستقل --</option>

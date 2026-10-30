@@ -10,6 +10,7 @@ import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
 import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
+import { validateAcademicProfileReferences } from '../domain/student-profile-references';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema, registrationProgressSchema } from '../schemas/student';
 
 export const studentRouter = Router();
@@ -109,6 +110,16 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     updatedAt: new Date().toISOString(),
   };
 
+  // Only a deliberate academic-identity change requires cross-reference
+  // validation. GPA-only edits must not rewrite or reject old student records.
+  const identityFields = [
+    'universityId', 'campusId', 'provinceId', 'degreeLevelId', 'majorId',
+    'entryYearId', 'currentTermId', 'isTrackSelected', 'selectedTrackId', 'desiredTrackIds',
+  ];
+  if (identityFields.some(field => Object.prototype.hasOwnProperty.call(req.body, field))) {
+    const error = validateAcademicProfileReferences(updatedProfile, db);
+    if (error) return res.status(400).json({ success: false, error });
+  }
   if (idx !== -1) {
     db.studentProfiles[idx] = updatedProfile;
   } else {
