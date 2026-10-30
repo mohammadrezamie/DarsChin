@@ -161,3 +161,49 @@ describe('one unified registration queue has integrity at the write boundary', (
     expect(err).toContain('همان درس');
   });
 });
+
+
+describe('account-and-term-isolated manual group registration marks',()=>{
+  it('persists only currently selected group and never creates official status', async()=>{
+    let plan=db.studentPlans.find(row=>row.userId===userId && row.termId===termId);
+    if(!plan) {
+      plan={id:'test-progress-plan',userId,termId,selectedOfferingIds:[],
+        coursePriorities:[],offeringPriorities:{},updatedAt:new Date().toISOString()};
+      db.studentPlans.push(plan);
+    }
+    plan.selectedOfferingIds=[main.id];
+    const mark=await request(app).put('/api/student/registration-progress').set(token())
+      .send({offeringId:main.id,registered:true});
+    expect(mark.status).toBe(200);
+    expect(mark.body.data.registeredOfferingIds).toEqual([main.id]);
+    const fresh=await request(app).get('/api/student/plan').set(token());
+    expect(fresh.body.data.registeredOfferingIds).toEqual([main.id]);
+
+    const wrong=await request(app).put('/api/student/registration-progress').set(token())
+      .send({offeringId:reserve.id,registered:true});
+    expect(wrong.status).toBe(409);
+    expect(db.studentPlans.find(row=>row.userId===userId)?.registeredOfferingIds).toEqual([main.id]);
+
+    const invalid=await request(app).put('/api/student/registration-progress').set(token())
+      .send({offeringId:main.id,registered:'yes'});
+    expect(invalid.status).toBe(400);
+    const cleared=await request(app).put('/api/student/plan').set(token()).send({
+      selectedOfferingIds:[],coursePriorities:[],offeringPriorities:{},
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.registeredOfferingIds).toEqual([]);
+  });
+
+  it('will not change marks from a different term or an account without that group',async()=>{
+    const plan=db.studentPlans.find(row=>row.userId===userId && row.termId===termId)!;
+    plan.selectedOfferingIds=[main.id];
+    const otherTerm=profile.currentTermId!;
+    profile.currentTermId='synthetic-unrelated-term';
+    try{
+      const response=await request(app).put('/api/student/registration-progress').set(token())
+        .send({offeringId:main.id,registered:true});
+      expect(response.status).toBe(409);
+    }finally{profile.currentTermId=otherTerm;}
+    expect(plan.registeredOfferingIds).toEqual([]);
+  });
+});

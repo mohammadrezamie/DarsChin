@@ -130,14 +130,14 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('setVerifiedContextKey(academicContextKey)');
     expect(component).toContain('setVerifiedContextKey(null)');
     expect(component).toContain('},[academicContextKey]);');
-    expect(component).toContain('const progressReady=progressLoadedKey===progressKey;');
+    expect(component).toContain('const progressReady=onToggleRegistered ? Array.isArray(registeredOfferingIds) : progressLoadedKey===progressKey;');
     expect(component).toContain('const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:');
     expect(component).toContain('setCopyNotice({contextKey:academicContextKey,message})');
     expect(component).toContain('},[academicContextKey]);');
-    expect(component).toContain('const activeDoneIds=progressReady?doneIds:[];');
-    expect(component).toContain('const done=activeDoneIds.includes(step.courseId);');
-    expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));');
-    expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
+    expect(component).toContain('const activeDoneIds=onToggleRegistered ? (registeredOfferingIds||[]) : progressReady?doneIds:[];');
+    expect(component).toContain('const done=activeDoneIds.includes(step.offeringId);');
+    expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!doneCourseIds.has(id));');
+    expect(component).toContain('disabled={!progressReady||markingRegistered||(!done&&locked)}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
     expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
     // Both student workspaces use the same clipboard fallback and cleanup.
@@ -219,5 +219,21 @@ describe('one registration workspace owns priorities and alternatives', () => {
     expect(planner).toContain("calendarOnly ? 'timetable' : 'priorities'");
     expect(planner).toContain("!calendarOnly && activePlannerTab === 'priorities'");
     expect(dashboard).toContain('...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : [])');
+  });
+});
+
+
+describe('manual registration marks are tied to a specific group, not its course', () => {
+  it('uses server-provided progress for real accounts and leaves demo-only storage separate',()=>{
+    const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
+    const dashboard=readFileSync(resolve(process.cwd(),'src/components/StudentDashboard.tsx'),'utf8');
+    expect(component).toContain('onToggleRegistered ? (registeredOfferingIds||[])');
+    expect(component).toContain('activeDoneIds.includes(step.offeringId)');
+    expect(component).toContain('toggleDone(step.offeringId)');
+    expect(component).toContain('darschin-reg-progress-v2-');
+    expect(dashboard).toContain('/api/student/registration-progress');
+    expect(dashboard).toContain('registeredOfferingIds={isBrowserDemo ? undefined : registeredOfferingIds}');
+    expect(dashboard).toContain('onToggleRegistered={isBrowserDemo ? undefined : handleToggleRegistered}');
+    expect(dashboard).toContain('setRegisteredOfferingIds(prev=>prev?.filter(id=>newSelected.includes(id)) ?? null)');
   });
 });
