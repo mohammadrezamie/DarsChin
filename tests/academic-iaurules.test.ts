@@ -70,7 +70,7 @@ describe('IAU Academic Policy & Rules Engine', () => {
     expect(res.results[0].isEligible).toBe(true);
   });
 
-  test('Failed prerequisite (grade < 10) triggers IAU same-term exception (conditionally allowed if selected)', () => {
+  test('A failed ordinary prerequisite is not automatically converted into a same-term corequisite', () => {
     const passedCourses: StudentPassedCourse[] = [
       { id: 'p1', userId: 'u1', courseId: 'math1', status: 'FAILED', grade: 9, passedAt: '' }
     ];
@@ -81,7 +81,7 @@ describe('IAU Academic Policy & Rules Engine', () => {
     });
     
     expect(res.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
-    expect(res.results[0].allReasons[0]).toContain('قبلاً مردود شده');
+    expect(res.results[0].allReasons[0]).toContain('باید قبلاً پاس شده باشد');
     
     // Now if they select both in same term
     const resBoth = evaluateStudentEligibility({
@@ -89,11 +89,11 @@ describe('IAU Academic Policy & Rules Engine', () => {
       academicRules: rules, passedCourses, currentOfferings: offerings, plannedOfferingIdsInSameTerm: ['math1']
     });
     
-    expect(resBoth.results[0].overallStatus).toBe('AVAILABLE');
-    expect(resBoth.results[0].isEligible).toBe(true);
+    expect(resBoth.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(resBoth.results[0].isEligible).toBe(false);
   });
 
-  test('Final semester ignores prerequisites', () => {
+  test('Final-term override does not silently exempt missing prerequisites', () => {
     const passedCourses: StudentPassedCourse[] = [];
     // Student is overriding to final semester
     const finalProfile = { ...profileTemplate, isFinalSemesterOverride: true };
@@ -102,8 +102,8 @@ describe('IAU Academic Policy & Rules Engine', () => {
       academicRules: rules, passedCourses, currentOfferings: offerings
     });
     
-    // Prerequisite for Math 2 is Math 1, but we are in final semester so it's ignored!
-    expect(res.results[0].overallStatus).toBe('AVAILABLE');
+    // A final-term flag is not proof of a reviewed exception.
+    expect(res.results[0].overallStatus).toBe('BLOCKED_PREREQUISITE');
   });
 
   test('Calculate Academic Limits (Normal, Grade A, Final Semester, Extra Units)', () => {
@@ -127,5 +127,68 @@ describe('IAU Academic Policy & Rules Engine', () => {
     const resFinal = calculateAcademicLimits({ ...profileTemplate, isFinalSemesterOverride: true }, allCourses, curriculumCourses, [], settings);
     expect(resFinal.effectiveMinUnits).toBe(2);
     expect(resFinal.effectiveMaxUnits).toBe(24);
+  });
+});
+
+
+describe('academic rule references and exceptional retakes fail safely by default',()=>{
+  const context = () => ({
+    studentProfile: {
+      userId:'unverified-rule-test',universityId:'univ1',campusId:'camp1',
+      degreeLevelId:'d1',majorId:'m1',entryYearId:'e1',
+      isTrackSelected:false,desiredTrackIds:[],updatedAt:'now',
+    } as StudentAcademicProfile,
+    curriculum: {id:'curr1',name:'Synthetic chart'} as any,
+    curriculumCourses: [
+      {id:'cc1',curriculumId:'curr1',courseId:'a',classification:'MAJOR_REQUIRED',termCode:1},
+      {id:'cc2',curriculumId:'curr1',courseId:'b',classification:'MAJOR_REQUIRED',termCode:2},
+    ] as CurriculumCourse[],
+    allCourses: [
+      {id:'a',name:'Prerequisite',code:'A',units:3,category:'پایه',active:true},
+      {id:'b',name:'Dependent',code:'B',units:3,category:'تخصصی',active:true},
+    ] as Course[],
+    tracks:[],
+    currentOfferings:[{id:'off-b',courseId:'b',termId:'t1',campusId:'camp1',groupCode:'01',
+      instructor:'Synthetic',dayOfWeek:'شنبه',startTime:'08:00',endTime:'10:00',
+      capacity:20,enrolledCount:0,active:true,source:'manual'}] as CourseOffering[],
+    passedCourses:[] as StudentPassedCourse[],
+    academicRules:[] as AcademicRule[],
+  });
+  const rule=(expression: AcademicRule['expression'],relationshipType: AcademicRule['relationshipType']='PREREQUISITE'):AcademicRule=>({
+    id:'synthetic-rule',curriculumId:'curr1',targetCourseId:'b',relationshipType,expression,
+  });
+
+  test('rejects a missing catalog prerequisite reference',()=>{
+    const input=context();
+    input.academicRules=[rule({type:'COURSE',courseId:'missing-course'})];
+    const result=evaluateStudentEligibility(input).results[0];
+    expect(result.canSelect).toBe(false);
+    expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(result.primaryReason).toContain('پیدا نشد');
+  });
+
+  test('rejects malformed rule expression rather than treating it as satisfied',()=>{
+    const input=context();
+    input.academicRules=[rule({type:'GROUP',operator:'AND',operands:[]})];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
+    input.academicRules=[rule({type:'UNKNOWN'} as any)];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
+  });
+
+  test('a failed prerequisite needs an explicit contextual retake rule to become a same-term option',()=>{
+    const input=context();
+    input.passedCourses=[{id:'history-a',userId:input.studentProfile.userId,
+      courseId:'a',status:'FAILED',grade:7,passedAt:'2026-01-01'}];
+    input.plannedOfferingIdsInSameTerm=['a'];
+    input.academicRules=[rule({type:'COURSE',courseId:'a'})];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(false);
+    input.academicRules=[rule({type:'COURSE',courseId:'a'},'CONTEXTUAL_RETAKE_RULE')];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(true);
+  });
+
+  test('does not apply a rule tied to a different entry year',()=>{
+    const input=context();
+    input.academicRules=[{...rule({type:'COURSE',courseId:'a'}),entryYearId:'other-entry'}];
+    expect(evaluateStudentEligibility(input).results[0].canSelect).toBe(true);
   });
 });
