@@ -212,6 +212,11 @@ function readStore(): DemoStore {
           typeof obj.collections === 'object' && Array.isArray(obj.passed) &&
           Array.isArray(obj.tickets) && obj.plan && obj.profile) {
         // Upgrade older browser-only demo sessions without touching real users.
+        // Preserve any valid prior choices; repair only missing container shapes.
+        if (!Array.isArray(obj.plan.selectedOfferingIds)) obj.plan.selectedOfferingIds = [];
+        if (!Array.isArray(obj.plan.coursePriorities)) obj.plan.coursePriorities = [];
+        if (!obj.plan.offeringPriorities || typeof obj.plan.offeringPriorities !== 'object' ||
+            Array.isArray(obj.plan.offeringPriorities)) obj.plan.offeringPriorities = {};
         if (!Array.isArray(obj.teacherRatings)) obj.teacherRatings = structuredClone(sampleRatings);
         if (!Array.isArray(obj.collections['/api/curriculum-courses'])) obj.collections['/api/curriculum-courses'] = [];
         if (!Array.isArray(obj.importBatches)) obj.importBatches = [];
