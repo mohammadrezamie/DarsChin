@@ -48,7 +48,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('چیدمان');
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('aria-controls="registration-queue-list"');
-    expect(html).toContain('ثبت خودکار در آموزشیار نیست');
+    expect(html).toContain('ثبت و تأیید رسمی در آموزشیار انجام می‌شود');
     expect(html).toContain('02');
     expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
     expect(html).toContain('کپی شماره گروه');
@@ -165,7 +165,8 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('<details class="w-full border-t');
     expect(html).toContain('410100');
     expect(html).toContain('کد از کاتالوگ/تطبیق درس آمده');
-    expect(html).toMatch(/<\/div><details class="w-full border-t/);
+    // The reserve editor lives between the compact row and the diagnostics.
+    expect(html.indexOf('گروه اصلی')).toBeLessThan(html.indexOf('جزئیات کد و وابستگی‌ها'));
   });
 });
 

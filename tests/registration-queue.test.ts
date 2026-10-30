@@ -147,7 +147,7 @@ describe('quick copy never treats catalog-only codes as verified group codes',()
       selectedOfferingIds:['off-diff'],
     });
     expect(result.steps[0].ready).toBe(true);
-    expect(result.steps[0].copyCode).toBe('410019');
+    expect(result.steps[0].copyCode).toBe('410019_01');
   });
 });
 
