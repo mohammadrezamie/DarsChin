@@ -134,3 +134,17 @@ describe('student registration marks do not leak across asynchronous account tra
     expect(dash).not.toContain('setRegisteredOfferingIds([]);\n      setRegisteredOfferingIds(null);');
   });
 });
+
+
+describe('academic unit display does not invent policy numbers on missing server data',()=>{
+  it('shows unknown ceilings instead of inventing 8/20/24 or a grade-A threshold',()=>{
+    const schedule=source('src/components/SchedulePlanner.tsx');
+    expect(schedule).toContain('const maxUnits = typeof academicLimits?.effectiveMaxUnits');
+    expect(schedule).toContain('const capacityRemaining = maxUnits === null ? null : maxUnits - totalUnits;');
+    expect(schedule).toContain('سقف واحد هنوز تأیید نشده است');
+    expect(schedule).toContain('تا دریافت سقف رسمی تنظیم‌شده در حساب');
+    expect(schedule).not.toContain('maxUnits = academicLimits?.effectiveMaxUnits ??');
+    expect(schedule).not.toContain('profile.previousTermGpa >= 17');
+    expect(schedule).not.toContain('مجوز ترم آخری (سقف ۲۴ واحد)');
+  });
+});

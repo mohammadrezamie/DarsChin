@@ -277,10 +277,14 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   // Unit calculations
   const isSummer = currentTerm?.termNumber === 3 || academicLimits?.isSummer;
   const isFinalSemester = academicLimits?.isFinalSemester ?? false;
-  const isGradeA = academicLimits?.isGradeA ?? (profile?.previousTermGpa ? profile.previousTermGpa >= 17 : false);
-
-  const minUnits = academicLimits?.effectiveMinUnits ?? (isSummer ? 1 : 12);
-  const maxUnits = academicLimits?.effectiveMaxUnits ?? (isSummer ? 8 : isFinalSemester || isGradeA ? 24 : 20);
+  // No guessed legal limits or grade-A threshold. Only the server's settings
+  // and academic record can authorize a numerical student unit ceiling.
+  const isGradeA = academicLimits?.isGradeA === true;
+  const minUnits = typeof academicLimits?.effectiveMinUnits === 'number' &&
+    Number.isFinite(academicLimits.effectiveMinUnits) ? academicLimits.effectiveMinUnits : null;
+  const maxUnits = typeof academicLimits?.effectiveMaxUnits === 'number' &&
+    Number.isFinite(academicLimits.effectiveMaxUnits) && academicLimits.effectiveMaxUnits > 0
+      ? academicLimits.effectiveMaxUnits : null;
 
   const extraUnits = selectedOfferings.reduce((sum, item) => item.isExtraUnit ? sum + (item.units || 0) : sum, 0);
   const totalUnits = selectedOfferings.reduce((sum, item) => {
@@ -289,16 +293,18 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
     return sum + (item.units || 0);
   }, 0);
 
-  const capacityRemaining = maxUnits - totalUnits;
+  const capacityRemaining = maxUnits === null ? null : maxUnits - totalUnits;
 
-  const unitsStatusColor =
-    totalUnits < minUnits
+  const unitsStatusColor = maxUnits === null || minUnits === null
+    ? 'text-slate-700 dark:text-slate-200'
+    : totalUnits < minUnits
       ? 'text-amber-600 dark:text-amber-400'
       : totalUnits > maxUnits
       ? 'text-rose-600 dark:text-rose-400'
       : 'text-emerald-600 dark:text-emerald-400';
 
-  const unitsBarPercent = Math.min(100, Math.round((totalUnits / maxUnits) * 100));
+  const unitsBarPercent = maxUnits === null ? 0 :
+    Math.min(100, Math.max(0, Math.round((totalUnits / maxUnits) * 100)));
 
   // Course reordering
   const handleMoveCourse = (index: number, direction: 'up' | 'down') => {
@@ -370,12 +376,12 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                 {isFinalSemester && (
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
-                    مجوز ترم آخری (سقف ۲۴ واحد)
+                    وضعیت ترم آخر · سقف {maxUnits ?? 'نیازمند بررسی'} واحد
                   </span>
                 )}
                 {isGradeA && !isFinalSemester && (
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
-                    معدل الف (سقف ۲۴ واحد)
+                    معدل الف · سقف {maxUnits ?? 'نیازمند بررسی'} واحد
                   </span>
                 )}
               </div>
@@ -429,7 +435,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
             <div className="flex items-baseline gap-1.5">
               <span className={`text-xl font-black ${unitsStatusColor}`}>{totalUnits}</span>
                 <div className="text-xs text-slate-500 mt-1">{extraUnits > 0 ? `+ ${extraUnits} مازاد` : ''}</div>
-              <span className="text-xs text-slate-500">از سقف {maxUnits} واحد</span>
+              <span className="text-xs text-slate-500">{maxUnits === null ? 'سقف تأیید نشده' : `از سقف ${maxUnits} واحد`}</span>
             </div>
           </div>
 
@@ -437,7 +443,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
             <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-0.5">کف و سقف مجاز اخذ</span>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                {minUnits} الی {maxUnits} واحد
+                {minUnits === null || maxUnits === null ? 'نیازمند دریافت اطلاعات معتبر' : `${minUnits} الی ${maxUnits} واحد`}
               </span>
               <span className="text-[10px] text-slate-500">({isSummer ? 'تابستان' : 'عادی'})</span>
             </div>
@@ -446,8 +452,10 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           <div className="p-3 bg-slate-50/80 dark:bg-slate-850/60 rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-0.5">ظرفیت باقیمانده واحد</span>
             <div className="text-xs font-black">
-              {capacityRemaining > 0 ? (
-                <span className="text-blue-600 dark:text-blue-400">{capacityRemaining} واحد امکان اخذ</span>
+              {capacityRemaining === null ? (
+                <span className="text-amber-700 dark:text-amber-300">سقف واحد هنوز تأیید نشده است</span>
+              ) : capacityRemaining > 0 ? (
+                <span className="text-blue-600 dark:text-blue-400">{capacityRemaining} واحد ظرفیت محاسباتی باقی است</span>
               ) : capacityRemaining === 0 ? (
                 <span className="text-emerald-600 dark:text-emerald-400">سقف مجاز تکمیل</span>
               ) : (
@@ -479,25 +487,29 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden flex">
             <div
               className={`h-full transition-all duration-300 ${
-                totalUnits < minUnits
+                maxUnits === null || minUnits === null
+                  ? 'bg-slate-400'
+                  : totalUnits < minUnits
                   ? 'bg-amber-500'
                   : totalUnits > maxUnits
                   ? 'bg-rose-500'
                   : 'bg-emerald-500'
               }`}
-              style={{ width: `${Math.min(100, (totalUnits / maxUnits) * 100)}%` }}
+              style={{ width: `${unitsBarPercent}%` }}
             />
           </div>
           <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1">
-            <span>حداقل مجاز: {minUnits} واحد</span>
+            <span>{minUnits === null ? 'حداقل: در انتظار تأیید' : `حداقل: ${minUnits} واحد`}</span>
             <span>
-              {totalUnits < minUnits
-                ? `نیاز به ${minUnits - totalUnits} واحد دیگر برای رسیدن به حداقل مجاز`
+              {minUnits === null || maxUnits === null
+                ? 'تا دریافت سقف رسمی تنظیم‌شده در حساب، وضعیت واحدها قابل قضاوت نیست.'
+                : totalUnits < minUnits
+                ? `نیاز به ${minUnits - totalUnits} واحد دیگر برای رسیدن به حداقل`
                 : totalUnits > maxUnits
-                ? `عبور ${totalUnits - maxUnits} واحد از سقف مجاز انتخاب واحد`
-                : 'تعداد واحدهای انتخابی در محدوده مجاز آموزشی است.'}
+                ? `عبور ${totalUnits - maxUnits} واحد از سقف محاسبه‌شده`
+                : 'تعداد واحدها در محدودهٔ تنظیم‌شدهٔ سامانه است؛ تأیید رسمی دانشگاه نیست.'}
             </span>
-            <span>حداکثر سقف: {maxUnits} واحد</span>
+            <span>{maxUnits === null ? 'حداکثر: در انتظار تأیید' : `حداکثر: ${maxUnits} واحد`}</span>
           </div>
         </div>
       </div>
