@@ -9,7 +9,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
-import { validateRegistrationPlanReferences } from '../domain/registration-plan-integrity';
+import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema } from '../schemas/student';
 
 export const studentRouter = Router();
@@ -411,10 +411,19 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
     });
     
     if (invalidOfferings.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         error: 'برخی از دروس انتخابی دارای منع آیین‌نامه‌ای هستند و قابل ثبت نیستند.',
-        invalidIds: invalidOfferings
+        invalidIds: invalidOfferings,
+      });
+    }
+
+    const countedUnits = countRegistrationPlanUnits(selectedOfferingIds, db.courseOfferings, db.courses);
+    const limit = db.calculateStudentAcademicLimits(userId).effectiveMaxUnits;
+    if (!Number.isFinite(limit) || countedUnits > limit) {
+      return res.status(400).json({
+        success: false,
+        error: 'تعداد واحدهای برنامه از سقف فعلی تنظیم‌شده برای این دانشجو بیشتر است.',
       });
     }
   }
@@ -533,47 +542,26 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     });
   }
 
-  // Academic Units Limit Check
+  // The add endpoint and whole-plan endpoint enforce the SAME configured
+  // limit. A name containing a religious-course keyword is never an exemption.
   const academicLimits = db.calculateStudentAcademicLimits(userId);
-  const targetCourse = db.courses.find((c) => c.id === targetOffering.courseId);
-  const targetUnits = targetCourse?.units || 0;
-
-  const currentSelectedOfferings = db.courseOfferings.filter((o) =>
+  const targetCourse = db.courses.find(c => c.id === targetOffering.courseId);
+  const currentSelectedOfferings = db.courseOfferings.filter(o =>
     plan!.selectedOfferingIds.includes(o.id)
   );
-
-  // Check if another section of the same course is currently selected
-  const sameCourseExistingOffering = currentSelectedOfferings.find(
-    (o) => o.courseId === targetOffering.courseId && o.id !== targetOffering.id
+  const sameCourseExistingOffering = currentSelectedOfferings.find(o =>
+    o.courseId === targetOffering.courseId && o.id !== targetOffering.id
   );
-
-  let currentUnits = currentSelectedOfferings.reduce((sum, o) => {
-    const c = db.courses.find((crs) => crs.id === o.courseId);
-    if (c?.name.includes('وصایا') || c?.name.includes('انس')) return sum;
-    return sum + (c?.units || 0);
-  }, 0);
-
-  // If swapping section of same course, subtract old section's units
-  if (sameCourseExistingOffering) {
-    const oldCourse = db.courses.find((crs) => crs.id === sameCourseExistingOffering.courseId);
-    if (!oldCourse?.name.includes('وصایا') && !oldCourse?.name.includes('انس')) {
-      currentUnits -= oldCourse?.units || 0;
-    }
-  }
-
-  const isExtra = targetCourse?.name.includes('وصایا') || targetCourse?.name.includes('انس');
-  if (!isExtra && currentUnits + targetUnits > academicLimits.effectiveMaxUnits) {
-    const limitLabel = academicLimits.isSummer
-      ? 'ترم تابستان (۸ واحد)'
-      : academicLimits.isFinalSemester
-      ? 'ترم آخر (۲۴ واحد)'
-      : academicLimits.isGradeA
-      ? 'معدل الف (۲۴ واحد)'
-      : `عادی (${academicLimits.effectiveMaxUnits} واحد)`;
-
+  const candidateIds = [
+    ...plan.selectedOfferingIds.filter(id => id !== sameCourseExistingOffering?.id),
+    ...(!plan.selectedOfferingIds.includes(offeringId) ? [offeringId] : []),
+  ];
+  const candidateUnits = countRegistrationPlanUnits(candidateIds, db.courseOfferings, db.courses);
+  if (!Number.isFinite(academicLimits.effectiveMaxUnits) ||
+      candidateUnits > academicLimits.effectiveMaxUnits) {
     return res.status(400).json({
       success: false,
-      error: `افزودن این درس (${targetUnits} واحد) باعث عبور از سقف مجاز انتخاب واحد ${limitLabel} می‌شود.`,
+      error: `افزودن یا جایگزینی گروه «${targetCourse?.name || targetOffering.courseId}» از سقف تنظیم‌شدهٔ فعلی (${academicLimits.effectiveMaxUnits} واحد) عبور می‌کند.`,
     });
   }
 

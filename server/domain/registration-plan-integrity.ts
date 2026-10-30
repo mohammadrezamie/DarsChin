@@ -1,4 +1,4 @@
-import type { CourseOffering } from '../../src/types';
+import type { Course, CourseOffering } from '../../src/types';
 
 export interface RegistrationPlanReferences {
   selectedOfferingIds?: string[];
@@ -49,4 +49,27 @@ export function validateRegistrationPlanReferences({
     }
   }
   return null;
+}
+
+
+/** Sum units for a candidate final plan, counting one chosen group per course.
+ * Extra-unit status is an explicit reviewed catalogue field, NEVER a guess from a course name.
+ */
+export function countRegistrationPlanUnits(
+  selectedOfferingIds: string[],
+  offerings: CourseOffering[],
+  courses: Course[],
+): number {
+  const offered = new Map(offerings.map(o => [o.id, o]));
+  const catalog = new Map(courses.map(c => [c.id, c]));
+  const counted = new Set<string>();
+  let total = 0;
+  for (const id of selectedOfferingIds) {
+    const courseId = offered.get(id)?.courseId;
+    if (!courseId || counted.has(courseId)) continue;
+    counted.add(courseId);
+    const course = catalog.get(courseId);
+    if (course && course.isExtraUnit !== true) total += course.units || 0;
+  }
+  return total;
 }
