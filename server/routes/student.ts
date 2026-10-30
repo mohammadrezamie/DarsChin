@@ -9,6 +9,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
+import { validateRegistrationPlanReferences } from '../domain/registration-plan-integrity';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema } from '../schemas/student';
 
 export const studentRouter = Router();
@@ -370,17 +371,26 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
 
+  const referenceError = validateRegistrationPlanReferences({
+    selectedOfferingIds,
+    offeringPriorities,
+    currentTermId,
+    campusId: profile?.campusId,
+    offerings: db.courseOfferings,
+  });
+  if (referenceError) return res.status(400).json({ success: false, error: referenceError });
+
   if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
     if (!profile) {
       return res.status(400).json({ success: false, error: 'پروفایل تحصیلی یافت نشد.' });
     }
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
-    const relevantOfferings = db.courseOfferings.filter((o) => o.termId === currentTermId && o.active);
+    const scope = curriculumForStudent(userId);
+    if (!scope) {
+      return res.status(409).json({ success: false, error: 'چارت فعال مرتبط با دانشگاه، واحد، مقطع، رشته و ورودی این حساب مشخص نیست.' });
+    }
+    const curriculum = scope.chart;
+    const relevantOfferings = db.courseOfferings.filter((o) =>
+      o.termId === currentTermId && o.campusId === profile.campusId && o.active);
     const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
     const report = evaluateStudentEligibility({
@@ -392,7 +402,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       academicRules: db.academicRules,
       passedCourses,
       currentOfferings: relevantOfferings,
-      plannedOfferingIdsInSameTerm: [], // Evaluate independently
+      plannedOfferingIdsInSameTerm: selectedOfferingIds, // Evaluate the complete saved combination, including same-term corequisites
     });
 
     const invalidOfferings = selectedOfferingIds.filter(id => {
@@ -478,15 +488,14 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     return res.status(404).json({ success: false, error: 'گروه درسی مورد نظر یافت نشد.' });
   }
 
-  const curriculum = db.curricula.find(
-    (c) =>
-      c.universityId === profile.universityId &&
-      c.majorId === profile.majorId &&
-      c.entryYearId === profile.entryYearId
-  ) || db.curricula[0];
+  const scope = curriculumForStudent(userId);
+  if (!scope) {
+    return res.status(409).json({ success: false, error: 'چارت فعال مرتبط با دانشگاه، واحد، مقطع، رشته و ورودی این حساب مشخص نیست.' });
+  }
+  const curriculum = scope.chart;
 
   const relevantOfferings = db.courseOfferings.filter(
-    (o) => o.termId === currentTermId && o.active
+    (o) => o.termId === currentTermId && o.campusId === profile.campusId && o.active
   );
   const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
@@ -585,7 +594,10 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   const currentCourseOfferings = plan.offeringPriorities[targetOffering.courseId] || [];
   const updatedCourseOfferings = [
     offeringId,
-    ...currentCourseOfferings.filter((id) => id !== offeringId),
+    ...new Set([
+      ...currentCourseOfferings.filter((id) => id !== offeringId),
+      ...(sameCourseExistingOffering ? [sameCourseExistingOffering.id] : []),
+    ]),
   ];
   plan.offeringPriorities[targetOffering.courseId] = updatedCourseOfferings;
 

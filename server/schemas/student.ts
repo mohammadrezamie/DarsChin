@@ -44,13 +44,18 @@ export const batchPassedCoursesSchema = z.object({
 });
 
 export const updatePlanSchema = z.object({
-  selectedOfferingIds: z.array(z.string()).optional(),
+  selectedOfferingIds: z.array(z.string().min(1)).max(500).refine(
+    ids => new Set(ids).size === ids.length, 'گروه تکراری در برنامه وجود دارد.'
+  ).optional(),
   // Historical plans store priority ranks as a map; the current planner sends an ordered array.
   coursePriorities: z.union([
-    z.array(z.string().min(1)).max(500),
+    z.array(z.string().min(1)).max(500).refine(
+      ids => new Set(ids).size === ids.length, 'درس تکراری در ترتیب اولویت وجود دارد.'
+    ),
     z.record(z.string(), z.number().int().nonnegative()),
   ]).optional(),
-  offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
+  offeringPriorities: z.record(z.string(), z.array(z.string().min(1)).max(50)
+    .refine(ids => new Set(ids).size === ids.length, 'گروه تکراری در جایگزین‌ها وجود دارد.')).optional(),
 });
 
 export const planSelectSchema = z.object({
