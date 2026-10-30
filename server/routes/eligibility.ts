@@ -56,11 +56,14 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     const relevantOfferings = db.courseOfferings.filter(o =>
       o.termId === currentTermId && o.campusId === profile.campusId && o.active === true
     );
-    const allowedOfferingIds = new Set(relevantOfferings.map(o => o.id));
-    if (plannedCourseIds.some((id: string) => !allowedOfferingIds.has(id))) {
+    // Existing clients submit either an offering ID or a course ID. Permit
+    // both ONLY when at least one active offering for that course exists in
+    // this student's exact campus and term; reject all foreign IDs.
+    const allowedPlanIds = new Set(relevantOfferings.flatMap(o => [o.id, o.courseId]));
+    if (plannedCourseIds.some((id: string) => !allowedPlanIds.has(id))) {
       return res.status(400).json({
         success: false,
-        error: 'فهرست تحلیل فقط می‌تواند شامل گروه‌های همین پردیس و نیمسال باشد.',
+        error: 'فهرست تحلیل فقط می‌تواند شامل درس‌ها یا گروه‌های همین پردیس و نیمسال باشد.',
       });
     }
     

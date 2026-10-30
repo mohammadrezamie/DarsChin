@@ -64,6 +64,14 @@ describe('student eligibility/report never borrows an unrelated chart or campus'
     expect(ids).not.toContain(foreign.id);
   });
 
+  it('preserves course-ID what-if clients for courses actually offered in this campus and term',async()=>{
+    const res=await request(app).post('/api/eligibility/evaluate').set(auth())
+      .send({plannedCourseIds:[own.courseId]});
+    expect(res.status).toBe(200);
+    expect(res.body.data.report.results.map((row:{offeringId:string})=>row.offeringId))
+      .not.toContain(foreign.id);
+  });
+
   it('refuses to evaluate a group from another campus or an unknown selection',async()=>{
     for(const id of [foreign.id,'never-existed-offering']){
       const res=await request(app).post('/api/eligibility/evaluate').set(auth())
