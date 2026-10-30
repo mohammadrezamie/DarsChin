@@ -15,7 +15,7 @@ export function verifiedOfferingGroupCopyCode(
   // Sources sometimes import placeholders as nonempty strings; these are
   // NOT verified registration identifiers. Never guess a numeric format.
   const placeholder = (value: string) =>
-    /^(?:[-_./?؟]+|(?:DEMO|TEST|PLACEHOLDER)(?:[-_].*)?|N\\/?A|NULL|UNDEFINED|UNKNOWN|نامشخص|بدون\\s*کد)$/i.test(value);
+    /^(?:[-_./?؟]+|(?:DEMO|TEST|PLACEHOLDER)(?:[-_].*)?|N[/]?A|NULL|UNDEFINED|UNKNOWN|نامشخص|بدون\s*کد)$/i.test(value);
   if (!raw || !group || placeholder(raw) || placeholder(group) ||
       !offering.canSelect || !offering.isEligible || offering.overallStatus !== 'AVAILABLE') {
     return null;
