@@ -39,6 +39,9 @@ describe('student-first product and private management contract', () => {
     expect(management).not.toContain("id: 'admin.create'");
     expect(management).not.toContain("id: 'admin.manage'");
     expect(adminWorkspaceAccess({ roles: ['student'], permissions: ['admin.panel.access'] }).isAdmin).toBe(false);
+    const auth = read('src/context/AuthContext.tsx');
+    expect(auth).toContain('const [isLoading, setIsLoading] = useState(true)');
+    expect(auth).not.toContain('useState(!getStoredToken())');
   });
 
   it('has a public student-only searchable guide with useful help sections and FAQ', () => {

@@ -76,7 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return null;
   });
-  const [isLoading, setIsLoading] = useState(!getStoredToken());
+  // Decoded JWT claims are unverified presentation hints only. Never render
+  // protected routes until /api/auth/me validates the persisted session.
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchCurrentUser = async () => {
     setIsLoading(true);
