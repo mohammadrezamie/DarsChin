@@ -89,6 +89,7 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       allCourses: db.courses,
       academicRules: db.academicRules,
       eligibilityResults: report.results,
+      studentProfile: profile,
       // Do not invent a third-semester standing for every student.
     });
 

@@ -11,6 +11,7 @@ import {
   AcademicRule,
   CourseEligibilityResult,
   CourseRecommendation,
+  StudentAcademicProfile,
 } from '../types';
 
 export interface RecommendationContext {
@@ -19,7 +20,9 @@ export interface RecommendationContext {
   allCourses: Course[];
   academicRules: AcademicRule[];
   eligibilityResults: CourseEligibilityResult[];
-  approximateStudentSemester?: number; // e.g. 3
+  approximateStudentSemester?: number; // set only when actually known
+  studentProfile?: Pick<StudentAcademicProfile,
+    'majorId' | 'entryYearId' | 'isTrackSelected' | 'selectedTrackId' | 'desiredTrackIds'>;
 }
 
 /**
@@ -35,20 +38,36 @@ export function generateCourseRecommendations(
     academicRules,
     eligibilityResults,
     approximateStudentSemester,
+    studentProfile,
   } = context;
+
+  const relevantTrackIds = new Set(studentProfile
+    ? studentProfile.isTrackSelected
+      ? (studentProfile.selectedTrackId ? [studentProfile.selectedTrackId] : [])
+      : (studentProfile.desiredTrackIds || [])
+    : []);
+  const scopedRules = academicRules.filter(rule =>
+    rule.curriculumId === curriculum.id &&
+    (!studentProfile || (
+      (!rule.majorId || rule.majorId === studentProfile.majorId) &&
+      (!rule.entryYearId || rule.entryYearId === studentProfile.entryYearId) &&
+      (!rule.trackId || relevantTrackIds.has(rule.trackId))
+    ))
+  );
 
   const coursesMap = new Map<string, Course>(allCourses.map((c) => [c.id, c]));
   const currCourseMap = new Map<string, CurriculumCourse>();
   for (const cc of curriculumCourses) {
-    if (cc.curriculumId === curriculum.id) {
+    if (cc.curriculumId === curriculum.id && cc.active !== false &&
+        (!studentProfile || !cc.trackId || relevantTrackIds.has(cc.trackId))) {
       currCourseMap.set(cc.courseId, cc);
     }
   }
 
   // Build dependency graph: courseId -> array of dependent target courseIds
   const dependencyGraph = new Map<string, string[]>();
-  for (const rule of academicRules) {
-    if (rule.curriculumId === curriculum.id && rule.relationshipType === 'PREREQUISITE') {
+  for (const rule of scopedRules) {
+    if (rule.relationshipType === 'PREREQUISITE') {
       const sourceCourseIds = extractSourceCourseIds(rule.expression);
       for (const sourceId of sourceCourseIds) {
         const dependents = dependencyGraph.get(sourceId) || [];
@@ -86,7 +105,7 @@ export function generateCourseRecommendations(
 
     // Calculate future unlocked courses
     const directDependents = dependencyGraph.get(courseId) || [];
-    const unlockedCourseIds = downstreamCourseIds(courseId, curriculum.id, academicRules)
+    const unlockedCourseIds = downstreamCourseIds(courseId, curriculum.id, scopedRules)
       .filter(id => currCourseMap.has(id) && id !== courseId);
     const unlockedCourseNames = unlockedCourseIds
       .map((id) => coursesMap.get(id)?.name)
