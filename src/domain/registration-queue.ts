@@ -26,6 +26,8 @@ export interface RegistrationStep {
   dependencyNames: string[];
   dependencyCourseIds: string[];
   warnings: string[];
+  /** Independent academic-rule readiness; a main group without a code cannot block a valid reserve. */
+  ruleReady: boolean;
   ready: boolean;
 }
 export interface RegistrationQueue {
@@ -160,7 +162,9 @@ export function buildRegistrationQueue(input: {
     // A plain catalog code may be displayed, but never offered for quick copy.
     const verifiedCode = verifiedOfferingGroupCopyCode(o);
     const code = verifiedCode || explicit || (catalog && catalog !== '---' ? catalog : '');
-    const problems = [...(warnings.get(id) || [])];
+    const ruleProblems = warnings.get(id) || [];
+    const ruleReady = !hasCycle && ruleProblems.length === 0;
+    const problems = [...ruleProblems];
     // A code is not permission to select an ineligible offering. Honor the
     // evaluated eligibility report rather than inventing academic exceptions.
     const blocked = !o.canSelect || !o.isEligible || o.overallStatus !== 'AVAILABLE';
@@ -195,7 +199,8 @@ export function buildRegistrationQueue(input: {
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
       dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
-      ready: !hasCycle && !blocked && Boolean(verifiedCode) && !problems.length,
+      ruleReady,
+      ready: ruleReady && !blocked && Boolean(verifiedCode) && !problems.length,
     };
   });
   return { steps, hasCycle, hasUnresolvedRules: unresolved.value };

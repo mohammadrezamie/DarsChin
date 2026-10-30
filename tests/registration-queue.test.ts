@@ -171,3 +171,15 @@ describe('full group copy format is identical across planning and offered-course
     expect(result.steps[0].warnings.join(' ')).toContain('شمارهٔ گروه ارائه مشخص نیست');
   });
 });
+
+
+describe('reserve codes are not blocked merely because the main section lacks a code',()=>{
+  it('separates academic sequence validity from the main group copy code',()=>{
+    const main={...diff,rawCourseCode:undefined,courseCode:'410019'};
+    const valid=buildRegistrationQueue({...input([]),evaluations:[main,math,physics],selectedOfferingIds:['off-diff']});
+    expect(valid.steps[0].ruleReady).toBe(true);
+    expect(valid.steps[0].ready).toBe(false);
+    const blocked=buildRegistrationQueue({...input([rule('PREREQUISITE','diff',{type:'COURSE',courseId:'missing'})]),evaluations:[main,math,physics],selectedOfferingIds:['off-diff']});
+    expect(blocked.steps[0].ruleReady).toBe(false);
+  });
+});

@@ -77,6 +77,15 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     if(progressLoadedKey!==progressKey)return;
     try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}
   },[doneIds,progressKey,progressLoadedKey]);
+  // No phantom self-reported registration when a demo user removes and later
+  // re-adds a group. Real accounts already prune marks at the API boundary.
+  useEffect(()=>{
+    if(onToggleRegistered || progressLoadedKey!==progressKey)return;
+    setDoneIds(previous=>{
+      const valid=previous.filter(id=>selectedOfferingIds.includes(id));
+      return valid.length===previous.length?previous:valid;
+    });
+  },[onToggleRegistered,progressKey,progressLoadedKey,selectedOfferingIds]);
 
   useEffect(()=>{
     let alive=true;
@@ -263,7 +272,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                       <span className="block text-amber-700 dark:text-amber-300">این گروه فعلاً قابل اخذ نیست؛ دوباره بررسی کن.</span>}
                   </div>
                   <div className="flex flex-wrap items-center gap-1">
-                    <button type="button" disabled={!rulesReady||!progressReady||!step.ready||locked||!verifiedOfferingGroupCopyCode(alt)}
+                    <button type="button" disabled={!rulesReady||!progressReady||!step.ruleReady||locked||!verifiedOfferingGroupCopyCode(alt)}
                       onClick={()=>void copy(verifiedOfferingGroupCopyCode(alt),`رزرو گروه ${alt.groupCode}`)}
                       aria-label={`کپی کد گروه رزرو ${alt.groupCode}`}
                       title="کپی کد گروه رزرو پس از تأیید شرایط"

@@ -248,3 +248,13 @@ describe('native compact group disclosure',()=>{
     expect(component).not.toContain('onToggle={event=>setExpandedAlternatives');
   });
 });
+
+
+describe('reserve copy does not inherit the main group missing-code state',()=>{
+  it('uses academic rule status for reserves and prunes deleted demo marks',()=>{
+    const component=readFileSync(resolve(process.cwd(),'src/components/RegistrationLaunchpad.tsx'),'utf8');
+    expect(component).toContain('!step.ruleReady||locked||!verifiedOfferingGroupCopyCode(alt)');
+    expect(component).not.toContain('!step.ready||locked||!verifiedOfferingGroupCopyCode(alt)');
+    expect(component).toContain('previous.filter(id=>selectedOfferingIds.includes(id))');
+  });
+});
