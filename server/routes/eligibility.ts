@@ -10,6 +10,11 @@ import { generateCourseRecommendations } from '../../src/domain/recommendation-e
 
 export const eligibilityRouter = Router();
 
+eligibilityRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  next();
+});
+
 // Evaluate student eligibility for current offerings
 eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, res) => {
   try {

@@ -15,6 +15,13 @@ import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, u
 
 export const studentRouter = Router();
 
+// Every route in this namespace carries private academic records, including
+// the failed-authentication/error cases. Never leave caching to individual handlers.
+studentRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  next();
+});
+
 // Get student academic profile
 studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;

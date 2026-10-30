@@ -77,6 +77,7 @@ describe('student eligibility/report never borrows an unrelated chart or campus'
       const res=await request(app).post('/api/eligibility/evaluate').set(auth())
         .send({plannedCourseIds:[id]});
       expect(res.status,id).toBe(400);
+      expect(res.headers['cache-control']).toBe('private, no-store');
     }
   });
 

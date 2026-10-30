@@ -168,3 +168,25 @@ describe('new academic profile reference boundaries',()=>{
     expect(source).toContain("setCampusId('');");
   });
 });
+
+
+describe('private student routes and active selector constraints',()=>{
+  it('prevents shared caching even on sensitive GET and unauthorized responses',async()=>{
+    const allowed=await request(app).get('/api/student/passed-courses').set(auth(existingId));
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers['cache-control']).toBe('private, no-store');
+    const denied=await request(app).get('/api/student/passed-courses');
+    expect(denied.status).toBe(401);
+    expect(denied.headers['cache-control']).toBe('private, no-store');
+  });
+  it('filters inactive campus, degree, major, track, year and term metadata in the student form',()=>{
+    const source=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
+    expect(source).toContain('c.active !== false');
+    expect(source).toContain('m.active !== false');
+    expect(source).toContain('t.active !== false');
+    expect(source).toContain('c.provinceId === provinceId');
+    expect(source).toContain('degreeLevels.filter(d => d.active !== false)');
+    expect(source).toContain('entryYears.filter(y => y.active !== false)');
+    expect(source).toContain('terms.filter(t => t.active !== false)');
+  });
+});
