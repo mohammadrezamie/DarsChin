@@ -162,7 +162,10 @@ export function buildRegistrationQueue(input: {
       unresolved.value = true;
       problems.push(`این گروه در گزارش فعلی قابل اخذ نیست: ${o.primaryReason || 'نیازمند بررسی شرایط آموزشی است.'}`);
     }
-    if (!explicit) problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
+    if (!explicit) {
+      unresolved.value = true;
+      problems.push('کد از کاتالوگ/تطبیق درس آمده و برای ثبت در آموزشیار تأیید نشده؛ قبل از جست‌وجو کد ارائه را کنترل کن.');
+    }
     if (!code) {
       unresolved.value = true;
       problems.push('کد این درس نامشخص است؛ ابتدا کد رسمی ارائه را تأیید کن.');
@@ -182,8 +185,7 @@ export function buildRegistrationQueue(input: {
       dependencyNames: [...(dependencies.get(id) || [])].map(dep => names.get(dep) || dep),
       dependencyCourseIds: [...(dependencies.get(id) || [])],
       warnings: [...new Set(problems)],
-      ready: !hasCycle && !blocked && !problems.some(text =>
-        !text.startsWith('کد از کاتالوگ/تطبیق')),
+      ready: !hasCycle && !blocked && Boolean(explicit) && !problems.length,
     };
   });
   return { steps, hasCycle, hasUnresolvedRules: unresolved.value };

@@ -121,5 +121,32 @@ describe('manual Educationalyar registration priority queue',()=>{
     expect(q.steps[0].codeFromOffering).toBe(true);
     expect(q.steps[1].codeFromOffering).toBe(false);
     expect(q.steps[1].warnings.join(' ')).toContain('تأیید نشده');
+    expect(q.steps[1].ready).toBe(false);
+    expect(q.hasUnresolvedRules).toBe(true);
+  });
+});
+
+
+describe('quick copy never treats catalog-only codes as verified group codes',()=>{
+  it('retains the visible catalog code but blocks the manual-registration shortcut',()=>{
+    const result=buildRegistrationQueue({
+      ...input([]),
+      evaluations:[{...diff,rawCourseCode:undefined,courseCode:'410019'},math,physics],
+      selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].copyCode).toBe('410019');
+    expect(result.steps[0].codeFromOffering).toBe(false);
+    expect(result.steps[0].ready).toBe(false);
+    expect(result.hasUnresolvedRules).toBe(true);
+    expect(result.steps[0].warnings.join(' ')).toContain('تأیید نشده');
+  });
+  it('allows a real imported offering code only when eligibility and other rules permit',()=>{
+    const result=buildRegistrationQueue({
+      ...input([]),
+      evaluations:[{...diff,rawCourseCode:'410019',courseCode:'CATALOG'},math,physics],
+      selectedOfferingIds:['off-diff'],
+    });
+    expect(result.steps[0].ready).toBe(true);
+    expect(result.steps[0].copyCode).toBe('410019');
   });
 });
