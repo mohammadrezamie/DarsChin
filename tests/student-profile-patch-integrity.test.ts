@@ -194,7 +194,9 @@ describe('private student routes and active selector constraints',()=>{
 
 describe('administrative final-semester approval is never transferred to another academic identity',()=>{
   it('invalidates a prior override after entry-year change without deleting the administrative note',async()=>{
-    const actual=db.studentProfiles.find(p=>p.userId===existingId)!;
+    const index=db.studentProfiles.findIndex(p=>p.userId===existingId);
+    if(index<0)throw new Error('Profile fixture missing');
+    const actual=db.studentProfiles[index];
     const snapshot={...actual};
     const reference=db.entryYears.find(y=>y.active);
     if(!reference)throw new Error('Fixture needs an active entry year');
@@ -209,10 +211,16 @@ describe('administrative final-semester approval is never transferred to another
       expect(result.body.data.entryYearId).toBe(next.id);
       expect(result.body.data.isFinalSemesterOverride).toBeNull();
       expect(result.body.data.finalSemesterNotes).toBe('Synthetic approved scope');
-    }finally{Object.assign(actual,snapshot);}
+    }finally{
+      db.studentProfiles[index]=snapshot;
+      const indexOfYear=db.entryYears.findIndex(y=>y.id===next.id);
+      if(indexOfYear>=0)db.entryYears.splice(indexOfYear,1);
+    }
   });
   it('clears a stale previous-term GPA after term change and expires old admin approval',async()=>{
-    const actual=db.studentProfiles.find(p=>p.userId===existingId)!;
+    const index=db.studentProfiles.findIndex(p=>p.userId===existingId);
+    if(index<0)throw new Error('Profile fixture missing');
+    const actual=db.studentProfiles[index];
     const snapshot={...actual};
     const reference=db.academicTerms.find(t=>t.active);
     if(!reference)throw new Error('Fixture needs an active term');
@@ -228,6 +236,10 @@ describe('administrative final-semester approval is never transferred to another
       expect(response.body.data.isFinalSemesterOverride).toBeNull();
       const modal=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
       expect(modal).toContain("setPreviousTermGpa('');");
-    }finally{Object.assign(actual,snapshot);}
+    }finally{
+      db.studentProfiles[index]=snapshot;
+      const indexOfTerm=db.academicTerms.findIndex(t=>t.id===next.id);
+      if(indexOfTerm>=0)db.academicTerms.splice(indexOfTerm,1);
+    }
   });
 });
