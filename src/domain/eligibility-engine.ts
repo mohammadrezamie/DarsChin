@@ -77,7 +77,7 @@ export function evaluateStudentEligibility(
   // Find curriculum courses
   const curriculumCourseMap = new Map<string, CurriculumCourse[]>();
   for (const cc of curriculumCourses) {
-    if (cc.curriculumId === curriculum.id) {
+    if (cc.curriculumId === curriculum.id && cc.active !== false) {
       const existing = curriculumCourseMap.get(cc.courseId) || [];
       existing.push(cc);
       curriculumCourseMap.set(cc.courseId, existing);
@@ -104,13 +104,13 @@ export function evaluateStudentEligibility(
 
   for (const offering of currentOfferings) {
     const course = coursesMap.get(offering.courseId);
-    if (!course) {
+    if (!course || course.active === false) {
       results.push({
         offeringId: offering.id,
         courseId: offering.courseId,
         courseCode: offering.rawCourseCode || 'نامشخص',
         rawCourseCode: offering.rawCourseCode,
-        courseName: offering.rawCourseName || 'درس تعریف نشده',
+        courseName: offering.rawCourseName || course?.name || 'درس تعریف نشده',
         units: 0,
         category: 'سایر',
         groupCode: offering.groupCode,
@@ -125,8 +125,12 @@ export function evaluateStudentEligibility(
         overallStatus: 'NEEDS_REVIEW',
         isEligible: false,
         canSelect: false,
-        primaryReason: 'شناسه این درس در پایگاه داده دروس تعریف نشده است.',
-        allReasons: ['شناسه این درس در پایگاه داده دروس تعریف نشده است.'],
+        primaryReason: course?.active === false
+          ? 'این درس در کاتالوگ فعلی غیرفعال است و نیاز به بررسی آموزش دارد.'
+          : 'شناسه این درس در پایگاه داده دروس تعریف نشده است.',
+        allReasons: [course?.active === false
+          ? 'درس از فهرست فعال آموزشی حذف شده است.'
+          : 'شناسه این درس در پایگاه داده دروس تعریف نشده است.'],
         missingPrerequisites: [],
         missingCorequisites: [],
       });
@@ -300,8 +304,7 @@ export function evaluateStudentEligibility(
               missing: allMissing,
               reasons: [`حداقل یکی از شروط زیر باید برآورده شود: (${results.map((r: any) => r.reasons.join(' و ')).join(' یا ')})`],
             };
-          } else {
-            // AND
+          } else if (node.operator === 'AND') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
             const failedResults = results.filter((r: any) => !r.passed);
             if (failedResults.length === 0) return { passed: true, missing: [], reasons: [] };
@@ -312,6 +315,7 @@ export function evaluateStudentEligibility(
               reasons: failedResults.flatMap((r: any) => r.reasons),
             };
           }
+          return { passed: false, missing: [], reasons: ['عملگر ترکیب شروط آموزشی نامعتبر است.'] };
         }
         return { passed: false, missing: [], reasons: ['نوع شرط آموزشی ناشناخته است.'] };
       };
