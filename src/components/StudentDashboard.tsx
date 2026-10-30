@@ -68,6 +68,8 @@ export const StudentDashboard: React.FC = () => {
   const [selectedOfferingIds, setSelectedOfferingIds] = useState<string[]>([]);
   const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
+  const [registeredOfferingIds, setRegisteredOfferingIds] = useState<string[] | null>(null);
+  const registrationMarkLock = useRef(false);
   const [wishlistCourseIds, setWishlistCourseIds] = useState<string[]>([]);
   const [journeyStep, setJourneyStep] = useState(0);
   const [journeyReady, setJourneyReady] = useState(false);
@@ -255,6 +257,8 @@ export const StudentDashboard: React.FC = () => {
       setSelectedOfferingIds([]);
       setCoursePriorities([]);
       setOfferingPriorities({});
+      setRegisteredOfferingIds([]);
+      setRegisteredOfferingIds(null);
       setWishlistCourseIds([]);
       setJourneyStep(0);
     }
@@ -262,7 +266,7 @@ export const StudentDashboard: React.FC = () => {
       // Resolve saved selections before calculating eligibility on reload.
       const [profileRes, planRes] = await Promise.all([
         apiRequest<{ profile: StudentAcademicProfile; curriculum?: { id: string } | null }>('/api/student/profile'),
-        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]>; wishlistCourseIds?: string[]; journeyStep?: number }>('/api/student/plan'),
+        apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]>; registeredOfferingIds?: string[]; wishlistCourseIds?: string[]; journeyStep?: number }>('/api/student/plan'),
       ]);
       if (version !== evaluationVersionRef.current) return;
       // Both responses are required before evaluating a plan. Never silently
@@ -275,6 +279,7 @@ export const StudentDashboard: React.FC = () => {
         setSelectedOfferingIds([]);
         setCoursePriorities([]);
         setOfferingPriorities({});
+        setRegisteredOfferingIds(null);
         setWishlistCourseIds([]);
         setJourneyStep(0);
         setEvaluations([]);
@@ -296,6 +301,8 @@ export const StudentDashboard: React.FC = () => {
       setCurriculumId(profileRes.data.curriculum?.id || null);
       const planned = planRes.data.selectedOfferingIds;
       setSelectedOfferingIds(planned);
+      setRegisteredOfferingIds(Array.isArray(planRes.data.registeredOfferingIds)
+        ? planRes.data.registeredOfferingIds.filter(id=>planned.includes(id)) : []);
       const priorities = planRes.data.coursePriorities;
       if (Array.isArray(priorities)) setCoursePriorities(priorities);
       else if (priorities && typeof priorities === 'object') {
@@ -421,6 +428,31 @@ export const StudentDashboard: React.FC = () => {
     return saved;
   };
 
+  // These are self-reported Educationalyar actions, never official university status.
+  // The server persists the exact offering ID for the current account and term.
+  const handleToggleRegistered = async (offeringId: string, registered: boolean): Promise<boolean> => {
+    if (loading || loadError || planMutationRef.current || registrationMarkLock.current ||
+        !selectedOfferingIds.includes(offeringId)) return false;
+    registrationMarkLock.current = true;
+    try {
+      const result = await apiRequest<{ registeredOfferingIds: string[] }>('/api/student/registration-progress', {
+        method: 'PUT', body: JSON.stringify({ offeringId, registered }),
+      });
+      if (!result.success || !Array.isArray(result.data?.registeredOfferingIds)) {
+        setPlanError(result.error || 'علامت ثبت در سرور ذخیره نشد.');
+        return false;
+      }
+      setRegisteredOfferingIds(result.data.registeredOfferingIds);
+      setPlanError(null);
+      return true;
+    } catch {
+      setPlanError('ارتباط با سرور برای علامت ثبت برقرار نشد.');
+      return false;
+    } finally {
+      registrationMarkLock.current = false;
+    }
+  };
+
   // Select primary offering for a course (promotes offering to primary)
   const handleSelectPrimaryOffering = async (courseId: string, offeringId: string) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
@@ -452,6 +484,7 @@ export const StudentDashboard: React.FC = () => {
 
     if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities)) {
       setSelectedOfferingIds(newSelected);
+      setRegisteredOfferingIds(prev=>prev?.filter(id=>newSelected.includes(id)) ?? null);
       setOfferingPriorities(newOfferingPriorities);
       // The primary section changed; refresh server-derived prerequisites,
       // schedule conflicts and recommendations for the actual saved plan.
@@ -555,6 +588,7 @@ export const StudentDashboard: React.FC = () => {
     if (!saved) return;
 
     setSelectedOfferingIds(acceptedSelectedIds);
+    setRegisteredOfferingIds(prev=>prev?.filter(id=>acceptedSelectedIds.includes(id)) ?? null);
     if (acceptedPriorities) setOfferingPriorities(acceptedPriorities);
     setConflictWarning(null);
     const version = ++evaluationVersionRef.current;
@@ -954,6 +988,8 @@ export const StudentDashboard: React.FC = () => {
                 onAddFallbackOffering={handleAddFallbackOffering}
                 onRemoveFallbackOffering={handleRemoveFallbackOffering}
                 onMoveFallbackOffering={handleMoveFallbackOffering}
+                registeredOfferingIds={isBrowserDemo ? undefined : registeredOfferingIds}
+                onToggleRegistered={isBrowserDemo ? undefined : handleToggleRegistered}
               />
             )}
 
