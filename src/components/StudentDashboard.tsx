@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
+import { findOfferingTimeConflicts } from '../domain/registration-conflicts';
 import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, AcademicLimitInfo } from '../types';
 
 import { AcademicProfileModal } from './AcademicProfileModal';
@@ -85,6 +86,7 @@ export const StudentDashboard: React.FC = () => {
     offeringId: string;
     courseName: string;
     messages: string[];
+    swapCourseId?: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<StudentTab>(() => studentWorkspaceFromSearch(location.search));
   const [loading, setLoading] = useState(true);
@@ -464,7 +466,7 @@ export const StudentDashboard: React.FC = () => {
   };
 
   // Select primary offering for a course (promotes offering to primary)
-  const handleSelectPrimaryOffering = async (courseId: string, offeringId: string) => {
+  const handleSelectPrimaryOffering = async (courseId: string, offeringId: string, confirmedConflict = false) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
     // The new main group must be eligible in the current server evaluation.
     const replacement = evaluations.find(e => e.offeringId === offeringId && e.courseId === courseId);
@@ -473,6 +475,18 @@ export const StudentDashboard: React.FC = () => {
       const e = evaluations.find((ev) => ev.offeringId === id);
       return (e?.courseId || e?.courseCode) === courseId;
     });
+    if (currentPrimary === offeringId) return;
+    // A reserve promotion can move lectures or exams. Warn before replacing
+    // the old group, and compare only against DIFFERENT selected courses.
+    if (!confirmedConflict) {
+      const conflicts = findOfferingTimeConflicts(replacement,
+        evaluations.filter(e => selectedOfferingIds.includes(e.offeringId)));
+      if (conflicts.length > 0) {
+        setConflictWarning({ offeringId, courseName: replacement.courseName,
+          messages: conflicts, swapCourseId: courseId });
+        return;
+      }
+    }
 
     // Replace old primary with new offering in selectedOfferingIds
     const newSelected = [
@@ -496,6 +510,7 @@ export const StudentDashboard: React.FC = () => {
       setSelectedOfferingIds(newSelected);
       setRegisteredOfferingIds(prev=>prev?.filter(id=>newSelected.includes(id)) ?? null);
       setOfferingPriorities(newOfferingPriorities);
+      setConflictWarning(null);
       // The primary section changed; refresh server-derived prerequisites,
       // schedule conflicts and recommendations for the actual saved plan.
       void fetchDashboardData();
@@ -643,39 +658,7 @@ export const StudentDashboard: React.FC = () => {
     }
 
     const currentSelected = evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
-    const messages: string[] = [];
-
-    currentSelected.forEach((existing) => {
-      // Lecture Conflict
-      if (
-        newEval.dayOfWeek &&
-        existing.dayOfWeek &&
-        newEval.dayOfWeek === existing.dayOfWeek &&
-        newEval.startTime &&
-        existing.startTime &&
-        newEval.endTime &&
-        existing.endTime
-      ) {
-        if (newEval.startTime < existing.endTime && newEval.endTime > existing.startTime) {
-          messages.push(
-            `تداخل زمان کلاس با درس "${existing.courseName}" (روز ${newEval.dayOfWeek} ساعت ${existing.startTime} تا ${existing.endTime})`
-          );
-        }
-      }
-
-      // Exam Conflict
-      if (newEval.examDate && existing.examDate) {
-        const newDate = newEval.examDate.split(' - ')[0].trim();
-        const existingDate = existing.examDate.split(' - ')[0].trim();
-        if (newDate === existingDate) {
-          if (newEval.examDate === existing.examDate) {
-            messages.push(`تداخل دقیق زمان امتحان با درس "${existing.courseName}" (${newEval.examDate})`);
-          } else {
-            messages.push(`تداخل روز امتحان با درس "${existing.courseName}" (هر دو در تاریخ ${newDate})`);
-          }
-        }
-      }
-    });
+    const messages: string[] = findOfferingTimeConflicts(newEval, currentSelected);
 
     // Never invent 8/20/24-unit legal limits from a missing or stale profile.
     // The Express eligibility/selection response remains authoritative.
@@ -1066,7 +1049,7 @@ export const StudentDashboard: React.FC = () => {
             </div>
             
             <p id="student-conflict-dialog-desc" className="mb-4 break-words text-sm leading-7 text-slate-700 dark:text-slate-300">
-              درخواست افزودن درس <strong>{conflictWarning.courseName}</strong> نیازمند بررسی موارد زیر است. تأیید شما قوانین سرور را دور نمی‌زند:
+              درخواست {conflictWarning.swapCourseId ? 'تغییر گروه درس' : 'افزودن درس'} <strong>{conflictWarning.courseName}</strong> نیازمند بررسی موارد زیر است. تأیید شما قوانین سرور را دور نمی‌زند:
             </p>
             
             <ul className="mb-5 space-y-2">
@@ -1089,7 +1072,11 @@ export const StudentDashboard: React.FC = () => {
                 انصراف
               </button>
               <button type="button" disabled={planStatus === 'saving'}
-                onClick={() => void confirmToggleScheduleOffering(conflictWarning.offeringId)}
+                onClick={() => { if (conflictWarning.swapCourseId) {
+                  void handleSelectPrimaryOffering(conflictWarning.swapCourseId, conflictWarning.offeringId, true);
+                } else {
+                  void confirmToggleScheduleOffering(conflictWarning.offeringId);
+                } }}
                 className="min-h-11 min-w-0 rounded-xl bg-amber-600 px-3 py-2 text-xs font-extrabold leading-6 text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50 sm:text-sm"
               >
                 درخواست ثبت با بررسی سرور
