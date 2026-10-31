@@ -104,6 +104,7 @@ export const AdminAcademicRules: React.FC = () => {
   } | null>(null);
   const [advancedLoading, setAdvancedLoading] = useState(false);
   const [advancedError, setAdvancedError] = useState('');
+  const [advancedRefresh, setAdvancedRefresh] = useState(0);
 
   const [formData, setFormData] = useState<{
     curriculumId: string;
@@ -182,7 +183,7 @@ export const AdminAcademicRules: React.FC = () => {
       if (active) setAdvancedError('بارگذاری چارت با خطا روبه‌رو شد؛ قانون ثبت نمی‌شود.');
     }).finally(() => { if (active) setAdvancedLoading(false); });
     return () => { active = false; };
-  }, [isAdding, formData.curriculumId]);
+  }, [isAdding, formData.curriculumId, advancedRefresh]);
 
   const activeAdvancedChart = advancedChartSnapshot?.id === formData.curriculumId
     ? advancedChartSnapshot : null;
@@ -243,7 +244,11 @@ export const AdminAcademicRules: React.FC = () => {
       if (res.success) {
         setIsAdding(false);
         await fetchData(true);
-      } else setError(res.error || 'قانون ذخیره نشد؛ اطلاعات فرم حفظ شدند.');
+      } else {
+        setAdvancedChartSnapshot(null);
+        setAdvancedError('پیش از تلاش دوباره نسخه و درس‌های چارت را تازه‌سازی و بازبینی کنید.');
+        setError(res.error || 'قانون ذخیره نشد؛ اطلاعات فرم حفظ شدند.');
+      }
     } catch {
       setError('ارتباط قطع شد؛ اطلاعات فرم حفظ شدند.');
     } finally {
@@ -340,6 +345,11 @@ export const AdminAcademicRules: React.FC = () => {
 
           {advancedLoading && <p role="status" className="text-xs text-indigo-700">در حال دریافت دروس معتبر چارت و آخرین نسخهٔ قوانین…</p>}
           {advancedError && <p role="alert" className="text-xs font-bold leading-6 text-rose-800">{advancedError}</p>}
+          {formData.curriculumId && <button type="button" disabled={saving || advancedLoading}
+            onClick={() => setAdvancedRefresh(value => value + 1)}
+            className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-800 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">
+            تازه‌سازی دروس و نسخهٔ چارت
+          </button>}
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
             <h3 className="font-bold text-gray-700 mb-4">ساختار شرط (Prerequisite Tree)</h3>
             <NodeEditor 
