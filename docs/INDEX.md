@@ -88,3 +88,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 
 - **[تحلیل هوشمند همهٔ دروس باقیمانده تا پایان چارت و جداسازی مسیرهای OR](STUDENT_GUIDED_JOURNEY_REQUIREMENTS_FA.md)** — OWN-105؛ فهرست سبد مستقل از ارائهٔ این نیمسال، الگوریتم سوابق پاس‌شده، ۴۰۹ آزمون در QA ایزوله و محدودیت‌های مدل چندترمی.
 - **[ایمن‌سازی قوانین ترکیبی مدیریت و نسخهٔ هم‌زمان چارت](ADMIN_GRAPH_EDITOR_HISTORY_FA.md)** — OWN-105؛ اعتبارسنجی درخت AND/OR، محدودکردن انتخاب دروس به همان چارت و کنترل `If-Match`.
+
+- **[OWN-106 · تغییرات محسوس در موبایل و صف ثبت: کشیدن اولویت با انگشت، کپی درس بعدی، سبد تک‌نمایی و قدم بعدی روشن](STUDENT_MOBILE_VISIBLE_OWN106_FA.md)** — وضعیت ۴۰۴ تست و گیت Preview/دستگاه واقعی.
