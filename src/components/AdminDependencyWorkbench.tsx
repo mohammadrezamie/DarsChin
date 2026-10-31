@@ -126,7 +126,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
             (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa')
           : (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa'))
         .forEach((id, row) => positions.set(id, {
-          x: 24 + column * COLUMN_WIDTH,
+          x: 24 + (chainModeActive ? sortedTerms.length - 1 - column : column) * COLUMN_WIDTH,
           y: 64 + row * ROW_HEIGHT,
         }));
     });
@@ -356,10 +356,13 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       const from = layout.positions.get(edge.from);
                       const to = layout.positions.get(edge.to);
                       if (!from || !to) return null;
-                      const d = 'M' + (from.x + NODE_WIDTH) + ' ' + (from.y + NODE_HEIGHT / 2) +
-                        ' C' + (from.x + NODE_WIDTH + 28) + ' ' + (from.y + NODE_HEIGHT / 2) +
-                        ' ' + (to.x - 24) + ' ' + (to.y + NODE_HEIGHT / 2) +
-                        ' ' + to.x + ' ' + (to.y + NODE_HEIGHT / 2);
+                      const fromX = layout.chainModeActive ? from.x : from.x + NODE_WIDTH;
+                      const toX = layout.chainModeActive ? to.x + NODE_WIDTH : to.x;
+                      const bend = layout.chainModeActive ? -28 : 28;
+                      const d = 'M' + fromX + ' ' + (from.y + NODE_HEIGHT / 2) +
+                        ' C' + (fromX + bend) + ' ' + (from.y + NODE_HEIGHT / 2) +
+                        ' ' + (toX - bend) + ' ' + (to.y + NODE_HEIGHT / 2) +
+                        ' ' + toX + ' ' + (to.y + NODE_HEIGHT / 2);
                       const selected = selectedExisting?.from === edge.from &&
                         selectedExisting?.to === edge.to && selectedExisting?.kind === edge.kind;
                       return <React.Fragment key={edge.kind + edge.from + edge.to}>
@@ -374,8 +377,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       </React.Fragment>;
                     })}
                     {pending && start && end && <path
-                      d={'M' + (start.x + NODE_WIDTH) + ' ' + (start.y + NODE_HEIGHT / 2) +
-                        ' L' + end.x + ' ' + (end.y + NODE_HEIGHT / 2)}
+                      d={'M' + (layout.chainModeActive ? start.x : start.x + NODE_WIDTH) + ' ' + (start.y + NODE_HEIGHT / 2) +
+                        ' L' + (layout.chainModeActive ? end.x + NODE_WIDTH : end.x) + ' ' + (end.y + NODE_HEIGHT / 2)}
                       stroke={assessment.valid ? '#059669' : '#e11d48'} strokeWidth={3} strokeDasharray="7 5" fill="none" />}
                   </svg>
                   {[...layout.positions].map(([id, point]) => {
