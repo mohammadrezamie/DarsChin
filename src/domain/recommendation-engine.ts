@@ -138,7 +138,7 @@ export function generateCourseRecommendations(
       // small informational weight, never the full structural urgency bonus.
       const choiceBonus = Math.min(mandatoryFutureIds.length ? 6 : 12,
         choiceOnlyFutureIds.length * 3 + (mandatoryFutureIds.length ? 0 : Math.max(0, remainingDepth - 1)));
-      const bonus = Math.min(35, mandatoryBonus + choiceBonus + Math.min(4, mandatoryRequiredCount * 2));
+      const bonus = Math.min(35, mandatoryBonus + choiceBonus + Math.min(4, Math.max(0, mandatoryRequiredCount - 1) * 2));
       score += bonus;
       reasons.push(`در زنجیرهٔ چارت تا انتهای دوره، ${unlockedCourseIds.length.toLocaleString('fa-IR')} درس باقیمانده در مسیر این درس است؛ ${directDependents.length.toLocaleString('fa-IR')} ارتباط مستقیم، عمق ${depth.toLocaleString('fa-IR')} (ساختاری) و ${remainingDepth.toLocaleString('fa-IR')} گام باقیمانده`);
       if (mandatoryFutureIds.length > 0) {
