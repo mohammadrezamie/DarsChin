@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Student Dashboard
 // ============================================================================
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { studentWorkspaceFromSearch, type StudentWorkspaceId } from '../utils/student-workspace-navigation';
 import {
@@ -21,19 +21,31 @@ import { apiRequest } from '../utils/api';
 import { findOfferingTimeConflicts, lectureTimesOverlap } from '../domain/registration-conflicts';
 import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, AcademicLimitInfo } from '../types';
 
-import { AcademicProfileModal } from './AcademicProfileModal';
-import { PassedCoursesManager } from './PassedCoursesManager';
-import { StudentHelpCenter } from './StudentHelpCenter';
-import { ImportOfferingsModal } from './ImportOfferingsModal';
-import { OfferingsList } from './OfferingsList';
-import { SchedulePlanner } from './SchedulePlanner';
-import { DemandWorkspace } from './DemandWorkspace';
-import { RegistrationLaunchpad } from './RegistrationLaunchpad';
+
+
+
+
+
+
+
+
 import { StudentMobileDock } from './StudentMobileDock';
-import { StudentWishlistBuilder } from './StudentWishlistBuilder';
+
 import { StudentJourneyStepper } from './StudentJourneyStepper';
 import { ContextualHelp } from './ContextualHelp';
 import { studentSectionHelp } from '../help/student-sections';
+
+// Each large workspace is requested only when opened; the initial mobile home
+// no longer downloads timetable, registration, import and support panels together.
+const AcademicProfileModal = lazy(() => import('./AcademicProfileModal').then(module => ({ default: module.AcademicProfileModal })));
+const PassedCoursesManager = lazy(() => import('./PassedCoursesManager').then(module => ({ default: module.PassedCoursesManager })));
+const StudentHelpCenter = lazy(() => import('./StudentHelpCenter').then(module => ({ default: module.StudentHelpCenter })));
+const ImportOfferingsModal = lazy(() => import('./ImportOfferingsModal').then(module => ({ default: module.ImportOfferingsModal })));
+const OfferingsList = lazy(() => import('./OfferingsList').then(module => ({ default: module.OfferingsList })));
+const SchedulePlanner = lazy(() => import('./SchedulePlanner').then(module => ({ default: module.SchedulePlanner })));
+const DemandWorkspace = lazy(() => import('./DemandWorkspace').then(module => ({ default: module.DemandWorkspace })));
+const RegistrationLaunchpad = lazy(() => import('./RegistrationLaunchpad').then(module => ({ default: module.RegistrationLaunchpad })));
+const StudentWishlistBuilder = lazy(() => import('./StudentWishlistBuilder').then(module => ({ default: module.StudentWishlistBuilder })));
 
 type StudentTab = StudentWorkspaceId;
 
@@ -910,7 +922,12 @@ export const StudentDashboard: React.FC = () => {
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
           </div>
         ) : (
-          <>
+          <Suspense fallback={
+            <div role="status" aria-live="polite" className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white/75 p-5 dark:border-slate-800 dark:bg-slate-900/75">
+              <span className="h-7 w-7 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600 motion-reduce:animate-none dark:border-slate-700 dark:border-t-blue-300" aria-hidden="true" />
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">در حال بازکردن بخش انتخاب‌شده…</span>
+            </div>
+          }>
             {activeTab === 'offerings' && (
               <div className="space-y-5" aria-label="انتخاب درس پیش از مقایسهٔ استاد و گروه">
                 <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
@@ -977,26 +994,32 @@ export const StudentDashboard: React.FC = () => {
               <PassedCoursesManager onPassedCoursesChanged={fetchDashboardData} />
             )}
             {activeTab === 'support' && <StudentHelpCenter />}
-          </>
+          </Suspense>
         )}
       </section>
 
       <StudentMobileDock active={activeTab} demandAvailable={demandSurveyAvailable} onSelect={selectMobileWorkspace} />
 
       {isProfileModalOpen && (
+        <Suspense fallback={<div role="status" aria-live="polite" className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/65 p-6 text-sm font-bold text-white">در حال بازکردن پروندهٔ تحصیلی…</div>}>
         <AcademicProfileModal
           key={user?.id ?? 'signed-out'}
           isOpen={true}
           onClose={() => setProfileModalOpen(false)}
           onProfileUpdated={fetchDashboardData}
         />
+        </Suspense>
       )}
 
-            <ImportOfferingsModal
-        isOpen={isImportModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onImportSuccess={fetchDashboardData}
-      />
+      {isImportModalOpen && (
+        <Suspense fallback={<div role="status" aria-live="polite" className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/65 p-6 text-sm font-bold text-white">در حال آماده‌سازی دریافت دروس…</div>}>
+          <ImportOfferingsModal
+            isOpen={true}
+            onClose={() => setImportModalOpen(false)}
+            onImportSuccess={fetchDashboardData}
+          />
+        </Suspense>
+      )}
 
       {/* Destructive plan reset: keep focus and scroll inside this in-app dialog. */}
       {clearConfirmOpen && (
