@@ -9,19 +9,19 @@ import { DemoWorkspace } from '../src/pages/DemoWorkspace';
 const source = () => readFileSync(resolve(process.cwd(), 'src/components/AdminDashboard.tsx'),'utf8');
 
 describe('compact accessible mobile administration shell', () => {
-  it('keeps a labelled workspace switcher available below the header in small layouts', () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/demo/admin?tab=courses']}>
-        <DemoWorkspace role="admin" />
-      </MemoryRouter>,
+  it('keeps a labelled workspace switcher reachable on small screens after lazy loading', () => {
+    const demo = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/demo/admin?tab=courses']}><DemoWorkspace role="admin" /></MemoryRouter>,
     );
-    expect(html).toContain('aria-label="ناوبری سریع مدیریت"');
-    expect(html).toContain('aria-controls="admin-mobile-navigation"');
-    expect(html).toContain('aria-label="بازکردن فهرست بخش‌های مدیریت"');
-    expect(html).toContain('در حال مدیریت');
-    expect(html).toContain('بانک دروس');
-    expect(html).toContain('min-h-11');
-    expect(html).toContain('top-0');
+    expect(demo).toContain('مدیر آزمایشی');
+    const dashboard = source();
+    expect(dashboard).toContain('aria-label="ناوبری سریع مدیریت"');
+    expect(dashboard).toContain('aria-controls="admin-mobile-navigation"');
+    expect(dashboard).toContain('aria-label="بازکردن فهرست بخش‌های مدیریت"');
+    expect(dashboard).toContain('در حال مدیریت');
+    expect(dashboard).toContain('activeNavigation?.label');
+    expect(dashboard).toContain('min-h-11');
+    expect(dashboard).toContain('top-0');
   });
 
   it('keeps one drawer trigger and maintains a keyboard-accessible right side drawer', () => {
@@ -39,10 +39,10 @@ describe('compact accessible mobile administration shell', () => {
   it('compresses the title and moves the current section into the always-visible navigation', () => {
     const s = source();
     expect(s).not.toContain('DARSCHIN / CONTROL CENTER');
-    expect(s).toContain('سامانهٔ مدیریت آموزشی');
-    expect(s).toContain('مرکز مدیریت درس‌چین');
-    expect(s).toContain('mt-2 hidden max-w-xl');
-    expect(s).toContain("activeNavigation?.label || 'داشبورد و آمار'");
-    expect(s).toContain('px-3.5 py-3.5');
+    expect(s).toContain('درس‌چین / میز کار مدیریت');
+    expect(s).toContain('مرکز مدیریت آموزشی');
+    expect(s).toContain('hidden text-xs leading-6 text-slate-300 sm:block');
+    expect(s).toContain("activeNavigation?.label || 'پیشخوان'");
+    expect(s).toContain('px-4 py-4');
   });
 });
