@@ -105,6 +105,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
 
   const nameOf = (id: string) => courseMap.get(id)?.name ?? 'درس نامشخص';
   const choose = (id: string) => {
+    if (saving) return;
     setFeedback('');
     setSelectedExisting(null);
     setDeleteConfirm(false);
@@ -204,7 +205,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label className="min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200">
           چارت تحصیلی
-          <select aria-label="انتخاب چارت برای ویرایش گرافیکی" value={curriculumId}
+          <select aria-label="انتخاب چارت برای ویرایش گرافیکی" disabled={saving} value={curriculumId}
             onChange={event => setCurriculumId(event.target.value)}
             className="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             {!curricula.length && <option value="">چارتي موجود نیست</option>}
@@ -213,7 +214,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
         </label>
         <label className="min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200">
           نوع اتصال
-          <select aria-label="نوع رابطهٔ جدید" value={kind}
+          <select aria-label="نوع رابطهٔ جدید" disabled={saving} value={kind}
             onChange={event => { reviseDraft({ sourceId, targetId, kind: event.target.value as VisualRelationship }); setFeedback(''); }}
             className="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option value="PREREQUISITE">پیش‌نیاز · فلش پیوسته</option>
@@ -350,17 +351,17 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       (course?.code ?? '').toLocaleLowerCase('fa').includes(filter);
                     const picked = sourceId === id || targetId === id;
                     const insight = insights.get(id);
-                    return <button key={id} type="button" draggable={!saving}
+                    return <button key={id} type="button" disabled={saving} draggable={!saving}
                       aria-label={(course?.name ?? 'درس نامشخص') + '؛ انتخاب برای اتصال'}
                       aria-pressed={picked}
                       title={(course?.name ?? '') + ' (' + (course?.code ?? '') + ')'}
                       onClick={() => choose(id)}
                       onDragStart={event => { event.dataTransfer.setData('text/plain', id); reviseDraft({ sourceId: id, targetId: '', kind }); setSelectedExisting(null); setDeleteConfirm(false); }}
-                      onDragOver={event => event.preventDefault()}
+                      onDragOver={event => { if (!saving) event.preventDefault(); }}
                       onDrop={event => {
                         event.preventDefault();
                         const from = event.dataTransfer.getData('text/plain');
-                        if (memberIds.has(from) && from !== id) {
+                        if (!saving && memberIds.has(from) && from !== id) {
                           reviseDraft({ sourceId: from, targetId: id, kind });
                           setFeedback('');
                         }
@@ -456,6 +457,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                 ? ` مسیر ${addImpact.impacted.length.toLocaleString('fa-IR')} درس تغییر می‌کند.`
                 : ' تعداد درس‌های پایین‌دستی و عمق زنجیره تغییری نمی‌کند.'}
               {kind === 'COREQUISITE' && ' هم‌نیاز در اولویت زنجیرهٔ پیش‌نیاز امتیاز اضافه نمی‌کند.'}
+              {analysis.hasChoices && ' برخی روابط چارت شرط «یا» دارند؛ مسیرهای احتمالی، مجوز یا الزام قطعی نیستند.'}
               {addImpact.impacted.length > 0 && <div className="mt-2 grid max-h-36 gap-1 overflow-y-auto sm:grid-cols-2">
                 {addImpact.impacted.slice(0, 8).map(item => <span key={item.courseId}>
                   {nameOf(item.courseId)}: ${item.beforeCount.toLocaleString('fa-IR')} ← ${item.afterCount.toLocaleString('fa-IR')} درس آینده · عمق ${item.beforeDepth.toLocaleString('fa-IR')} ← ${item.afterDepth.toLocaleString('fa-IR')}
