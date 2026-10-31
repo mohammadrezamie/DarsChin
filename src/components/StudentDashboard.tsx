@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
-import { findOfferingTimeConflicts } from '../domain/registration-conflicts';
+import { findOfferingTimeConflicts, lectureTimesOverlap } from '../domain/registration-conflicts';
 import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, AcademicLimitInfo } from '../types';
 
 import { AcademicProfileModal } from './AcademicProfileModal';
@@ -563,18 +563,13 @@ export const StudentDashboard: React.FC = () => {
       const o1 = selectedItems[i];
       const o2 = selectedItems[j];
       
-      // Basic time overlap check
-      if (
-        o1.dayOfWeek && o2.dayOfWeek && o1.dayOfWeek === o2.dayOfWeek &&
-        o1.startTime && o1.endTime && o2.startTime && o2.endTime
-      ) {
-        if (o1.startTime < o2.endTime && o1.endTime > o2.startTime) {
-          timeConflicts.push({
-            offering1: o1.courseName,
-            offering2: o2.courseName,
-            day: o1.dayOfWeek,
-          });
-        }
+      // Match the same numeric, boundary-aware rule used when choosing a group.
+      if (lectureTimesOverlap(o1, o2)) {
+        timeConflicts.push({
+          offering1: o1.courseName,
+          offering2: o2.courseName,
+          day: o1.dayOfWeek || '',
+        });
       }
     }
   }
