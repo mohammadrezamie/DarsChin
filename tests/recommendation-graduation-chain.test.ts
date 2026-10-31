@@ -95,6 +95,33 @@ describe('graduation-wide academic recommendation is deeper than next-term ranki
     expect(a.reasons.join(' ')).toContain('ناسازگاری قواعد چارت');
   });
 
+  it('breaks capped 100-point ties by remaining unique descendants across the full chart', () => {
+    const context = base();
+    for (const id of ['e', 'f', 'g', 'h']) {
+      context.allCourses.push({
+        id, code: id.toUpperCase(), name: 'درس ' + id.toUpperCase(),
+        units: 3, category: 'تخصصی', active: true,
+      });
+      context.curriculumCourses.push({
+        id: 'cc-' + id, courseId: id, curriculumId: 'chart',
+        classification: 'MAJOR_REQUIRED', active: true,
+      } as any);
+    }
+    context.academicRules = [
+      ...['b','c','d','y','e','f'].map(id => rule('a',id)),
+      ...['b','c','d','y','e','f','g','h'].map(id => rule('x',id)),
+    ];
+    const result = generateCourseRecommendations(context);
+    expect(result[0].score).toBe(100);
+    expect(result[1].score).toBe(100);
+    expect(result[0].courseId).toBe('x');
+    expect(result[0].unlockedFutureCoursesCount).toBe(8);
+    expect(result[1].unlockedFutureCoursesCount).toBe(6);
+    const wishlist = readFileSync(resolve(process.cwd(), 'src/components/StudentWishlistBuilder.tsx'), 'utf8');
+    expect(wishlist).toContain("recByCourse.get(b.id)?.unlockedFutureCoursesCount");
+    expect(wishlist).toContain("recByCourse.get(b.id)?.longestPrerequisiteChain");
+  });
+
   it('keeps the complete chain explanation visible even after the student adds a course to the wishlist', () => {
     const wishlist = readFileSync(resolve(process.cwd(), 'src/components/StudentWishlistBuilder.tsx'), 'utf8');
     expect(wishlist).toContain('علت پیشنهاد این درس در مسیر فارغ‌التحصیلی');
