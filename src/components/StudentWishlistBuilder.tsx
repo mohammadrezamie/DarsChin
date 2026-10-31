@@ -34,6 +34,9 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [search, setSearch] = useState('');
+  // Mobile is a single app-like workspace, not two 28rem columns stacked
+  // into one endless scrolling page. Desktop retains the useful comparison.
+  const [mobileView, setMobileView] = useState<'catalog' | 'selected'>('catalog');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     let active = true;
@@ -112,8 +115,18 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
       )}
       {loading && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">در حال دریافت درس‌های چارت…</p>}
 
+      <nav aria-label="نمای سبد درس در موبایل" className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800 lg:hidden">
+        <button type="button" aria-pressed={mobileView==='catalog'} onClick={()=>setMobileView('catalog')}
+          className={`min-h-11 rounded-xl px-3 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 ${mobileView==='catalog'?'bg-white text-indigo-700 shadow-sm dark:bg-slate-900 dark:text-indigo-300':'text-slate-600 dark:text-slate-300'}`}>
+          افزودن درس <span className="tabular-nums">({available.length.toLocaleString('fa-IR')})</span>
+        </button>
+        <button type="button" aria-pressed={mobileView==='selected'} onClick={()=>setMobileView('selected')}
+          className={`min-h-11 rounded-xl px-3 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 ${mobileView==='selected'?'bg-white text-indigo-700 shadow-sm dark:bg-slate-900 dark:text-indigo-300':'text-slate-600 dark:text-slate-300'}`}>
+          سبد من <span className="tabular-nums">({selected.length.toLocaleString('fa-IR')})</span>
+        </button>
+      </nav>
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+        <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 ${mobileView==='catalog'?'':'hidden lg:block'}`}>
           <h4 className="mb-3 text-sm font-bold">درس‌های قابل افزودن به سبد</h4>
           <label className="mb-3 flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 dark:border-slate-700">
             <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-500" />
@@ -148,8 +161,22 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
             {!loading && !available.length && <p className="p-4 text-xs text-slate-500">درسی با این نام پیدا نشد یا همه به سبد افزوده شده‌اند.</p>}
           </div>
         </div>
-        <div className="min-w-0 rounded-2xl border border-indigo-200 bg-white p-3 dark:border-indigo-900 dark:bg-slate-900">
-          <h4 className="mb-3 text-sm font-bold">ترتیب علاقه‌مندی‌ها</h4>
+        <div className={`min-w-0 rounded-2xl border border-indigo-200 bg-white p-3 dark:border-indigo-900 dark:bg-slate-900 ${mobileView==='selected'?'':'hidden lg:block'}`}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-extrabold">ترتیب علاقه‌مندی‌ها</h4>
+            {selected.length > 0 && <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+              {totalUnits.toLocaleString('fa-IR')} واحد برای مقایسه
+            </span>}
+          </div>
+          {selected.length===0 && <div className="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 p-4 text-center dark:border-indigo-900 dark:bg-indigo-950/20">
+            <BookOpenCheck aria-hidden="true" className="mx-auto h-7 w-7 text-indigo-500"/>
+            <p className="mt-2 text-xs font-bold text-slate-800 dark:text-slate-200">سبدت هنوز خالیه</p>
+            <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">از فهرست درس‌ها انتخاب کن؛ بعداً استاد، ساعت و جایگزین رو جدا بررسی می‌کنی.</p>
+            <button type="button" onClick={()=>setMobileView('catalog')}
+              className="mt-3 min-h-11 rounded-xl bg-indigo-600 px-4 text-xs font-bold text-white lg:hidden">
+              رفتن به فهرست درس‌ها
+            </button>
+          </div>}
           <div className="max-h-[28rem] space-y-2 overflow-y-auto">
             {selected.map((c, index) => (
               <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-indigo-50/70 p-2.5 dark:bg-indigo-950/30">
@@ -181,6 +208,10 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      {mobileView==='catalog'&&selected.length>0&&<button type="button" onClick={()=>setMobileView('selected')}
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-sm font-extrabold text-white shadow-lg shadow-indigo-800/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 lg:hidden">
+        مشاهده و چینش سبد من · {selected.length.toLocaleString('fa-IR')} درس
+      </button>}
     </section>
   );
 };
