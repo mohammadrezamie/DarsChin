@@ -137,6 +137,14 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold" title={c.name}>{c.name}</div>
                   <div className="text-xs text-slate-600 dark:text-slate-400">{c.units.toLocaleString('fa-IR')} واحد</div>
+                  {recByCourse.get(c.id) && <details className="mt-1 text-[11px] leading-6 text-indigo-800 dark:text-indigo-200">
+                    <summary className="min-h-8 cursor-pointer rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      علت پیشنهاد این درس در مسیر فارغ‌التحصیلی
+                    </summary>
+                    <p className="mt-1 text-slate-600 dark:text-slate-300">
+                      {recByCourse.get(c.id)!.reasons.join('؛ ')}
+                    </p>
+                  </details>}
                 </div>
                 <button type="button" disabled={saving || index === 0} aria-label={'بالابردن اولویت ' + c.name}
                   onClick={() => { const ids = [...wishlistCourseIds]; [ids[index-1], ids[index]] = [ids[index], ids[index-1]]; void mutate(ids); }}
