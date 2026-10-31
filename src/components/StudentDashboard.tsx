@@ -31,7 +31,7 @@ import { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile, 
 
 import { StudentMobileDock } from './StudentMobileDock';
 
-import { StudentJourneyStepper } from './StudentJourneyStepper';
+import { StudentJourneyStepper, STUDENT_JOURNEY_STEPS } from './StudentJourneyStepper';
 import { ContextualHelp } from './ContextualHelp';
 import { studentSectionHelp } from '../help/student-sections';
 
@@ -721,6 +721,32 @@ export const StudentDashboard: React.FC = () => {
             className="inline-flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border border-blue-200 bg-white/90 px-3 text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-slate-800 dark:text-blue-200">
             <strong className="text-sm tabular-nums">{selectedOfferingIds.length.toLocaleString('fa-IR')}</strong>
             <span className="text-[10px] font-bold">گروه من</span>
+          </button>
+        </div>
+        <div className="mb-2.5 flex min-w-0 items-center gap-2 rounded-xl border border-indigo-100 bg-white/80 p-2.5 dark:border-indigo-900 dark:bg-slate-800/80">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-300">
+              قدم بعدی تو · مرحلهٔ {(journeyStep+1).toLocaleString('fa-IR')} از ۷
+            </p>
+            <p className="mt-0.5 truncate text-sm font-extrabold text-slate-900 dark:text-white">
+              {STUDENT_JOURNEY_STEPS[journeyStep]?.title ?? 'آماده‌سازی انتخاب واحد'}
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-950" role="progressbar"
+              aria-valuemin={0} aria-valuemax={6} aria-valuenow={journeyStep}
+              aria-label="پیشرفت راهنمای انتخاب واحد">
+              <div className="h-full rounded-full bg-indigo-600 transition-[width] motion-reduce:transition-none dark:bg-indigo-400"
+                style={{width:`${Math.max(0,Math.min(100,(journeyStep/6)*100))}%`}}/>
+            </div>
+          </div>
+          <button type="button" disabled={!journeyReady}
+            aria-controls="student-journey-progress"
+            onClick={() => {
+              const stepper=document.getElementById('student-journey-progress');
+              stepper?.scrollIntoView({behavior:'smooth',block:'start'});
+              stepper?.focus({preventScroll:true});
+            }}
+            className="min-h-11 shrink-0 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:opacity-40">
+            {journeyReady?'ادامه مسیر':'در حال بارگذاری'}
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
