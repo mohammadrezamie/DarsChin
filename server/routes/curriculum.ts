@@ -319,6 +319,19 @@ curriculumRouter.post('/rules/history/:curriculumId/revert', authenticate,
       const sources = extractSourceCourseIds(rule.expression);
       if (!allowed.has(rule.targetCourseId) || !sources.length || sources.some(id=>!allowed.has(id)))
         return res.status(409).json({success:false,error:'دروس این قانون دیگر در چارت فعال نیستند.'});
+      if ((rule.majorId && rule.majorId !== chart.majorId) ||
+          (rule.entryYearId && rule.entryYearId !== chart.entryYearId) ||
+          (rule.trackId && !db.tracks.some(track => track.id === rule.trackId &&
+            track.majorId === chart.majorId && track.active)))
+        return res.status(409).json({success:false,error:'حوزهٔ قانون با چارت کنونی سازگار نیست.'});
+      if (rule.expression.type === 'COURSE' && db.academicRules.some(existing =>
+          existing.curriculumId === curriculumId && existing.targetCourseId === rule.targetCourseId &&
+          existing.relationshipType === rule.relationshipType &&
+          existing.expression.type === 'COURSE' && existing.expression.courseId === rule.expression.courseId &&
+          (existing.majorId || null) === (rule.majorId || null) &&
+          (existing.entryYearId || null) === (rule.entryYearId || null) &&
+          (existing.trackId || null) === (rule.trackId || null)))
+        return res.status(409).json({success:false,error:'یک رابطهٔ هم‌ارز بعداً ثبت شده است؛ بازیابی خودکار امن نیست.'});
       const candidate = [...db.academicRules,rule];
       const validation = analyzeCurriculumDependencies(curriculumId,currentChartCourses,candidate);
       if (!validation.valid) return res.status(409).json({success:false,error:'بازگردانی باعث ناسازگاری گراف می‌شود؛ ابتدا چارت را بازبینی کنید.'});
