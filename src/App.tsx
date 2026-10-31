@@ -49,19 +49,20 @@ const AdminDemoGate: React.FC = () => {
 
 const DashboardLayout: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [isPasswordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [isExtModalOpen, setExtModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-transparent font-sans text-slate-900 dark:text-slate-100 transition-colors">
       <Navbar
-        activeTab={window.location.pathname.includes('/admin') ? 'admin' : 'student'}
+        activeTab={location.pathname === '/admin' ? 'admin' : 'student'}
         setActiveTab={() => {}}
         onOpenAuth={() => {}}
         onOpenProfile={() => {}}
         onOpenPasswordChange={() => setPasswordChangeOpen(true)}
       />
-      <main className={`mx-auto w-full min-w-0 px-3 py-3 sm:px-6 sm:py-6 lg:px-8 ${window.location.pathname === '/admin' ? 'max-w-[1640px]' : 'max-w-7xl'}`}>
+      <main className={`mx-auto w-full min-w-0 px-3 py-3 sm:px-6 sm:py-6 lg:px-8 ${location.pathname === '/admin' ? 'max-w-[1640px]' : 'max-w-7xl'}`}>
         <Outlet />
       </main>
 
