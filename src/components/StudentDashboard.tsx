@@ -8,7 +8,6 @@ import { studentWorkspaceFromSearch, type StudentWorkspaceId } from '../utils/st
 import {
   UploadCloud,
   Layers,
-  Sparkles,
   BookOpen,
   Calendar,
   MessageCircle,
@@ -27,7 +26,6 @@ import { PassedCoursesManager } from './PassedCoursesManager';
 import { StudentHelpCenter } from './StudentHelpCenter';
 import { ImportOfferingsModal } from './ImportOfferingsModal';
 import { OfferingsList } from './OfferingsList';
-import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
@@ -42,12 +40,10 @@ type StudentTab = StudentWorkspaceId;
 const studentTabs = [
   // Put the student's primary mobile journey first; all other workspaces
   // remain reachable via the same horizontal nav without a vertical menu.
-  { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
+  { id: 'offerings', label: 'انتخاب درس و بررسی گروه‌های ارائه‌شده', short: 'انتخاب درس', icon: Layers },
   { id: 'registration', label: 'چینش اولویت، جایگزین‌ها و صف ثبت', short: 'چینش و ثبت', icon: Zap },
   { id: 'schedule', label: 'تقویم هفتگی و تداخل‌ها', short: 'تقویم', icon: Calendar },
-  { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
-  { id: 'wishlist', label: 'سبد علاقه‌مندی', short: 'سبد من', icon: BookOpen },
-  { id: 'passed', label: 'دروس پاس‌شده', short: 'پاس‌شده‌ها', icon: BookOpen },
+  { id: 'passed', label: 'کارنامهٔ تحصیلی ترم‌به‌ترم', short: 'کارنامهٔ من', icon: BookOpen },
   { id: 'demand', label: 'نیازسنجی درس‌های ترم آینده', short: 'نیازسنجی', icon: BookOpen },
   { id: 'support', label: 'پشتیبانی و گزارش خطا', short: 'پشتیبانی', icon: MessageCircle },
 ] as const;
@@ -219,7 +215,7 @@ export const StudentDashboard: React.FC = () => {
     });
   };
 
-  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'wishlist', 'offerings', 'registration'];
+  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'offerings', 'offerings', 'offerings', 'registration'];
   const updateJourney = async (next: number) => {
     if (journeyBusy || !user || next < 0 || next > 6) return;
     setJourneyBusy(true);
@@ -921,32 +917,26 @@ export const StudentDashboard: React.FC = () => {
         ) : (
           <>
             {activeTab === 'offerings' && (
-              <OfferingsList
-                evaluations={evaluations}
-                selectedOfferingIds={selectedOfferingIds}
-                onToggleScheduleOffering={handleToggleScheduleOffering}
-                onOpenProfileModal={() => setProfileModalOpen(true)}
-                wishlistCourseIds={wishlistCourseIds}
-                initiallyShowWishlist={journeyStep === 5}
-                onOpenWishlist={() => navigateWorkspace('wishlist')}
-              />
-            )}
-            
-            {activeTab === 'wishlist' && (
-              <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
-                evaluations={evaluations} recommendations={recommendations} onSave={saveWishlist} />
-            )}
-
-            {activeTab === 'recommendations' && (
-              <RecommendationsPanel
-                recommendations={recommendations}
-                evaluations={evaluations}
-                selectedOfferingIds={selectedOfferingIds}
-                onToggleScheduleOffering={handleToggleScheduleOffering}
-                demandCourseIds={demandCourseIds}
-                demandSurveyAvailable={demandSurveyAvailable}
-                onOpenDemand={() => navigateWorkspace('demand')}
-              />
+              <div className="space-y-5" aria-label="انتخاب درس پیش از مقایسهٔ استاد و گروه">
+                <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
+                  evaluations={evaluations} recommendations={recommendations} onSave={saveWishlist} />
+                {wishlistCourseIds.length > 0 || selectedOfferingIds.length > 0 ? (
+                  <section aria-label="گام دوم: انتخاب گروه و استاد" className="space-y-3">
+                    <header className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+                      <h3 className="text-sm font-extrabold text-blue-950 dark:text-blue-100">۲. حالا استاد، زمان و گروه درس‌های انتخابی را مقایسه کن</h3>
+                      <p className="mt-1 text-xs leading-7 text-blue-900 dark:text-blue-200">اولویت اول نام درس بود؛ انتخاب اینجا گروهِ اصلی را به برنامه می‌برد. گروه‌های جایگزین و ترتیب ثبت را در بخش «چینش و ثبت» تنظیم می‌کنی.</p>
+                    </header>
+                    <OfferingsList evaluations={evaluations} selectedOfferingIds={selectedOfferingIds}
+                      onToggleScheduleOffering={handleToggleScheduleOffering}
+                      onOpenProfileModal={() => setProfileModalOpen(true)}
+                      wishlistCourseIds={[...new Set([...wishlistCourseIds,
+                        ...evaluations.filter(row => selectedOfferingIds.includes(row.offeringId)).map(row => row.courseId)])]}
+                      initiallyShowWishlist />
+                  </section>
+                ) : (
+                  <p role="status" className="rounded-2xl border border-dashed border-indigo-200 p-4 text-xs leading-7 text-indigo-800 dark:border-indigo-900 dark:text-indigo-300">بعد از اینکه درس‌های موردنظرت را از فهرست بالا مشخص کردی، استادها و ساعت‌های همان درس‌ها اینجا ظاهر می‌شوند؛ لازم نیست از همین حالا درگیر انتخاب گروه شوی.</p>
+                )}
+              </div>
             )}
 
             {activeTab === 'schedule' && (

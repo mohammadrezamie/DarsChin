@@ -73,10 +73,10 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
     <section dir="rtl" aria-labelledby="wishlist-heading" className="space-y-4">
       <header className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
         <h3 id="wishlist-heading" className="flex items-center gap-2 text-base font-extrabold text-indigo-950 dark:text-indigo-100">
-          <BookOpenCheck className="h-5 w-5" aria-hidden="true" /> سبد علاقه‌مندی به درس‌ها
+          <BookOpenCheck className="h-5 w-5" aria-hidden="true" /> ۱. اول درس‌هایی را که می‌خواهی انتخاب کن
         </h3>
         <p className="mt-1 text-xs leading-7 text-indigo-900 dark:text-indigo-200">
-          این فقط فهرست درس‌هایی است که دوست داری بررسی کنی؛ حتی ۴۰ واحد یا بیشتر هم می‌توانی در آن نگه داری.
+          این فهرست انتخاب نام درس است؛ پیشنهادهای هوشمند کنار همان درس نمایش داده می‌شوند. حتی ۴۰ واحد یا بیشتر هم می‌توانی برای مقایسه نگه داری.
           این‌ها <strong>انتخاب واحد نهایی نیستند</strong>؛ پیش‌نیاز، ظرفیت، استاد، تداخل و سقف واحد هنگام ساخت برنامهٔ نهایی جداگانه بررسی می‌شوند.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-indigo-900 dark:text-indigo-200">
@@ -115,9 +115,10 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                   <div className="truncate text-sm font-bold" title={c.name}>{c.name}</div>
                   <div className="text-[11px] leading-6 text-slate-500 dark:text-slate-400">
                     {c.units.toLocaleString('fa-IR')} واحد · {c.code}
-                    {rec ? ' · پیشنهاد: ' + rec.priority : ''}
+                    {rec ? ' · پیشنهاد هوشمند: ' + (rec.priority === 'HIGH' ? 'اولویت بالا' : rec.priority === 'MEDIUM' ? 'اولویت متوسط' : 'اولویت عادی') : ''}
                     {!offered.has(c.id) ? ' · گروه ارائه‌شده یافت نشد' : ''}
                   </div>
+                  {rec?.reasons?.length ? <p className="mt-1 text-[11px] leading-5 text-indigo-700 dark:text-indigo-300">{rec.reasons.slice(0,2).join('؛ ')}</p> : null}
                 </div>
                 <button type="button" disabled={saving || loading} onClick={() => void mutate([...wishlistCourseIds, c.id])}
                   aria-label={'افزودن ' + c.name + ' به سبد'}

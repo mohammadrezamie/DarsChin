@@ -59,7 +59,8 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
-  const [basketOnly, setBasketOnly] = useState(initiallyShowWishlist && wishlistCourseIds.length > 0);
+  // The student first chooses COURSE IDs; only those groups are relevant here.
+  const [basketOnly, setBasketOnly] = useState(initiallyShowWishlist || wishlistCourseIds.length > 0);
 
   // Group evaluations by course
   const groupedCourses = useMemo(() => {
@@ -199,12 +200,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
             {' '}وجود گروه به‌معنی مجازبودن ثبت نیست؛ پیش‌نیاز، سقف و تداخل جدا بررسی می‌شوند.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" aria-pressed={basketOnly} onClick={() => setBasketOnly(!basketOnly)}
-              className="min-h-11 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
-              {basketOnly ? 'نمایش همهٔ درس‌ها' : 'فقط درس‌های سبد من'}
-            </button>
-            {onOpenWishlist && <button type="button" onClick={onOpenWishlist}
-              className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-100">ویرایش سبد علاقه‌مندی</button>}
+            <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">گروه‌های درس‌های انتخابی، بدون نمایش درس‌های نامرتبط</span>
           </div>
         </section>
       )}
@@ -313,7 +309,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
           filteredGroups.map((grp, cIdx) => {
             const selectedSectionInCourse = grp.sections.find((s) => selectedOfferingIds.includes(s.offeringId));
             const isAnySelected = Boolean(selectedSectionInCourse);
-            const isExpanded = expandedCourseIds[grp.courseId] ?? true; // Default expanded
+            const isExpanded = expandedCourseIds[grp.courseId] ?? false; // Course first; sections on demand
 
             return (
               <div

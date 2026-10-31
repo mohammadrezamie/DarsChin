@@ -4,11 +4,11 @@ import type { AcademicLimitInfo, StudentAcademicProfile } from '../types';
 
 export const STUDENT_JOURNEY_STEPS = [
   { title: 'پروندهٔ تحصیلی', description: 'دانشگاه، رشته، ورودی و نیمسال را بررسی کن.' },
-  { title: 'سوابق درس‌ها', description: 'درس‌های واقعاً پاس‌شده و نمره‌های مردودی را ثبت کن.' },
+  { title: 'کارنامهٔ ترمی', description: 'درس‌های هر نیمسال را با نتیجهٔ واقعی: پاس، مردود، غیبت امتحان یا حذف کلاسی ثبت کن.' },
   { title: 'شرایط این ترم', description: 'سقف واحد، ترم تابستان و وضعیت معدل را بررسی کن.' },
-  { title: 'پیشنهادهای مهم', description: 'درس‌های مجاز و اولویت‌دار را با دلیل ببین.' },
-  { title: 'سبد علاقه‌مندی', description: 'هر تعداد درس را برای بررسی کنار بگذار؛ هنوز انتخاب نهایی نیست.' },
-  { title: 'گروه و تداخل', description: 'استاد، روز کلاس و امتحان و گروه‌های جایگزین را مقایسه کن.' },
+  { title: 'مرور درس‌ها و پیشنهادها', description: 'درس‌ها و دلیل پیشنهاد هوشمند را در یک فهرست ببین.' },
+  { title: 'انتخاب نام درس', description: 'اول تصمیم بگیر کدام درس‌ها را می‌خواهی؛ استاد و ساعت بعداً.' },
+  { title: 'تعیین استاد و ساعت', description: 'فقط برای درس‌های انتخابی، استاد، ساعت و تداخل را بررسی کن.' },
   { title: 'چینش و صف ثبت', description: 'در یک فهرست، اولویت درس‌ها، گروه اصلی، جایگزین‌ها و کد ثبت را تنظیم کن.' },
 ] as const;
 
@@ -66,7 +66,7 @@ export const StudentJourneyStepper: React.FC<Props> = ({
         اطلاعات نمونهٔ سامانه به‌معنای تأیید پروندهٔ تو نیست. ابتدا دانشگاه، مقطع، رشته، ورودی و نیمسال را بررسی و ذخیره کن.
       </p>}
       {step === 1 && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-7 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-        فقط درس واقعاً قبول‌شده را پاس‌شده ثبت کن. اگر ریاضی مهندسی را افتاده‌ای ولی سیگنال‌وسیستم را بعداً پاس کرده‌ای، سیگنال‌وسیستم پاس است و ریاضی مهندسی هنوز باید بررسی شود.
+        در کارنامه، برای هر نیمسال درس‌ها و نتیجهٔ واقعی آن‌ها را ثبت کن؛ مردودی، غیبت موجه امتحان و حذف به‌دلیل غیبت کلاسی هیچ‌کدام به معنی قبولی نیستند.
       </p>}
       {step === 2 && <div className="mt-3 rounded-xl bg-indigo-50 p-3 text-xs leading-7 text-indigo-950 dark:bg-indigo-950/40 dark:text-indigo-100">
         <div className="flex flex-wrap gap-x-4 gap-y-1 font-bold">
@@ -93,8 +93,8 @@ export const StudentJourneyStepper: React.FC<Props> = ({
           onClick={() => onStep(step + 1)}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50">
           {busy ? 'در حال ذخیره…' : step === 0 ? 'پرونده‌ام را بررسی و تأیید کردم' :
-            step === 1 ? 'سوابق ثبت‌شده را بررسی کردم' : step === 2 ? 'شرایط را دیدم؛ پیشنهادها' :
-            step === 3 ? 'ساخت سبد علاقه‌مندی' : step === 4 ? 'مقایسهٔ استاد و گروه' : 'چینش اولویت و آماده‌سازی ثبت'}
+            step === 1 ? 'سوابق ثبت‌شده را بررسی کردم' : step === 2 ? 'شرایط را دیدم؛ مرور درس‌ها' :
+            step === 3 ? 'انتخاب نام درس' : step === 4 ? 'حالا استاد و ساعت را انتخاب می‌کنم' : 'چینش اولویت و آماده‌سازی ثبت'}
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         </button> : <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-5 w-5" /> همهٔ بخش‌ها را مرور کردی. برنامهٔ نهایی همچنان باید با قوانین و اطلاعات واقعی بررسی شود.

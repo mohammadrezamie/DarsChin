@@ -1,19 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CalendarDays, Layers3, MoreHorizontal, Sparkles, MessageCircle, Zap } from 'lucide-react';
+import { BookOpen, CalendarDays, Layers3, MoreHorizontal, MessageCircle, Zap } from 'lucide-react';
 
-export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 'recommendations' | 'wishlist' | 'passed' | 'demand' | 'support';
+export type StudentDestination = 'offerings' | 'schedule' | 'registration' | 'passed' | 'demand' | 'support';
 
 const PRIMARY = [
-  { id: 'offerings', label: 'دروس', icon: Layers3 },
+  { id: 'offerings', label: 'انتخاب درس', icon: Layers3 },
   { id: 'registration', label: 'چینش و ثبت', icon: Zap },
   { id: 'schedule', label: 'تقویم', icon: CalendarDays },
 ] as const;
 
 const SECONDARY = [
-  { id: 'recommendations', label: 'پیشنهادهای هوشمند', detail: 'بررسی پیشنهادهای قابل انتخاب', icon: Sparkles },
-  { id: 'wishlist', label: 'سبد علاقه‌مندی', detail: 'درس‌های مدنظر قبل از انتخاب نهایی', icon: BookOpen },
-  { id: 'passed', label: 'دروس پاس‌شده', detail: 'ثبت و مرور سوابق تحصیلی', icon: BookOpen },
+  { id: 'passed', label: 'کارنامهٔ من', detail: 'ثبت نتیجهٔ هر درس در هر نیمسال', icon: BookOpen },
   { id: 'demand', label: 'نیازسنجی ترم آینده', detail: 'پس از بازشدن فرم توسط مدیر گروه', icon: Layers3 },
   { id: 'support', label: 'پشتیبانی و گزارش خطا', detail: 'راهنما و ارسال درخواست', icon: MessageCircle },
 ] as const;
