@@ -312,13 +312,14 @@ function cleanDemoPlan(s: DemoStore): void {
 function academicLimits(s: DemoStore): AcademicLimitInfo {
   const courses = currentCourses(s);
   const total = courses.reduce((n, c) => n + c.units, 0);
-  const passed = s.passed.reduce((n, p) => n + (courses.find(c => c.id === p.courseId)?.units || 0), 0);
+  const counted = new Set(s.passed.filter(isSuccessfulCourseAttempt).map(p => p.courseId));
+  const passed = courses.filter(c => counted.has(c.id)).reduce((n,c)=>n+c.units,0);
   return {
     ...defaults, effectiveMinUnits: 0, effectiveMaxUnits: 99,
     isFinalSemester: s.profile.isFinalSemesterOverride === true,
     isGradeA: false, isSummer: false,
     totalCurriculumUnits: total, passedUnits: passed, remainingUnits: total - passed,
-    remainingCoursesCount: Math.max(0, courses.length - s.passed.length),
+    remainingCoursesCount: Math.max(0, courses.length - counted.size),
     policySettings: { ...s.academicSettings }, majorRequiredPassed: passed,
     majorRequiredRemaining: total - passed, trackRequiredPassed: 0,
     trackRequiredRemaining: 0, electivesPassed: 0, electivesRemaining: 0,
@@ -677,16 +678,49 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
   }
   if (path === '/api/student/passed-courses' && method === 'GET') {
     const enriched = s.passed.map(row => ({ ...row, course: s.collections['/api/academic/courses'].find(c => c.id === row.courseId) }));
-    const totalUnits = enriched.reduce((n,r) => n + (r.course?.units||0), 0);
+    const counted = new Set<string>();
+    const totalUnits = enriched.reduce((n,r) => {
+      if (!r.course || !isSuccessfulCourseAttempt(r) || counted.has(r.courseId)) return n;
+      counted.add(r.courseId);
+      return n + r.course.units;
+    }, 0);
     const categorySummary: Record<string,number> = {};
-    enriched.forEach(r=>{if (r.course) categorySummary[r.course.category] = (categorySummary[r.course.category]||0)+r.course.units;});
+    const added = new Set<string>();
+    enriched.forEach(r=>{if (r.course && isSuccessfulCourseAttempt(r) && !added.has(r.courseId)) {
+      categorySummary[r.course.category] = (categorySummary[r.course.category]||0)+r.course.units; added.add(r.courseId);
+    }});
     return good({ passedCourses: enriched, totalUnits, categorySummary }) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'POST') {
     if (!currentCourses(s).some(c=>c.id === data.courseId)) return fail('این درس در بانک فعلی دمو نیست.');
-    if (s.passed.some(p=>p.courseId===data.courseId)) return fail('این درس قبلاً اضافه شده است.');
-    s.passed.push({id:id(),userId:'demo-student',courseId:data.courseId,grade:data.grade,status:'PASSED',passedAt:now()});
+    if (data.termId && s.passed.some(p=>p.courseId===data.courseId && p.termId===data.termId))
+      return fail('این درس در این نیمسال قبلاً در کارنامه هست.');
+    if (s.passed.some(p=>p.courseId===data.courseId && isSuccessfulCourseAttempt(p) &&
+      (data.status === 'PASSED' || (!data.status && (data.grade === undefined || data.grade >= 10)))))
+      return fail('این درس قبلاً پاس شده است.');
+    const status = data.status || (data.grade !== undefined && data.grade < 10 ? 'FAILED' : 'PASSED');
+    if (['ABSENT','EXCUSED_EXAM_ABSENCE','CLASS_ABSENCE_DROP'].includes(status) && data.grade !== undefined)
+      return fail('برای غیبت یا حذف نمره ثبت نکن.');
+    if ((status === 'PASSED' && data.grade !== undefined && data.grade < 10) ||
+        (status === 'FAILED' && data.grade !== undefined && data.grade >= 10))
+      return fail('نمره و وضعیت درس سازگار نیست.');
+    s.passed.push({id:id(),userId:'demo-student',courseId:data.courseId,termId:data.termId,
+      grade:data.grade,status,passedAt:now()});
     saveStore(s);return good(s.passed.at(-1)) as ApiResponse<T>;
+  }
+  if (/^\/api\/student\/passed-courses\/[^/]+$/.test(path) && method === 'PUT') {
+    const row=s.passed.find(p=>p.id===path.split('/').at(-1));
+    if (!row) return fail('این سابقه در حساب شما پیدا نشد.');
+    if (!currentCourses(s).some(c=>c.id===data.courseId)) return fail('شناسهٔ درس معتبر نیست.');
+    if (data.termId && s.passed.some(p=>p.id!==row.id && p.courseId===data.courseId && p.termId===data.termId))
+      return fail('برای این درس و نیمسال سابقهٔ دیگری ثبت شده است.');
+    const status=data.status || (data.grade !== undefined && data.grade < 10 ? 'FAILED' : 'PASSED');
+    if ((['ABSENT','EXCUSED_EXAM_ABSENCE','CLASS_ABSENCE_DROP'].includes(status) && data.grade !== undefined) ||
+        (status==='PASSED' && data.grade!==undefined && data.grade<10) ||
+        (status==='FAILED' && data.grade!==undefined && data.grade>=10))
+      return fail('نمره و وضعیت درس سازگار نیست.');
+    Object.assign(row,{courseId:data.courseId,termId:data.termId,grade:data.grade,status});
+    saveStore(s);return good({...row}) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses/batch' && method === 'POST') {
     const ids = Array.isArray(data.courseIds) ? data.courseIds : [];

@@ -25,7 +25,7 @@ export const addPassedCourseSchema = z.object({
   courseId: z.string().min(1, 'شناسه درس الزامی است'),
   grade: studentGrade.optional(),
   status: z.enum(['PASSED', 'FAILED', 'ABSENT', 'EXCUSED_EXAM_ABSENCE', 'CLASS_ABSENCE_DROP']).optional(),
-  termId: z.string().optional(),
+  termId: z.string().trim().min(1).max(80).optional(),
 }).superRefine((attempt, ctx) => {
   const status = attempt.status || (attempt.grade !== undefined && attempt.grade < 10 ? 'FAILED' : 'PASSED');
   if (['ABSENT', 'EXCUSED_EXAM_ABSENCE', 'CLASS_ABSENCE_DROP'].includes(status) && attempt.grade !== undefined) {

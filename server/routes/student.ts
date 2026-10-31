@@ -211,6 +211,13 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
     return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
   }
 
+  // A transcript describes one outcome per course per semester. An older
+  // attempt with no term keeps its historical identity and is not guessed.
+  if (termId && db.studentPassedCourses.some(p =>
+      p.userId === userId && p.courseId === courseId && p.termId === termId)) {
+    return res.status(409).json({ success: false, error: 'نتیجهٔ این درس در این نیمسال قبلاً ثبت شده؛ همان سابقه را ویرایش کن.' });
+  }
+
   const newEntry: StudentPassedCourse = {
     id: 'spc-' + randomUUID(),
     userId,
@@ -226,6 +233,31 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
 
   const course = db.courses.find((c) => c.id === courseId);
   res.json({ success: true, data: { ...newEntry, course } });
+});
+
+// Correct an individual transcript attempt without deleting its audit identity.
+// Ownership and grade/status compatibility are enforced before mutating data.
+studentRouter.put('/passed-courses/:id', authenticate, validate(addPassedCourseSchema), (req: AuthenticatedRequest, res) => {
+  const userId = req.user!.id;
+  const row = db.studentPassedCourses.find(p => p.id === req.params.id && p.userId === userId);
+  if (!row) return res.status(404).json({ success: false, error: 'سابقهٔ این درس در حساب شما یافت نشد.' });
+  const { courseId, grade, status, termId } = req.body;
+  if (!db.courses.some(c => c.id === courseId)) {
+    return res.status(400).json({ success: false, error: 'شناسهٔ درس معتبر نیست.' });
+  }
+  if (termId && db.studentPassedCourses.some(p =>
+    p.id !== row.id && p.userId === userId && p.courseId === courseId && p.termId === termId)) {
+    return res.status(409).json({ success: false, error: 'برای این درس و نیمسال سابقهٔ دیگری ثبت شده است.' });
+  }
+  if (db.studentPassedCourses.some(p => p.id !== row.id && p.userId === userId &&
+      p.courseId === courseId && isSuccessfulCourseAttempt(p) &&
+      (status === 'PASSED' || (!status && (grade === undefined || grade >= 10))))) {
+    return res.status(409).json({ success: false, error: 'این درس قبلاً به‌عنوان پاس‌شده ثبت شده است.' });
+  }
+  const nextStatus = status || (grade !== undefined && grade < 10 ? 'FAILED' : 'PASSED');
+  Object.assign(row, { courseId, grade, termId: termId || undefined, status: nextStatus });
+  db.save();
+  res.json({ success: true, data: row });
 });
 
 // Batch update passed courses
