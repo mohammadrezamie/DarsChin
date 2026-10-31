@@ -42,6 +42,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const resetDraft = () => setDraftHistory(freshConnectionHistory(kind));
   const [search, setSearch] = useState('');
   const [zoom, setZoom] = useState(1);
+  const [layoutMode, setLayoutMode] = useState<'chain' | 'semester'>('chain');
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [selectedExisting, setSelectedExisting] = useState<DependencyEdge | null>(null);
@@ -102,19 +103,28 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     : null, [curriculumId, courseIds, rules, selectedRule?.id, loadedId]);
 
   const layout = useMemo(() => {
-    const terms = new Map<number, string[]>();
+    // In chain mode the entire prerequisite DAG, not the guessed registration
+    // term, decides the left-to-right order. Semester view remains optional.
+    const groups = new Map<number, string[]>();
+    const chainModeActive = layoutMode === 'chain' && analysis.valid;
     for (const row of verified) {
       if (!courseMap.has(row.courseId)) continue;
-      const term = Math.max(1, Math.min(16, Math.round(Number(row.suggestedSemester) || 1)));
-      const list = terms.get(term) ?? [];
+      const insight = insights.get(row.courseId);
+      const column = chainModeActive && insight
+        ? insight.depth + 1
+        : Math.max(1, Math.min(16, Math.round(Number(row.suggestedSemester) || 1)));
+      const list = groups.get(column) ?? [];
       if (!list.includes(row.courseId)) list.push(row.courseId);
-      terms.set(term, list);
+      groups.set(column, list);
     }
     const positions = new Map<string, { x: number; y: number }>();
-    const sortedTerms = [...terms.keys()].sort((a, b) => a - b);
+    const sortedTerms = [...groups.keys()].sort((a, b) => a - b);
     sortedTerms.forEach((term, column) => {
-      (terms.get(term) ?? []).sort((a, b) =>
-        (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa'))
+      (groups.get(term) ?? []).sort((a,b) =>
+        chainModeActive
+          ? (insights.get(b)?.downstreamCount ?? 0) - (insights.get(a)?.downstreamCount ?? 0) ||
+            (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa')
+          : (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa'))
         .forEach((id, row) => positions.set(id, {
           x: 24 + column * COLUMN_WIDTH,
           y: 64 + row * ROW_HEIGHT,
@@ -123,11 +133,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     return {
       positions,
       width: Math.max(500, sortedTerms.length * COLUMN_WIDTH + 32),
-      height: Math.max(220, 88 + Math.max(0, ...[...terms.values()].map(items => items.length)) * ROW_HEIGHT),
-      terms,
+      height: Math.max(220, 88 + Math.max(0, ...[...groups.values()].map(items => items.length)) * ROW_HEIGHT),
+      terms: groups,
       sortedTerms,
+      chainModeActive,
     };
-  }, [verified, courseMap]);
+  }, [verified, courseMap, insights, analysis.valid, layoutMode]);
 
   const nameOf = (id: string) => courseMap.get(id)?.name ?? 'درس نامشخص';
   const choose = (id: string) => {
@@ -264,6 +275,27 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-2.5 dark:border-indigo-900 dark:bg-indigo-950/30">
+        <div className="min-w-0">
+          <p className="text-xs font-extrabold text-indigo-950 dark:text-indigo-100">چینش نقشه</p>
+          <p className="mt-1 text-[11px] leading-6 text-indigo-800 dark:text-indigo-200">
+            {layout.chainModeActive ? 'درس‌ها بر اساس سطح وابستگی در کل دوره مرتب شده‌اند؛ مسیرهای چندمرحله‌ای از راست به چپ نمایان هستند.' :
+              'چیدمان بر اساس ترم پیشنهادی چارت است؛ فلش‌ها همچنان روابط واقعی‌اند.'}
+            {!analysis.valid && layoutMode === 'chain' && ' به دلیل خطای زنجیره، نمای ترمی جایگزین شده است.'}
+          </p>
+        </div>
+        <div className="inline-flex shrink-0 rounded-xl border border-indigo-200 bg-white p-1 dark:border-indigo-900 dark:bg-slate-900" role="group" aria-label="شیوهٔ چینش نقشهٔ پیش‌نیاز">
+          <button type="button" aria-pressed={layoutMode === 'chain'} onClick={() => setLayoutMode('chain')}
+            className={`min-h-11 rounded-lg px-3 text-xs font-bold transition-colors ${layoutMode === 'chain' ? 'bg-indigo-700 text-white' : 'text-indigo-800 dark:text-indigo-200'}`}>
+            زنجیره
+          </button>
+          <button type="button" aria-pressed={layoutMode === 'semester'} onClick={() => setLayoutMode('semester')}
+            className={`min-h-11 rounded-lg px-3 text-xs font-bold transition-colors ${layoutMode === 'semester' ? 'bg-indigo-700 text-white' : 'text-indigo-800 dark:text-indigo-200'}`}>
+            ترم چارت
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
         <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
           تاریخچهٔ انتخاب و اتصالِ <strong>ذخیره‌نشده</strong> · بازگشت به انتخاب قبلی هیچ قانون ثبت‌شده‌ای را تغییر نمی‌دهد.
@@ -316,7 +348,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                         <rect x={12 + column * COLUMN_WIDTH} y={10} width={COLUMN_WIDTH - 8} height={layout.height - 24}
                           rx={16} fill={column % 2 ? '#e2e8f033' : '#c7d2fe24'} />
                         <text x={24 + column * COLUMN_WIDTH} y={36} fill="#64748b" fontSize={13} fontWeight={700}>
-                          {'ترم پیشنهادی ' + term.toLocaleString('fa-IR')}
+                          {(layout.chainModeActive ? 'سطح زنجیرهٔ ' : 'ترم پیشنهادی ') + term.toLocaleString('fa-IR')}
                         </text>
                       </g>;
                     })}
