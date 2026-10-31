@@ -57,6 +57,8 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
   const available = catalog.filter(c => !wishlistCourseIds.includes(c.id) &&
     (!normalized || c.name.toLocaleLowerCase('fa').includes(normalized) || c.code.toLocaleLowerCase('fa').includes(normalized)))
     .sort((a, b) => (recByCourse.get(b.id)?.score ?? 0) - (recByCourse.get(a.id)?.score ?? 0) ||
+      (recByCourse.get(b.id)?.unlockedFutureCoursesCount ?? 0) - (recByCourse.get(a.id)?.unlockedFutureCoursesCount ?? 0) ||
+      (recByCourse.get(b.id)?.longestPrerequisiteChain ?? 0) - (recByCourse.get(a.id)?.longestPrerequisiteChain ?? 0) ||
       Number(a.suggestedSemester || 99) - Number(b.suggestedSemester || 99) ||
       a.name.localeCompare(b.name, 'fa'));
 
