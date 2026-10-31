@@ -1,397 +1,239 @@
-// ============================================================================
-// DARSCHYN (درس‌چین) - Passed Courses Manager Component
-// ============================================================================
-
-import React, { useEffect, useState } from 'react';
-import {
-  CheckSquare,
-  Search,
-  Plus,
-  Trash2,
-  BookOpen,
-  Award,
-  Filter,
-  CheckCircle2,
-  Sparkles,
-  Layers,
-  ListFilter,
-  Check,
-  RotateCcw,
-} from 'lucide-react';
-import { Course, CourseCategory, StudentPassedCourse } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CalendarDays, Pencil, Plus, Trash2, X, CheckCircle2 } from 'lucide-react';
+import type { AcademicTerm, Course, CourseAttemptStatus, StudentPassedCourse } from '../types';
+import { COURSE_ATTEMPT_LABELS, courseAttemptLabel } from '../domain/course-attempt-status';
 import { apiRequest } from '../utils/api';
 
-interface EnrichedPassedCourse extends StudentPassedCourse {
-  course?: Course;
-}
+interface TranscriptRow extends StudentPassedCourse { course?: Course }
+interface Props { onPassedCoursesChanged?: () => void }
+type EditableStatus = CourseAttemptStatus | '';
 
-interface PassedCoursesManagerProps {
-  onPassedCoursesChanged?: () => void;
-}
+const STATUS_OPTIONS: CourseAttemptStatus[] = [
+  'PASSED', 'FAILED', 'EXCUSED_EXAM_ABSENCE', 'CLASS_ABSENCE_DROP',
+];
+const noGrade = (status: EditableStatus) =>
+  status === 'ABSENT' || status === 'EXCUSED_EXAM_ABSENCE' || status === 'CLASS_ABSENCE_DROP';
 
-export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
-  onPassedCoursesChanged,
-}) => {
-  const [passedCourses, setPassedCourses] = useState<EnrichedPassedCourse[]>([]);
-  const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [totalUnits, setTotalUnits] = useState(0);
-  const [categorySummary, setCategorySummary] = useState<Record<string, number>>({});
+export const PassedCoursesManager: React.FC<Props> = ({ onPassedCoursesChanged }) => {
+  const [records,setRecords]=useState<TranscriptRow[]>([]);
+  const [courses,setCourses]=useState<Course[]>([]);
+  const [terms,setTerms]=useState<AcademicTerm[]>([]);
+  const [totalUnits,setTotalUnits]=useState(0);
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
+  const [search,setSearch]=useState('');
+  const [termChoice,setTermChoice]=useState('');
+  const [manualTerm,setManualTerm]=useState('');
+  const [courseId,setCourseId]=useState('');
+  const [status,setStatus]=useState<EditableStatus>('');
+  const [grade,setGrade]=useState('');
+  const [editingId,setEditingId]=useState<string|null>(null);
+  const [formOpen,setFormOpen]=useState(false);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'checklist' | 'table'>('checklist');
-
-  const [selectedCourseIdToAdd, setSelectedCourseIdToAdd] = useState('');
-  const [gradeInput, setGradeInput] = useState('');
-  const [attemptStatus, setAttemptStatus] = useState<'PASSED' | 'FAILED' | 'ABSENT'>('FAILED');
-  const [attemptError, setAttemptError] = useState('');
-
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-
-  const fetchPassedData = async () => {
+  const load=async()=>{
     setLoading(true);
-    const [passedRes, coursesRes] = await Promise.all([
-      apiRequest<{
-        passedCourses: EnrichedPassedCourse[];
-        totalUnits: number;
-        categorySummary: Record<string, number>;
-      }>('/api/student/passed-courses'),
+    const [history,catalog,meta]=await Promise.all([
+      apiRequest<{passedCourses:TranscriptRow[];totalUnits:number}>('/api/student/passed-courses'),
       apiRequest<Course[]>('/api/academic/courses'),
+      apiRequest<{academicTerms:AcademicTerm[]}>('/api/academic/all-meta'),
     ]);
-
-    if (passedRes.success && passedRes.data) {
-      setPassedCourses(passedRes.data.passedCourses);
-      setTotalUnits(passedRes.data.totalUnits);
-      setCategorySummary(passedRes.data.categorySummary);
-    }
-
-    if (coursesRes.success && coursesRes.data) {
-      setAllCourses(coursesRes.data);
-    }
+    if (history.success && history.data){
+      setRecords(history.data.passedCourses);setTotalUnits(history.data.totalUnits);
+    } else setError(history.error||'دریافت کارنامه ممکن نشد.');
+    if(catalog.success&&catalog.data)setCourses(catalog.data);
+    if(meta.success&&meta.data)setTerms(meta.data.academicTerms||[]);
     setLoading(false);
   };
+  useEffect(()=>{void load();},[]);
 
-  useEffect(() => {
-    fetchPassedData();
-  }, []);
-
-  const handleAddPassedCourse = async (e: React.FormEvent) => {
+  const reset=()=>{
+    setEditingId(null);setCourseId('');setTermChoice('');setManualTerm('');
+    setStatus('');setGrade('');setFormOpen(false);
+  };
+  const edit=(row:TranscriptRow)=>{
+    setEditingId(row.id);setCourseId(row.courseId);
+    if(row.termId&&terms.some(t=>t.id===row.termId)){
+      setTermChoice(row.termId);setManualTerm('');
+    }else{
+      setTermChoice(row.termId?'__manual':'');
+      setManualTerm(row.termId||'');
+    }
+    setStatus(row.status||'PASSED');
+    setGrade(row.grade==null?'':String(row.grade));
+    setError('');setNotice('');setFormOpen(true);
+  };
+  const save=async(e:React.FormEvent)=>{
     e.preventDefault();
-    if (!selectedCourseIdToAdd) return;
-    setAttemptError('');
-    setAdding(true);
-
-    const res = await apiRequest('/api/student/passed-courses', {
-      method: 'POST',
-      body: JSON.stringify({
-        courseId: selectedCourseIdToAdd,
-        grade: gradeInput.trim() ? Number(gradeInput) : undefined,
-        status: attemptStatus,
-      }),
-    });
-
-    setAdding(false);
-    if (res.success) {
-      setSelectedCourseIdToAdd('');
-      setGradeInput('');
-      setAttemptStatus('FAILED');
-      await fetchPassedData();
-      if (onPassedCoursesChanged) onPassedCoursesChanged();
-    } else {
-      setAttemptError(res.error || 'این سابقه ذخیره نشد. دوباره تلاش کنید.');
+    const termId=(termChoice==='__manual'?manualTerm:termChoice).trim();
+    if(!courseId||!status||!termId){
+      setError('درس، نیمسال و نتیجهٔ آن را انتخاب کن.');return;
     }
-  };
-
-  const handleToggleCoursePassed = async (courseId: string) => {
-    const existing = passedCourses.find((pc) => pc.courseId === courseId &&
-      pc.status !== 'FAILED' && pc.status !== 'ABSENT' && (pc.grade === undefined || pc.grade >= 10));
-    if (existing) {
-      // Remove it
-      const res = await apiRequest(`/api/student/passed-courses/${existing.id}`, {
-        method: 'DELETE',
-      });
-      if (res.success) {
-        await fetchPassedData();
-        if (onPassedCoursesChanged) onPassedCoursesChanged();
-      }
-    } else {
-      // Add it
-      const res = await apiRequest('/api/student/passed-courses', {
-        method: 'POST',
-        body: JSON.stringify({ courseId }),
-      });
-      if (res.success) {
-        await fetchPassedData();
-        if (onPassedCoursesChanged) onPassedCoursesChanged();
+    if(grade.trim()&&!noGrade(status)){
+      const n=Number(grade);
+      if(!Number.isFinite(n)||n<0||n>20||
+          (status==='PASSED'&&n<10)||(status==='FAILED'&&n>=10)){
+        setError('نمره با وضعیت انتخاب‌شده سازگار نیست.');return;
       }
     }
+    setError('');setNotice('');setSaving(true);
+    const result=await apiRequest(
+      editingId?'/api/student/passed-courses/'+encodeURIComponent(editingId):'/api/student/passed-courses',
+      {method:editingId?'PUT':'POST',body:JSON.stringify({
+        courseId,termId,status,
+        grade:!noGrade(status)&&grade.trim()?Number(grade):undefined,
+      })},
+    );
+    setSaving(false);
+    if(!result.success){setError(result.error||'ثبت نتیجه موفق نبود؛ دوباره تلاش کن.');return;}
+    reset();setNotice('نتیجهٔ درس در کارنامه ذخیره شد.');
+    await load();onPassedCoursesChanged?.();
   };
-
-  const handleRemove = async (id: string) => {
-    if (!confirm('آیا از حذف این درس از لیست دروس گذرانده مطمئن هستید؟')) return;
-
-    const res = await apiRequest(`/api/student/passed-courses/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (res.success) {
-      await fetchPassedData();
-      if (onPassedCoursesChanged) onPassedCoursesChanged();
-    } else {
-      alert(res.error || 'خطا در حذف درس.');
+  const remove=async(row:TranscriptRow)=>{
+    if(!confirm('این سابقه از کارنامهٔ شخصی شما حذف شود؟'))return;
+    setError('');setNotice('');setSaving(true);
+    const result=await apiRequest('/api/student/passed-courses/'+encodeURIComponent(row.id),{method:'DELETE'});
+    setSaving(false);
+    if(!result.success){setError(result.error||'حذف این سابقه ممکن نشد.');return;}
+    setNotice('سابقهٔ انتخابی حذف شد.');await load();onPassedCoursesChanged?.();
+  };
+  const termNames=new Map(terms.map(t=>[t.id,t.name]));
+  const grouped=useMemo(()=>{
+    const buckets=new Map<string,TranscriptRow[]>();
+    const query=search.trim().toLocaleLowerCase('fa');
+    for(const row of records){
+      if(query&&!((row.course?.name||'')+' '+(row.course?.code||'')).toLocaleLowerCase('fa').includes(query))continue;
+      const key=row.termId||'__legacy_unknown';
+      buckets.set(key,[...(buckets.get(key)||[]),row]);
     }
-  };
+    return [...buckets].sort(([a],[b])=>{
+      const ta=terms.find(t=>t.id===a),tb=terms.find(t=>t.id===b);
+      if(ta&&tb)return tb.year-ta.year||tb.termNumber-ta.termNumber;
+      return a==='__legacy_unknown'?1:b==='__legacy_unknown'?-1:b.localeCompare(a,'fa');
+    });
+  },[records,terms,search]);
+  const passedCount=new Set(records.filter(row=>row.status==='PASSED'||
+    (row.status==null&&(row.grade===undefined||row.grade>=10))).map(row=>row.courseId)).size;
 
-  // Filter available courses not yet passed for the dropdown
-  const isPassedAttempt = (pc: EnrichedPassedCourse) => pc.status !== 'FAILED' && pc.status !== 'ABSENT' &&
-    (pc.grade === undefined || pc.grade >= 10);
-  const passedIds = new Set(passedCourses.filter(isPassedAttempt).map((pc) => pc.courseId));
-  const availableToPass = allCourses.filter((c) => !passedIds.has(c.id));
-
-  // Filter current passed list by search query & category
-  const filteredPassed = passedCourses.filter((pc) => {
-    const name = pc.course?.name || '';
-    const code = pc.course?.code || '';
-    const cat = pc.course?.category || '';
-
-    const matchesSearch = name.includes(searchQuery) || code.includes(searchQuery);
-    const matchesCat = selectedCategory === 'all' || cat === selectedCategory;
-    return matchesSearch && matchesCat;
-  });
-
-  // Filter all courses for interactive checklist view
-  const checklistCourses = allCourses.filter((c) => {
-    const name = c.name || '';
-    const code = c.code || '';
-    const cat = c.category || '';
-    const matchesSearch = name.includes(searchQuery) || code.includes(searchQuery);
-    const matchesCat = selectedCategory === 'all' || cat === selectedCategory;
-    return matchesSearch && matchesCat;
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
-        <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-300"/>
-        <span className="font-bold text-slate-900 dark:text-white">{passedIds.size} درس پاس‌شده</span>
-        <span className="text-slate-600 dark:text-slate-300">· {totalUnits} واحد گذرانده‌شده</span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">فقط درس‌هایی را علامت بزن که واقعاً گذرانده‌ای.</span>
-      </div>
-
-      {/* Advanced, optional attempt history; the one-tap checklist stays the default. */}
-      <details className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/20">
-        <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-amber-950 dark:text-amber-200">
-          ثبت مردودی، غیبت یا قبولی با نمره
-        </summary>
-        <p className="mb-3 text-xs leading-6 text-amber-900 dark:text-amber-200">
-          مثال: ممکن است «سیگنال‌وسیستم» را قبول شده باشی اما «ریاضی مهندسی» را مردود شده باشی.
-          هر تلاش را جدا ثبت کن؛ مردودی باعث نمی‌شود درس قبولی به‌طور خودکار حذف شود.
+  return <section dir="rtl" aria-label="کارنامهٔ ترم‌به‌ترم من" className="space-y-4">
+    <header className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+      <h2 className="flex items-center gap-2 text-base font-extrabold text-indigo-950 dark:text-indigo-100">
+        <BookOpen className="h-5 w-5" aria-hidden="true"/> کارنامهٔ تحصیلی من
+      </h2>
+      <p className="mt-2 text-xs leading-7 text-indigo-900 dark:text-indigo-200">
+        هر نیمسال را فقط یک‌بار وارد کن و برای تک‌تک درس‌های آن نتیجه را ثبت کن.
+        سابقهٔ مردودی یا غیبت پاک نمی‌شود؛ قبولی‌های ترم‌های بعد در کنار آن نمایش داده می‌شوند.
+        این کارنامه خوداظهاری دانشجوست و جایگزین کارنامهٔ رسمی دانشگاه نیست.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200">
+          {passedCount.toLocaleString('fa-IR')} درس پاس‌شده · {totalUnits.toLocaleString('fa-IR')} واحد گذرانده
         </p>
-        <form onSubmit={handleAddPassedCourse} className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(8rem,1fr)_minmax(7rem,1fr)_auto] md:items-end">
-          <label className="space-y-1 text-xs font-semibold">
-            <span>نام درس</span>
-            <select required value={selectedCourseIdToAdd} onChange={e => setSelectedCourseIdToAdd(e.target.value)}
-              className="min-h-11 w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 text-slate-900 dark:border-amber-800 dark:bg-slate-900 dark:text-white">
-              <option value="">انتخاب درس</option>
-              {availableToPass.map(course => <option key={course.id} value={course.id}>{course.name} · {course.code}</option>)}
-            </select>
-          </label>
-          <label className="space-y-1 text-xs font-semibold">
-            <span>نتیجهٔ این تلاش</span>
-            <select value={attemptStatus} onChange={e => { setAttemptStatus(e.target.value as 'PASSED' | 'FAILED' | 'ABSENT'); if (e.target.value === 'ABSENT') setGradeInput(''); }}
-              className="min-h-11 w-full rounded-xl border border-amber-200 bg-white px-3 text-slate-900 dark:border-amber-800 dark:bg-slate-900 dark:text-white">
-              <option value="FAILED">مردود شدم</option>
-              <option value="PASSED">قبول شدم</option>
-              <option value="ABSENT">غیبت داشتم</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-xs font-semibold">
-            <span>نمره (اختیاری)</span>
-            <input type="number" inputMode="decimal" min="0" max="20" step="0.01"
-              disabled={attemptStatus === 'ABSENT'}
-              value={gradeInput} onChange={e => setGradeInput(e.target.value)} placeholder="مثلاً ۸٫۵"
-              className="min-h-11 w-full rounded-xl border border-amber-200 bg-white px-3 text-slate-900 disabled:opacity-50 dark:border-amber-800 dark:bg-slate-900 dark:text-white" />
-          </label>
-          <button type="submit" disabled={adding || !selectedCourseIdToAdd}
-            className="min-h-11 rounded-xl bg-amber-700 px-4 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50">
-            {adding ? 'در حال ثبت…' : 'ثبت این تلاش'}
-          </button>
-        </form>
-        {attemptError && <p role="alert" className="mt-2 rounded-xl border border-rose-300 bg-rose-50 p-2 text-xs text-rose-900 dark:bg-rose-950/40 dark:text-rose-200">{attemptError}</p>}
-      </details>
-
-      {/* Main Container with Tabs */}
-      <div className="p-5 sm:p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-emerald-600" />
-              سوابق قبولی و مردودی من
-            </h3>
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs">
-              <button
-                type="button"
-                onClick={() => setViewMode('checklist')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  viewMode === 'checklist'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                چک‌لیست تعاملی
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                لیست ثبت‌شده‌ها ({passedCourses.length})
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="جستجو در دروس..."
-                className="pr-8 pl-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white w-44"
-              />
-            </div>
-
-            {/* Category filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-2.5 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white"
-            >
-              <option value="all">همه گروه‌ها</option>
-              <option value="عمومی">عمومی</option>
-              <option value="پایه">پایه</option>
-              <option value="اصلی">اصلی</option>
-              <option value="تخصصی">تخصصی</option>
-              <option value="اختیاری">اختیاری</option>
-            </select>
-          </div>
-        </div>
-
-        {/* CHECKLIST VIEW (Easy 1-click toggles) */}
-        {viewMode === 'checklist' && (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              برای ثبت یا حذف هر درس از لیست گذرانده‌شده‌ها، کافیست روی کارت درس کلیک کنید:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-96 overflow-y-auto p-1">
-              {checklistCourses.map((course) => {
-                const isPassed = passedIds.has(course.id);
-                return (
-                  <button type="button"
-                    key={course.id}
-                    aria-pressed={isPassed}
-                    aria-label={(isPassed ? 'حذف قبولی ' : 'ثبت قبولی ') + course.name}
-                    disabled={adding}
-                    onClick={() => void handleToggleCoursePassed(course.id)}
-                    className={`w-full p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 text-right focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 ${
-                      isPassed
-                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 shadow-xs'
-                        : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500'
-                    }`}
-                  >
-                    <div className="space-y-0.5 pr-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">
-                          {course.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span className="font-mono">{course.code}</span>
-                        <span>•</span>
-                        <span>{course.units} واحد</span>
-                        <span>•</span>
-                        <span className="text-blue-600 dark:text-blue-400 font-medium">
-                          {course.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                        isPassed
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                      }`}
-                    >
-                      {isPassed ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TABLE VIEW */}
-        {viewMode === 'table' && (
-          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden">
-            <table className="w-full text-xs text-right border-collapse">
-              <thead className="bg-slate-100/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300">
-                <tr>
-                  <th className="py-2.5 px-3">کد درس</th>
-                  <th className="py-2.5 px-3">نام درس</th>
-                  <th className="py-2.5 px-3">تعداد واحد</th>
-                  <th className="py-2.5 px-3">نوع درس</th>
-                  <th className="py-2.5 px-3">نمره</th>
-                  <th className="py-2.5 px-3 text-center">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
-                {filteredPassed.map((pc) => (
-                  <tr key={pc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                    <td className="py-2.5 px-3 font-mono">{pc.course?.code || '---'}</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">
-                      {pc.course?.name || 'درس ناشناخته'}
-                    </td>
-                    <td className="py-2.5 px-3">{pc.course?.units || '-'} واحد</td>
-                    <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-medium">
-                        {pc.course?.category || '---'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-mono">
-                      {isPassedAttempt(pc) ? (pc.grade !== undefined && pc.grade !== null ? 'قبول · ' + pc.grade : 'قبول (بدون نمره)') : (pc.grade !== undefined && pc.grade !== null ? 'مردود · ' + pc.grade : 'مردود/غیبت')}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <button
-                        onClick={() => handleRemove(pc.id)}
-                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                        title="حذف این سابقهٔ درسی"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {filteredPassed.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
-                      هیچ درسی با این مشخصات در کارنامه ثبت نشده است.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <button type="button" onClick={()=>{reset();setError('');setFormOpen(true);}}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <Plus className="h-4 w-4"/> ثبت نتیجهٔ درس
+        </button>
       </div>
-    </div>
-  );
+    </header>
+
+    {notice&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}
+    {error&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{error}</p>}
+
+    {formOpen&&<form onSubmit={save} className="space-y-3 rounded-2xl border border-indigo-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" aria-label="فرم ثبت نتیجه در کارنامه">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-bold">{editingId?'اصلاح نتیجهٔ ثبت‌شده':'افزودن درس به کارنامه'}</h3>
+        <button type="button" onClick={reset} aria-label="بستن فرم کارنامه"
+          className="grid min-h-11 min-w-11 place-items-center rounded-xl bg-slate-100 dark:bg-slate-800">
+          <X className="h-4 w-4"/></button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-xs font-semibold">
+          <span>نیمسال تحصیلی</span>
+          <select required value={termChoice} onChange={e=>setTermChoice(e.target.value)}
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-800">
+            <option value="">نیمسال را انتخاب کن</option>
+            {[...terms].sort((a,b)=>b.year-a.year||b.termNumber-a.termNumber)
+              .map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            <option value="__manual">نیمسال قدیمی در فهرست نیست</option>
+          </select>
+        </label>
+        {termChoice==='__manual'&&<label className="space-y-1 text-xs font-semibold">
+          <span>شناسهٔ نیمسال قدیمی</span>
+          <input required maxLength={80} value={manualTerm} onChange={e=>setManualTerm(e.target.value)}
+            placeholder="مثلاً ۱۴۰۳-۱ (پاییز)" className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-800"/>
+        </label>}
+        <label className="space-y-1 text-xs font-semibold">
+          <span>درس</span>
+          <select required value={courseId} onChange={e=>setCourseId(e.target.value)}
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-800">
+            <option value="">درس را انتخاب کن</option>
+            {courses.filter(c=>c.active!==false||c.id===courseId).map(c=>
+              <option key={c.id} value={c.id}>{c.name} · {c.code}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1 text-xs font-semibold">
+          <span>نتیجهٔ این درس</span>
+          <select required value={status} onChange={e=>{setStatus(e.target.value as EditableStatus);if(noGrade(e.target.value as EditableStatus))setGrade('');}}
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-800">
+            <option value="">نتیجه را انتخاب کن</option>
+            {STATUS_OPTIONS.map(s=><option key={s} value={s}>{COURSE_ATTEMPT_LABELS[s]}</option>)}
+            {status==='ABSENT'&&<option value="ABSENT">{COURSE_ATTEMPT_LABELS.ABSENT}</option>}
+          </select>
+        </label>
+        <label className="space-y-1 text-xs font-semibold">
+          <span>نمره (اختیاری برای قبولی یا مردودی)</span>
+          <input type="number" inputMode="decimal" min={0} max={20} step="0.01"
+            disabled={noGrade(status)} value={grade} onChange={e=>setGrade(e.target.value)}
+            placeholder="مثلاً ۱۵٫۵" className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800"/>
+        </label>
+      </div>
+      <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">برای غیبت موجه امتحان یا حذف به‌دلیل غیبت کلاسی، نمره وارد نکن. این وضعیت‌ها واحد پاس‌شده محسوب نمی‌شوند.</p>
+      <button type="submit" disabled={saving||!courseId||!status||!termChoice}
+        className="min-h-11 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white disabled:opacity-50">
+        {saving?'در حال ذخیره…':editingId?'ذخیرهٔ اصلاح':'ثبت در کارنامه'}
+      </button>
+    </form>}
+
+    <label className="block space-y-1 text-xs font-semibold">
+      <span>جست‌وجو در کارنامه</span>
+      <input value={search} onChange={e=>setSearch(e.target.value)}
+        placeholder="نام یا کد درس" className="min-h-11 w-full max-w-md rounded-xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900"/>
+    </label>
+    {loading&&<p role="status" className="text-sm text-slate-500">در حال دریافت کارنامه…</p>}
+    {!loading&&grouped.length===0&&<p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700">
+      هنوز سابقه‌ای ثبت نشده یا نتیجه‌ای مطابق جست‌وجوی تو پیدا نشد.
+    </p>}
+    {grouped.map(([termId,rows])=><section key={termId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <header className="flex items-center justify-between gap-2 bg-slate-50 px-4 py-3 dark:bg-slate-800/50">
+        <h3 className="flex items-center gap-2 text-sm font-bold">
+          <CalendarDays className="h-4 w-4 text-indigo-600"/>
+          {termId==='__legacy_unknown'?'نیمسال نامشخص (سوابق قدیمی)':termNames.get(termId)||termId}
+        </h3>
+        <span className="text-xs text-slate-500">{rows.length.toLocaleString('fa-IR')} درس</span>
+      </header>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        {rows.map(row=><article key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{row.course?.name||'درس ناشناخته'}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{row.course?.code||row.courseId} · {row.course?.units??'–'} واحد</p>
+            <p className={'text-xs font-bold '+(row.status==='PASSED'||row.status==null?'text-emerald-700 dark:text-emerald-400':'text-amber-700 dark:text-amber-400')}>
+              {courseAttemptLabel(row.status)} {row.grade!=null?'· نمره '+row.grade.toLocaleString('fa-IR'):''}
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <button type="button" disabled={saving} onClick={()=>edit(row)} aria-label={'ویرایش '+(row.course?.name||row.courseId)}
+              className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-slate-200 dark:border-slate-700">
+              <Pencil className="h-4 w-4"/></button>
+            <button type="button" disabled={saving} onClick={()=>void remove(row)} aria-label={'حذف سابقهٔ '+(row.course?.name||row.courseId)}
+              className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-rose-200 text-rose-600 dark:border-rose-900">
+              <Trash2 className="h-4 w-4"/></button>
+          </div>
+        </article>)}
+      </div>
+    </section>)}
+    <p className="flex items-start gap-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
+      <CheckCircle2 className="h-4 w-4 shrink-0"/> فقط درس‌های پاس‌شده در محاسبهٔ پیش‌نیاز و واحد گذرانده لحاظ می‌شوند؛ غیبت‌ها و حذف توسط استاد قبولی نیستند.
+    </p>
+  </section>;
 };
