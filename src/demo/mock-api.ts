@@ -1,4 +1,5 @@
 import { DEMO_COURSES } from './course-planner';
+import { isSuccessfulCourseAttempt } from '../domain/course-attempt-status';
 import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
@@ -580,7 +581,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         const course = currentCourses(s).find(row => row.id === cc.courseId);
         return { course, cc };
       }).filter(({course}) => Boolean(course && !s.passed.some(p => p.courseId === course?.id &&
-        p.status !== 'FAILED' && p.status !== 'ABSENT' && (p.grade === undefined || p.grade >= 10))))
+        isSuccessfulCourseAttempt(p))))
       .filter(({course}) => {
         if (!course || seen.has(course.id)) return false;
         seen.add(course.id); return true;

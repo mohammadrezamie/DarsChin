@@ -8,6 +8,7 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
+import { isSuccessfulCourseAttempt } from '../../src/domain/course-attempt-status';
 import { validate } from '../middleware/validate';
 import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
 import { validateAcademicProfileReferences } from '../domain/student-profile-references';
@@ -168,7 +169,7 @@ studentRouter.get('/passed-courses', authenticate, (req: AuthenticatedRequest, r
   const countedPassed = new Set<string>();
   const enrichedList = userPassed.map((p) => {
     const course = db.courses.find((c) => c.id === p.courseId);
-    const passed = p.status !== 'FAILED' && p.status !== 'ABSENT' && (p.grade === undefined || p.grade >= 10);
+    const passed = isSuccessfulCourseAttempt(p);
     if (course && passed && !countedPassed.has(p.courseId)) {
       countedPassed.add(p.courseId);
       totalUnits += course.units;
@@ -204,8 +205,7 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
 
   const existing = db.studentPassedCourses.find(
     (spc) => spc.userId === userId && spc.courseId === courseId &&
-      spc.status !== 'FAILED' && spc.status !== 'ABSENT' &&
-      (spc.grade === undefined || spc.grade >= 10)
+      isSuccessfulCourseAttempt(spc)
   );
   if (existing) {
     return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
@@ -248,8 +248,7 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
     const retainedPassed = new Set(courseIds);
     for (let i = db.studentPassedCourses.length - 1; i >= 0; i--) {
       const record = db.studentPassedCourses[i];
-      const isPassed = record.status !== 'FAILED' && record.status !== 'ABSENT' &&
-        (record.grade === undefined || record.grade >= 10);
+      const isPassed = isSuccessfulCourseAttempt(record);
       // Preserve grade, term and original attempt ID for each retained success.
       if (record.userId === userId && isPassed && !retainedPassed.has(record.courseId)) {
         db.studentPassedCourses.splice(i, 1);
@@ -259,8 +258,7 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
 
   const existingCourseIds = new Set(
     db.studentPassedCourses.filter((spc) => spc.userId === userId &&
-      spc.status !== 'FAILED' && spc.status !== 'ABSENT' &&
-      (spc.grade === undefined || spc.grade >= 10)).map((spc) => spc.courseId)
+      isSuccessfulCourseAttempt(spc)).map((spc) => spc.courseId)
   );
 
   let addedCount = 0;
@@ -319,8 +317,7 @@ studentRouter.get('/wishlist/catalog', authenticate, (req: AuthenticatedRequest,
   const scope = curriculumForStudent(req.user!.id);
   if (!scope) return res.status(409).json({ success: false, error: 'برای مشاهدهٔ سبد، ابتدا پرونده و چارت تحصیلی معتبر خود را تکمیل کنید.' });
   const passed = new Set(db.studentPassedCourses.filter(item => item.userId === req.user!.id &&
-    item.status !== 'FAILED' && item.status !== 'ABSENT' &&
-    (item.grade === undefined || item.grade >= 10)).map(item => item.courseId));
+    isSuccessfulCourseAttempt(item)).map(item => item.courseId));
   const courses = db.curriculumCourses.filter(cc =>
     cc.curriculumId === scope.chart.id && cc.active !== false &&
     (!cc.trackId || !scope.profile.selectedTrackId || cc.trackId === scope.profile.selectedTrackId))
@@ -348,8 +345,7 @@ studentRouter.put('/wishlist', authenticate, validate(updateWishlistSchema), (re
     db.courses.some(course => course.id === cc.courseId && course.active)
   ).map(cc => cc.courseId));
   const passed = new Set(db.studentPassedCourses.filter(item => item.userId === req.user!.id &&
-    item.status !== 'FAILED' && item.status !== 'ABSENT' &&
-    (item.grade === undefined || item.grade >= 10)).map(item => item.courseId));
+    isSuccessfulCourseAttempt(item)).map(item => item.courseId));
   if (courseIds.some(id => !eligibleCatalog.has(id) || passed.has(id))) {
     return res.status(400).json({ success: false, error: 'سبد فقط می‌تواند شامل درس‌های گذرانده‌نشدهٔ چارت همین حساب باشد.' });
   }

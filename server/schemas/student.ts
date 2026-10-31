@@ -24,11 +24,11 @@ const studentGrade = z.union([
 export const addPassedCourseSchema = z.object({
   courseId: z.string().min(1, 'شناسه درس الزامی است'),
   grade: studentGrade.optional(),
-  status: z.enum(['PASSED', 'FAILED', 'ABSENT']).optional(),
+  status: z.enum(['PASSED', 'FAILED', 'ABSENT', 'EXCUSED_EXAM_ABSENCE', 'CLASS_ABSENCE_DROP']).optional(),
   termId: z.string().optional(),
 }).superRefine((attempt, ctx) => {
   const status = attempt.status || (attempt.grade !== undefined && attempt.grade < 10 ? 'FAILED' : 'PASSED');
-  if (status === 'ABSENT' && attempt.grade !== undefined) {
+  if (['ABSENT', 'EXCUSED_EXAM_ABSENCE', 'CLASS_ABSENCE_DROP'].includes(status) && attempt.grade !== undefined) {
     ctx.addIssue({ code: 'custom', path: ['grade'], message: 'برای غیبت نمره ثبت نکنید.' });
   }
   if (status === 'PASSED' && attempt.grade !== undefined && attempt.grade < 10) {

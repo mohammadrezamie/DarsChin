@@ -2,6 +2,7 @@
 // DARSCHYN (درس‌چین) - Core Eligibility Engine (Deterministic Rule-Based)
 // ============================================================================
 
+import { isSuccessfulCourseAttempt } from './course-attempt-status';
 import {
   Course,
   Curriculum,
@@ -53,11 +54,7 @@ export function evaluateStudentEligibility(
   // Filter passed courses: only status PASSED or grade >= 10 count. Failed/Absent do NOT count.
   const passedCourseIdsSet = new Set(
     passedCourses
-      .filter((pc) => {
-        if (pc.status === 'FAILED' || pc.status === 'ABSENT') return false;
-        if (pc.grade !== undefined && pc.grade < 10) return false;
-        return true;
-      })
+      .filter(isSuccessfulCourseAttempt)
       .map((pc) => pc.courseId)
   );
 

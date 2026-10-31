@@ -258,7 +258,7 @@ export interface AcademicLimitInfo {
   electivesRemaining: number;
 }
 
-export type CourseAttemptStatus = 'PASSED' | 'FAILED' | 'ABSENT';
+export type CourseAttemptStatus = 'PASSED' | 'FAILED' | 'ABSENT' | 'EXCUSED_EXAM_ABSENCE' | 'CLASS_ABSENCE_DROP';
 
 export interface StudentPassedCourse {
   id: string;

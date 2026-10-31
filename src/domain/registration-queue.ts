@@ -3,6 +3,7 @@ import type {
   StudentPassedCourse,
 } from '../types';
 import { verifiedOfferingGroupCopyCode } from './offering-code';
+import { isSuccessfulCourseAttempt } from './course-attempt-status';
 
 /**
  * Planning aid for the *manual* Educationalyar registration workflow.
@@ -38,9 +39,7 @@ export interface RegistrationQueue {
 
 type Choice = { prerequisites: string[]; missing: string[]; notes: string[] };
 
-const successful = (row: StudentPassedCourse) =>
-  row.status !== 'FAILED' && row.status !== 'ABSENT' &&
-  (row.grade === undefined || Number(row.grade) >= 10);
+const successful = isSuccessfulCourseAttempt;
 
 /** Never arbitrarily enforce every operand of an OR expression. */
 function resolveRequirement(

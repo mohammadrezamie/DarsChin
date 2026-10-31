@@ -10,6 +10,7 @@ import path from 'path';
 import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
 import { resolveBootstrapRoot } from './root-identity';
 import { prepareCatalogRestore } from './catalog-restore';
+import { isSuccessfulCourseAttempt } from '../../src/domain/course-attempt-status';
 import {
   User,
   University,
@@ -456,9 +457,7 @@ this.isInitialized = true;
     const passed = this.studentPassedCourses.filter(
       (sp) =>
         sp.userId === userId &&
-        sp.status !== 'FAILED' &&
-        sp.status !== 'ABSENT' &&
-        (sp.status === 'PASSED' || sp.grade === undefined || sp.grade >= 10)
+        isSuccessfulCourseAttempt(sp)
     );
     const passedCourseIds = new Set(passed.map((p) => p.courseId));
     const passedUnits = this.courses
