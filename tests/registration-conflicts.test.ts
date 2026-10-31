@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { findOfferingTimeConflicts } from '../src/domain/registration-conflicts';
+import { findOfferingTimeConflicts, lectureTimesOverlap } from '../src/domain/registration-conflicts';
 import type { CourseEligibilityResult } from '../src/types';
 
 const row = (overrides: Partial<CourseEligibilityResult> = {}): CourseEligibilityResult => ({
@@ -44,5 +44,33 @@ describe('shared conflict warnings for first choice AND reserve promotion',()=>{
     expect(dashboard).toContain('findOfferingTimeConflicts(newEval, currentSelected)');
     expect(dashboard).toContain('swapCourseId?: string');
     expect(dashboard).toContain('handleSelectPrimaryOffering(conflictWarning.swapCourseId, conflictWarning.offeringId, true)');
+  });
+});
+
+describe('all student timetable surfaces use consistent clock-time overlap checks', () => {
+  it('compares numeric minutes, including non-zero-padded input on either side', () => {
+    const first = row({ startTime: '8:30', endTime: '10:00' });
+    const sameDay = row({ startTime: '09:45', endTime: '11:00' });
+    expect(lectureTimesOverlap(first, sameDay)).toBe(true);
+    expect(lectureTimesOverlap(sameDay, first)).toBe(true);
+    expect(lectureTimesOverlap(first, row({ startTime: '10:00', endTime: '12:00' }))).toBe(false);
+  });
+
+  it('does not invent confirmed clashes for malformed times, zero duration, or different days', () => {
+    const first = row({ startTime: '09:00', endTime: '10:00' });
+    expect(lectureTimesOverlap(first, row({ dayOfWeek: 'یکشنبه' }))).toBe(false);
+    expect(lectureTimesOverlap(first, row({ startTime: '9:99' }))).toBe(false);
+    expect(lectureTimesOverlap(first, row({ startTime: '09:00', endTime: '09:00' }))).toBe(false);
+    expect(lectureTimesOverlap(first, row({ startTime: '', endTime: '' }))).toBe(false);
+  });
+
+  it('uses one overlap function for the dashboard banner, calendar and add/swap warning', () => {
+    const dashboard = readFileSync(resolve(process.cwd(), 'src/components/StudentDashboard.tsx'), 'utf8');
+    const planner = readFileSync(resolve(process.cwd(), 'src/components/SchedulePlanner.tsx'), 'utf8');
+    expect(dashboard).toContain('if (lectureTimesOverlap(o1, o2))');
+    expect(planner).toContain('if (lectureTimesOverlap(o1, o2))');
+    expect(dashboard).toContain('findOfferingTimeConflicts(newEval, currentSelected)');
+    expect(dashboard).not.toContain('o1.startTime < o2.endTime && o1.endTime > o2.startTime');
+    expect(planner).not.toContain('o1.startTime < o2.endTime && o1.endTime > o2.startTime');
   });
 });
