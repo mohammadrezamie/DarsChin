@@ -35,6 +35,7 @@ import { ExamCalendar } from './ExamCalendar';
 import { FluidWeekTimetable } from './FluidWeekTimetable';
 import { generateExamsICS, downloadICSFile } from '../utils/calendar';
 import { copyTextWithFallback } from '../utils/clipboard';
+import { lectureTimesOverlap } from '../domain/registration-conflicts';
 
 export interface PlannedCourseCardData {
   courseId: string;
@@ -129,30 +130,19 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         const o1 = selectedOfferings[i];
         const o2 = selectedOfferings[j];
 
-        // Lecture time overlap check
-        if (
-          o1.dayOfWeek &&
-          o2.dayOfWeek &&
-          o1.dayOfWeek === o2.dayOfWeek &&
-          o1.startTime &&
-          o1.endTime &&
-          o2.startTime &&
-          o2.endTime
-        ) {
-          if (o1.startTime < o2.endTime && o1.endTime > o2.startTime) {
-            const desc = `تداخل ساعت کلاسی با درس «${o2.courseName}» (${o1.dayOfWeek} ساعت ${o1.startTime} تا ${o1.endTime})`;
-            lConflicts.push({
-              offering1: o1.courseName,
-              offering2: o2.courseName,
-              day: o1.dayOfWeek,
-              time: `${o1.startTime}-${o1.endTime}`,
-            });
-
-            if (!cMap.has(o1.offeringId)) cMap.set(o1.offeringId, []);
-            if (!cMap.has(o2.offeringId)) cMap.set(o2.offeringId, []);
-            cMap.get(o1.offeringId)!.push(desc);
-            cMap.get(o2.offeringId)!.push(`تداخل ساعت کلاسی با درس «${o1.courseName}» (${o1.dayOfWeek} ساعت ${o2.startTime} تا ${o2.endTime})`);
-          }
+        // Keep calendar warnings in sync with selection validation and dashboard.
+        if (lectureTimesOverlap(o1, o2)) {
+          const desc = `تداخل ساعت کلاسی با درس «${o2.courseName}» (${o1.dayOfWeek} ساعت ${o1.startTime} تا ${o1.endTime})`;
+          lConflicts.push({
+            offering1: o1.courseName,
+            offering2: o2.courseName,
+            day: o1.dayOfWeek || '',
+            time: `${o1.startTime}-${o1.endTime}`,
+          });
+          if (!cMap.has(o1.offeringId)) cMap.set(o1.offeringId, []);
+          if (!cMap.has(o2.offeringId)) cMap.set(o2.offeringId, []);
+          cMap.get(o1.offeringId)!.push(desc);
+          cMap.get(o2.offeringId)!.push(`تداخل ساعت کلاسی با درس «${o1.courseName}» (${o1.dayOfWeek} ساعت ${o2.startTime} تا ${o2.endTime})`);
         }
 
         // Exam conflict check
