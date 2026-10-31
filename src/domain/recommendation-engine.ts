@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { analyzeCurriculumDependencies } from './course-dependency-insights';
+import { analyzeRemainingGraduationPaths } from './remaining-graduation-path';
 import {
   Course,
   Curriculum,
@@ -75,6 +76,7 @@ export function generateCourseRecommendations(
   const completed = new Set(completedCourseIds);
   const prerequisiteEdges = chartGraph.valid
     ? chartGraph.edges.filter(edge => edge.kind === 'PREREQUISITE') : [];
+  const remainingPaths = analyzeRemainingGraduationPaths(chartGraph, completed);
 
   // Filter only eligible courses (strictly canSelect === true and overallStatus === 'AVAILABLE')
   const eligibleResults = eligibilityResults.filter(
@@ -104,15 +106,20 @@ export function generateCourseRecommendations(
     // Already-passed courses may remain links in the chain, but are not future
     // academic work and must not inflate the count.
     const insight = insightsByCourse.get(courseId);
-    const unlockedCourseIds = (insight?.downstreamIds ?? [])
-      .filter(id => currCourseMap.has(id) && !completed.has(id) && id !== courseId);
+    const remainingPath = remainingPaths.get(courseId);
+    const mandatoryFutureIds = remainingPath?.noChoiceFutureCourseIds ?? [];
+    const choiceOnlyFutureIds = remainingPath?.choiceOnlyFutureCourseIds ?? [];
+    // Keep the existing public total for backwards compatibility, but do NOT
+    // score the optional OR-only descendants like compulsory bottlenecks.
+    const unlockedCourseIds = [...mandatoryFutureIds, ...choiceOnlyFutureIds].sort();
     const unlockedCourseNames = unlockedCourseIds
       .map(id => coursesMap.get(id)?.name).filter((name): name is string => !!name);
     const directDependents = prerequisiteEdges.filter(edge => edge.from === courseId &&
       !completed.has(edge.to) && currCourseMap.has(edge.to));
-    const potentiallyOptional = prerequisiteEdges.some(edge => edge.optional &&
-      (edge.from === courseId || (insight?.downstreamIds.includes(edge.from) ?? false)) &&
-      unlockedCourseIds.includes(edge.to));
+    const mandatoryRequiredCount = mandatoryFutureIds.filter(id => {
+      const category = currCourseMap.get(id)?.classification;
+      return category === 'MAJOR_REQUIRED' || category === 'TRACK_REQUIRED';
+    }).length;
 
     let score = 50; // relative planning preference, NOT authorization
     const reasons: string[] = [];
@@ -122,13 +129,23 @@ export function generateCourseRecommendations(
     // bonus for every 3+ descendants hid genuine multi-semester bottlenecks.
     if (unlockedCourseIds.length > 0) {
       const depth = insight?.longestChain ?? 0;
-      const bonus = unlockedCourseIds.length === 1
-        ? 15
-        : Math.min(35, 15 + 4 * (unlockedCourseIds.length - 1) + 3 * Math.max(0, depth - 1));
+      const remainingDepth = remainingPath?.longestRemainingChain ?? 0;
+      const noChoiceDepth = remainingPath?.longestNoChoiceRemainingChain ?? 0;
+      const mandatoryBonus = mandatoryFutureIds.length
+        ? 15 + 4 * (mandatoryFutureIds.length - 1) + 3 * Math.max(0, noChoiceDepth - 1)
+        : 0;
+      // OR paths might be satisfied by a different course, so they get only
+      // small informational weight, never the full structural urgency bonus.
+      const choiceBonus = Math.min(mandatoryFutureIds.length ? 6 : 12,
+        choiceOnlyFutureIds.length * 3 + (mandatoryFutureIds.length ? 0 : Math.max(0, remainingDepth - 1)));
+      const bonus = Math.min(35, mandatoryBonus + choiceBonus + Math.min(4, mandatoryRequiredCount * 2));
       score += bonus;
-      reasons.push(`در زنجیرهٔ چارت تا انتهای دوره، ${unlockedCourseIds.length.toLocaleString('fa-IR')} درس باقیمانده در مسیر این درس است؛ ${directDependents.length.toLocaleString('fa-IR')} ارتباط مستقیم، عمق ${depth.toLocaleString('fa-IR')}`);
-      if (potentiallyOptional) {
-        reasons.push('بعضی مسیرهای وابستگی دارای شرط «یا» هستند و الزام قطعی برای همهٔ آن مسیرها وجود ندارد.');
+      reasons.push(`در زنجیرهٔ چارت تا انتهای دوره، ${unlockedCourseIds.length.toLocaleString('fa-IR')} درس باقیمانده در مسیر این درس است؛ ${directDependents.length.toLocaleString('fa-IR')} ارتباط مستقیم، عمق ${depth.toLocaleString('fa-IR')} (ساختاری) و ${remainingDepth.toLocaleString('fa-IR')} گام باقیمانده`);
+      if (mandatoryFutureIds.length > 0) {
+        reasons.push(`${mandatoryFutureIds.length.toLocaleString('fa-IR')} درس در مسیرهای بدون شرط «یا» و ${mandatoryRequiredCount.toLocaleString('fa-IR')} مورد از آن‌ها در گروه دروس الزامی چارت هستند؛ این اعداد مجوز اخذ قطعی نیستند.`);
+      }
+      if (choiceOnlyFutureIds.length > 0) {
+        reasons.push(`${choiceOnlyFutureIds.length.toLocaleString('fa-IR')} درس فقط از مسیرهای دارای شرط «یا» قابل دستیابی است؛ این مسیرها اختیاری/احتمالی‌اند و الزام قطعی نیستند.`);
       }
     } else if (!chartGraph.valid) {
       reasons.push('تحلیل اهمیت زنجیره‌ای به دلیل ناسازگاری قواعد چارت معتبر نیست؛ نیازمند بررسی مدیر.');
@@ -178,6 +195,10 @@ export function generateCourseRecommendations(
       score: Math.min(score, 100),
       suggestedSemester: suggestedSem,
       unlockedFutureCoursesCount: unlockedCourseIds.length,
+      noChoiceFutureCoursesCount: mandatoryFutureIds.length,
+      choiceOnlyFutureCoursesCount: choiceOnlyFutureIds.length,
+      longestRemainingPrerequisiteChain: remainingPath?.longestRemainingChain ?? 0,
+      longestNoChoiceRemainingChain: remainingPath?.longestNoChoiceRemainingChain ?? 0,
       longestPrerequisiteChain: insight?.longestChain ?? 0,
       unlockedCourseNames,
       reasons,
@@ -190,6 +211,8 @@ export function generateCourseRecommendations(
   // even when two equally required courses both reach that cap.
   recommendations.sort((a, b) =>
     b.score - a.score ||
+    (b.noChoiceFutureCoursesCount ?? 0) - (a.noChoiceFutureCoursesCount ?? 0) ||
+    (b.longestNoChoiceRemainingChain ?? 0) - (a.longestNoChoiceRemainingChain ?? 0) ||
     b.unlockedFutureCoursesCount - a.unlockedFutureCoursesCount ||
     (b.longestPrerequisiteChain ?? 0) - (a.longestPrerequisiteChain ?? 0) ||
     a.courseId.localeCompare(b.courseId));
