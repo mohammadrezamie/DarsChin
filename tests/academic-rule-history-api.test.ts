@@ -20,8 +20,8 @@ const bearer=(token:string)=>({Authorization:'Bearer '+token});
 beforeAll(async()=>{
   await db.init(true);
   original={
-    curricula:db.data.curricula,curriculumCourses:db.data.curriculumCourses,
-    academicRules:db.data.academicRules,auditLogs:db.data.auditLogs,users:db.data.users,
+    curricula:[...db.data.curricula],curriculumCourses:[...db.data.curriculumCourses],
+    academicRules:[...db.data.academicRules],auditLogs:[...db.data.auditLogs],users:[...db.data.users],
   };
   saveSpy=vi.spyOn(db,'save').mockImplementation(()=>undefined);
   const root=db.users.find(u=>u.roles.includes('super-admin'));
