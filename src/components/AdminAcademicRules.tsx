@@ -95,6 +95,7 @@ export const AdminAcademicRules: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState('');
+  const [dataReady, setDataReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingDeleteRuleId, setPendingDeleteRuleId] = useState<string | null>(null);
 
@@ -129,6 +130,7 @@ export const AdminAcademicRules: React.FC = () => {
       setRules(rulesRes.data);
       setCourses(coursesRes.data);
       setCurricula(curRes.data);
+      setDataReady(true);
     } catch {
       setError('ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.');
     } finally {
@@ -194,7 +196,7 @@ export const AdminAcademicRules: React.FC = () => {
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
         {error} <button type="button" onClick={() => void fetchData()} disabled={saving} className="mr-2 min-h-11 rounded-lg px-3 underline">دریافت دوباره</button>
       </div>}
-      {!loading && !error && <>
+      {!loading && dataReady && <>
         <AdminDependencyWorkbench rules={rules} courses={courses} curricula={curricula} onChanged={() => fetchData(true)} />
         <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
           <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-slate-800 dark:text-white">نمای تحلیلی و رتبه‌بندی کل زنجیرهٔ پیش‌نیازها</summary>
