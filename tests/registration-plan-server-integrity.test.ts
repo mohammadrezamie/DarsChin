@@ -133,7 +133,7 @@ describe('one unified registration queue has integrity at the write boundary', (
   it('keeps the displaced main group available in fallback order on the selection endpoint', () => {
     const route = readFileSync(resolve(process.cwd(), 'server/routes/student.ts'), 'utf8');
     expect(route).toContain('...(sameCourseExistingOffering ? [sameCourseExistingOffering.id] : [])');
-    expect(route).toContain('plannedOfferingIdsInSameTerm: selectedOfferingIds');
+    expect(route).toContain('plannedOfferingIdsInSameTerm: candidateIds');
   });
 
   it('counts only explicit extra-unit metadata, not similar words in a course title', () => {
@@ -276,7 +276,7 @@ describe('academic-scope validation cannot be bypassed via priorities or manual 
       const response = await request(app).put('/api/student/plan').set(token())
         .send({ coursePriorities: [courseId] });
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('پردیس');
+      expect(response.body.error).toContain('واحد دانشگاهی');
       expect(plan.selectedOfferingIds).toEqual([main.id]);
       expect(plan.coursePriorities).toEqual(priorPriorities);
     } finally {
