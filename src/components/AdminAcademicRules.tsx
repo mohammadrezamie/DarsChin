@@ -94,6 +94,9 @@ export const AdminAcademicRules: React.FC = () => {
   const [curricula, setCurricula] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [pendingDeleteRuleId, setPendingDeleteRuleId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<{
     curriculumId: string;
@@ -111,42 +114,67 @@ export const AdminAcademicRules: React.FC = () => {
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
-    const [rulesRes, coursesRes, curRes] = await Promise.all([
-      apiRequest('/api/curriculum/rules'),
-      apiRequest('/api/academic/courses'),
-      apiRequest('/api/curriculum'),
-    ]);
-    if (rulesRes.success) setRules(rulesRes.data);
-    if (coursesRes.success) setCourses(coursesRes.data);
-    if (curRes.success) setCurricula(curRes.data);
-    setLoading(false);
+    setError('');
+    try {
+      const [rulesRes, coursesRes, curRes] = await Promise.all([
+        apiRequest<AcademicRule[]>('/api/curriculum/rules'),
+        apiRequest<Course[]>('/api/academic/courses'),
+        apiRequest('/api/curriculum'),
+      ]);
+      if (!rulesRes.success || !coursesRes.success || !curRes.success ||
+          !Array.isArray(rulesRes.data) || !Array.isArray(coursesRes.data) || !Array.isArray(curRes.data)) {
+        setError(rulesRes.error || coursesRes.error || curRes.error || 'داده‌های قوانین به‌طور کامل دریافت نشدند.');
+        return;
+      }
+      setRules(rulesRes.data);
+      setCourses(coursesRes.data);
+      setCurricula(curRes.data);
+    } catch {
+      setError('ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
-    const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
-    if (res.success) {
-      await fetchData(true);
-    } else {
-      alert(res.error || 'خطا در حذف');
+    if (saving || pendingDeleteRuleId !== id) return;
+    setSaving(true);
+    setError('');
+    try {
+      const res = await apiRequest(`/api/curriculum/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.success) {
+        setPendingDeleteRuleId(null);
+        await fetchData(true);
+      } else setError(res.error || 'حذف قانون انجام نشد.');
+    } catch {
+      setError('ارتباط قطع شد؛ حذف قانون تأیید نشده است.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleSave = async () => {
+    if (saving) return;
     if (!formData.curriculumId || !formData.targetCourseId) {
-      alert('چارت درسی و درس هدف الزامی است.');
+      setError('چارت تحصیلی و درس هدف الزامی است.');
       return;
     }
-    const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
-    if (res.success) {
-      setIsAdding(false);
-      await fetchData(true);
-    } else {
-      alert(res.error || 'خطا در ثبت قانون');
+    setSaving(true);
+    setError('');
+    try {
+      const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
+      if (res.success) {
+        setIsAdding(false);
+        await fetchData(true);
+      } else setError(res.error || 'قانون ذخیره نشد؛ اطلاعات فرم حفظ شدند.');
+    } catch {
+      setError('ارتباط قطع شد؛ اطلاعات فرم حفظ شدند.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -162,22 +190,32 @@ export const AdminAcademicRules: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      {!loading && <>
+    <div className="min-w-0 space-y-4">
+      {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+        {error} <button type="button" onClick={() => void fetchData()} disabled={saving} className="mr-2 min-h-11 rounded-lg px-3 underline">دریافت دوباره</button>
+      </div>}
+      {!loading && !error && <>
         <AdminDependencyWorkbench rules={rules} courses={courses} curricula={curricula} onChanged={() => fetchData(true)} />
         <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
           <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold text-slate-800 dark:text-white">نمای تحلیلی و رتبه‌بندی کل زنجیرهٔ پیش‌نیازها</summary>
           <div className="pt-3"><AdminDependencyMap rules={rules} courses={courses} curricula={curricula} /></div>
         </details>
       </>}
+      <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:p-4">
+        <summary className="min-h-11 cursor-pointer py-2 text-sm font-extrabold text-slate-900 dark:text-white">قوانین ترکیبی و استثناها · ویرایش پیشرفته
+          <span className="mr-2 text-xs font-normal text-slate-500 dark:text-slate-400">برای روابط «و/یا» و هم‌نیازی مشروط</span>
+        </summary>
+      <div className="min-w-0 space-y-5 pt-4">
       <div className="flex flex-wrap justify-between items-center gap-3">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+        <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
           <Network className="text-blue-600" />
           مدیریت قوانین آکادمیک (پیش‌نیازها)
         </h2>
         <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition"
+          type="button"
+          disabled={saving}
+          onClick={() => { setError(''); setIsAdding(!isAdding); }}
+          className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
         >
           {isAdding ? 'انصراف' : 'ثبت قانون جدید'}
         </button>
@@ -233,16 +271,20 @@ export const AdminAcademicRules: React.FC = () => {
 
           <div className="flex justify-end gap-3">
             <button
+              type="button"
+              disabled={saving}
               onClick={() => setIsAdding(false)}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
+              className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200"
             >
               لغو
             </button>
             <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
+              type="button"
+              disabled={saving}
+              onClick={() => void handleSave()}
+              className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
-              ذخیره و اعتبارسنجی
+              {saving ? 'در حال ثبت…' : 'ذخیره و اعتبارسنجی'}
             </button>
           </div>
         </div>
@@ -267,14 +309,26 @@ export const AdminAcademicRules: React.FC = () => {
                 </p>
               </div>
               <div className="mt-4 flex justify-end">
-                <button onClick={() => handleDelete(rule.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
-                  <Trash2 size={18} />
-                </button>
+                {pendingDeleteRuleId === rule.id ? <div role="group" aria-label="تأیید حذف قانون" className="flex flex-wrap items-center gap-2">
+                  <p className="w-full text-xs font-bold text-rose-800 dark:text-rose-300">این قانون از چارت حذف شود؟</p>
+                  <button type="button" disabled={saving} onClick={() => setPendingDeleteRuleId(null)}
+                    className="min-h-11 rounded-lg border border-slate-300 px-3 text-xs font-bold dark:border-slate-600">انصراف</button>
+                  <button type="button" disabled={saving} onClick={() => void handleDelete(rule.id)}
+                    className="min-h-11 rounded-lg bg-rose-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+                    {saving ? 'در حال حذف…' : 'تأیید حذف'}
+                  </button>
+                </div> : <button type="button" disabled={saving} onClick={() => { setError(''); setPendingDeleteRuleId(rule.id); }}
+                  aria-label={`حذف قانون مربوط به ${rule.targetCourseName || 'درس انتخابی'}`}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 dark:text-rose-300">
+                  <Trash2 size={18} aria-hidden="true" /> حذف
+                </button>}
               </div>
             </div>
           ))}
         </div>
       )}
+      </div>
+      </details>
     </div>
   );
 };
