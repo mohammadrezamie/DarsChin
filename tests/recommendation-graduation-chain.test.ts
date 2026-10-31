@@ -4,7 +4,7 @@ import type { AcademicRule, CourseEligibilityResult } from '../src/types';
 
 const courses = ['a','b','c','d','x','y'].map(id => ({
   id, name: 'درس ' + id.toUpperCase(), code: id.toUpperCase(),
-  units: 3, category: 'تخصصی', active: true,
+  units: 3, category: 'تخصصی' as const, active: true,
 }));
 const evaluation = (id: string): CourseEligibilityResult => ({
   offeringId: 'group-' + id, courseId: id, courseName: 'درس ' + id.toUpperCase(),
