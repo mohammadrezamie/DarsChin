@@ -517,6 +517,8 @@ export interface CourseRecommendation {
   score: number; // 0 to 100
   suggestedSemester: number;
   unlockedFutureCoursesCount: number;
+  /** Full graduation-chart prerequisite depth, advisory only; not an eligibility decision. */
+  longestPrerequisiteChain?: number;
   unlockedCourseNames: string[];
   reasons: string[]; // Persian explanation tags
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
