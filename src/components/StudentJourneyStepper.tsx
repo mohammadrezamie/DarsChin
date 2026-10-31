@@ -32,8 +32,8 @@ export const StudentJourneyStepper: React.FC<Props> = ({
   const current = STUDENT_JOURNEY_STEPS[Math.min(6, Math.max(0, step))];
   const limit = academicLimits?.effectiveMaxUnits;
   return (
-    <section aria-label="مسیر گام‌به‌گام آماده‌سازی انتخاب واحد" dir="rtl"
-      className="overflow-hidden rounded-[1.35rem] border border-indigo-200 bg-white p-3.5 shadow-sm dark:border-indigo-900 dark:bg-slate-900 sm:p-5">
+    <section id="student-journey-progress" tabIndex={-1} aria-label="مسیر گام‌به‌گام آماده‌سازی انتخاب واحد" dir="rtl"
+      className="scroll-mt-20 overflow-hidden rounded-[1.35rem] border border-indigo-200 bg-white p-3.5 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-900 dark:bg-slate-900 sm:p-5">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
