@@ -56,6 +56,15 @@ describe('all student timetable surfaces use consistent clock-time overlap check
     expect(lectureTimesOverlap(first, row({ startTime: '10:00', endTime: '12:00' }))).toBe(false);
   });
 
+  it('recognizes Persian and Arabic-Indic clock digits next to imported Western digits', () => {
+    const persian = row({ startTime: '۸:۳۰', endTime: '۱۰:۰۰' });
+    const arabicIndic = row({ startTime: '٠٩:٤٥', endTime: '١١:٠٠' });
+    const western = row({ startTime: '09:00', endTime: '10:30' });
+    expect(lectureTimesOverlap(persian, western)).toBe(true);
+    expect(lectureTimesOverlap(persian, arabicIndic)).toBe(true);
+    expect(lectureTimesOverlap(persian, row({ startTime: '۱۰:۰۰', endTime: '۱۲:۰۰' }))).toBe(false);
+  });
+
   it('does not invent confirmed clashes for malformed times, zero duration, or different days', () => {
     const first = row({ startTime: '09:00', endTime: '10:00' });
     expect(lectureTimesOverlap(first, row({ dayOfWeek: 'یکشنبه' }))).toBe(false);
