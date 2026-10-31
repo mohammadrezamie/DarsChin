@@ -4,7 +4,7 @@ type LectureTime = Pick<CourseEligibilityResult, 'dayOfWeek' | 'startTime' | 'en
 
 function clockMinutes(value?: string): number | null {
   if (!value) return null;
-  const match = /^(\\d{1,2}):(\\d{2})$/.exec(value.trim());
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
   if (!match) return null;
   const h = Number(match[1]), m = Number(match[2]);
   return h >= 0 && h < 24 && m >= 0 && m < 60 ? h * 60 + m : null;
