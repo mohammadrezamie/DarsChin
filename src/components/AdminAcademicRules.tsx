@@ -5,80 +5,10 @@ import { RelationshipType, AcademicRuleNode, Course } from '../types';
 import { AdminDependencyMap } from './AdminDependencyMap';
 import { AdminDependencyWorkbench } from './AdminDependencyWorkbench';
 
-export const AdminAcademicRules: React.FC = () => {
-  const [rules, setRules] = useState<any[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [curricula, setCurricula] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
-
-  const [formData, setFormData] = useState<{
-    curriculumId: string;
-    targetCourseId: string;
-    relationshipType: RelationshipType;
-    expression: AcademicRuleNode;
-    notes: string;
-  }>({
-    curriculumId: '',
-    targetCourseId: '',
-    relationshipType: 'PREREQUISITE',
-    expression: { type: 'COURSE', courseId: '' },
-    notes: '',
-  });
-
-  const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
-    const [rulesRes, coursesRes, curRes] = await Promise.all([
-      apiRequest('/api/curriculum/rules'),
-      apiRequest('/api/academic/courses'),
-      apiRequest('/api/curriculum'),
-    ]);
-    if (rulesRes.success) setRules(rulesRes.data);
-    if (coursesRes.success) setCourses(coursesRes.data);
-    if (curRes.success) setCurricula(curRes.data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
-    const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
-    if (res.success) {
-      await fetchData(true);
-    } else {
-      alert(res.error || 'خطا در حذف');
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formData.curriculumId || !formData.targetCourseId) {
-      alert('چارت درسی و درس هدف الزامی است.');
-      return;
-    }
-    const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
-    if (res.success) {
-      setIsAdding(false);
-      await fetchData(true);
-    } else {
-      alert(res.error || 'خطا در ثبت قانون');
-    }
-  };
-
-  /** Human-readable rule summary: never make administrators read internal JSON IDs. */
-  const describeExpression = (node: AcademicRuleNode): string => {
-    if (node.type === 'COURSE') {
-      const course = courses.find(item => item.id === node.courseId);
-      return course ? `${course.name} (${course.code})` : 'درس نامشخص';
-    }
-    const parts = (node.operands ?? []).map(describeExpression);
-    return parts.length ? `(${parts.join(node.operator === 'OR' ? ' یا ' : ' و ')})` : 'شرط خالی';
-  };
-
-  // --- Node Builder Component ---
-  const NodeEditor = ({ node, onChange, coursesList }: { node: AcademicRuleNode, onChange: (n: AcademicRuleNode) => void, coursesList: Course[] }) => {
+// Keep this recursive editor component stable across changes to the parent form.
+// Defining it inside AdminAcademicRules remounted all nested fields after each
+// keystroke/selection and lost keyboard focus in long AND/OR expressions.
+const NodeEditor = ({ node, onChange, coursesList }: { node: AcademicRuleNode, onChange: (n: AcademicRuleNode) => void, coursesList: Course[] }) => {
     return (
       <div className="p-4 border rounded-xl bg-white shadow-sm mb-4 space-y-4">
         <div className="flex items-center gap-4">
@@ -156,6 +86,80 @@ export const AdminAcademicRules: React.FC = () => {
       </div>
     );
   };
+
+
+export const AdminAcademicRules: React.FC = () => {
+  const [rules, setRules] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [curricula, setCurricula] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [formData, setFormData] = useState<{
+    curriculumId: string;
+    targetCourseId: string;
+    relationshipType: RelationshipType;
+    expression: AcademicRuleNode;
+    notes: string;
+  }>({
+    curriculumId: '',
+    targetCourseId: '',
+    relationshipType: 'PREREQUISITE',
+    expression: { type: 'COURSE', courseId: '' },
+    notes: '',
+  });
+
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [rulesRes, coursesRes, curRes] = await Promise.all([
+      apiRequest('/api/curriculum/rules'),
+      apiRequest('/api/academic/courses'),
+      apiRequest('/api/curriculum'),
+    ]);
+    if (rulesRes.success) setRules(rulesRes.data);
+    if (coursesRes.success) setCourses(coursesRes.data);
+    if (curRes.success) setCurricula(curRes.data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('آیا از حذف این قانون اطمینان دارید؟')) return;
+    const res = await apiRequest(`/api/curriculum/rules/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      await fetchData(true);
+    } else {
+      alert(res.error || 'خطا در حذف');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.curriculumId || !formData.targetCourseId) {
+      alert('چارت درسی و درس هدف الزامی است.');
+      return;
+    }
+    const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
+    if (res.success) {
+      setIsAdding(false);
+      await fetchData(true);
+    } else {
+      alert(res.error || 'خطا در ثبت قانون');
+    }
+  };
+
+  /** Human-readable rule summary: never make administrators read internal JSON IDs. */
+  const describeExpression = (node: AcademicRuleNode): string => {
+    if (node.type === 'COURSE') {
+      const course = courses.find(item => item.id === node.courseId);
+      return course ? `${course.name} (${course.code})` : 'درس نامشخص';
+    }
+    const parts = (node.operands ?? []).map(describeExpression);
+    return parts.length ? `(${parts.join(node.operator === 'OR' ? ' یا ' : ' و ')})` : 'شرط خالی';
+  };
+
 
   return (
     <div className="space-y-6">
