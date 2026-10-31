@@ -10,6 +10,11 @@ import { extractSourceCourseIds } from '../../src/utils/academic';
 import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
 import { validate } from '../middleware/validate';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
+import { z } from 'zod';
+import {
+  academicRulesRevision, expectedAcademicRevision,
+  latestRuleEvent, readAcademicRuleHistory, appendAcademicRuleEvent, checkAcademicRuleRevert,
+} from '../services/academic-rule-history';
 import {
   Curriculum,
   CurriculumCourse,
@@ -262,6 +267,77 @@ curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.man
   res.json({ success: true, data: enriched });
 });
 
+// Admin: Read a consistent graph snapshot and limited academic-rule history.
+// This endpoint is private, never exposed in the public/student workspace.
+curriculumRouter.get('/rules/history/:curriculumId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
+  const curriculumId = req.params.curriculumId;
+  const chart = db.curricula.find(item => item.id === curriculumId);
+  if (!chart) return res.status(404).json({ success:false,error:'چارت انتخابی یافت نشد.' });
+  const revision = academicRulesRevision(curriculumId, db.academicRules);
+  const isRoot = req.user!.roles.includes('super-admin');
+  const latest = latestRuleEvent(db.auditLogs, curriculumId);
+  const entries = db.auditLogs.flatMap(row => {
+    const details = readAcademicRuleHistory(row);
+    if (!details || details.curriculumId !== curriculumId ||
+      (!isRoot && row.adminId !== req.user!.id)) return [];
+    const isLatest = row.id === latest?.log.id;
+    return [{
+      id: row.id, actorId: row.adminId, at: row.createdAt,
+      kind: details.kind, ruleId: details.rule.id,
+      sourceCourseId: details.rule.expression.type === 'COURSE' ? details.rule.expression.courseId : null,
+      targetCourseId: details.rule.targetCourseId,
+      relationshipType: details.rule.relationshipType,
+      revertedEventId: details.revertedEventId ?? null,
+      canRevert: isLatest && latest?.details.afterRevision === revision &&
+        (isRoot || row.adminId === req.user!.id),
+    }];
+  }).slice(-20).reverse();
+  res.setHeader('Cache-Control','private, no-store');
+  return res.json({success:true,data:{revision,entries}});
+});
+
+// Explicitly undo/redo ONE latest persisted rule action with a fresh revision.
+// A second administrator's later edit always prevents stale reversions.
+curriculumRouter.post('/rules/history/:curriculumId/revert', authenticate,
+  requirePermission('prerequisite.manage'),
+  validate(z.object({eventId:z.string().min(1),expectedRevision:z.string().regex(/^[a-f0-9]{64}$/)})),
+  (req, res) => {
+    const {curriculumId} = req.params;
+    const chart = db.curricula.find(item => item.id === curriculumId && item.status !== 'archived');
+    if (!chart) return res.status(404).json({success:false,error:'چارت فعال یافت نشد.'});
+    const revision = academicRulesRevision(curriculumId, db.academicRules);
+    if (req.body.expectedRevision !== revision)
+      return res.status(409).json({success:false,error:'قوانین تغییر کرده‌اند؛ ابتدا تاریخچه را تازه‌سازی کنید.'});
+    const checked = checkAcademicRuleRevert(db.auditLogs,db.academicRules,curriculumId,
+      req.body.eventId,req.user!.id,req.user!.roles.includes('super-admin'));
+    if (!checked.ok) return res.status(409).json({success:false,error:checked.error});
+    const rule = checked.details.rule;
+    const currentChartCourses = [...new Set(db.curriculumCourses.filter(item =>
+      item.curriculumId === curriculumId && item.active !== false).map(item=>item.courseId))];
+    if (checked.reverseKind === 'ADD') {
+      const allowed = new Set(currentChartCourses);
+      const sources = extractSourceCourseIds(rule.expression);
+      if (!allowed.has(rule.targetCourseId) || !sources.length || sources.some(id=>!allowed.has(id)))
+        return res.status(409).json({success:false,error:'دروس این قانون دیگر در چارت فعال نیستند.'});
+      const candidate = [...db.academicRules,rule];
+      const validation = analyzeCurriculumDependencies(curriculumId,currentChartCourses,candidate);
+      if (!validation.valid) return res.status(409).json({success:false,error:'بازگردانی باعث ناسازگاری گراف می‌شود؛ ابتدا چارت را بازبینی کنید.'});
+      db.data.academicRules.push(rule);
+    } else {
+      const idx = db.academicRules.findIndex(item => item.id === rule.id && item.curriculumId === curriculumId);
+      if (idx < 0) return res.status(409).json({success:false,error:'قانون اصلی دیگر وجود ندارد.'});
+      db.data.academicRules.splice(idx,1);
+    }
+    const nextRevision = academicRulesRevision(curriculumId,db.academicRules);
+    const event = appendAcademicRuleEvent(db.auditLogs,req.user!.id,curriculumId,
+      checked.reverseKind,rule,revision,nextRevision,checked.event.id);
+    db.save();
+    res.setHeader('Cache-Control','private, no-store');
+    return res.json({success:true,data:{revision:nextRevision,eventId:event.id,
+      restoredRuleId:rule.id,action:checked.reverseKind}});
+  }
+);
+
 // Admin: Add Academic Rule
 curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
   const {
@@ -285,6 +361,13 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
       (entryYearId && entryYearId !== chart.entryYearId) ||
       (trackId && !db.tracks.some(track => track.id === trackId && track.majorId === chart.majorId && track.active))) {
     return res.status(400).json({ success: false, error: 'حوزهٔ قانون با چارت انتخابی مطابقت ندارد.' });
+  }
+  // A graph editor sends the revision of the chart it actually displayed.
+  // Older clients may omit this header, but their writes are still audited.
+  const suppliedRevision = expectedAcademicRevision(req.headers['if-match']);
+  const currentRevision = academicRulesRevision(curriculumId,db.academicRules);
+  if (suppliedRevision === 'invalid' || (suppliedRevision !== null && suppliedRevision !== currentRevision)) {
+    return res.status(409).json({success:false,error:'نسخهٔ قوانین این چارت تغییر کرده؛ نقشه را تازه‌سازی کنید.'});
   }
   const assignedCourseIds = [...new Set(db.curriculumCourses
     .filter(item => item.curriculumId === curriculumId && item.active !== false)
@@ -345,16 +428,27 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     notes: notes?.trim() || undefined,
   };
 
-  db.data.academicRules.push(newRule as any);
+  db.data.academicRules.push(newRule as AcademicRule);
+  const nextRevision = academicRulesRevision(curriculumId,db.academicRules);
+  appendAcademicRuleEvent(db.auditLogs,req.user!.id,curriculumId,'ADD',
+    newRule as AcademicRule,currentRevision,nextRevision);
   db.save();
-  res.json({ success: true, data: newRule });
+  res.json({ success: true, data: newRule, revision: nextRevision });
 });
 
 // Admin: Delete Academic Rule
 curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
+  const rule = db.data.academicRules[idx];
+  const revision = academicRulesRevision(rule.curriculumId,db.academicRules);
+  const suppliedRevision = expectedAcademicRevision(req.headers['if-match']);
+  if (suppliedRevision === 'invalid' || (suppliedRevision !== null && suppliedRevision !== revision))
+    return res.status(409).json({success:false,error:'نسخهٔ قوانین تغییر کرده؛ ابتدا نقشه را تازه‌سازی کنید.'});
   db.data.academicRules.splice(idx, 1);
+  const nextRevision = academicRulesRevision(rule.curriculumId,db.academicRules);
+  appendAcademicRuleEvent(db.auditLogs,req.user!.id,rule.curriculumId,'DELETE',
+    rule,revision,nextRevision);
   db.save();
-  res.json({ success: true, message: 'قانون حذف شد.' });
+  res.json({ success: true, message: 'قانون حذف شد.', revision:nextRevision });
 });
