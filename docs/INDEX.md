@@ -83,4 +83,4 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 
 - [قرارداد جداسازی مدیریت و روت یکتا، حساب دوپنلی](ROOT_ONLY_ADMIN_STUDENT_PRIVACY_20261030_FA.md) — OWN-068؛ گیت QA و مرج باز.
 
-- **[گیت جدید کارگاه گراف: Undo/Redo پیش‌نویس، پیش‌نمایش اثر تا پایان چارت و چینش RTL زنجیره‌ای/ترمی](ADMIN_GRAPH_EDITOR_HISTORY_FA.md)** — OWN-103؛ وضعیت تست ۱۸/۱۸ و مرز قابلیت‌های هنوز ناتمام.
+- **[کارگاه گراف: Undo/Redo پیش‌نویس و بازگردانی نسخه‌دار آخرین تغییر ثبت‌شده، تحلیل کل زنجیره و چینش RTL](ADMIN_GRAPH_EDITOR_HISTORY_FA.md)** — OWN-103 و OWN-104؛ نسخهٔ سروری با مجوز، ثبت audit و کنترل هم‌زمانی محدود به آخرین رویداد چارت؛ تاریخچهٔ دلخواه و 3D هنوز ناتمام.
