@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { Trash2, Plus, Server, Network } from 'lucide-react';
-import { RelationshipType, AcademicRuleNode, Course } from '../types';
+import { RelationshipType, AcademicRule, AcademicRuleNode, Course } from '../types';
 import { AdminDependencyMap } from './AdminDependencyMap';
 import { AdminDependencyWorkbench } from './AdminDependencyWorkbench';
 
