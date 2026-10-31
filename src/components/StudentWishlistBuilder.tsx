@@ -10,6 +10,10 @@ interface BasketCourse {
   units: number;
   category: string;
   suggestedSemester?: number;
+  graduationAnalysisValid?: boolean;
+  noChoiceFutureCoursesCount?: number;
+  choiceOnlyFutureCoursesCount?: number;
+  longestRemainingPrerequisiteChain?: number;
 }
 
 interface Props {
@@ -56,9 +60,14 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
   const normalized = search.trim().toLocaleLowerCase('fa');
   const available = catalog.filter(c => !wishlistCourseIds.includes(c.id) &&
     (!normalized || c.name.toLocaleLowerCase('fa').includes(normalized) || c.code.toLocaleLowerCase('fa').includes(normalized)))
-    .sort((a, b) => (recByCourse.get(b.id)?.score ?? 0) - (recByCourse.get(a.id)?.score ?? 0) ||
-      (recByCourse.get(b.id)?.noChoiceFutureCoursesCount ?? 0) - (recByCourse.get(a.id)?.noChoiceFutureCoursesCount ?? 0) ||
-      (recByCourse.get(b.id)?.longestNoChoiceRemainingChain ?? 0) - (recByCourse.get(a.id)?.longestNoChoiceRemainingChain ?? 0) ||
+    .sort((a, b) =>
+      // Every outstanding chart course participates, including courses that
+      // have no offering this term or are not yet eligible to register.
+      (recByCourse.get(b.id)?.noChoiceFutureCoursesCount ?? b.noChoiceFutureCoursesCount ?? 0) -
+      (recByCourse.get(a.id)?.noChoiceFutureCoursesCount ?? a.noChoiceFutureCoursesCount ?? 0) ||
+      (recByCourse.get(b.id)?.longestNoChoiceRemainingChain ?? b.longestRemainingPrerequisiteChain ?? 0) -
+      (recByCourse.get(a.id)?.longestNoChoiceRemainingChain ?? a.longestRemainingPrerequisiteChain ?? 0) ||
+      (recByCourse.get(b.id)?.score ?? 0) - (recByCourse.get(a.id)?.score ?? 0) ||
       (recByCourse.get(b.id)?.unlockedFutureCoursesCount ?? 0) - (recByCourse.get(a.id)?.unlockedFutureCoursesCount ?? 0) ||
       (recByCourse.get(b.id)?.longestPrerequisiteChain ?? 0) - (recByCourse.get(a.id)?.longestPrerequisiteChain ?? 0) ||
       Number(a.suggestedSemester || 99) - Number(b.suggestedSemester || 99) ||
@@ -121,10 +130,15 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                     {c.units.toLocaleString('fa-IR')} واحد · {c.code}
                     {rec ? ' · پیشنهاد هوشمند: ' + (rec.priority === 'HIGH' ? 'اولویت بالا' : rec.priority === 'MEDIUM' ? 'اولویت متوسط' : 'اولویت عادی') : ''}
                     {!offered.has(c.id) ? ' · گروه ارائه‌شده یافت نشد' : ''}
-                    {rec?.choiceOnlyFutureCoursesCount ? ' · ' + rec.choiceOnlyFutureCoursesCount.toLocaleString('fa-IR') + ' مسیر احتمالی «یا»' : ''}
-                    {rec?.noChoiceFutureCoursesCount ? ' · ' + rec.noChoiceFutureCoursesCount.toLocaleString('fa-IR') + ' مسیر بدون «یا»' : ''}
+                    {(rec?.choiceOnlyFutureCoursesCount ?? c.choiceOnlyFutureCoursesCount) ? ' · ' + (rec?.choiceOnlyFutureCoursesCount ?? c.choiceOnlyFutureCoursesCount ?? 0).toLocaleString('fa-IR') + ' درس در مسیر احتمالی «یا»' : ''}
+                    {(rec?.noChoiceFutureCoursesCount ?? c.noChoiceFutureCoursesCount) ? ' · ' + (rec?.noChoiceFutureCoursesCount ?? c.noChoiceFutureCoursesCount ?? 0).toLocaleString('fa-IR') + ' درس در مسیر بدون «یا»' : ''}
+                    {!c.graduationAnalysisValid ? ' · تحلیل زنجیره نیازمند بازبینی چارت' : ''}
                   </div>
-                  {rec?.reasons?.length ? <p className="mt-1 text-[11px] leading-5 text-indigo-700 dark:text-indigo-300">{rec.reasons.slice(0,2).join('؛ ')}</p> : null}
+                  {rec?.reasons?.length ? <p className="mt-1 text-[11px] leading-5 text-indigo-700 dark:text-indigo-300">{rec.reasons.slice(0,2).join('؛ ')}</p> :
+                    c.graduationAnalysisValid && (c.noChoiceFutureCoursesCount || c.choiceOnlyFutureCoursesCount) ?
+                      <p className="mt-1 text-[11px] leading-5 text-indigo-700 dark:text-indigo-300">
+                        تحلیل زنجیرهٔ باقی‌مانده تا پایان چارت؛ صرفاً برای برنامه‌ریزی آینده است و به معنی مجاز بودن اخذ این درس نیست.
+                      </p> : null}
                 </div>
                 <button type="button" disabled={saving || loading} onClick={() => void mutate([...wishlistCourseIds, c.id])}
                   aria-label={'افزودن ' + c.name + ' به سبد'}
