@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, FlaskConical, RotateCcw, GraduationCap, AlertTriangle } from 'lucide-react';
 import { DemoAuthProvider } from '../context/AuthContext';
 import { resetBrowserDemo } from '../demo/mock-api';
-import { StudentDashboard } from '../components/StudentDashboard';
+
 import { DemoFeedback } from '../components/DemoFeedback';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { AdminDashboard } from '../components/AdminDashboard';
+
+
+// Keep admin code out of the public student demo and student code out of admin demo.
+const StudentDashboard = lazy(() => import('../components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
+const AdminDashboard = lazy(() => import('../components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 
 export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role }) => {
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -54,7 +58,9 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
         </div>
 
         <main className="mx-auto max-w-7xl min-w-0 px-3 py-5 sm:px-6 sm:py-7">
-          {role === 'student' ? <StudentDashboard /> : <AdminDashboard />}
+          <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-[50dvh] items-center justify-center rounded-2xl bg-white/70 p-6 text-sm font-bold text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">در حال آماده‌سازی محیط آزمایشی…</div>}>
+            {role === 'student' ? <StudentDashboard /> : <AdminDashboard />}
+          </Suspense>
         </main>
         <aside role="note" className="mx-auto max-w-7xl border-t border-slate-200 px-4 pb-28 pt-6 text-xs text-slate-500 dark:border-slate-800 md:pb-6">
           محدودیت محیط آزمایشی: این نسخه برای دیباگ رابط کاربری است. بخش‌های متصل به سرور واقعی ممکن است در شبیه‌ساز هنوز پشتیبانی نشوند.
