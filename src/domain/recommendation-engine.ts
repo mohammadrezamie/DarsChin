@@ -2,8 +2,7 @@
 // DARSCHYN (درس‌چین) - Rule-Based Transparent Course Recommendation Engine
 // ============================================================================
 
-import { extractSourceCourseIds } from '../utils/academic';
-import { downstreamCourseIds } from './course-demand';
+import { analyzeCurriculumDependencies } from './course-dependency-insights';
 import {
   Course,
   Curriculum,
@@ -21,6 +20,8 @@ export interface RecommendationContext {
   academicRules: AcademicRule[];
   eligibilityResults: CourseEligibilityResult[];
   approximateStudentSemester?: number; // set only when actually known
+  /** Genuine completed courses from this student's transcript, not a guessed term. */
+  completedCourseIds?: readonly string[];
   studentProfile?: Pick<StudentAcademicProfile,
     'majorId' | 'entryYearId' | 'isTrackSelected' | 'selectedTrackId' | 'desiredTrackIds'>;
 }
@@ -38,6 +39,7 @@ export function generateCourseRecommendations(
     academicRules,
     eligibilityResults,
     approximateStudentSemester,
+    completedCourseIds = [],
     studentProfile,
   } = context;
 
@@ -64,20 +66,15 @@ export function generateCourseRecommendations(
     }
   }
 
-  // Build dependency graph: courseId -> array of dependent target courseIds
-  const dependencyGraph = new Map<string, string[]>();
-  for (const rule of scopedRules) {
-    if (rule.relationshipType === 'PREREQUISITE') {
-      const sourceCourseIds = extractSourceCourseIds(rule.expression);
-      for (const sourceId of sourceCourseIds) {
-        const dependents = dependencyGraph.get(sourceId) || [];
-        if (!dependents.includes(rule.targetCourseId)) {
-          dependents.push(rule.targetCourseId);
-        }
-        dependencyGraph.set(sourceId, dependents);
-      }
-    }
-  }
+  // Reuse the SAME full-curriculum DAG analysis as the private admin map.
+  // No term+1 truncation; OR branches remain possible paths, not a promise.
+  const chartGraph = analyzeCurriculumDependencies(curriculum.id, [...currCourseMap.keys()], scopedRules);
+  const insightsByCourse = new Map(
+    chartGraph.valid ? chartGraph.insights.map(item => [item.courseId, item] as const) : [],
+  );
+  const completed = new Set(completedCourseIds);
+  const prerequisiteEdges = chartGraph.valid
+    ? chartGraph.edges.filter(edge => edge.kind === 'PREREQUISITE') : [];
 
   // Filter only eligible courses (strictly canSelect === true and overallStatus === 'AVAILABLE')
   const eligibleResults = eligibilityResults.filter(
@@ -103,24 +100,38 @@ export function generateCourseRecommendations(
     const classification = currCourse ? currCourse.classification : res.classification;
     const isRequired = classification === 'MAJOR_REQUIRED' || classification === 'TRACK_REQUIRED';
 
-    // Calculate future unlocked courses
-    const directDependents = dependencyGraph.get(courseId) || [];
-    const unlockedCourseIds = downstreamCourseIds(courseId, curriculum.id, scopedRules)
-      .filter(id => currCourseMap.has(id) && id !== courseId);
+    // Compute ALL downstream courses in this student's scoped curriculum.
+    // Already-passed courses may remain links in the chain, but are not future
+    // academic work and must not inflate the count.
+    const insight = insightsByCourse.get(courseId);
+    const unlockedCourseIds = (insight?.downstreamIds ?? [])
+      .filter(id => currCourseMap.has(id) && !completed.has(id) && id !== courseId);
     const unlockedCourseNames = unlockedCourseIds
-      .map((id) => coursesMap.get(id)?.name)
-      .filter((name): name is string => !!name);
+      .map(id => coursesMap.get(id)?.name).filter((name): name is string => !!name);
+    const directDependents = prerequisiteEdges.filter(edge => edge.from === courseId &&
+      !completed.has(edge.to) && currCourseMap.has(edge.to));
+    const potentiallyOptional = prerequisiteEdges.some(edge => edge.optional &&
+      (edge.from === courseId || (insight?.downstreamIds.includes(edge.from) ?? false)) &&
+      unlockedCourseIds.includes(edge.to));
 
-    let score = 50; // base score
+    let score = 50; // relative planning preference, NOT authorization
     const reasons: string[] = [];
 
-    // 1. Critical path / Unlocked future courses
-    if (unlockedCourseIds.length >= 3) {
-      score += 25;
-      reasons.push(`طبق نمودار پیش‌نیازهای ثبت‌شده، در مسیر ${unlockedCourseIds.length} درس آینده قرار دارد (${directDependents.length} وابستگی مستقیم)`);
-    } else if (unlockedCourseIds.length > 0) {
-      score += 15;
-      reasons.push(`در مسیر پیش‌نیازی ${unlockedCourseIds.length} درس آینده قرار دارد؛ اولویت‌بندی پیشنهادی است، نه مجوز`);
+    // Structural impact increases with both unique reachable courses and the
+    // longest path. Diamond descendants count once. The previous flat +25
+    // bonus for every 3+ descendants hid genuine multi-semester bottlenecks.
+    if (unlockedCourseIds.length > 0) {
+      const depth = insight?.longestChain ?? 0;
+      const bonus = unlockedCourseIds.length === 1
+        ? 15
+        : Math.min(35, 15 + 4 * (unlockedCourseIds.length - 1) + 3 * Math.max(0, depth - 1));
+      score += bonus;
+      reasons.push(`در زنجیرهٔ چارت تا انتهای دوره، ${unlockedCourseIds.length.toLocaleString('fa-IR')} درس باقیمانده در مسیر این درس است؛ ${directDependents.length.toLocaleString('fa-IR')} ارتباط مستقیم، عمق ${depth.toLocaleString('fa-IR')}`);
+      if (potentiallyOptional) {
+        reasons.push('بعضی مسیرهای وابستگی دارای شرط «یا» هستند و الزام قطعی برای همهٔ آن مسیرها وجود ندارد.');
+      }
+    } else if (!chartGraph.valid) {
+      reasons.push('تحلیل اهمیت زنجیره‌ای به دلیل ناسازگاری قواعد چارت معتبر نیست؛ نیازمند بررسی مدیر.');
     }
 
     // 2. Required vs Elective
@@ -174,7 +185,7 @@ export function generateCourseRecommendations(
   }
 
   // Sort descending by score
-  recommendations.sort((a, b) => b.score - a.score);
+  recommendations.sort((a, b) => b.score - a.score || a.courseId.localeCompare(b.courseId));
 
   return recommendations;
 }
