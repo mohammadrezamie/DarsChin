@@ -61,7 +61,7 @@ const DashboardLayout: React.FC = () => {
         onOpenProfile={() => {}}
         onOpenPasswordChange={() => setPasswordChangeOpen(true)}
       />
-      <main className="max-w-7xl mx-auto px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
+      <main className={`mx-auto w-full min-w-0 px-3 py-3 sm:px-6 sm:py-6 lg:px-8 ${window.location.pathname === '/admin' ? 'max-w-[1640px]' : 'max-w-7xl'}`}>
         <Outlet />
       </main>
 
