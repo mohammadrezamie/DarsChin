@@ -38,7 +38,7 @@ describe('wishlist-to-offerings student handoff', () => {
       .map(x=>x.courseId)).toEqual(['physics','math']);
   });
 
-  it('renders student-friendly basket availability, teacher groups and an editable back link', () => {
+  it('renders only chosen subjects and hides instructor details until the student opens a course', () => {
     const html = renderToStaticMarkup(<OfferingsList
       evaluations={[sample('physics'), sample('math'), sample('signals')]}
       selectedOfferingIds={[]}
@@ -48,10 +48,11 @@ describe('wishlist-to-offerings student handoff', () => {
       initiallyShowWishlist
       onOpenWishlist={()=>{}} />);
     expect(html).toContain('از سبد علاقه‌مندی تا انتخاب گروه واقعی');
-    expect(html).toContain('ویرایش سبد علاقه‌مندی');
-    expect(html).toContain('نمایش همهٔ درس‌ها');
+    expect(html).toContain('گروه‌های درس‌های انتخابی');
+    expect(html).not.toContain('نمایش همهٔ درس‌ها');
     expect(html).toContain('گروهی در داده‌های فعلی ندارد');
-    expect(html).toContain('استاد نمونه');
+    expect(html).toContain('مشاهده گروه‌ها');
+    expect(html).not.toContain('استاد نمونه');
     expect(html).not.toContain('درس physics');
   });
 
@@ -70,7 +71,7 @@ describe('wishlist-to-offerings student handoff', () => {
       wishlistCount={3} selectedGroupCount={1}/>);
     expect(allowed).toContain('اکنون ۱ گروه');
     expect(allowed).not.toContain('حداقل یک گروه مجاز');
-    expect(source('src/components/StudentDashboard.tsx')).toContain("'wishlist', 'offerings', 'registration'");
+    expect(source('src/components/StudentDashboard.tsx')).toContain("'offerings', 'offerings', 'registration'");
   });
 
   it('copies only verified eligible group codes, never catalog or synthetic codes', () => {

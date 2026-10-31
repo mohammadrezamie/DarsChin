@@ -66,6 +66,10 @@ describe('term-by-term transcript outcomes never invent a passed prerequisite',(
     expect(repeat.status).toBe(409);
     expect(invalid.status).toBe(400);
     expect(db.studentPassedCourses.filter(x=>x.userId===studentId)).toHaveLength(before);
+    // Recording an earlier historical failure remains possible even if the
+    // course was passed in a later semester.
+    const earlier=await post(courseA.id,'semester-0','FAILED',3);
+    expect(earlier.status).toBe(200);
   });
   it('allows ownership-scoped correction of a semester outcome but not another user history',async()=>{
     const id=db.studentPassedCourses.find(x=>x.userId===studentId&&x.courseId===courseB.id)!.id;

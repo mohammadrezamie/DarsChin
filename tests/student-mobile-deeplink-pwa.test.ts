@@ -7,10 +7,12 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 
 describe('mobile student app launch and deep links', () => {
   it('recognizes every student workspace and rejects unexpected routes', () => {
-    for (const value of ['offerings', 'schedule', 'registration', 'recommendations', 'passed', 'demand', 'support']) {
+    for (const value of ['offerings', 'schedule', 'registration', 'passed', 'demand', 'support']) {
       expect(studentWorkspaceFromSearch('?tab=' + value)).toBe(value);
     }
     expect(studentWorkspaceFromSearch('?tab=admin')).toBe('offerings');
+    expect(studentWorkspaceFromSearch('?tab=recommendations')).toBe('offerings');
+    expect(studentWorkspaceFromSearch('?tab=wishlist')).toBe('offerings');
     expect(studentWorkspaceFromSearch('?tab=')).toBe('offerings');
     expect(studentWorkspaceFromSearch('')).toBe('offerings');
   });

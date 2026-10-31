@@ -39,12 +39,12 @@ describe('guided seven-step student workflow', () => {
   it('allows an interest basket separate from registration, reachable by a student-only URL', () => {
     const html = renderToStaticMarkup(<StudentWishlistBuilder curriculumId={null}
       wishlistCourseIds={[]} evaluations={[]} recommendations={[]} onSave={async () => true}/>);
-    expect(studentWorkspaceFromSearch('?tab=wishlist')).toBe('wishlist');
-    expect(html).toContain('سبد علاقه‌مندی');
+    expect(studentWorkspaceFromSearch('?tab=wishlist')).toBe('offerings');
+    expect(html).toContain('اول درس‌هایی را که می‌خواهی انتخاب کن');
     expect(html).toContain('انتخاب واحد نهایی نیستند');
     expect(html).toContain('۴۰ واحد');
     expect(source('src/components/StudentWishlistBuilder.tsx')).not.toContain('onToggleScheduleOffering');
-    expect(source('src/components/StudentDashboard.tsx')).toContain("activeTab === 'wishlist'");
+    expect(source('src/components/StudentDashboard.tsx')).toContain('<StudentWishlistBuilder');
   });
 
   it('does not overwhelm a first-time account with the whole offerings list', () => {
@@ -59,9 +59,9 @@ describe('guided seven-step student workflow', () => {
 
   it('maintains a distinct history for previous failures and successes', () => {
     const records = source('src/components/PassedCoursesManager.tsx');
-    expect(records).toContain("pc.status !== 'FAILED'");
-    expect(records).toContain('مردود · ');
-    expect(records).toContain('aria-pressed={isPassed}');
-    expect(records).toContain('<button type="button"');
+    expect(records).toContain('EXCUSED_EXAM_ABSENCE');
+    expect(records).toContain('CLASS_ABSENCE_DROP');
+    expect(records).toContain('نیمسال نامشخص (سوابق قدیمی)');
+    expect(records).toContain("method:editingId?'PUT':'POST'");
   });
 });
