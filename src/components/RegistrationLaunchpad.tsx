@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap, Layers3, ArrowRightLeft, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, LockKeyhole, RefreshCw, Zap, Layers3, ArrowRightLeft, Plus, Trash2, GripVertical } from 'lucide-react';
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
 import { copyTextWithFallback } from '../utils/clipboard';
 import { verifiedOfferingGroupCopyCode } from '../domain/offering-code';
+import { reorderRegistrationCourses } from '../domain/reorder-registration-courses';
 
 interface ChartRules {
   curriculum: { id: string; name: string; version: string };
@@ -48,6 +49,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
   const reorderLock=useRef(false);
+  const touchDragRef=useRef<{pointerId:number;from:number;to:number}|null>(null);
+  const [dragFrom,setDragFrom]=useState<number|null>(null);
+  const [dragTarget,setDragTarget]=useState<number|null>(null);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   // Async clipboard/reorder responses from another account never show on this one.
@@ -60,7 +64,12 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Wait for hydration of this exact term/chart before persisting; otherwise the
   // initial [] state could overwrite a student's previously checked progress.
   const [progressLoadedKey,setProgressLoadedKey]=useState<string|null>(null);
-  useEffect(()=>{setSortMode(false);},[profile?.userId,profile?.currentTermId]);
+  useEffect(()=>{
+    setSortMode(false);
+    touchDragRef.current=null;
+    setDragFrom(null);
+    setDragTarget(null);
+  },[profile?.userId,profile?.currentTermId,curriculumId]);
   // Never render completion marks from the previous student's session during
   // the render immediately after switching profiles.
   const progressReady=onToggleRegistered ? Array.isArray(registeredOfferingIds) : progressLoadedKey===progressKey;
@@ -154,25 +163,54 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     // Synthetic demo only; never present this local mark as an official result.
     setDoneIds(prev=>registered?[...new Set([...prev,id])]:prev.filter(x=>x!==id));
   };
-  const move=async(index:number,direction:-1|1)=>{
-    const target=index+direction;
-    if(reorderLock.current||target<0||target>=stepIds.length)return;
-    const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
+  const moveTo=async(from:number,to:number)=>{
+    if(reorderLock.current)return;
+    const order=reorderRegistrationCourses(stepIds,from,to);
+    if(!order)return;
     reorderLock.current=true;
     setReordering(true);
     setCopyState('در حال ذخیرهٔ ترتیب دلخواه…');
     try {
-      // The live dashboard returns false if saving failed. Demo callbacks may
-      // return void; they must never be mistaken for a rejected save.
+      // The live dashboard returns false when saving fails. Demo callbacks
+      // may return void, which is not a rejected save.
       const saved=await onReorderCourses(order);
       if(saved===false)throw new Error('save rejected');
-      setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم همنیازها در صورت نیاز رعایت می‌شود.');
+      setCopyState('ترتیب دلخواه ذخیره شد؛ تقدم پیش‌نیازها و هم‌نیازها همچنان بررسی می‌شود.');
     } catch {
       setCopyState('ترتیب ذخیره نشد؛ چیدمان قبلی حفظ شده است. دوباره تلاش کن.');
     } finally {
       reorderLock.current=false;
       setReordering(false);
     }
+  };
+  const move=(index:number,direction:-1|1)=>moveTo(index,index+direction);
+
+  // Pointer Events make the SAME unified queue reorderable with a finger,
+  // mouse or pen. Only the grip starts a drag; the rest of the row scrolls
+  // normally. Keyboard/screen-reader users retain the up/down buttons.
+  const startDrag=(event:React.PointerEvent<HTMLButtonElement>,from:number)=>{
+    if(!sortMode||reordering||reorderLock.current||touchDragRef.current||event.button!==0)return;
+    touchDragRef.current={pointerId:event.pointerId,from,to:from};
+    setDragFrom(from);setDragTarget(from);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const trackDrag=(event:React.PointerEvent<HTMLButtonElement>)=>{
+    const current=touchDragRef.current;
+    if(!current||current.pointerId!==event.pointerId)return;
+    const target=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>('[data-queue-row]');
+    const index=target ? Number(target.dataset.queueRow) : NaN;
+    if(Number.isInteger(index)&&index>=0&&index<stepIds.length){
+      current.to=index;
+      setDragTarget(index);
+    }
+  };
+  const finishDrag=(event:React.PointerEvent<HTMLButtonElement>,cancelled=false)=>{
+    const current=touchDragRef.current;
+    if(!current||current.pointerId!==event.pointerId)return;
+    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
+    touchDragRef.current=null;
+    setDragFrom(null);setDragTarget(null);
+    if(!cancelled&&current.from!==current.to)void moveTo(current.from,current.to);
   };
 
   return <section dir="rtl" aria-label="صف سریع ثبت دروس" className="darschin-page space-y-3">
@@ -208,6 +246,22 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
       <button type="button" onClick={()=>setRevision(x=>x+1)} className="mr-2 underline">بررسی مجدد</button>
     </p>}
     {copyState&&<p role="status" aria-live="polite" className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-200">{copyState}</p>}
+    {sortMode && queue.steps.length>1 && <div role="status" className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs font-bold leading-6 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+      <GripVertical aria-hidden="true" className="ml-1 inline h-4 w-4" />
+      دستگیرهٔ کنار هر درس را با انگشت یا ماوس بگیر و روی ردیف دلخواه رها کن. دکمه‌های بالا و پایین هم برای صفحه‌کلید فعال‌اند.
+    </div>}
+    {rulesReady && progressReady && next && !sortMode && <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-gradient-to-l from-indigo-700 to-blue-700 p-3 text-white shadow-md shadow-indigo-900/10 dark:border-indigo-600">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold text-blue-100">مرحلهٔ بعدی ثبت · آمادهٔ کپی</p>
+        <p className="mt-1 truncate text-base font-extrabold" title={next.courseName}>{next.courseName}</p>
+        <p className="mt-0.5 text-xs text-blue-100">کد گروه <span dir="ltr" className="font-mono font-bold text-white">{next.copyCode}</span></p>
+      </div>
+      <button type="button" onClick={()=>void copy(next.copyCode,next.courseName)}
+        aria-label={`کپی کد درس بعدی: ${next.courseName}`}
+        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-extrabold text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+        <ClipboardCopy aria-hidden="true" className="h-4 w-4" /> کپی کد
+      </button>
+    </div>}
     {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
     <ol id="registration-queue-list" className="space-y-1.5" aria-label="ترتیب ثبت دروس">
       {queue.steps.map((step,index)=>{
@@ -221,7 +275,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
         const availableAlternatives=courseOfferings.filter(row=>row.offeringId!==step.offeringId &&
           !alternativeIds.includes(row.offeringId) && row.canSelect && row.isEligible && row.overallStatus==='AVAILABLE');
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
-        return <li key={`${academicContextKey}|${step.courseId}`} className={`min-w-0 rounded-xl border ${done
+        return <li key={`${academicContextKey}|${step.courseId}`} data-queue-row={index} className={`min-w-0 rounded-xl border transition-colors ${dragTarget===index&&dragFrom!==index?'ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 ':''} ${dragFrom===index?'opacity-65 ':''}${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
           <div className="flex min-w-0 items-center gap-1.5 px-2 py-1.5 sm:gap-2">
@@ -231,6 +285,16 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           </div>
           <div className="flex shrink-0 items-center justify-end gap-1">
             {sortMode ? <>
+            <button type="button" disabled={reordering} aria-label={`کشیدن و جابه‌جاکردن ${step.courseName}`}
+              title="دستگیرهٔ جابه‌جایی · لمس و کشیدن"
+              onPointerDown={event=>startDrag(event,index)}
+              onPointerMove={trackDrag}
+              onPointerUp={event=>finishDrag(event)}
+              onPointerCancel={event=>finishDrag(event,true)}
+              style={{touchAction:'none'}}
+              className="flex h-11 w-9 shrink-0 cursor-grab items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-40 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200">
+              <GripVertical aria-hidden="true" className="h-5 w-5"/>
+            </button>
             <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowUp className="h-4 w-4"/></button>
             <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
