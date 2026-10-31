@@ -145,19 +145,22 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     if (!selectedRule || saving || loadedId !== curriculumId) return;
     setSaving(true);
     setFeedback('');
-    const response = await apiRequest('/api/curriculum/rules/' + encodeURIComponent(selectedRule.id), { method: 'DELETE' });
-    if (!response.success) {
-      setFeedback(response.error || 'اتصال حذف نشد.');
-      setSaving(false);
-      return;
-    }
     try {
-      await onChanged();
-      setSelectedExisting(null);
-      setDeleteConfirm(false);
-      setFeedback('اتصال از چارت حذف شد؛ وابستگی‌های باقی‌مانده به‌روزرسانی شدند.');
+      const response = await apiRequest('/api/curriculum/rules/' + encodeURIComponent(selectedRule.id), { method: 'DELETE' });
+      if (!response.success) {
+        setFeedback(response.error || 'اتصال حذف نشد.');
+        return;
+      }
+      try {
+        await onChanged();
+        setSelectedExisting(null);
+        setDeleteConfirm(false);
+        setFeedback('اتصال از چارت حذف شد؛ وابستگی‌های باقی‌مانده به‌روزرسانی شدند.');
+      } catch {
+        setFeedback('حذف روی سرور انجام شد، اما نقشه تازه نشد. صفحه را بارگذاری مجدد کنید.');
+      }
     } catch {
-      setFeedback('حذف روی سرور انجام شد، اما نقشه تازه نشد. صفحه را بارگذاری مجدد کنید.');
+      setFeedback('ارتباط با سرور برقرار نشد؛ حذف اتصال تأیید نشده است.');
     } finally {
       setSaving(false);
     }
@@ -167,27 +170,28 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     if (saving || !assessment.valid || loadedId !== curriculumId) return;
     setSaving(true);
     setFeedback('');
-    const response = await apiRequest('/api/curriculum/rules', {
-      method: 'POST',
-      body: JSON.stringify({
-        curriculumId,
-        targetCourseId: targetId,
-        relationshipType: kind,
-        expression: { type: 'COURSE', courseId: sourceId },
-      }),
-    });
-    if (!response.success) {
-      setFeedback(response.error || 'اتصال ذخیره نشد. لطفاً دوباره تلاش کنید.');
-      setSaving(false);
-      return;
-    }
     try {
-      await onChanged();
-      setFeedback('اتصال با موفقیت ثبت شد و نقشه به‌روزرسانی شد.');
-      setSourceId('');
-      setTargetId('');
+      const response = await apiRequest('/api/curriculum/rules', {
+        method: 'POST',
+        body: JSON.stringify({
+          curriculumId, targetCourseId: targetId, relationshipType: kind,
+          expression: { type: 'COURSE', courseId: sourceId },
+        }),
+      });
+      if (!response.success) {
+        setFeedback(response.error || 'اتصال ذخیره نشد. لطفاً دوباره تلاش کنید.');
+        return;
+      }
+      try {
+        await onChanged();
+        setFeedback('اتصال با موفقیت ثبت شد و نقشه به‌روزرسانی شد.');
+        setSourceId('');
+        setTargetId('');
+      } catch {
+        setFeedback('اتصال ثبت شد، اما نوسازی نقشه موفق نبود. صفحه را تازه‌سازی کنید.');
+      }
     } catch {
-      setFeedback('اتصال ثبت شد، اما نوسازی نقشه موفق نبود. صفحه را تازه‌سازی کنید.');
+      setFeedback('ارتباط قطع شد؛ اتصال هنوز ثبت‌شده تلقی نمی‌شود.');
     } finally {
       setSaving(false);
     }
@@ -261,6 +265,10 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
 
       {loading && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">در حال بارگیری درس‌های چارت…</p>}
       {fetchError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{fetchError}</p>}
+      {!loading && loadedId === curriculumId && courseIds.length > 0 && !analysis.valid &&
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+          زنجیرهٔ چارت معتبر نیست؛ تا اصلاح خطاهای زیر، رتبهٔ اهمیت درس‌ها نمایش داده نمی‌شود: {analysis.errors.join(' ')}
+        </p>}
       {!loading && !fetchError && loadedId === curriculumId && (
         <>
           {courseIds.length === 0 ? (
@@ -317,7 +325,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                     const highlight = !filter || (course?.name ?? '').toLocaleLowerCase('fa').includes(filter) ||
                       (course?.code ?? '').toLocaleLowerCase('fa').includes(filter);
                     const picked = sourceId === id || targetId === id;
-                    const importance = insights.get(id)?.downstreamCount ?? 0;
+                    const insight = insights.get(id);
                     return <button key={id} type="button" draggable={!saving}
                       aria-label={(course?.name ?? 'درس نامشخص') + '؛ انتخاب برای اتصال'}
                       aria-pressed={picked}
@@ -341,7 +349,9 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                         (!highlight ? 'opacity-25' : 'hover:border-indigo-400')}>
                       <span className="block w-full truncate text-xs font-extrabold">{course?.name ?? 'درس نامشخص'}</span>
                       <span className="block w-full truncate text-[11px] text-slate-500 dark:text-slate-300">
-                        {course?.code ?? 'بدون کد'} · {importance.toLocaleString('fa-IR')} درس در ادامهٔ زنجیره
+                        {course?.code ?? 'بدون کد'} · {analysis.valid && insight
+                          ? `${insight.downstreamCount.toLocaleString('fa-IR')} درس پایین‌دستی · عمق ${insight.longestChain.toLocaleString('fa-IR')}`
+                          : 'اهمیت نیازمند بازبینی چارت'}
                       </span>
                     </button>;
                   })}
