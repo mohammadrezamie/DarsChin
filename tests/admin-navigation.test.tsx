@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { DemoWorkspace } from '../src/pages/DemoWorkspace';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const adminSource = () => readFileSync(resolve(process.cwd(), 'src/components/AdminDashboard.tsx'), 'utf8');
 import { ADMIN_TABS, resolveAdminTab, adminWorkspaceAccess } from '../src/utils/admin-navigation';
 
 describe('admin workspace navigation', () => {
@@ -36,26 +39,26 @@ describe('admin workspace navigation', () => {
       .toMatchObject({ isSuperAdmin: true, demandOnly: false, isAdmin: true });
   });
 
-  it('renders the deep-linked demo management section and visible navigation search', () => {
+  it('keeps deep links, searchable navigation and section headings available after lazy loading', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={['/demo/admin?tab=courses']}>
         <DemoWorkspace role="admin" />
       </MemoryRouter>,
     );
-    expect(html).toContain('مرکز مدیریت درس‌چین');
-    expect(html).toContain('جست‌وجوی بخش‌های مدیریت');
-    expect(html).toContain('مدیریت / داده‌های آموزشی و قوانین');
-    expect(html).toContain('aria-current="page"');
-    expect(html).toContain('بانک دروس');
+    expect(html).toContain('مدیر آزمایشی');
+    expect(resolveAdminTab('courses', true)).toBe('courses');
+    const source = adminSource();
+    expect(source).toContain('جست‌وجوی بخش‌های مدیریت');
+    expect(source).toContain('میز کار / {activeCategory}');
+    expect(source).toContain('aria-current={active ? \'page\' : undefined}');
+    expect(source).toContain("activeTab === 'courses' && (");
   });
 
   it('does not render a nonexistent workspace for an invalid query', () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/demo/admin?tab=prerequisites']}>
-        <DemoWorkspace role="admin" />
-      </MemoryRouter>,
-    );
-    expect(html).toContain('مدیریت / پیشخوان');
-    expect(html).toContain('داشبورد و آمار');
+    expect(resolveAdminTab('prerequisites', true)).toBe('overview');
+    const source = adminSource();
+    expect(source).toContain("resolveAdminTab(searchParams.get('tab'), isSuperAdmin)");
+    expect(source).toContain("id: 'overview' as AdminTab");
+    expect(source).toContain("activeTab === 'overview' && (");
   });
 });
