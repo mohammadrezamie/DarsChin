@@ -4,7 +4,11 @@ type LectureTime = Pick<CourseEligibilityResult, 'dayOfWeek' | 'startTime' | 'en
 
 function clockMinutes(value?: string): number | null {
   if (!value) return null;
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  // Offerings may use Western, Persian or Arabic-Indic numerals.
+  const normalized = value.trim()
+    .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x06F0))
+    .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x0660));
+  const match = /^(\d{1,2}):(\d{2})$/.exec(normalized);
   if (!match) return null;
   const h = Number(match[1]), m = Number(match[2]);
   return h >= 0 && h < 24 && m >= 0 && m < 60 ? h * 60 + m : null;
