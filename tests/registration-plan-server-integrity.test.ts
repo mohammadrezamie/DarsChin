@@ -146,7 +146,7 @@ describe('one unified registration queue has integrity at the write boundary', (
     expect(countRegistrationPlanUnits([main.id, reserve.id], [main, reserve], courses)).toBe(3);
     expect(countRegistrationPlanUnits([main.id], [main], [{ ...courses[0], isExtraUnit: true }])).toBe(0);
     const endpoint = readFileSync(resolve(process.cwd(), 'server/routes/student.ts'), 'utf8');
-    expect(endpoint).toContain('const countedUnits = countRegistrationPlanUnits(selectedOfferingIds');
+    expect(endpoint).toContain('const countedUnits = countRegistrationPlanUnits(candidateSelectedOfferingIds');
     expect(endpoint).toContain('const candidateUnits = countRegistrationPlanUnits(candidateIds');
     expect(endpoint).not.toContain("c?.name.includes('وصایا')");
     expect(endpoint).not.toContain("targetCourse?.name.includes('انس')");
@@ -259,5 +259,56 @@ describe('single group selection cannot write an invalid or incomplete plan', ()
     expect(block.indexOf('const candidateUnits')).toBeLessThan(block.indexOf('db.studentPlans.push(plan);'));
     expect(block).toContain('plan.selectedOfferingIds = candidateIds;');
     expect(block).toContain("res.setHeader('Cache-Control', 'private, no-store');");
+  });
+});
+
+
+describe('academic-scope validation cannot be bypassed via priorities or manual marks', () => {
+  it('rechecks the existing selected groups on priorities-only writes', async () => {
+    const plan = db.studentPlans.find(p => p.userId === userId && p.termId === termId)!;
+    if (!plan) throw new Error('Expected synthetic plan');
+    const priorSelected = [...plan.selectedOfferingIds];
+    const priorPriorities = plan.coursePriorities;
+    const previousCampus = profile.campusId;
+    try {
+      plan.selectedOfferingIds = [main.id];
+      profile.campusId = 'other-campus-invalid-for-main';
+      const response = await request(app).put('/api/student/plan').set(token())
+        .send({ coursePriorities: [courseId] });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('پردیس');
+      expect(plan.selectedOfferingIds).toEqual([main.id]);
+      expect(plan.coursePriorities).toEqual(priorPriorities);
+    } finally {
+      profile.campusId = previousCampus;
+      plan.selectedOfferingIds = priorSelected;
+    }
+  });
+
+  it('does not permit self-reporting an old selected group as registered after a campus switch', async () => {
+    const plan = db.studentPlans.find(p => p.userId === userId && p.termId === termId)!;
+    if (!plan) throw new Error('Expected synthetic plan');
+    const before = [...plan.selectedOfferingIds];
+    const registeredBefore = [...(plan.registeredOfferingIds || [])];
+    const previousCampus = profile.campusId;
+    try {
+      plan.selectedOfferingIds = [main.id];
+      plan.registeredOfferingIds = [];
+      profile.campusId = 'other-campus-invalid-for-main';
+      const reject = await request(app).put('/api/student/registration-progress').set(token())
+        .send({ offeringId: main.id, registered: true });
+      expect(reject.status).toBe(409);
+      expect(plan.registeredOfferingIds).toEqual([]);
+      // Still allow removing a stale manual checkmark without asserting
+      // anything about the university portal or reviving the old selection.
+      const remove = await request(app).put('/api/student/registration-progress').set(token())
+        .send({ offeringId: main.id, registered: false });
+      expect(remove.status).toBe(200);
+      expect(remove.body.data.registeredOfferingIds).toEqual([]);
+    } finally {
+      profile.campusId = previousCampus;
+      plan.selectedOfferingIds = before;
+      plan.registeredOfferingIds = registeredBefore;
+    }
   });
 });

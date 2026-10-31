@@ -421,6 +421,18 @@ studentRouter.put('/registration-progress', authenticate, validate(registrationP
   if (!plan || !plan.selectedOfferingIds.includes(offeringId)) {
     return res.status(409).json({ success: false, error: 'این گروه در برنامهٔ فعلی شما انتخاب نشده است؛ وضعیت ثبت نمی‌تواند تغییر کند.' });
   }
+  // A previously selected group may become foreign/inactive after a profile
+  // change. It can be unmarked, but never newly self-reported as registered.
+  if (registered) {
+    const profile = db.studentProfiles.find(p => p.userId === userId);
+    const offering = db.courseOfferings.find(o => o.id === offeringId);
+    if (!profile || !offering || !offering.active ||
+        offering.termId !== termId || offering.campusId !== profile.campusId) {
+      return res.status(409).json({
+        success: false, error: 'این گروه دیگر در پردیس و نیمسال فعلی شما معتبر نیست؛ پرونده و برنامه را بررسی کنید.',
+      });
+    }
+  }
   const selected = new Set(plan.selectedOfferingIds);
   const previous = (plan.registeredOfferingIds || []).filter(id => selected.has(id));
   plan.registeredOfferingIds = registered
@@ -438,9 +450,14 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   const { selectedOfferingIds, coursePriorities, offeringPriorities } = req.body;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
   const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
+  // A priorities-only request still modifies a saved plan: recheck its actual
+  // selected main groups, not an empty/undefined array from the payload.
+  const existingPlan = db.studentPlans.find(p => p.userId === userId && p.termId === currentTermId);
+  const candidateSelectedOfferingIds = Array.isArray(selectedOfferingIds)
+    ? selectedOfferingIds : (existingPlan?.selectedOfferingIds || []);
 
   const referenceError = validateRegistrationPlanReferences({
-    selectedOfferingIds,
+    selectedOfferingIds: candidateSelectedOfferingIds,
     offeringPriorities,
     currentTermId,
     campusId: profile?.campusId,
@@ -448,7 +465,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   });
   if (referenceError) return res.status(400).json({ success: false, error: referenceError });
 
-  if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
+  if (candidateSelectedOfferingIds.length > 0) {
     if (!profile) {
       return res.status(400).json({ success: false, error: 'پروفایل تحصیلی یافت نشد.' });
     }
@@ -470,10 +487,10 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       academicRules: db.academicRules,
       passedCourses,
       currentOfferings: relevantOfferings,
-      plannedOfferingIdsInSameTerm: selectedOfferingIds, // Evaluate the complete saved combination, including same-term corequisites
+      plannedOfferingIdsInSameTerm: candidateSelectedOfferingIds, // Evaluate the complete saved combination, including same-term corequisites
     });
 
-    const invalidOfferings = selectedOfferingIds.filter(id => {
+    const invalidOfferings = candidateSelectedOfferingIds.filter(id => {
       const evalItem = report.results.find((r: any) => r.offeringId === id);
       return !evalItem || !evalItem.canSelect || !evalItem.isEligible || evalItem.overallStatus !== 'AVAILABLE';
     });
@@ -486,7 +503,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       });
     }
 
-    const countedUnits = countRegistrationPlanUnits(selectedOfferingIds, db.courseOfferings, db.courses);
+    const countedUnits = countRegistrationPlanUnits(candidateSelectedOfferingIds, db.courseOfferings, db.courses);
     const limit = db.calculateStudentAcademicLimits(userId).effectiveMaxUnits;
     if (!Number.isFinite(limit) || countedUnits > limit) {
       return res.status(400).json({
@@ -496,7 +513,7 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
     }
   }
 
-  let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
+  let plan = existingPlan;
   if (!plan) {
     plan = {
       id: `plan-${userId}-${currentTermId}`,
