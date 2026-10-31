@@ -126,6 +126,41 @@ describe('real HTTP rules history: auth, revisions and safe undo/redo',()=>{
     expect(db.academicRules.find(r=>r.curriculumId===chartId)?.id).toBe(created.body.data.id);
   });
 
+  it('allows a root to reverse a different manager but denies delegated managers reversing root actions',async()=>{
+    const before=(await snapshot(rootToken)).body.data.revision;
+    const created=await request(app).post('/api/curriculum/rules')
+      .set(bearer(rootToken)).set('If-Match',before).send(rule('a','b'));
+    expect(created.status).toBe(200);
+    const rootHistory=(await snapshot(rootToken)).body.data;
+    const managerHistory=(await snapshot(adminToken)).body.data;
+    expect(managerHistory.entries).toHaveLength(0);
+    const forbidden=await request(app).post('/api/curriculum/rules/history/'+chartId+'/revert')
+      .set(bearer(adminToken)).send({
+        eventId:rootHistory.entries[0].id,expectedRevision:rootHistory.revision,
+      });
+    expect(forbidden.status).toBe(409);
+    expect(db.academicRules.filter(row=>row.curriculumId===chartId)).toHaveLength(1);
+    const undo=await request(app).post('/api/curriculum/rules/history/'+chartId+'/revert')
+      .set(bearer(rootToken)).send({
+        eventId:rootHistory.entries[0].id,expectedRevision:rootHistory.revision,
+      });
+    expect(undo.status).toBe(200);
+    expect(db.academicRules.filter(row=>row.curriculumId===chartId)).toHaveLength(0);
+  });
+
+  it('rejects stale or malformed revisions on DELETE without touching the rule',async()=>{
+    const start=(await snapshot(adminToken)).body.data.revision;
+    const created=await request(app).post('/api/curriculum/rules')
+      .set(bearer(adminToken)).set('If-Match',start).send(rule('a','b'));
+    expect(created.status).toBe(200);
+    const route='/api/curriculum/rules/'+created.body.data.id;
+    expect((await request(app).delete(route).set(bearer(adminToken)).set('If-Match',start)).status).toBe(409);
+    expect((await request(app).delete(route).set(bearer(adminToken)).set('If-Match','garbage')).status).toBe(409);
+    expect(db.academicRules.some(row=>row.id===created.body.data.id)).toBe(true);
+    const current=(await snapshot(adminToken)).body.data.revision;
+    expect((await request(app).delete(route).set(bearer(adminToken)).set('If-Match',current)).status).toBe(200);
+  });
+
   it('supports restoring a deleted rule, but not undoing after another writer changes that chart',async()=>{
     const start=(await snapshot(adminToken)).body.data.revision;
     const created=await request(app).post('/api/curriculum/rules')
