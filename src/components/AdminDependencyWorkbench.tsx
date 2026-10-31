@@ -5,7 +5,7 @@ import { apiRequest } from '../utils/api';
 import { analyzeCurriculumDependencies, type DependencyEdge } from '../domain/course-dependency-insights';
 import { assessDependencyDraft, findRemovableDirectDependency, type VisualRelationship } from '../domain/dependency-editor';
 import { freshConnectionHistory, recordConnectionDraft, undoConnectionDraft, redoConnectionDraft, previewDependencyImpact } from '../domain/dependency-draft-history';
-import { layoutDependencyGraph, NODE_WIDTH, NODE_HEIGHT, COLUMN_WIDTH, ROW_HEIGHT } from '../domain/dependency-graph-layout';
+import { layoutDependencyGraph, NODE_WIDTH, NODE_HEIGHT, COLUMN_WIDTH } from '../domain/dependency-graph-layout';
 
 interface ChartAssignment {
   courseId: string;
