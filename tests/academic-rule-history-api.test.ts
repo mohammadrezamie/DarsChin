@@ -24,8 +24,18 @@ beforeAll(async()=>{
     academicRules:[...db.data.academicRules],auditLogs:[...db.data.auditLogs],users:[...db.data.users],
   };
   saveSpy=vi.spyOn(db,'save').mockImplementation(()=>undefined);
-  const root=db.users.find(u=>u.roles.includes('super-admin'));
-  if(!root)throw Error('No isolated root account');
+  // Fresh isolated CI databases may not provision a root through environment.
+  // Create one synthetic in-memory owner only when the test store has none.
+  let root=db.users.find(u=>u.roles.includes('super-admin'));
+  if(!root) {
+    root={
+      id:'synthetic-history-root',name:'Synthetic In-Memory Root',
+      mobile:'09900000112',password:'test-only',
+      roles:['student','super-admin'],permissions:[],
+      createdAt:new Date().toISOString(),
+    };
+    db.users.push(root);
+  }
   rootToken=generateToken({id:root.id});
   db.users.push({
     id:adminId,name:'Synthetic Rules Manager',mobile:'09900000113',password:'test',
