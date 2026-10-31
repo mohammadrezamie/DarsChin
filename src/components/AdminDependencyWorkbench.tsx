@@ -7,6 +7,22 @@ import { assessDependencyDraft, findRemovableDirectDependency, type VisualRelati
 import { freshConnectionHistory, recordConnectionDraft, undoConnectionDraft, redoConnectionDraft, previewDependencyImpact } from '../domain/dependency-draft-history';
 import { layoutDependencyGraph, NODE_WIDTH, NODE_HEIGHT, COLUMN_WIDTH } from '../domain/dependency-graph-layout';
 
+interface RuleHistoryEntry {
+  id: string;
+  kind: 'ADD' | 'DELETE';
+  at: string;
+  ruleId: string;
+  sourceCourseId: string | null;
+  targetCourseId: string;
+  relationshipType: string;
+  revertedEventId: string | null;
+  canRevert: boolean;
+}
+interface RuleHistorySnapshot {
+  revision: string;
+  entries: RuleHistoryEntry[];
+}
+
 interface ChartAssignment {
   courseId: string;
   suggestedSemester?: number;
@@ -43,6 +59,9 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const [feedback, setFeedback] = useState('');
   const [selectedExisting, setSelectedExisting] = useState<DependencyEdge | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [historySnapshot, setHistorySnapshot] = useState<{ chartId: string; data: RuleHistorySnapshot } | null>(null);
+  const [historyError, setHistoryError] = useState('');
+  const [revertConfirm, setRevertConfirm] = useState(false);
 
   useEffect(() => {
     if (!curricula.some(chart => chart.id === curriculumId)) {
@@ -75,6 +94,31 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [curriculumId]);
+
+  useEffect(() => {
+    let active = true;
+    setHistorySnapshot(null);
+    setHistoryError('');
+    setRevertConfirm(false);
+    if (!curriculumId) return;
+    apiRequest<RuleHistorySnapshot>('/api/curriculum/rules/history/' + encodeURIComponent(curriculumId))
+      .then(response => {
+        if (!active) return;
+        if (response.success && response.data &&
+          /^[a-f0-9]{64}$/.test(response.data.revision) && Array.isArray(response.data.entries)) {
+          setHistorySnapshot({ chartId: curriculumId, data: response.data });
+        } else {
+          setHistoryError(response.error || 'نسخهٔ قابل‌اعتماد قوانین دریافت نشد؛ عملیات گراف موقتاً قفل است.');
+        }
+      })
+      .catch(() => { if (active) setHistoryError('ارتباط برای دریافت تاریخچه برقرار نشد.'); });
+    return () => { active = false; };
+  }, [curriculumId, rules]);
+
+  const revision = historySnapshot?.chartId === curriculumId ? historySnapshot.data.revision : null;
+  const recentChanges = revision ? historySnapshot?.data.entries ?? [] : [];
+  const latestChange = recentChanges[0] ?? null;
+  const canRevert = !!latestChange?.canRevert && !!revision && loadedId === curriculumId;
 
   const verified = loadedId === curriculumId ? assignments : [];
   const courseIds = useMemo(() => [...new Set(verified.map(row => row.courseId))], [verified]);
@@ -124,11 +168,13 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   };
 
   const removeSelectedLink = async () => {
-    if (!selectedRule || saving || loadedId !== curriculumId) return;
+    if (!selectedRule || saving || !revision || loadedId !== curriculumId) return;
     setSaving(true);
     setFeedback('');
     try {
-      const response = await apiRequest('/api/curriculum/rules/' + encodeURIComponent(selectedRule.id), { method: 'DELETE' });
+      const response = await apiRequest('/api/curriculum/rules/' + encodeURIComponent(selectedRule.id), {
+        method: 'DELETE', headers: { 'If-Match': revision },
+      });
       if (!response.success) {
         setFeedback(response.error || 'اتصال حذف نشد.');
         return;
@@ -149,12 +195,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   };
 
   const save = async () => {
-    if (saving || !assessment.valid || loadedId !== curriculumId) return;
+    if (saving || !revision || !assessment.valid || loadedId !== curriculumId) return;
     setSaving(true);
     setFeedback('');
     try {
       const response = await apiRequest('/api/curriculum/rules', {
-        method: 'POST',
+        method: 'POST', headers: { 'If-Match': revision },
         body: JSON.stringify({
           curriculumId, targetCourseId: targetId, relationshipType: kind,
           expression: { type: 'COURSE', courseId: sourceId },
@@ -175,6 +221,33 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       setFeedback('ارتباط قطع شد؛ اتصال هنوز ثبت‌شده تلقی نمی‌شود.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const revertLastPersisted = async () => {
+    if (!canRevert || !revertConfirm || saving || !latestChange || !revision) return;
+    setSaving(true);
+    setFeedback('');
+    try {
+      const response = await apiRequest('/api/curriculum/rules/history/' +
+        encodeURIComponent(curriculumId) + '/revert', {
+        method: 'POST',
+        body: JSON.stringify({ eventId: latestChange.id, expectedRevision: revision }),
+      });
+      if (!response.success) {
+        setFeedback(response.error || 'بازگردانی انجام نشد. تاریخچه را تازه‌سازی کنید.');
+        return;
+      }
+      setHistorySnapshot(null);
+      setSelectedExisting(null);
+      resetDraft();
+      await onChanged();
+      setFeedback('آخرین تغییر ثبت‌شده به شکل امن بازگردانده شد؛ عملیات در تاریخچه ثبت شد.');
+    } catch {
+      setFeedback('بازگردانی تأیید نشده است؛ تاریخچه را دوباره دریافت کنید.');
+    } finally {
+      setSaving(false);
+      setRevertConfirm(false);
     }
   };
 
@@ -287,6 +360,9 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
 
       {loading && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">در حال بارگیری درس‌های چارت…</p>}
       {fetchError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{fetchError}</p>}
+      {historyError && <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold leading-7 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        {historyError}
+      </p>}
       {!loading && loadedId === curriculumId && courseIds.length > 0 && !analysis.valid &&
         <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           زنجیرهٔ چارت معتبر نیست؛ تا اصلاح خطاهای زیر، رتبهٔ اهمیت درس‌ها نمایش داده نمی‌شود: {analysis.errors.join(' ')}
@@ -422,7 +498,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
               </p>}
 
                   {!deleteConfirm ? (
-                    <button type="button" disabled={saving} onClick={() => setDeleteConfirm(true)}
+                    <button type="button" disabled={saving || !revision} onClick={() => setDeleteConfirm(true)}
                       className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300">
                       <Trash2 size={16} aria-hidden="true" /> حذف همین اتصال
                     </button>
@@ -434,7 +510,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       <div className="flex flex-wrap gap-2">
                         <button type="button" disabled={saving} onClick={() => setDeleteConfirm(false)}
                           className="min-h-11 rounded-xl border border-slate-300 px-4 text-xs font-bold dark:border-slate-600">انصراف</button>
-                        <button type="button" disabled={saving} onClick={() => void removeSelectedLink()}
+                        <button type="button" disabled={saving || !revision} onClick={() => void removeSelectedLink()}
                           className="min-h-11 rounded-xl bg-rose-700 px-4 text-xs font-bold text-white disabled:opacity-50">
                           {saving ? 'در حال حذف…' : 'تأیید حذف اتصال'}
                         </button>
@@ -490,12 +566,53 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                 className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200">
                 <RotateCcw size={16} aria-hidden="true" /> پاک‌کردن انتخاب
               </button>
-              <button type="button" onClick={save} disabled={!pending || !assessment.valid || saving}
+              <button type="button" onClick={save} disabled={!pending || !assessment.valid || saving || !revision}
                 className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-indigo-700 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
                 <Check size={16} aria-hidden="true" /> {saving ? 'در حال ثبت…' : 'ثبت اتصال'}
               </button>
             </div>
           </div>
+          <details className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+            <summary className="min-h-11 cursor-pointer py-2 text-sm font-extrabold text-slate-900 dark:text-white">
+              تاریخچهٔ تغییرات ثبت‌شدهٔ چارت
+              <span className="mr-2 text-xs font-normal text-slate-500 dark:text-slate-400">بازگردانی مشروط و ثبت‌شده</span>
+            </summary>
+            <div className="mt-3 space-y-3">
+              <p className="text-xs leading-7 text-slate-600 dark:text-slate-300">
+                فقط آخرین تغییر بدون تداخل با مدیران دیگر قابل بازگردانی است. هر بازگردانی در سرور ثبت می‌شود و می‌توان آن را دوباره انجام داد.
+              </p>
+              {!revision && <p role="status" className="text-xs text-amber-700">در حال دریافت نسخهٔ قوانین یا نیازمند تازه‌سازی…</p>}
+              {recentChanges.length === 0 && revision && <p className="text-xs text-slate-500">تغییر ثبت‌شده‌ای برای نمایش وجود ندارد.</p>}
+              <ol className="max-h-48 space-y-1 overflow-y-auto text-xs leading-7">
+                {recentChanges.slice(0,10).map(entry => <li key={entry.id}
+                  className="rounded-xl border border-slate-100 p-2 dark:border-slate-800">
+                  {entry.revertedEventId ? 'بازگردانی' : entry.kind === 'ADD' ? 'افزودن' : 'حذف'}
+                  {' · '}{entry.sourceCourseId ? nameOf(entry.sourceCourseId) + ' ← ' : ''}
+                  {nameOf(entry.targetCourseId)}
+                  {entry.canRevert && <span className="mr-2 font-bold text-emerald-700 dark:text-emerald-300">قابل بازگردانی</span>}
+                </li>)}
+              </ol>
+              {canRevert && !revertConfirm && <button type="button" disabled={saving}
+                onClick={() => setRevertConfirm(true)}
+                className="min-h-11 rounded-xl border border-amber-300 px-3 text-xs font-extrabold text-amber-900 dark:border-amber-900 dark:text-amber-200">
+                {latestChange?.revertedEventId ? 'انجام دوبارهٔ تغییر ثبت‌شده' : 'بازگردانی آخرین تغییر ثبت‌شده'}
+              </button>}
+              {canRevert && revertConfirm && <div role="group" aria-label="تأیید بازگردانی تغییر ثبت‌شده"
+                className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+                <p className="text-xs font-bold leading-7 text-amber-950 dark:text-amber-100">
+                  آیا آخرین تغییر این چارت بازگردانده شود؟ سرور دوباره نسخه و مجوز را کنترل می‌کند.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={saving} onClick={() => setRevertConfirm(false)}
+                    className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold dark:border-slate-700">انصراف</button>
+                  <button type="button" disabled={saving} onClick={() => void revertLastPersisted()}
+                    className="min-h-11 rounded-xl bg-amber-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+                    {saving ? 'در حال بازگردانی…' : 'تأیید بازگردانی'}
+                  </button>
+                </div>
+              </div>}
+            </div>
+          </details>
           {feedback && <p role="status" className="rounded-xl bg-indigo-50 p-3 text-sm leading-7 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">{feedback}</p>}
           {!analysis.valid && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{analysis.errors.join(' ')}</p>}
         </>
