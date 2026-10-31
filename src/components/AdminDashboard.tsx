@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Core Admin & Educational Management Dashboard
 // ============================================================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { resolveAdminTab, adminWorkspaceAccess, type AdminTab } from '../utils/admin-navigation';
 import { useAuth } from '../context/AuthContext';
@@ -37,21 +37,36 @@ import {
   PanelRightClose,
   Search,
 } from 'lucide-react';
-import { AdminCrudTable, Column } from './AdminCrudTable';
-import { AdminCurriculumBuilder } from './AdminCurriculumBuilder';
-import { UserManagement } from './UserManagement';
-import { AdminSyncStatus } from './AdminSyncStatus';
-import { AdminLogs } from './AdminLogs';
-import { AdminSupportPanel } from './AdminSupportPanel';
-import { AdminDiagnostics } from './AdminDiagnostics';
-import { AdminAcademicSettings } from './AdminAcademicSettings';
-import { AdminAcademicRules } from './AdminAcademicRules';
+
+
+
+
+
+
+
+
+
 import { ContextualHelp } from './ContextualHelp';
 import { adminSectionHelp } from '../help/admin-sections';
-import { AdminImportCenter } from './AdminImportCenter';
-import { DemandWorkspace } from './DemandWorkspace';
-import { AdminSmsCenter } from './AdminSmsCenter';
+
+
+
 import { apiRequest } from '../utils/api';
+
+// Only the selected management tool is shipped to the browser. Large CRUD,
+// chart, import and user-management screens are no longer required at login.
+const AdminCrudTable = lazy(() => import('./AdminCrudTable').then(module => ({ default: module.AdminCrudTable })));
+const AdminCurriculumBuilder = lazy(() => import('./AdminCurriculumBuilder').then(module => ({ default: module.AdminCurriculumBuilder })));
+const UserManagement = lazy(() => import('./UserManagement').then(module => ({ default: module.UserManagement })));
+const AdminSyncStatus = lazy(() => import('./AdminSyncStatus').then(module => ({ default: module.AdminSyncStatus })));
+const AdminLogs = lazy(() => import('./AdminLogs').then(module => ({ default: module.AdminLogs })));
+const AdminSupportPanel = lazy(() => import('./AdminSupportPanel').then(module => ({ default: module.AdminSupportPanel })));
+const AdminDiagnostics = lazy(() => import('./AdminDiagnostics').then(module => ({ default: module.AdminDiagnostics })));
+const AdminAcademicSettings = lazy(() => import('./AdminAcademicSettings').then(module => ({ default: module.AdminAcademicSettings })));
+const AdminAcademicRules = lazy(() => import('./AdminAcademicRules').then(module => ({ default: module.AdminAcademicRules })));
+const AdminImportCenter = lazy(() => import('./AdminImportCenter').then(module => ({ default: module.AdminImportCenter })));
+const DemandWorkspace = lazy(() => import('./DemandWorkspace').then(module => ({ default: module.DemandWorkspace })));
+const AdminSmsCenter = lazy(() => import('./AdminSmsCenter').then(module => ({ default: module.AdminSmsCenter })));
 
 interface AdminStats {
   totalUsers: number;
@@ -416,6 +431,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
       {/* Main Tab Content Area */}
+      <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-44 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 p-5 text-sm font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">در حال بازکردن ابزار مدیریت…</div>}>
       <div className="pt-1">
         {/* 1. OVERVIEW TAB */}
         {activeTab === 'overview' && (
@@ -810,6 +826,7 @@ export const AdminDashboard: React.FC = () => {
         {/* 17. LOGS */}
         {activeTab === 'logs' && isSuperAdmin && <AdminLogs />}
           </div>
+      </Suspense>
         </section>
       </div>
     </div>
