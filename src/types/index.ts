@@ -517,6 +517,14 @@ export interface CourseRecommendation {
   score: number; // 0 to 100
   suggestedSemester: number;
   unlockedFutureCoursesCount: number;
+  /** Outstanding reachable descendants along OR-free paths. This is not a
+   * promise that the courses themselves are graduation-required. */
+  noChoiceFutureCoursesCount?: number;
+  /** Outstanding descendants reachable exclusively through an OR alternative. */
+  choiceOnlyFutureCoursesCount?: number;
+  /** Longest unfinished path, keeping already-passed intermediate links traversable. */
+  longestRemainingPrerequisiteChain?: number;
+  longestNoChoiceRemainingChain?: number;
   /** Full graduation-chart prerequisite depth, advisory only; not an eligibility decision. */
   longestPrerequisiteChain?: number;
   unlockedCourseNames: string[];
