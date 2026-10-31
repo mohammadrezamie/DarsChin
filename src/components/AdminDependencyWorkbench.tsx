@@ -385,14 +385,14 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       {fetchError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{fetchError}</p>}
       {historyError && <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold leading-7 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
         {historyError}
-      </p>
+      </p>}
       <div className="flex items-center justify-end">
         <button type="button" disabled={saving || refreshing} onClick={() => void refreshGraph()}
           aria-label="تازه‌سازی قوانین و تاریخچهٔ این چارت"
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
           <RotateCw size={16} aria-hidden="true" /> {refreshing ? 'در حال دریافت…' : 'تازه‌سازی قوانین'}
         </button>
-      </div>}
+      </div>
       {!loading && loadedId === curriculumId && courseIds.length > 0 && !analysis.valid &&
         <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           زنجیرهٔ چارت معتبر نیست؛ تا اصلاح خطاهای زیر، رتبهٔ اهمیت درس‌ها نمایش داده نمی‌شود: {analysis.errors.join(' ')}
