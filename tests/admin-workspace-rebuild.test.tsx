@@ -13,7 +13,7 @@ describe('admin workspace redesign without changing its privileges or IA', () =>
     for (const tab of ['overview','provinces','campuses','degrees','majors','tracks',
       'entry-years','curricula','courses','academic-rules','terms','offerings','imports',
       'demand','academic-settings','users','support','diagnostics','logs','sms-center']) {
-      expect(dashboard).toContain(`id: '${tab}' as AdminTab`);
+      expect(dashboard).toMatch(new RegExp(`id:\\s*'${tab}'\\s*as AdminTab`));
     }
     expect(dashboard).toContain('adminWorkspaceAccess(user)');
     expect(dashboard).toContain('demandOnly ?');
