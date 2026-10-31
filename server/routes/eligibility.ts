@@ -7,6 +7,7 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { generateCourseRecommendations } from '../../src/domain/recommendation-engine';
+import { isSuccessfulCourseAttempt } from '../../src/domain/course-attempt-status';
 
 export const eligibilityRouter = Router();
 
@@ -98,6 +99,9 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       academicRules: db.academicRules,
       eligibilityResults: report.results,
       studentProfile: profile,
+      completedCourseIds: [...new Set(passedCourses
+        .filter(attempt => isSuccessfulCourseAttempt(attempt))
+        .map(attempt => attempt.courseId))],
       // Do not invent a third-semester standing for every student.
     });
 
