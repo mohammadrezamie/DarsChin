@@ -132,7 +132,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                     {!offered.has(c.id) ? ' · گروه ارائه‌شده یافت نشد' : ''}
                     {(rec?.choiceOnlyFutureCoursesCount ?? c.choiceOnlyFutureCoursesCount) ? ' · ' + (rec?.choiceOnlyFutureCoursesCount ?? c.choiceOnlyFutureCoursesCount ?? 0).toLocaleString('fa-IR') + ' درس در مسیر احتمالی «یا»' : ''}
                     {(rec?.noChoiceFutureCoursesCount ?? c.noChoiceFutureCoursesCount) ? ' · ' + (rec?.noChoiceFutureCoursesCount ?? c.noChoiceFutureCoursesCount ?? 0).toLocaleString('fa-IR') + ' درس در مسیر بدون «یا»' : ''}
-                    {!c.graduationAnalysisValid ? ' · تحلیل زنجیره نیازمند بازبینی چارت' : ''}
+                    {c.graduationAnalysisValid === false ? ' · تحلیل زنجیره نیازمند بازبینی چارت' : ''}
                   </div>
                   {rec?.reasons?.length ? <p className="mt-1 text-[11px] leading-5 text-indigo-700 dark:text-indigo-300">{rec.reasons.slice(0,2).join('؛ ')}</p> :
                     c.graduationAnalysisValid && (c.noChoiceFutureCoursesCount || c.choiceOnlyFutureCoursesCount) ?
