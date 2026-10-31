@@ -178,6 +178,7 @@ export function generateCourseRecommendations(
       score: Math.min(score, 100),
       suggestedSemester: suggestedSem,
       unlockedFutureCoursesCount: unlockedCourseIds.length,
+      longestPrerequisiteChain: insight?.longestChain ?? 0,
       unlockedCourseNames,
       reasons,
       priority,
@@ -185,7 +186,13 @@ export function generateCourseRecommendations(
   }
 
   // Sort descending by score
-  recommendations.sort((a, b) => b.score - a.score || a.courseId.localeCompare(b.courseId));
+  // Scores cap at 100: keep the deeper and wider graduation bottleneck first
+  // even when two equally required courses both reach that cap.
+  recommendations.sort((a, b) =>
+    b.score - a.score ||
+    b.unlockedFutureCoursesCount - a.unlockedFutureCoursesCount ||
+    (b.longestPrerequisiteChain ?? 0) - (a.longestPrerequisiteChain ?? 0) ||
+    a.courseId.localeCompare(b.courseId));
 
   return recommendations;
 }
