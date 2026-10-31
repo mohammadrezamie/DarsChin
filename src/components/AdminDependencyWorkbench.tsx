@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, GitBranch, Link2, MousePointer2, RotateCcw, Search, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, GitBranch, Link2, MousePointer2, RotateCcw, RotateCw, Search, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import type { AcademicRule, Course, Curriculum } from '../types';
 import { apiRequest } from '../utils/api';
 import { analyzeCurriculumDependencies, type DependencyEdge } from '../domain/course-dependency-insights';
 import { assessDependencyDraft, findRemovableDirectDependency, type VisualRelationship } from '../domain/dependency-editor';
+import { freshConnectionHistory, recordConnectionDraft, undoConnectionDraft, redoConnectionDraft, previewDependencyImpact } from '../domain/dependency-draft-history';
 
 interface ChartAssignment {
   courseId: string;
@@ -33,9 +34,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const [loadedId, setLoadedId] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
-  const [sourceId, setSourceId] = useState('');
-  const [targetId, setTargetId] = useState('');
-  const [kind, setKind] = useState<VisualRelationship>('PREREQUISITE');
+  const [draftHistory, setDraftHistory] = useState(freshConnectionHistory);
+  const { sourceId, targetId, kind } = draftHistory.present;
+  const reviseDraft = (next: { sourceId: string; targetId: string; kind: VisualRelationship }) => {
+    setDraftHistory(current => recordConnectionDraft(current, next));
+  };
+  const resetDraft = () => setDraftHistory(freshConnectionHistory(kind));
   const [search, setSearch] = useState('');
   const [zoom, setZoom] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -50,8 +54,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   }, [curricula, curriculumId]);
 
   useEffect(() => {
-    setSourceId('');
-    setTargetId('');
+    setDraftHistory(freshConnectionHistory());
     setFeedback('');
     setSelectedExisting(null);
     setDeleteConfirm(false);
@@ -91,6 +94,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const selectedRule = selectedExisting ? findRemovableDirectDependency(
     rules, curriculumId, selectedExisting.from, selectedExisting.to, selectedExisting.kind,
   ) : null;
+  const addImpact = useMemo(() => sourceId && targetId && assessment.valid && loadedId === curriculumId
+    ? previewDependencyImpact(curriculumId, courseIds, rules, { direction: 'add', sourceId, targetId, kind })
+    : null, [curriculumId, courseIds, rules, sourceId, targetId, kind, assessment.valid, loadedId]);
+  const removeImpact = useMemo(() => selectedRule && loadedId === curriculumId
+    ? previewDependencyImpact(curriculumId, courseIds, rules, { direction: 'remove', ruleId: selectedRule.id })
+    : null, [curriculumId, courseIds, rules, selectedRule?.id, loadedId]);
 
   const layout = useMemo(() => {
     const terms = new Map<number, string[]>();
@@ -126,17 +135,15 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     setSelectedExisting(null);
     setDeleteConfirm(false);
     if (!sourceId || targetId) {
-      setSourceId(id);
-      setTargetId('');
+      reviseDraft({ sourceId: id, targetId: '', kind });
     } else if (sourceId !== id) {
-      setTargetId(id);
+      reviseDraft({ sourceId, targetId: id, kind });
     }
   };
 
   const selectExistingEdge = (edge: DependencyEdge) => {
     setSelectedExisting(edge);
-    setSourceId('');
-    setTargetId('');
+    reviseDraft({ sourceId: '', targetId: '', kind });
     setDeleteConfirm(false);
     setFeedback('');
   };
@@ -185,8 +192,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       try {
         await onChanged();
         setFeedback('اتصال با موفقیت ثبت شد و نقشه به‌روزرسانی شد.');
-        setSourceId('');
-        setTargetId('');
+        resetDraft();
       } catch {
         setFeedback('اتصال ثبت شد، اما نوسازی نقشه موفق نبود. صفحه را تازه‌سازی کنید.');
       }
@@ -234,7 +240,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
         <label className="min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200">
           نوع اتصال
           <select aria-label="نوع رابطهٔ جدید" value={kind}
-            onChange={event => { setKind(event.target.value as VisualRelationship); setFeedback(''); }}
+            onChange={event => { reviseDraft({ sourceId, targetId, kind: event.target.value as VisualRelationship }); setFeedback(''); }}
             className="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option value="PREREQUISITE">پیش‌نیاز · فلش پیوسته</option>
             <option value="COREQUISITE">هم‌نیاز · خط‌چین</option>
@@ -255,6 +261,26 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
           <span className="min-w-11 pb-3 text-center text-xs font-bold text-slate-600 dark:text-slate-300">{Math.round(zoom * 100)}٪</span>
           <button type="button" aria-label="بزرگ‌نمایی" onClick={() => setZoom(value => Math.min(1.4, +(value + .15).toFixed(2)))}
             className="grid min-h-11 flex-1 place-items-center rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800"><ZoomIn size={18} /></button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+          تاریخچهٔ انتخاب و اتصالِ <strong>ذخیره‌نشده</strong> · بازگشت به انتخاب قبلی هیچ قانون ثبت‌شده‌ای را تغییر نمی‌دهد.
+        </p>
+        <div className="flex shrink-0 items-center gap-2" role="group" aria-label="تاریخچهٔ پیش‌نویس گراف">
+          <button type="button" disabled={saving || !draftHistory.past.length}
+            onClick={() => { setDraftHistory(undoConnectionDraft); setFeedback(''); setSelectedExisting(null); setDeleteConfirm(false); }}
+            aria-label="بازگشت تغییر پیش‌نویس" title="Undo · پیش‌نویس"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200">
+            <RotateCcw size={16} aria-hidden="true" /> بازگشت
+          </button>
+          <button type="button" disabled={saving || !draftHistory.future.length}
+            onClick={() => { setDraftHistory(redoConnectionDraft); setFeedback(''); setSelectedExisting(null); setDeleteConfirm(false); }}
+            aria-label="انجام دوبارهٔ تغییر پیش‌نویس" title="Redo · پیش‌نویس"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200">
+            <RotateCw size={16} aria-hidden="true" /> انجام دوباره
+          </button>
         </div>
       </div>
 
@@ -331,14 +357,13 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       aria-pressed={picked}
                       title={(course?.name ?? '') + ' (' + (course?.code ?? '') + ')'}
                       onClick={() => choose(id)}
-                      onDragStart={event => { event.dataTransfer.setData('text/plain', id); setSourceId(id); setTargetId(''); setSelectedExisting(null); setDeleteConfirm(false); }}
+                      onDragStart={event => { event.dataTransfer.setData('text/plain', id); reviseDraft({ sourceId: id, targetId: '', kind }); setSelectedExisting(null); setDeleteConfirm(false); }}
                       onDragOver={event => event.preventDefault()}
                       onDrop={event => {
                         event.preventDefault();
                         const from = event.dataTransfer.getData('text/plain');
                         if (memberIds.has(from) && from !== id) {
-                          setSourceId(from);
-                          setTargetId(id);
+                          reviseDraft({ sourceId: from, targetId: id, kind });
                           setFeedback('');
                         }
                       }}
@@ -392,6 +417,11 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
               </p>
               {selectedRule ? (
                 <>
+              {removeImpact?.valid && <p className="text-xs font-bold leading-7 text-amber-950 dark:text-amber-100">
+                پیش‌نمایش حذف: اثر زنجیره‌ای ${removeImpact.impacted.length.toLocaleString('fa-IR')} درس تغییر خواهد کرد.
+                این فقط یک برآورد ساختاری است؛ حذف واقعی پس از تأیید جداگانه انجام می‌شود.
+              </p>}
+
                   {!deleteConfirm ? (
                     <button type="button" disabled={saving} onClick={() => setDeleteConfirm(true)}
                       className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300">
@@ -421,6 +451,22 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
             </div>
           )}
 
+          {addImpact?.valid && (
+            <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+              <strong>پیش‌نمایش اثر این اتصال روی کل چارت:</strong>
+              {addImpact.impacted.length
+                ? ` مسیر ${addImpact.impacted.length.toLocaleString('fa-IR')} درس تغییر می‌کند.`
+                : ' تعداد درس‌های پایین‌دستی و عمق زنجیره تغییری نمی‌کند.'}
+              {kind === 'COREQUISITE' && ' هم‌نیاز در اولویت زنجیرهٔ پیش‌نیاز امتیاز اضافه نمی‌کند.'}
+              {addImpact.impacted.length > 0 && <div className="mt-2 grid max-h-36 gap-1 overflow-y-auto sm:grid-cols-2">
+                {addImpact.impacted.slice(0, 8).map(item => <span key={item.courseId}>
+                  {nameOf(item.courseId)}: ${item.beforeCount.toLocaleString('fa-IR')} ← ${item.afterCount.toLocaleString('fa-IR')} درس آینده · عمق ${item.beforeDepth.toLocaleString('fa-IR')} ← ${item.afterDepth.toLocaleString('fa-IR')}
+                </span>)}
+                {addImpact.impacted.length > 8 && <span>و ${(addImpact.impacted.length - 8).toLocaleString('fa-IR')} درس دیگر…</span>}
+              </div>}
+            </div>
+          )}
+
           <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-end dark:border-slate-700 dark:bg-slate-800">
             <div className="min-w-0 space-y-1">
               <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white">
@@ -440,7 +486,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => { setSourceId(''); setTargetId(''); setFeedback(''); }}
+              <button type="button" disabled={saving || (!sourceId && !targetId)} onClick={() => { reviseDraft({ sourceId: '', targetId: '', kind }); setFeedback(''); }}
                 className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200">
                 <RotateCcw size={16} aria-hidden="true" /> پاک‌کردن انتخاب
               </button>
