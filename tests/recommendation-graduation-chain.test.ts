@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { generateCourseRecommendations, type RecommendationContext } from '../src/domain/recommendation-engine';
 import type { AcademicRule, CourseEligibilityResult } from '../src/types';
 
@@ -92,4 +94,19 @@ describe('graduation-wide academic recommendation is deeper than next-term ranki
     expect(a.unlockedFutureCoursesCount).toBe(0);
     expect(a.reasons.join(' ')).toContain('ناسازگاری قواعد چارت');
   });
+
+  it('keeps the complete chain explanation visible even after the student adds a course to the wishlist', () => {
+    const wishlist = readFileSync(resolve(process.cwd(), 'src/components/StudentWishlistBuilder.tsx'), 'utf8');
+    expect(wishlist).toContain('علت پیشنهاد این درس در مسیر فارغ‌التحصیلی');
+    expect(wishlist).toContain("recByCourse.get(c.id)!.reasons.join('؛ ')");
+    expect(wishlist).toContain('ترتیب علاقه‌مندی‌ها');
+  });
+
+  it('reads actual course-attempt results from the private API, not a self-reported future semester', () => {
+    const route = readFileSync(resolve(process.cwd(), 'server/routes/eligibility.ts'), 'utf8');
+    expect(route).toContain('isSuccessfulCourseAttempt(attempt)');
+    expect(route).toContain('completedCourseIds:');
+    expect(route).toContain('studentProfile: profile,');
+  });
+
 });
