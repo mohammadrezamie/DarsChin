@@ -82,3 +82,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - **[قرارداد قطعی جریان مرحله‌ای دانشجو و ثبت تمام الزامات مهم مالک](STUDENT_GUIDED_JOURNEY_REQUIREMENTS_FA.md)** — P0، سوابق پاس/مردودی، سقف واحد، سبد علاقه‌مندی مستقل، استاد/تداخل و صف ثبت، همراه با وضعیت انجام و گیت پذیرش.
 
 - [قرارداد جداسازی مدیریت و روت یکتا، حساب دوپنلی](ROOT_ONLY_ADMIN_STUDENT_PRIVACY_20261030_FA.md) — OWN-068؛ گیت QA و مرج باز.
+
+- **[گیت جدید کارگاه گراف: Undo/Redo پیش‌نویس، پیش‌نمایش اثر تا پایان چارت و چینش RTL زنجیره‌ای/ترمی](ADMIN_GRAPH_EDITOR_HISTORY_FA.md)** — OWN-103؛ وضعیت تست ۱۸/۱۸ و مرز قابلیت‌های هنوز ناتمام.
