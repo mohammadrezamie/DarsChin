@@ -4,6 +4,7 @@ import { Trash2, Plus, Server, Network } from 'lucide-react';
 import { RelationshipType, AcademicRule, AcademicRuleNode, Course } from '../types';
 import { AdminDependencyMap } from './AdminDependencyMap';
 import { AdminDependencyWorkbench } from './AdminDependencyWorkbench';
+import { extractSourceCourseIds } from '../utils/academic';
 
 // Keep this recursive editor component stable across changes to the parent form.
 // Defining it inside AdminAcademicRules remounted all nested fields after each
@@ -98,6 +99,11 @@ export const AdminAcademicRules: React.FC = () => {
   const [dataReady, setDataReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingDeleteRuleId, setPendingDeleteRuleId] = useState<string | null>(null);
+  const [advancedChartSnapshot, setAdvancedChartSnapshot] = useState<{
+    id: string; memberIds: Set<string>; revision: string;
+  } | null>(null);
+  const [advancedLoading, setAdvancedLoading] = useState(false);
+  const [advancedError, setAdvancedError] = useState('');
 
   const [formData, setFormData] = useState<{
     curriculumId: string;
@@ -142,12 +148,64 @@ export const AdminAcademicRules: React.FC = () => {
     void fetchData();
   }, []);
 
+  // Advanced forms must never offer a global, out-of-chart course list.
+  // Fetch the *actual selected chart* and its current rule revision together.
+  useEffect(() => {
+    const chartId = formData.curriculumId;
+    setAdvancedChartSnapshot(null);
+    setAdvancedError('');
+    if (!isAdding || !chartId) {
+      setAdvancedLoading(false);
+      return;
+    }
+    let active = true;
+    setAdvancedLoading(true);
+    void Promise.all([
+      apiRequest<{ courses: { courseId: string; active?: boolean }[] }>(
+        '/api/curriculum/' + encodeURIComponent(chartId) + '/full'),
+      apiRequest<{ revision: string }>(
+        '/api/curriculum/rules/history/' + encodeURIComponent(chartId)),
+    ]).then(([members, history]) => {
+      if (!active) return;
+      if (!members.success || !Array.isArray(members.data?.courses) ||
+          !history.success || !/^[a-f0-9]{64}$/.test(history.data?.revision ?? '')) {
+        setAdvancedError(members.error || history.error || 'دروس یا نسخهٔ معتبر این چارت در دسترس نیست.');
+        return;
+      }
+      setAdvancedChartSnapshot({
+        id: chartId,
+        memberIds: new Set(members.data!.courses
+          .filter(item => item.active !== false).map(item => item.courseId)),
+        revision: history.data!.revision,
+      });
+    }).catch(() => {
+      if (active) setAdvancedError('بارگذاری چارت با خطا روبه‌رو شد؛ قانون ثبت نمی‌شود.');
+    }).finally(() => { if (active) setAdvancedLoading(false); });
+    return () => { active = false; };
+  }, [isAdding, formData.curriculumId]);
+
+  const activeAdvancedChart = advancedChartSnapshot?.id === formData.curriculumId
+    ? advancedChartSnapshot : null;
+  const scopedCourses = activeAdvancedChart
+    ? courses.filter(course => course.active !== false && activeAdvancedChart.memberIds.has(course.id))
+    : [];
+
   const handleDelete = async (id: string) => {
     if (saving || pendingDeleteRuleId !== id) return;
     setSaving(true);
     setError('');
     try {
-      const res = await apiRequest(`/api/curriculum/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const target = rules.find(rule => rule.id === id);
+      if (!target) { setError('قانون انتخاب‌شده پیدا نشد.'); return; }
+      const version = await apiRequest<{ revision: string }>(
+        '/api/curriculum/rules/history/' + encodeURIComponent(target.curriculumId));
+      if (!version.success || !/^[a-f0-9]{64}$/.test(version.data?.revision ?? '')) {
+        setError(version.error || 'نسخهٔ فعلی قوانین چارت مشخص نیست.');
+        return;
+      }
+      const res = await apiRequest(`/api/curriculum/rules/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { 'If-Match': version.data!.revision },
+      });
       if (res.success) {
         setPendingDeleteRuleId(null);
         await fetchData(true);
@@ -165,10 +223,23 @@ export const AdminAcademicRules: React.FC = () => {
       setError('چارت تحصیلی و درس هدف الزامی است.');
       return;
     }
+    if (!activeAdvancedChart || advancedLoading || !activeAdvancedChart.memberIds.has(formData.targetCourseId)) {
+      setError('ابتدا چارت معتبر و درس مقصدِ متعلق به همان چارت را انتخاب کنید.');
+      return;
+    }
+    const sourceIds = extractSourceCourseIds(formData.expression);
+    if (!sourceIds.length || sourceIds.some(id => !activeAdvancedChart.memberIds.has(id))) {
+      setError('همهٔ درس‌های شرط باید از چارت انتخاب‌شده باشند؛ هیچ شرطی نمی‌تواند خالی بماند.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
-      const res = await apiRequest('/api/curriculum/rules', { method: 'POST', body: JSON.stringify(formData) });
+      const res = await apiRequest('/api/curriculum/rules', {
+        method: 'POST',
+        headers: { 'If-Match': activeAdvancedChart.revision },
+        body: JSON.stringify(formData),
+      });
       if (res.success) {
         setIsAdding(false);
         await fetchData(true);
@@ -231,7 +302,12 @@ export const AdminAcademicRules: React.FC = () => {
               <select 
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                 value={formData.curriculumId}
-                onChange={(e) => setFormData({ ...formData, curriculumId: e.target.value })}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  curriculumId: e.target.value,
+                  targetCourseId: '',
+                  expression: { type: 'COURSE', courseId: '' },
+                })}
               >
                 <option value="">-- انتخاب --</option>
                 {curricula.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -245,7 +321,7 @@ export const AdminAcademicRules: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, targetCourseId: e.target.value })}
               >
                 <option value="">-- انتخاب --</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {scopedCourses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
               </select>
             </div>
             <div>
@@ -262,11 +338,13 @@ export const AdminAcademicRules: React.FC = () => {
             </div>
           </div>
 
+          {advancedLoading && <p role="status" className="text-xs text-indigo-700">در حال دریافت دروس معتبر چارت و آخرین نسخهٔ قوانین…</p>}
+          {advancedError && <p role="alert" className="text-xs font-bold leading-6 text-rose-800">{advancedError}</p>}
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
             <h3 className="font-bold text-gray-700 mb-4">ساختار شرط (Prerequisite Tree)</h3>
             <NodeEditor 
               node={formData.expression} 
-              coursesList={courses} 
+              coursesList={scopedCourses} 
               onChange={(exp) => setFormData({ ...formData, expression: exp })}
             />
           </div>
@@ -282,7 +360,7 @@ export const AdminAcademicRules: React.FC = () => {
             </button>
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || advancedLoading || !activeAdvancedChart}
               onClick={() => void handleSave()}
               className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
