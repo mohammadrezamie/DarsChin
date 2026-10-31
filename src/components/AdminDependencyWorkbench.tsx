@@ -62,6 +62,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
   const [historySnapshot, setHistorySnapshot] = useState<{ chartId: string; data: RuleHistorySnapshot } | null>(null);
   const [historyError, setHistoryError] = useState('');
   const [revertConfirm, setRevertConfirm] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!curricula.some(chart => chart.id === curriculumId)) {
@@ -113,7 +115,22 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       })
       .catch(() => { if (active) setHistoryError('ارتباط برای دریافت تاریخچه برقرار نشد.'); });
     return () => { active = false; };
-  }, [curriculumId, rules]);
+  }, [curriculumId, rules, historyRefresh]);
+
+  const refreshGraph = async () => {
+    if (saving || refreshing) return;
+    setRefreshing(true);
+    setHistorySnapshot(null);
+    try {
+      await onChanged();
+      setHistoryRefresh(previous => previous + 1);
+      setFeedback('داده‌های چارت و تاریخچه دوباره دریافت شدند.');
+    } catch {
+      setFeedback('تازه‌سازی کامل نشد؛ لطفاً دوباره تلاش کنید.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const revision = historySnapshot?.chartId === curriculumId ? historySnapshot.data.revision : null;
   const recentChanges = revision ? historySnapshot?.data.entries ?? [] : [];
@@ -179,6 +196,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
         setFeedback(response.error || 'اتصال حذف نشد.');
         return;
       }
+      setHistorySnapshot(null);
       try {
         await onChanged();
         setSelectedExisting(null);
@@ -210,6 +228,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
         setFeedback(response.error || 'اتصال ذخیره نشد. لطفاً دوباره تلاش کنید.');
         return;
       }
+      setHistorySnapshot(null);
       try {
         await onChanged();
         setFeedback('اتصال با موفقیت ثبت شد و نقشه به‌روزرسانی شد.');
@@ -241,8 +260,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       setHistorySnapshot(null);
       setSelectedExisting(null);
       resetDraft();
-      await onChanged();
-      setFeedback('آخرین تغییر ثبت‌شده به شکل امن بازگردانده شد؛ عملیات در تاریخچه ثبت شد.');
+      try {
+        await onChanged();
+        setFeedback('آخرین تغییر ثبت‌شده به شکل امن بازگردانده شد؛ عملیات در تاریخچه ثبت شد.');
+      } catch {
+        setFeedback('بازگردانی در سرور انجام شد، ولی نقشه تازه نشد؛ از «تازه‌سازی قوانین» استفاده کنید.');
+      }
     } catch {
       setFeedback('بازگردانی تأیید نشده است؛ تاریخچه را دوباره دریافت کنید.');
     } finally {
@@ -362,7 +385,14 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
       {fetchError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{fetchError}</p>}
       {historyError && <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold leading-7 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
         {historyError}
-      </p>}
+      </p>
+      <div className="flex items-center justify-end">
+        <button type="button" disabled={saving || refreshing} onClick={() => void refreshGraph()}
+          aria-label="تازه‌سازی قوانین و تاریخچهٔ این چارت"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          <RotateCw size={16} aria-hidden="true" /> {refreshing ? 'در حال دریافت…' : 'تازه‌سازی قوانین'}
+        </button>
+      </div>}
       {!loading && loadedId === curriculumId && courseIds.length > 0 && !analysis.valid &&
         <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold leading-7 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           زنجیرهٔ چارت معتبر نیست؛ تا اصلاح خطاهای زیر، رتبهٔ اهمیت درس‌ها نمایش داده نمی‌شود: {analysis.errors.join(' ')}
