@@ -46,5 +46,8 @@ describe('advanced academic rules: schema safety and chart-scoped UI',()=>{
     expect(ui).toContain("headers: { 'If-Match': version.data!.revision }");
     expect(ui).toContain("targetCourseId: ''");
     expect(ui).toContain("expression: { type: 'COURSE', courseId: '' }");
+    expect(ui).toContain('تازه‌سازی دروس و نسخهٔ چارت');
+    expect(ui).toContain('setAdvancedChartSnapshot(null)');
+    expect(ui).toContain('setAdvancedRefresh(value => value + 1)');
   });
 });
