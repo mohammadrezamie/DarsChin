@@ -982,6 +982,17 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good({}) as ApiResponse<T>;
     }
   }
+  // Browser demo uses synthetic, isolated data only. Its draft editor can
+  // preview relationships, but never pretends to own real persisted audit history.
+  const demoRuleHistory = path.match(/^\/api\/curriculum\/rules\/history\/([^/]+)$/);
+  if (demoRuleHistory && method === 'GET') {
+    const chart = s.collections['/api/curriculum'].find(row => row.id === demoRuleHistory[1]);
+    if (!chart) return fail('چارت آزمایشی یافت نشد.');
+    return good({ revision: '0'.repeat(64), entries: [] }) as ApiResponse<T>;
+  }
+  if (/^\/api\/curriculum\/rules\/history\/[^/]+\/revert$/.test(path)) {
+    return fail('بازگردانی قوانین ثبت‌شده در حالت دمو فعال نیست؛ تغییرات اینجا آزمایشی هستند.');
+  }
   if (path === '/api/curriculum/rules' && method === 'POST') {
     const chart = s.collections['/api/curriculum'].find(row => row.id === data.curriculumId);
     if (!chart || chart.status !== 'draft' ||
