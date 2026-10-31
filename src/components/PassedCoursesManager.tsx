@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, CalendarDays, Pencil, Plus, Trash2, X, CheckCircle2 } from 'lucide-react';
 import type { AcademicTerm, Course, CourseAttemptStatus, StudentPassedCourse } from '../types';
-import { COURSE_ATTEMPT_LABELS, courseAttemptLabel } from '../domain/course-attempt-status';
+import { COURSE_ATTEMPT_LABELS, courseAttemptLabel, isSuccessfulCourseAttempt } from '../domain/course-attempt-status';
 import { apiRequest } from '../utils/api';
 
 interface TranscriptRow extends StudentPassedCourse { course?: Course }
@@ -113,8 +113,7 @@ export const PassedCoursesManager: React.FC<Props> = ({ onPassedCoursesChanged }
       return a==='__legacy_unknown'?1:b==='__legacy_unknown'?-1:b.localeCompare(a,'fa');
     });
   },[records,terms,search]);
-  const passedCount=new Set(records.filter(row=>row.status==='PASSED'||
-    (row.status==null&&(row.grade===undefined||row.grade>=10))).map(row=>row.courseId)).size;
+  const passedCount=new Set(records.filter(isSuccessfulCourseAttempt).map(row=>row.courseId)).size;
 
   return <section dir="rtl" aria-label="کارنامهٔ ترم‌به‌ترم من" className="space-y-4">
     <header className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">

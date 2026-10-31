@@ -203,19 +203,16 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
     return res.status(400).json({ success: false, error: 'این درس در کاتالوگ فعال وجود ندارد.' });
   }
 
-  const existing = db.studentPassedCourses.find(
-    (spc) => spc.userId === userId && spc.courseId === courseId &&
-      isSuccessfulCourseAttempt(spc)
-  );
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
-  }
-
-  // A transcript describes one outcome per course per semester. An older
-  // attempt with no term keeps its historical identity and is not guessed.
+  // Historical outcomes can predate a pass. A later PASSED result must not
+  // erase previous failure/absence; only duplicate passes are blocked.
+  const requestedStatus = status || (grade !== undefined && grade < 10 ? 'FAILED' : 'PASSED');
   if (termId && db.studentPassedCourses.some(p =>
       p.userId === userId && p.courseId === courseId && p.termId === termId)) {
     return res.status(409).json({ success: false, error: 'نتیجهٔ این درس در این نیمسال قبلاً ثبت شده؛ همان سابقه را ویرایش کن.' });
+  }
+  if (requestedStatus === 'PASSED' && db.studentPassedCourses.some(spc =>
+      spc.userId === userId && spc.courseId === courseId && isSuccessfulCourseAttempt(spc))) {
+    return res.status(400).json({ success: false, error: 'این درس قبلاً به عنوان درس گذرانده‌شده ثبت شده است.' });
   }
 
   const newEntry: StudentPassedCourse = {
@@ -223,7 +220,7 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
     userId,
     courseId,
     grade,
-    status: status || (grade !== undefined && grade < 10 ? 'FAILED' : 'PASSED'),
+    status: requestedStatus,
     termId: termId || undefined,
     passedAt: new Date().toISOString(),
   };
