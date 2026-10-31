@@ -677,16 +677,18 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     return good(s.plan) as ApiResponse<T>;
   }
   if (path === '/api/student/passed-courses' && method === 'GET') {
-    const enriched = s.passed.map(row => ({ ...row, course: s.collections['/api/academic/courses'].find(c => c.id === row.courseId) }));
+    const enriched: (Row & { course?: Row })[] = s.passed.map(row => ({
+      ...row, course: s.collections['/api/academic/courses'].find(c => c.id === row.courseId),
+    }));
     const counted = new Set<string>();
     const totalUnits = enriched.reduce((n,r) => {
-      if (!r.course || !isSuccessfulCourseAttempt(r) || counted.has(r.courseId)) return n;
+      if (!r.course || !isSuccessfulCourseAttempt({status:r.status,grade:r.grade}) || counted.has(r.courseId)) return n;
       counted.add(r.courseId);
       return n + r.course.units;
     }, 0);
     const categorySummary: Record<string,number> = {};
     const added = new Set<string>();
-    enriched.forEach(r=>{if (r.course && isSuccessfulCourseAttempt(r) && !added.has(r.courseId)) {
+    enriched.forEach(r=>{if (r.course && isSuccessfulCourseAttempt({status:r.status,grade:r.grade}) && !added.has(r.courseId)) {
       categorySummary[r.course.category] = (categorySummary[r.course.category]||0)+r.course.units; added.add(r.courseId);
     }});
     return good({ passedCourses: enriched, totalUnits, categorySummary }) as ApiResponse<T>;
