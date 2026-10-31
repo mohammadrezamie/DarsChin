@@ -97,5 +97,12 @@ describe('whole-chart change previews', () => {
     expect(graph).toContain('previewDependencyImpact(');
     expect(graph).toContain('پس از تأیید جداگانه');
     expect(graph).toContain('onChanged()');
+    expect(graph).toContain("setLayoutMode('chain')");
+    expect(graph).toContain("setLayoutMode('semester')");
+    expect(graph).toContain('insight.depth + 1');
+    expect(graph).toContain('sortedTerms.length - 1 - column');
+    expect(graph).toContain('layout.chainModeActive ? from.x : from.x + NODE_WIDTH');
+    expect(graph).toContain("layout.chainModeActive ? 'سطح زنجیرهٔ ' : 'ترم پیشنهادی '");
+
   });
 });
