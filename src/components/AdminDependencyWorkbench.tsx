@@ -5,6 +5,7 @@ import { apiRequest } from '../utils/api';
 import { analyzeCurriculumDependencies, type DependencyEdge } from '../domain/course-dependency-insights';
 import { assessDependencyDraft, findRemovableDirectDependency, type VisualRelationship } from '../domain/dependency-editor';
 import { freshConnectionHistory, recordConnectionDraft, undoConnectionDraft, redoConnectionDraft, previewDependencyImpact } from '../domain/dependency-draft-history';
+import { layoutDependencyGraph, NODE_WIDTH, NODE_HEIGHT, COLUMN_WIDTH, ROW_HEIGHT } from '../domain/dependency-graph-layout';
 
 interface ChartAssignment {
   courseId: string;
@@ -17,11 +18,6 @@ interface Props {
   curricula: Curriculum[];
   onChanged: () => Promise<void>;
 }
-
-const NODE_WIDTH = 208;
-const NODE_HEIGHT = 68;
-const COLUMN_WIDTH = 252;
-const ROW_HEIGHT = 88;
 
 /**
  * Private admin workbench. Connect two actual curriculum courses either by
@@ -102,43 +98,10 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
     ? previewDependencyImpact(curriculumId, courseIds, rules, { direction: 'remove', ruleId: selectedRule.id })
     : null, [curriculumId, courseIds, rules, selectedRule?.id, loadedId]);
 
-  const layout = useMemo(() => {
-    // In chain mode the entire prerequisite DAG, not the guessed registration
-    // term, decides the left-to-right order. Semester view remains optional.
-    const groups = new Map<number, string[]>();
-    const chainModeActive = layoutMode === 'chain' && analysis.valid;
-    for (const row of verified) {
-      if (!courseMap.has(row.courseId)) continue;
-      const insight = insights.get(row.courseId);
-      const column = chainModeActive && insight
-        ? insight.depth + 1
-        : Math.max(1, Math.min(16, Math.round(Number(row.suggestedSemester) || 1)));
-      const list = groups.get(column) ?? [];
-      if (!list.includes(row.courseId)) list.push(row.courseId);
-      groups.set(column, list);
-    }
-    const positions = new Map<string, { x: number; y: number }>();
-    const sortedTerms = [...groups.keys()].sort((a, b) => a - b);
-    sortedTerms.forEach((term, column) => {
-      (groups.get(term) ?? []).sort((a,b) =>
-        chainModeActive
-          ? (insights.get(b)?.downstreamCount ?? 0) - (insights.get(a)?.downstreamCount ?? 0) ||
-            (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa')
-          : (courseMap.get(a)?.name ?? '').localeCompare(courseMap.get(b)?.name ?? '', 'fa'))
-        .forEach((id, row) => positions.set(id, {
-          x: 24 + (chainModeActive ? sortedTerms.length - 1 - column : column) * COLUMN_WIDTH,
-          y: 64 + row * ROW_HEIGHT,
-        }));
-    });
-    return {
-      positions,
-      width: Math.max(500, sortedTerms.length * COLUMN_WIDTH + 32),
-      height: Math.max(220, 88 + Math.max(0, ...[...groups.values()].map(items => items.length)) * ROW_HEIGHT),
-      terms: groups,
-      sortedTerms,
-      chainModeActive,
-    };
-  }, [verified, courseMap, insights, analysis.valid, layoutMode]);
+  const layout = useMemo(
+    () => layoutDependencyGraph(verified, courseMap, analysis, layoutMode),
+    [verified, courseMap, analysis, layoutMode],
+  );
 
   const nameOf = (id: string) => courseMap.get(id)?.name ?? 'درس نامشخص';
   const choose = (id: string) => {
@@ -356,9 +319,9 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       const from = layout.positions.get(edge.from);
                       const to = layout.positions.get(edge.to);
                       if (!from || !to) return null;
-                      const fromX = layout.chainModeActive ? from.x : from.x + NODE_WIDTH;
-                      const toX = layout.chainModeActive ? to.x + NODE_WIDTH : to.x;
-                      const bend = layout.chainModeActive ? -28 : 28;
+                      const fromX = from.x;
+                      const toX = to.x + NODE_WIDTH;
+                      const bend = -28;
                       const d = 'M' + fromX + ' ' + (from.y + NODE_HEIGHT / 2) +
                         ' C' + (fromX + bend) + ' ' + (from.y + NODE_HEIGHT / 2) +
                         ' ' + (toX - bend) + ' ' + (to.y + NODE_HEIGHT / 2) +
@@ -377,8 +340,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                       </React.Fragment>;
                     })}
                     {pending && start && end && <path
-                      d={'M' + (layout.chainModeActive ? start.x : start.x + NODE_WIDTH) + ' ' + (start.y + NODE_HEIGHT / 2) +
-                        ' L' + (layout.chainModeActive ? end.x + NODE_WIDTH : end.x) + ' ' + (end.y + NODE_HEIGHT / 2)}
+                      d={'M' + start.x + ' ' + (start.y + NODE_HEIGHT / 2) +
+                        ' L' + (end.x + NODE_WIDTH) + ' ' + (end.y + NODE_HEIGHT / 2)}
                       stroke={assessment.valid ? '#059669' : '#e11d48'} strokeWidth={3} strokeDasharray="7 5" fill="none" />}
                   </svg>
                   {[...layout.positions].map(([id, point]) => {
