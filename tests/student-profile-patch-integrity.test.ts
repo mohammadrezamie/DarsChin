@@ -110,8 +110,8 @@ describe('the student academic identity survives partial edits', () => {
 
   it('hydrates the academic modal with the previously saved GPA and province rather than clearing them', () => {
     const code = readFileSync(resolve(process.cwd(), 'src/components/AcademicProfileModal.tsx'), 'utf8');
-    expect(code).toContain("setProvinceId(p.provinceId || '')");
-    expect(code).toContain("setPreviousTermGpa(p.previousTermGpa == null ? '' : String(p.previousTermGpa))");
+    expect(code).toContain("setProvinceId(profile.provinceId || '')");
+    expect(code).toContain("setPreviousTermGpa(profile.previousTermGpa == null ? '' : String(profile.previousTermGpa))");
     expect(code).toContain("previousTermGpa.trim() === '' ? null : Number(previousTermGpa)");
     expect(code).toContain('provinces: Province[]');
     expect(code).not.toContain("universityId || 'univ-azad'");
@@ -164,7 +164,7 @@ describe('new academic profile reference boundaries',()=>{
 
   it('actually loads provinces from metadata into the editable selector',()=>{
     const source=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
-    expect(source).toContain('setProvinces(metaRes.data.provinces || [])');
+    expect(source).toContain('setProvinces(Array.isArray(meta!.provinces) ? meta!.provinces : [])');
     expect(source).toContain("setCampusId('');");
   });
 });

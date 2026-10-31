@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Student Academic Profile Setup Modal
 // ============================================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
   GraduationCap,
@@ -61,61 +61,124 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
   const [desiredTrackIds, setDesiredTrackIds] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadRevision, setLoadRevision] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const savingRef = useRef(false);
+  const closeCallbackRef = useRef(onClose);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  savingRef.current = saving;
+  closeCallbackRef.current = onClose;
+
+  // Modal focus must remain inside the active academic form. Restoring focus
+  // after closing is especially important for keyboard and mobile users.
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
 
-    const loadAll = async () => {
-      setLoading(true);
-      // Fetch metadata and current profile
-      const [metaRes, profileRes] = await Promise.all([
-        apiRequest<{
-          universities: University[];
-          provinces: Province[];
-          campuses: Campus[];
-          degreeLevels: DegreeLevel[];
-          majors: Major[];
-          tracks: Track[];
-          entryYears: EntryYear[];
-          academicTerms: AcademicTerm[];
-        }>('/api/academic/all-meta'),
-        apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
-      ]);
-
-      if (metaRes.success && metaRes.data) {
-        setUniversities(metaRes.data.universities);
-        setProvinces(metaRes.data.provinces || []);
-        setCampuses(metaRes.data.campuses);
-        setDegreeLevels(metaRes.data.degreeLevels);
-        setMajors(metaRes.data.majors);
-        setTracks(metaRes.data.tracks);
-        setEntryYears(metaRes.data.entryYears);
-        setTerms(metaRes.data.academicTerms);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (!savingRef.current) {
+          event.preventDefault();
+          closeCallbackRef.current();
+        }
+        return;
       }
-
-      if (profileRes.success && profileRes.data?.profile) {
-        const p = profileRes.data.profile;
-        setUniversityId(p.universityId || '');
-        setProvinceId(p.provinceId || '');
-        setPreviousTermGpa(p.previousTermGpa == null ? '' : String(p.previousTermGpa));
-        setCampusId(p.campusId || '');
-        setDegreeLevelId(p.degreeLevelId || '');
-        setMajorId(p.majorId || '');
-        setEntryYearId(p.entryYearId || '');
-        setCurrentTermId(p.currentTermId || '');
-        setIsTrackSelected(Boolean(p.isTrackSelected));
-        setSelectedTrackId(p.selectedTrackId || '');
-        setDesiredTrackIds(p.desiredTrackIds || []);
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]',
+      ) ?? []);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
-
-      setLoading(false);
     };
-
-    loadAll();
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    setLoading(true);
+    setLoadError(null);
+    setMessage(null);
+
+    const loadAll = async () => {
+      try {
+        const [metaRes, profileRes] = await Promise.all([
+          apiRequest<{
+            universities: University[];
+            provinces: Province[];
+            campuses: Campus[];
+            degreeLevels: DegreeLevel[];
+            majors: Major[];
+            tracks: Track[];
+            entryYears: EntryYear[];
+            academicTerms: AcademicTerm[];
+          }>('/api/academic/all-meta'),
+          apiRequest<{ profile: StudentAcademicProfile }>('/api/student/profile'),
+        ]);
+        if (!alive) return;
+        const meta = metaRes.data;
+        const profile = profileRes.data?.profile;
+        const requiredLists = [
+          meta?.universities, meta?.campuses, meta?.degreeLevels,
+          meta?.majors, meta?.tracks, meta?.entryYears, meta?.academicTerms,
+        ];
+        if (!metaRes.success || !profileRes.success || !profile ||
+            requiredLists.some(rows => !Array.isArray(rows))) {
+          setLoadError(metaRes.error || profileRes.error ||
+            'اطلاعات لازم برای تشکیل پرونده کامل دریافت نشد؛ دوباره تلاش کن.');
+          return;
+        }
+
+        setUniversities(meta!.universities);
+        setProvinces(Array.isArray(meta!.provinces) ? meta!.provinces : []);
+        setCampuses(meta!.campuses);
+        setDegreeLevels(meta!.degreeLevels);
+        setMajors(meta!.majors);
+        setTracks(meta!.tracks);
+        setEntryYears(meta!.entryYears);
+        setTerms(meta!.academicTerms);
+
+        setUniversityId(profile.universityId || '');
+        setProvinceId(profile.provinceId || '');
+        setPreviousTermGpa(profile.previousTermGpa == null ? '' : String(profile.previousTermGpa));
+        setCampusId(profile.campusId || '');
+        setDegreeLevelId(profile.degreeLevelId || '');
+        setMajorId(profile.majorId || '');
+        setEntryYearId(profile.entryYearId || '');
+        setCurrentTermId(profile.currentTermId || '');
+        setIsTrackSelected(Boolean(profile.isTrackSelected));
+        setSelectedTrackId(profile.selectedTrackId || '');
+        setDesiredTrackIds(profile.desiredTrackIds || []);
+      } catch {
+        if (alive) setLoadError('ارتباط با سرور برقرار نشد؛ برای جلوگیری از ذخیرهٔ پروندهٔ ناقص دوباره تلاش کن.');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+    void loadAll();
+    // A response from an earlier open/retry may not replace current student fields.
+    return () => { alive = false; };
+  }, [isOpen, loadRevision]);
   if (!isOpen) return null;
 
   // Filtered lists based on parent selection
@@ -139,6 +202,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || loadError || saving) return;
     setSaving(true);
     setMessage(null);
 
@@ -179,20 +243,21 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       previousTermGpa: previousTermGpa.trim() === '' ? null : Number(previousTermGpa),
     };
 
-    const res = await apiRequest('/api/student/profile', {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
-
-    setSaving(false);
-    if (res.success) {
-      setMessage({ type: 'success', text: 'پرونده تحصیلی شما با موفقیت به‌روزرسانی شد.' });
-      setTimeout(() => {
+    try {
+      const res = await apiRequest('/api/student/profile', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      if (res.success) {
         onProfileUpdated();
         onClose();
-      }, 700);
-    } else {
-      setMessage({ type: 'error', text: res.error || 'خطا در ذخیره پروفایل تحصیلی.' });
+      } else {
+        setMessage({ type: 'error', text: res.error || 'خطا در ذخیره پروفایل تحصیلی.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'ارتباط برای ذخیرهٔ پرونده برقرار نشد؛ اطلاعات را بررسی و دوباره تلاش کن.' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -200,6 +265,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <div
         id="academicProfileModalContainer"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="تنظیمات پروندهٔ تحصیلی"
@@ -207,8 +273,10 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       >
         <button
           id="btnCloseProfileModal"
+          ref={closeRef}
           type="button"
           aria-label="بستن تنظیمات پروندهٔ تحصیلی"
+          disabled={saving}
           onClick={onClose}
           className="absolute top-3 left-3 flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:top-4 sm:left-4"
         >
@@ -243,7 +311,15 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
         )}
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-500">در حال بارگذاری اطلاعات تحصیلی...</div>
+          <div role="status" className="py-12 text-center text-xs text-slate-500">در حال بارگذاری اطلاعات تحصیلی...</div>
+        ) : loadError ? (
+          <div role="alert" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+            <p>{loadError}</p>
+            <button type="button" onClick={() => setLoadRevision(previous => previous + 1)}
+              className="min-h-11 rounded-xl bg-blue-700 px-4 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-blue-400">
+              دریافت دوبارهٔ اطلاعات پرونده
+            </button>
+          </div>
         ) : (
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -521,15 +597,16 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                disabled={saving}
+                className="min-h-11 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
               >
                 انصراف
               </button>
               <button
                 id="btnSaveAcademicProfile"
                 type="submit"
-                disabled={saving}
-                className="px-5 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs"
+                disabled={saving || loading || Boolean(loadError)}
+                className="min-h-11 px-5 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs"
               >
                 {saving ? 'در حال ذخیره...' : 'ذخیره پرونده تحصیلی'}
               </button>
