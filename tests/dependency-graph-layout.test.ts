@@ -61,6 +61,20 @@ describe('RTL graph layout based on the entire prerequisite DAG', () => {
     expect(layout.positions.size).toBe(3);
   });
 
+  it('lays out a long graduation path without duplicating or losing nodes', () => {
+    const ids = Array.from({ length: 120 }, (_, i) => 'level-' + i);
+    const graph = analyzeCurriculumDependencies('chart', ids,
+      ids.slice(1).map((id, i) => rule(ids[i], id)));
+    expect(graph.valid).toBe(true);
+    const catalog = new Map(ids.map(id => [id, {name:id}]));
+    const layout = layoutDependencyGraph(ids.map(courseId => ({courseId, suggestedSemester:1})),
+      catalog, graph, 'chain');
+    expect(layout.positions.size).toBe(120);
+    expect(layout.sortedTerms).toHaveLength(120);
+    expect(layout.positions.get(ids[0])!.x).toBeGreaterThan(layout.positions.get(ids[119])!.x);
+    expect(new Set([...layout.positions.values()].map(p => p.x + '/' + p.y)).size).toBe(120);
+  });
+
   it('handles empty charts and missing courses without throwing', () => {
     const graph = analyzeCurriculumDependencies('chart',[],[]);
     const layout=layoutDependencyGraph([{courseId:'missing',suggestedSemester:1}],courses,graph,'chain');
