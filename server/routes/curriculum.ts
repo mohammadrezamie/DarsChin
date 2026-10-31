@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
 import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
 import { validate } from '../middleware/validate';
@@ -269,7 +269,7 @@ curriculumRouter.get('/rules', authenticate, requirePermission('prerequisite.man
 
 // Admin: Read a consistent graph snapshot and limited academic-rule history.
 // This endpoint is private, never exposed in the public/student workspace.
-curriculumRouter.get('/rules/history/:curriculumId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
+curriculumRouter.get('/rules/history/:curriculumId', authenticate, requirePermission('prerequisite.manage'), (req: AuthenticatedRequest, res) => {
   const curriculumId = req.params.curriculumId;
   const chart = db.curricula.find(item => item.id === curriculumId);
   if (!chart) return res.status(404).json({ success:false,error:'چارت انتخابی یافت نشد.' });
@@ -301,7 +301,7 @@ curriculumRouter.get('/rules/history/:curriculumId', authenticate, requirePermis
 curriculumRouter.post('/rules/history/:curriculumId/revert', authenticate,
   requirePermission('prerequisite.manage'),
   validate(z.object({eventId:z.string().min(1),expectedRevision:z.string().regex(/^[a-f0-9]{64}$/)})),
-  (req, res) => {
+  (req: AuthenticatedRequest, res) => {
     const {curriculumId} = req.params;
     const chart = db.curricula.find(item => item.id === curriculumId && item.status !== 'archived');
     if (!chart) return res.status(404).json({success:false,error:'چارت فعال یافت نشد.'});
@@ -310,7 +310,7 @@ curriculumRouter.post('/rules/history/:curriculumId/revert', authenticate,
       return res.status(409).json({success:false,error:'قوانین تغییر کرده‌اند؛ ابتدا تاریخچه را تازه‌سازی کنید.'});
     const checked = checkAcademicRuleRevert(db.auditLogs,db.academicRules,curriculumId,
       req.body.eventId,req.user!.id,req.user!.roles.includes('super-admin'));
-    if (!checked.ok) return res.status(409).json({success:false,error:checked.error});
+    if (checked.ok === false) return res.status(409).json({success:false,error:checked.error});
     const rule = checked.details.rule;
     const currentChartCourses = [...new Set(db.curriculumCourses.filter(item =>
       item.curriculumId === curriculumId && item.active !== false).map(item=>item.courseId))];
@@ -339,7 +339,7 @@ curriculumRouter.post('/rules/history/:curriculumId/revert', authenticate,
 );
 
 // Admin: Add Academic Rule
-curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req, res) => {
+curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.manage'), validate(createAcademicRuleSchema), (req: AuthenticatedRequest, res) => {
   const {
     curriculumId,
     entryYearId,
@@ -437,7 +437,7 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
 });
 
 // Admin: Delete Academic Rule
-curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
+curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req: AuthenticatedRequest, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
   const rule = db.data.academicRules[idx];
