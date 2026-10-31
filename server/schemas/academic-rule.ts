@@ -1,13 +1,21 @@
 import { z } from 'zod';
+import type { AcademicRuleNode } from '../../src/types';
 
-const academicRuleNodeSchema: z.ZodType<any> = z.lazy(() =>
+// Reject partially empty or ambiguously-shaped trees at the API boundary.
+// The former schema accepted GROUP without operator/operands and COURSE without
+// courseId; a single filled operand could hide incomplete AND/OR siblings.
+const academicRuleNodeSchema: z.ZodType<AcademicRuleNode> = z.lazy(() => z.discriminatedUnion('type', [
   z.object({
-    type: z.enum(['COURSE', 'GROUP']),
-    courseId: z.string().optional(),
-    operator: z.enum(['AND', 'OR']).optional(),
-    operands: z.array(academicRuleNodeSchema).optional(),
-  })
-);
+    type: z.literal('COURSE'),
+    courseId: z.string().trim().min(1, 'یک درس برای هر شرط لازم است'),
+  }).strict(),
+  z.object({
+    type: z.literal('GROUP'),
+    operator: z.enum(['AND', 'OR']),
+    operands: z.array(academicRuleNodeSchema).min(2, 'هر گروه «و/یا» حداقل دو شرط نیاز دارد')
+      .max(30, 'تعداد شرط‌های یک گروه بیش از حد مجاز است'),
+  }).strict(),
+]));
 
 export const createAcademicRuleSchema = z.object({
   curriculumId: z.string().min(1, 'Curriculum ID is required'),
