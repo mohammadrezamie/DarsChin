@@ -57,7 +57,7 @@ describe('isolated browser demo API', () => {
     const student = renderToStaticMarkup(<MemoryRouter><DemoWorkspace role="student" /></MemoryRouter>);
     const admin = renderToStaticMarkup(<MemoryRouter><DemoWorkspace role="admin" /></MemoryRouter>);
     expect(student).toContain('محیط آزمایشیِ بدون حساب واقعی');
-    expect(admin).toContain('پنل مدیر');
+    expect(admin).toContain('در حال آماده‌سازی محیط آزمایشی');
     expect(student).toContain('دانشجوی آزمایشی');
     expect(admin).toContain('مدیر آزمایشی');
     expect(student).toContain('بازنشانی دمو');
