@@ -988,11 +988,14 @@ export const StudentDashboard: React.FC = () => {
 
       <StudentMobileDock active={activeTab} demandAvailable={demandSurveyAvailable} onSelect={selectMobileWorkspace} />
 
-      <AcademicProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-        onProfileUpdated={fetchDashboardData}
-      />
+      {isProfileModalOpen && (
+        <AcademicProfileModal
+          key={user?.id ?? 'signed-out'}
+          isOpen={true}
+          onClose={() => setProfileModalOpen(false)}
+          onProfileUpdated={fetchDashboardData}
+        />
+      )}
 
             <ImportOfferingsModal
         isOpen={isImportModalOpen}

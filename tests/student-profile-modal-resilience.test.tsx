@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AcademicProfileModal } from '../src/components/AcademicProfileModal';
+const dashboard=readFileSync(resolve(process.cwd(),'src/components/StudentDashboard.tsx'),'utf8');
 
 const source=readFileSync(resolve(process.cwd(),'src/components/AcademicProfileModal.tsx'),'utf8');
 
@@ -47,4 +48,11 @@ describe('guided profile dialog fails closed and stays usable by keyboard',()=>{
     expect(source).toContain('} finally {\n      setSaving(false);');
     expect(source).not.toContain('setTimeout(() => {');
   });
+  it('remounts with blank state each time the profile opens or the user changes',()=>{
+    expect(dashboard).toContain('{isProfileModalOpen && (');
+    expect(dashboard).toContain("key={user?.id ?? 'signed-out'}");
+    expect(dashboard).toContain('isOpen={true}');
+    expect(source).toContain('useState(true)');
+  });
+
 });
