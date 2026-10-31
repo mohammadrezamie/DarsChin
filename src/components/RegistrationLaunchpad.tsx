@@ -164,7 +164,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     setDoneIds(prev=>registered?[...new Set([...prev,id])]:prev.filter(x=>x!==id));
   };
   const moveTo=async(from:number,to:number)=>{
-    if(reorderLock.current)return;
+    if(reorderLock.current||reordering)return;
     const order=reorderRegistrationCourses(stepIds,from,to);
     if(!order)return;
     reorderLock.current=true;
