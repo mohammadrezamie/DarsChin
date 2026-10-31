@@ -9,6 +9,8 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { isSuccessfulCourseAttempt } from '../../src/domain/course-attempt-status';
+import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
+import { analyzeRemainingGraduationPaths } from '../../src/domain/remaining-graduation-path';
 import { validate } from '../middleware/validate';
 import { validateRegistrationPlanReferences, countRegistrationPlanUnits } from '../domain/registration-plan-integrity';
 import { validateAcademicProfileReferences } from '../domain/student-profile-references';
@@ -347,19 +349,45 @@ studentRouter.get('/wishlist/catalog', authenticate, (req: AuthenticatedRequest,
   if (!scope) return res.status(409).json({ success: false, error: 'برای مشاهدهٔ سبد، ابتدا پرونده و چارت تحصیلی معتبر خود را تکمیل کنید.' });
   const passed = new Set(db.studentPassedCourses.filter(item => item.userId === req.user!.id &&
     isSuccessfulCourseAttempt(item)).map(item => item.courseId));
-  const courses = db.curriculumCourses.filter(cc =>
+  // The wishlist lists ALL outstanding chart courses, not only currently
+  // offered groups. This graduation-wide ranking is advisory and never bypasses
+  // the separate, authoritative eligibility/registration checks.
+  const assignments = db.curriculumCourses.filter(cc =>
     cc.curriculumId === scope.chart.id && cc.active !== false &&
-    (!cc.trackId || !scope.profile.selectedTrackId || cc.trackId === scope.profile.selectedTrackId))
-    .map(cc => {
-      const course = db.courses.find(c => c.id === cc.courseId && c.active);
-      return course && !passed.has(course.id)
-        ? { id: course.id, name: course.name, code: course.code, units: course.units,
-            category: course.category, suggestedSemester: cc.suggestedSemester } : null;
-    })
-    .filter((course): course is NonNullable<typeof course> => course !== null);
+    (!cc.trackId || !scope.profile.selectedTrackId || cc.trackId === scope.profile.selectedTrackId));
+  const chartCourseIds = [...new Set(assignments
+    .filter(cc => db.courses.some(course => course.id === cc.courseId && course.active))
+    .map(cc => cc.courseId))];
+  const relevantTrackIds = new Set(scope.profile.isTrackSelected
+    ? (scope.profile.selectedTrackId ? [scope.profile.selectedTrackId] : [])
+    : (scope.profile.desiredTrackIds ?? []));
+  const applicableRules = db.academicRules.filter(rule =>
+    rule.curriculumId === scope.chart.id &&
+    (!rule.majorId || rule.majorId === scope.profile.majorId) &&
+    (!rule.entryYearId || rule.entryYearId === scope.profile.entryYearId) &&
+    (!rule.trackId || relevantTrackIds.has(rule.trackId)));
+  const chartAnalysis = analyzeCurriculumDependencies(scope.chart.id,chartCourseIds,applicableRules);
+  const paths = analyzeRemainingGraduationPaths(chartAnalysis,passed);
+  const courses = assignments.map(cc => {
+    const course = db.courses.find(c => c.id === cc.courseId && c.active);
+    if (!course || passed.has(course.id)) return null;
+    const path = paths.get(course.id);
+    return {
+      id: course.id, name: course.name, code: course.code, units: course.units,
+      category: course.category, suggestedSemester: cc.suggestedSemester,
+      graduationAnalysisValid: chartAnalysis.valid,
+      noChoiceFutureCoursesCount: path?.noChoiceFutureCourseIds.length,
+      choiceOnlyFutureCoursesCount: path?.choiceOnlyFutureCourseIds.length,
+      longestRemainingPrerequisiteChain: path?.longestRemainingChain,
+      // No academic or enrollment permission is encoded here.
+    };
+  }).filter((course): course is NonNullable<typeof course> => course !== null);
   const unique = [...new Map(courses.map(c => [c.id, c])).values()];
-  unique.sort((a, b) => Number(a.suggestedSemester || 0) - Number(b.suggestedSemester || 0) ||
-    a.name.localeCompare(b.name, 'fa'));
+  unique.sort((a,b) =>
+    (b.noChoiceFutureCoursesCount ?? 0) - (a.noChoiceFutureCoursesCount ?? 0) ||
+    (b.longestRemainingPrerequisiteChain ?? 0) - (a.longestRemainingPrerequisiteChain ?? 0) ||
+    Number(a.suggestedSemester || 99) - Number(b.suggestedSemester || 99) ||
+    a.name.localeCompare(b.name,'fa'));
   res.setHeader('Cache-Control', 'private, no-store');
   res.json({ success: true, data: unique });
 });
