@@ -1,5 +1,7 @@
 # DarsChin (DARSCHYN)
 
+> **Public repository status: NOT CLEARED.** Before changing GitHub visibility, follow the [public-source security gate (2026-11-01)](docs/PUBLIC_REPOSITORY_READINESS_20261101_FA.md). A committed local database has included an identifiable non-demo account and recovery credentials; deleting it from the latest branch does not remove Git history.
+
 DarsChin is a student-focused helper for course planning and workflows around Educationalyar. The web application includes a React/Vite frontend and a Node.js/Express backend, with an accompanying browser-extension codebase.
 
 Project homepage (frontend demo only, subject to deployment status): https://dars-chin.vercel.app
