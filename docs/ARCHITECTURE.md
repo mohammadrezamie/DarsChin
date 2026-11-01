@@ -1,68 +1,56 @@
-# DARSCHYN Architecture
+# معماری درس‌چین
 
-## Product boundary
+## مرز محصول
 
-DARSCHYN is the student course-planning application. The Chrome extension is an ingestion adapter, not the application itself.
+درس‌چین یک **سامانهٔ وب برای برنامه‌ریزی درسی دانشجو** است؛ افزونهٔ کروم تنها یک ابزار اختیاری برای جمع‌آوری اطلاعات ارائه‌های آموزشیار محسوب می‌شود و نباید با محصول اصلی اشتباه گرفته شود.
 
-## Main layers
+## لایه‌های معماری
 
-1. **Client UI** — React pages, student/admin workspaces, forms, timetable, and course prioritization.
-2. **API** — Express routes; authentication and authorization must be enforced server-side.
-3. **Domain** — academic policy, eligibility, schedule conflicts, and recommendations. Domain rules should not depend on the source from which course data arrived.
-4. **Ingestion adapters** — extension, future official APIs, or explicitly supported imports.
-5. **Normalization and reconciliation** — validate raw source records, normalize identifiers and times, deduplicate, track provenance, and reconcile complete snapshots.
-6. **Persistence** — users, academic data, offerings, sync jobs/snapshots, and audit history.
+1. **رابط کاربری:** صفحات React، محیط دانشجو و مدیر، فرم‌ها، برنامهٔ هفتگی، صف اولویت و آماده‌باش.
+2. **API:** مسیرهای Express با احراز هویت و کنترل مجوز و مالکیت داده در سرور.
+3. **منطق دامنه:** قوانین آموزشی تأییدشده، ارزیابی صلاحیت، تداخل زمانی، محدودیت واحد و پیشنهاد دروس؛ مستقل از منبع داده.
+4. **درگاه‌های دریافت:** افزونهٔ آموزشیار، API رسمیِ مجاز در آینده و واردسازی پرونده‌های تأییدشده.
+5. **اعتبارسنجی و تطبیق:** بررسی ساختار، عادی‌سازی کدها و ساعت‌ها، حذف تکرارها، ثبت منبع و تطبیق دادهٔ کامل.
+6. **ذخیره‌سازی:** حساب‌ها، چارت و سوابق آموزشی، گروه‌ها، صف همگام‌سازی و سوابق ممیزی.
 
-## Intended data flow
+## مسیر درست گردش داده
 
 ```text
-Educationalyar / authorized source
-             |
-             v
-      Source adapter
-             |
-             v
- Validate -> Normalize -> Deduplicate
-             |
-             v
-       Sync job + chunks
-             |
-             v
- Complete-snapshot reconciliation
-             |
-             v
- ImportBatch + manager review records
-             |
-             v
- Checked source/course/class permissions
-             |
-             v
- Audited publication flow (NOT YET AVAILABLE)
-             |
-             v
- Canonical course offerings
-             |
-       +-----+------+
-       |            |
-       v            v
- Eligibility   Timetable/conflicts
-       |            |
-       +-----+------+
-             v
-      Student recommendations
+آموزشیار یا منبع مجاز
+         ↓
+درگاه اختصاصی دریافت
+         ↓
+اعتبارسنجی ← عادی‌سازی ← تشخیص تکرار
+         ↓
+کار همگام‌سازی و بخش‌های ورودی
+         ↓
+تطبیق مجموعهٔ کامل
+         ↓
+صف واردسازی و بررسی مدیر
+         ↓
+کنترل منبع، درس و مجوزها
+         ↓
+انتشار با تأیید و ممیزی مجزا
+         ↓
+گروه‌های ارائه‌شدهٔ معتبر
+         ↓
+صلاحیت آموزشی + تداخل برنامه
+         ↓
+پیشنهادها و آماده‌باش دانشجو
 ```
 
-## Invariants
+**نکتهٔ وضعیت:** در نسخهٔ مورد بررسی، دریافت دادهٔ افزونه فقط تا **صف بررسی مدیر** انجام می‌شود. مسیر انتشار خودکارِ دادهٔ دانشجو به ارائهٔ رسمی **مجاز یا فعال نیست**؛ مراحل بعدی نباید بدون مجوز مالک و آزمون، این مرز را بشکنند.
 
-- **Student extension snapshots must never write canonical offerings.** Completed sync jobs queue normalized candidates for human review; independent audited publication is intentionally disabled.
-- A source adapter must not directly implement academic policy.
-- A partial or failed sync must never mark unseen offerings inactive.
-- Replaying the same completed snapshot must be idempotent.
-- Every sync job and snapshot must be scoped to its owner and validated server-side.
-- Sync history must survive a process restart.
-- Secrets belong in environment configuration, never in source code, fixtures, logs, or API responses.
-- A successful HTTP response is not proof that the external source was parsed correctly.
+## قواعد قطعی معماری
 
-## Current implementation caveat
+- دادهٔ خام افزونهٔ دانشجو هرگز مستقیماً `courseOfferings` معتبر را تغییر ندهد.
+- منطق آموزشی در درگاه دریافت، UI یا افزونه تکثیر نشود؛ موتور دامنه و اعتبارسنجی سرور مرجع هستند.
+- همگام‌سازی ناقص یا ناموفق نباید گروه‌های دیده‌نشده را غیرفعال کند.
+- ارسال مجدد دادهٔ کامل یکسان باید نتیجهٔ تکرارپذیر و بدون رکورد تکراری بدهد.
+- هر کار و Snapshot فقط برای صاحب مجاز خود قابل مشاهده و تغییر باشد و پس از Restart تاریخچهٔ صحیح بماند.
+- رمزها و دادهٔ خصوصی در فایل محیطی محافظت‌شده باشند؛ هیچ دادهٔ واقعی در سورس، خروجی خطا، لاگ یا دمو قرار نگیرد.
+- پاسخ HTTP موفق به‌تنهایی به معنی درست‌بودن استخراج از سامانهٔ بیرونی نیست.
 
-The earlier sync route directly applied matched student-provided snapshots to campus-wide offerings. The current main branch changes this to **review staging only**: validated candidates become import-review records, job status becomes `AWAITING_REVIEW`, submitted raw snapshots are cleared after finalization, and no class is published. Historical `RECONCILED` jobs may predate this boundary and cannot be treated as proof of review. **New sync tests, TypeScript, build and actual browser QA have not been verified in this session.** The Vercel preview still lacks a connected persistent API. See [the Educationalyar review policy](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) and [fullstack deployment plan](VERCEL_FULLSTACK_PLAN_FA.md).
+## محدودیت‌های موجود
+
+در نسخه‌های قدیمی، برخی مسیرهای همگام‌سازی از دادهٔ دانشجو مستقیماً برای گروه‌های مشترک استفاده می‌کردند. اصلاحات بعدی آن مسیر را به صف `AWAITING_REVIEW` محدود کرده‌اند. سوابق تاریخی `RECONCILED` لزوماً تأیید انسانی را نشان نمی‌دهند. **برای درستی دادهٔ واقعی آموزشیار هنوز باید بر مبنای نسخهٔ جاری و نمونهٔ واقعیِ مجاز آزمون جداگانه اجرا شود.** سبزشدن CI یا فرانت‌اند Vercel به معنی آزمون اتصال زنده نیست. برای وضعیت امروز به [فهرست اسناد](INDEX.md)، [سیاست بررسی دادهٔ آموزشیار](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) و [گزارش‌های تست](QA_WITHOUT_ACTIONS_FA.md) مراجعه کنید.
