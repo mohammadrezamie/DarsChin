@@ -151,8 +151,10 @@ academicRouter.get('/campuses', (req, res) => {
 
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body ?? {};
-  if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
-    return res.status(400).json({ success: false, error: 'نام و کد واحد دانشگاهی الزامی است.' });
+  if (!validText(name) || !validText(code, 50) ||
+      !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type) ||
+      typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام، کد و نوع واحد دانشگاهی نامعتبر است.' });
   }
   if (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId && u.active)) {
     return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر و فعال نیست.' });
@@ -161,16 +163,17 @@ academicRouter.post('/campuses', authenticate, requirePermission('system.setting
       (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId && p.active))) {
     return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر و فعال نیست.' });
   }
+  if (db.campuses.some(c => c.universityId === universityId && c.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد واحد در این دانشگاه تکراری است.' });
+  }
   const newCampus: Campus = {
-    id: `camp-${Date.now()}`,
-    universityId,
+    id: `camp-${randomUUID()}`, universityId,
     provinceId: provinceId || null, type, name: name.trim(),
-    code: code.trim().toUpperCase(),
-    active: !!active,
+    code: code.trim().toUpperCase(), active,
   };
-  db.campuses.push(newCampus);
-  db.save();
-  res.json({ success: true, data: newCampus });
+  const saved = writeCatalog(['campuses'], () => { db.campuses.push(newCampus); return newCampus; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -178,29 +181,60 @@ academicRouter.put('/campuses/:id', authenticate, requirePermission('system.sett
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
   const { universityId, provinceId, type, name, code, active } = req.body ?? {};
   if (universityId !== undefined &&
-      (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId))) {
+      (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId && u.active))) {
     return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر نیست.' });
   }
   if (provinceId !== undefined && provinceId !== null && provinceId !== '' &&
       (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId))) {
     return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر نیست.' });
   }
-  if (universityId) db.campuses[idx].universityId = universityId;
-  if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId || null;
-  if (type) db.campuses[idx].type = type;
-  if (name) db.campuses[idx].name = name.trim();
-  if (code) db.campuses[idx].code = code.trim().toUpperCase();
-  if (typeof active === 'boolean') db.campuses[idx].active = active;
-  db.save();
-  res.json({ success: true, data: db.campuses[idx] });
+  if ((name !== undefined && !validText(name)) ||
+      (code !== undefined && !validText(code, 50)) ||
+      (type !== undefined && !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type)) ||
+      (active !== undefined && typeof active !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'اطلاعات ویرایش واحد نامعتبر است.' });
+  }
+  if (universityId && universityId !== db.campuses[idx].universityId &&
+      (db.curricula.some(c => c.campusId === req.params.id) ||
+       db.studentProfiles.some(p => p.campusId === req.params.id) ||
+       db.demandSurveys.some(d => d.campusId === req.params.id))) {
+    return res.status(409).json({ success: false, error: 'انتقال واحد دارای چارت یا پروندهٔ دانشجو به دانشگاه دیگر مجاز نیست.' });
+  }
+  const targetUniversityId = universityId ?? db.campuses[idx].universityId;
+  const targetCode = code?.trim().toUpperCase() ?? db.campuses[idx].code;
+  if (db.campuses.some(c => c.id !== req.params.id &&
+      c.universityId === targetUniversityId && c.code === targetCode)) {
+    return res.status(409).json({ success: false, error: 'کد واحد دانشگاهی تکراری است.' });
+  }
+  const saved = writeCatalog(['campuses'], () => {
+    if (universityId !== undefined) db.campuses[idx].universityId = universityId;
+    if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId || null;
+    if (type !== undefined) db.campuses[idx].type = type;
+    if (name !== undefined) db.campuses[idx].name = name.trim();
+    if (code !== undefined) db.campuses[idx].code = code.trim().toUpperCase();
+    if (active !== undefined) db.campuses[idx].active = active;
+    return db.campuses[idx];
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
-  db.campuses.splice(idx, 1);
-  db.save();
-  res.json({ success: true, message: 'واحد دانشگاهی حذف شد.' });
+  const referenced = db.curricula.some(c => c.campusId === req.params.id) ||
+    db.studentProfiles.some(p => p.campusId === req.params.id) ||
+    db.courseOfferings.some(o => o.campusId === req.params.id) ||
+    db.demandSurveys.some(d => d.campusId === req.params.id) ||
+    db.syncJobs.some(job => job.campusId === req.params.id);
+  const saved = writeCatalog(['campuses'], () => {
+    if (referenced) db.campuses[idx].active = false;
+    else db.campuses.splice(idx, 1);
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, message: referenced
+    ? 'این واحد به دلیل وجود سوابق وابسته غیرفعال شد و حذف دائمی نشد.'
+    : 'واحد دانشگاهی حذف شد.' });
 });
 
 // --- Degrees & Majors & Tracks ---
