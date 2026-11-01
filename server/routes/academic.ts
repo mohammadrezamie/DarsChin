@@ -34,7 +34,7 @@ const validText = (value: unknown, max = 180): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
 const validAcademicYear = (value: unknown): value is number | string => {
   if (typeof value !== 'number' && typeof value !== 'string') return false;
-  if (!/^\\d{4}$/.test(String(value))) return false;
+  if (!/^\d{4}$/.test(String(value))) return false;
   const number = Number(value);
   return Number.isInteger(number) && number >= 1200 && number <= 2200;
 };
