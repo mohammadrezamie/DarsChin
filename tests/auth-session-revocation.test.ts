@@ -80,6 +80,8 @@ describe('P0 JWT invalidation after sensitive credential changes', () => {
       .send({ mobile: testMobile, newPassword: 'new-password-03', otpChallengeId: id });
     expect(reset.status).toBe(200);
     expect(db.users[0].sessionVersion).toBe(1);
+    expect(db.auditLogs.filter(log => log.entityId === db.users[0].id)
+      .every(log => !log.details.includes(testMobile) && !log.details.includes(db.users[0].name))).toBe(true);
     expect(db.otpChallenges[0].recoveredAt).toEqual(expect.any(Number));
     expect((await request(app).get('/api/private').set(bearer(oldToken))).status).toBe(401);
     expect((await request(app).get('/api/private').set(bearer(generateToken(db.users[0])))).status).toBe(200);

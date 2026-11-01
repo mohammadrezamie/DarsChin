@@ -280,7 +280,8 @@ if (!this.data.supportTickets) this.data.supportTickets = [];
                 id: 'usr-super',
                 mobile: rootMobile,
                 password: bcrypt.hashSync(rootPassword, 10),
-                recoveryKey: rootRecovery,
+                // Only a one-way verifier may be written to the new root row.
+                recoveryKey: rootRecovery ? bcrypt.hashSync(rootRecovery, 10) : undefined,
                 name: 'مدیر ارشد سامانه (Root)',
                 roles: allRoles as UserRole[],
                 permissions: allPerms,

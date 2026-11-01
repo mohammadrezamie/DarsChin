@@ -66,6 +66,11 @@ describe('opt-in proof of phone ownership during registration', () => {
     const student = db.users.find(user => user.mobile === phone);
     expect(student?.mobileVerifiedAt).toEqual(expect.any(String));
     expect(student?.roles).toEqual(['student']);
+    // Even if the recovery key were leaked in a backup, the raw value is absent.
+    expect(student?.recoveryKey).toMatch(/^\$2[aby]\$/);
+    expect(student?.recoveryKey).not.toBe(password);
+    expect(db.auditLogs.filter(log => log.entityId === student?.id)
+      .every(log => !log.details.includes(phone))).toBe(true);
     expect(db.otpChallenges.find(challenge => challenge.id === id)?.consumedAt).toEqual(expect.any(Number));
 
     const replay = await registerWithCaptcha(phone, { otpChallengeId: id, otpCode: code });

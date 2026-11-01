@@ -126,7 +126,8 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     mobile,
     name: name.trim(),
     password: passwordHash,
-    recoveryKey: userRecoveryKey,
+    // Recovery material is never persisted in clear text.
+    recoveryKey: bcrypt.hashSync(userRecoveryKey, 10),
     roles,
     ...(otpRequired ? { mobileVerifiedAt: new Date().toISOString() } : {}),
     createdAt: new Date().toISOString(),
@@ -162,7 +163,7 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     action: 'USER_REGISTERED',
     entityType: 'USER',
     entityId: newUser.id,
-    details: `کاربر با شماره موبایل ${mobile} و نقش‌های ${roles.join(', ')} ثبت‌نام کرد.`,
+    details: 'حساب دانشجو ایجاد شد.',
     createdAt: new Date().toISOString(),
   });
 
@@ -216,7 +217,7 @@ authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema),
 
   // Find user by mobile
   const user = db.users.find((u) => u.mobile === mobile);
-  const maskedMobile = mobile.substring(0, 4) + '***' + mobile.substring(mobile.length - 4); console.log('Login attempt mobile:', maskedMobile, 'User Exists:', !!user);
+  // Do not log identifiers or whether an account exists for a supplied number.
   if (user && user.deactivatedAt) {
     return res.status(403).json({
       success: false,
@@ -275,7 +276,7 @@ authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema),
     action: 'USER_LOGIN',
     entityType: 'USER',
     entityId: user.id,
-    details: `ورود موفق کاربر با شماره موبایل ${user.mobile}`,
+    details: 'ورود موفق حساب کاربری.',
     createdAt: new Date().toISOString(),
   });
   db.save();
@@ -339,7 +340,7 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
     action: 'PASSWORD_CHANGED',
     entityType: 'USER',
     entityId: user.id,
-    details: `کاربر ${user.name} رمز عبور خود را تغییر داد.`,
+    details: 'رمز عبور حساب تغییر کرد.',
     createdAt: new Date().toISOString(),
   });
 
@@ -397,7 +398,7 @@ authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, 
     action: 'PASSWORD_RECOVERED',
     entityType: 'USER',
     entityId: user.id,
-    details: `رمز عبور کاربر ${user.mobile} با OTP بازیابی شد.`,
+    details: 'رمز عبور حساب با OTP بازنشانی شد.',
     createdAt: new Date().toISOString(),
   });
   db.save();
