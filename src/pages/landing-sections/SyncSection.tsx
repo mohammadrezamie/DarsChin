@@ -27,22 +27,22 @@ export const SyncSection: React.FC = () => {
       <div className="grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-5">
         <div className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/75 sm:p-7">
           <div className="mb-5 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"><Chrome className="h-7 w-7" /></div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-800 dark:bg-teal-600/10 dark:text-teal-300"><Chrome className="h-7 w-7" /></div>
             <div><h3 className="text-lg font-black text-slate-900 dark:text-white">منبع داده</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">افزونه یا منبع مجاز دیگر</p></div>
           </div>
           <div className="space-y-2.5">
-            {['شناسه و نام درس', 'گروه و اطلاعات ارائه', 'زمان دریافت و ترم'].map((label) => <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300"><span className="h-2 w-2 rounded-full bg-blue-500" />{label}</div>)}
+            {['شناسه و نام درس', 'گروه و اطلاعات ارائه', 'زمان دریافت و ترم'].map((label) => <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300"><span className="h-2 w-2 rounded-full bg-teal-600" />{label}</div>)}
           </div>
           <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">این موارد، نمونه فیلدهای داده هستند؛ داده زنده آموزشیار در این پیش‌نمایش نمایش داده نمی‌شود.</p>
         </div>
 
-        <motion.div style={{ opacity: arrowOpacity, x: arrowX }} className="flex items-center justify-center py-1 text-blue-600 dark:text-blue-400">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-200 bg-blue-50 shadow-sm dark:border-blue-400/20 dark:bg-blue-500/10"><ArrowLeft className="h-5 w-5" /></div>
+        <motion.div style={{ opacity: arrowOpacity, x: arrowX }} className="flex items-center justify-center py-1 text-teal-700 dark:text-teal-400">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-teal-200 bg-teal-50 shadow-sm dark:border-teal-400/20 dark:bg-teal-600/10"><ArrowLeft className="h-5 w-5" /></div>
         </motion.div>
 
-        <div className="rounded-3xl border border-blue-200/80 bg-gradient-to-br from-blue-50/80 to-white p-6 shadow-sm dark:border-blue-500/20 dark:from-blue-950/30 dark:to-slate-900 sm:p-7">
+        <div className="rounded-3xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 to-white p-6 shadow-sm dark:border-teal-600/20 dark:from-teal-950/30 dark:to-slate-900 sm:p-7">
           <div className="mb-5 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><Database className="h-7 w-7" /></div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/20"><Database className="h-7 w-7" /></div>
             <div><h3 className="text-lg font-black text-slate-900 dark:text-white">پردازش در درس‌چین</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">مراحل لازم برای داده معتبر</p></div>
           </div>
           <div className="space-y-3">
