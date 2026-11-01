@@ -1,12 +1,14 @@
-# DarsChin documentation index
+# فهرست رسمی مستندات فارسی درس‌چین
 
-**Latest owner decision (2026-11-01): source is MIT open source, but hosted runtime access and data remain independently private.** [Self-hosting, VPS safety, optional owner-only API mode and upstream updates](SELF_HOSTING_OPEN_SOURCE_FA.md).
+**درس‌چین یک محصول ایرانی و فارسی‌محور است.** متن مستندات مخزن و توضیح‌های توسعه از ۱ نوامبر ۲۰۲۶ طبق [استاندارد دائمی فارسی‌نویسی](PERSIAN_DOCUMENTATION_STANDARD_FA.md) باید فارسی باشند؛ نام قراردادها و دستورهای فنی و متن مجوز MIT تغییر نمی‌کنند.
 
+**تصمیم مالک:** سورس پروژه با مجوز MIT متن‌باز است، اما داده‌ها و دسترسی سرور نصب‌کننده‌ها مستقل و خصوصی باقی می‌مانند. [راهنمای نصب و به‌روزرسانی مستقل](SELF_HOSTING_OPEN_SOURCE_FA.md).
 
-**Status: DEMO.** Course and campus data are samples, not official university records. The Chrome extension is a data-collection adapter, not the core product.
+**وضعیت محصول: نسخهٔ نمایشی و توسعه‌ای.** داده‌های دروس و واحدهای آزمایشی الزاماً رسمی نیستند. افزونهٔ مرورگر فقط یکی از ابزارهای دریافت داده است، نه خود محصول.
 
-| Topic | Reference |
+| موضوع | راهنما |
 | --- | --- |
+| **الزام دائمی فارسی‌بودن مستندات و حفظ هویت ایرانی محصول** | [PERSIAN_DOCUMENTATION_STANDARD_FA.md](PERSIAN_DOCUMENTATION_STANDARD_FA.md) |
 | **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |
 | **امن‌سازی صف اولویت/گروه جایگزین و جلوگیری از تأیید قانون ناقص پیش‌نیاز** | [PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md](PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md) |
 | **مسدودسازی مسیر مستقیم نشت فایل‌های اضافی افزونه/دموی آموزشیار** | [PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md](PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md) |
