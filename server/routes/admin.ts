@@ -39,10 +39,15 @@ adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'),
 // Export Database Backup (without sensitive passwords)
 adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
-  const backup = db.exportBackup();
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
-  res.json(backup);
+  try {
+    // Never start a downloadable response until serialization succeeds.
+    const backup = db.exportBackup();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
+    return res.json(backup);
+  } catch {
+    return res.status(500).json({ success: false, error: 'آماده‌سازی فایل پشتیبان ناموفق بود.' });
+  }
 });
 
 // Restore Database Backup
