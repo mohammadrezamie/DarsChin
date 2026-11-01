@@ -425,7 +425,7 @@
   --darschin-focus: #0f766e;
   --darschin-brand: #0f766e;
   --darschin-brand-soft: rgb(15 118 110 / 10%);
-  --darschin-accent: #ac6c20;
+  --darschin-accent: #945916;
   --darschin-page-glow: rgb(20 184 166 / 12%);
   --darschin-focus-ring: 0 0 0 4px rgb(15 118 110 / 22%);
   --darschin-shadow: 0 14px 38px -25px rgb(8 72 61 / 31%);
@@ -539,7 +539,7 @@
   color: transparent;
 }
 .dc-primary-action {
-  background: linear-gradient(118deg, #075e58 0%, #0e8b7a 75%, #168879 100%);
+  background: linear-gradient(118deg, #075e58 0%, #0c7166 75%, #0d756c 100%);
   color: #fff;
   border: 1px solid rgb(255 255 255 / 16%);
   box-shadow: 0 15px 32px -17px rgb(4 112 96 / 66%);
