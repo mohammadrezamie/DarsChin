@@ -12,6 +12,11 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       DARSCHYN_DATA_DIR: /app/data
+      # Public repository visibility is independent from who can access this VPS.
+      DARSCHYN_ACCESS_MODE: ${DARSCHYN_ACCESS_MODE:-multiuser}
+      # Explicitly forward the safety toggles from the operator's private env file.
+      DARSCHYN_REQUIRE_EXISTING_DB: ${DARSCHYN_REQUIRE_EXISTING_DB:-false}
+      DARSCHYN_REGISTRATION_OTP_REQUIRED: ${DARSCHYN_REGISTRATION_OTP_REQUIRED:-false}
       DARSCHYN_RELEASE_SHA: ${DARSCHYN_RELEASE_SHA:-unidentified}
       SMS_PROVIDER: ${SMS_PROVIDER:-log}
       NIAZPARDAZ_API_KEY: ${NIAZPARDAZ_API_KEY:-}

@@ -9,6 +9,6 @@ server_log.txt
 !.env.example
 
 # Prevent *new* local runtime data files from being added accidentally.
-# data/darschyn-db.json is already tracked and must be handled separately.
+# Current HEAD does not track runtime data; historical Git refs still need cleanup.
 data/*.json
 data/*.json.tmp
