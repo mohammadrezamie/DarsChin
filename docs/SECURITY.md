@@ -71,3 +71,9 @@ Internal 500 responses in administration and student eligibility must never refl
 ## Sync-history personal-data scope (2026-11-01)
 
 The global admin-facing `GET /api/sync/jobs` must not reveal every student's import history merely because a delegated administrator has `admin.panel.access`. Verified root can see all records; delegated administrators can see their own jobs or jobs owned by students whose academic profile exactly matches an explicitly assigned `demandScopes` campus/degree/major and the recorded job campus. Raw reconciliation failure diagnostics are root-only because imported data can contain identifying details. An unscoped manager has no cross-student visibility. This change is a source patch and does not guarantee that the owner's currently deployed VPS has received the patch.
+
+## OTP account-enumeration hardening (2026-11-01)
+
+The login and password-recovery OTP send endpoints no longer respond with distinct `404` / `403` errors to identify missing or deactivated phone numbers. Once CAPTCHA and per-mobile throttling pass, a missing/deactivated account receives a short-lived **non-delivered decoy challenge** with the same generic response shape as a legitimate send. No SMS is dispatched and no token can be issued for a non-account. OTP rows remain subject to one-minute resend throttling, two-minute expiration and a global persisted queue cap (4096).
+
+Limitations: this does not eliminate every possible timing/network side channel, and the regular registration duplicate-number response remains a distinct user-flow decision. A production deployment and rate limiting at the trusted reverse proxy remain important; source fixes are not yet applied to the VPS.
