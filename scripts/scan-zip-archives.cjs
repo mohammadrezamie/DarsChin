@@ -57,6 +57,11 @@ function scanZipArchive(blob, findSecretKinds, findPopulatedEnvTemplateFields) {
       if (local + 30 > blob.length || blob.readUInt32LE(local) !== 0x04034b50) throw Error('local-header');
       const dataStart = local + 30 + blob.readUInt16LE(local + 26) + blob.readUInt16LE(local + 28);
       if (dataStart + compressedSize > blob.length) throw Error('entry-data');
+      // A release ZIP must not smuggle persisted local account data.
+      if (/(^|\\/)data\\/.*\\.(?:json|jsonl|csv|log|sqlite|db)$/i.test(name)) {
+        findings.push({ type: 'embedded-runtime-data' });
+        continue;
+      }
       if (/(^|\/)\.env(?:\.|$)/i.test(name) && !name.endsWith('.env.example')) {
         findings.push({ type: 'embedded-private-env' });
         continue;
