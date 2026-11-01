@@ -77,11 +77,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                 </button>
               )}
               <Link to={user ? '/dashboard' : '/'} className="group flex min-w-0 items-center gap-2 sm:gap-3">
-                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-lg shadow-teal-600/20 sm:flex dark:bg-teal-600">
+                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl dc-brand-mark text-white shadow-lg shadow-teal-600/20 sm:flex dark:bg-teal-600">
                   <GraduationCap aria-hidden="true" className="h-6 w-6" />
                 </span>
                 <span className="flex min-w-0 flex-col">
-                  <strong className="text-lg font-black tracking-tight text-slate-900 sm:text-xl dark:text-white">درس‌چین</strong>
+                  <strong className="text-lg font-black tracking-tight dc-brand-name sm:text-xl">درس‌چین</strong>
                   <span className="hidden text-[11px] font-medium text-slate-500 sm:block dark:text-slate-400">دستیار هوشمند انتخاب واحد دانشگاه آزاد</span>
                 </span>
               </Link>
