@@ -1,0 +1,6 @@
+# Keep review ownership visible for risk-sensitive components.
+/server/ @mohammadrezamie
+/src/domain/ @mohammadrezamie
+/extension/ @mohammadrezamie
+/data/ @mohammadrezamie
+/.github/ @mohammadrezamie

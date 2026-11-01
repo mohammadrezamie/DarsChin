@@ -1,0 +1,28 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+server_log.txt
+.env*
+!.env.example
+
+# Prevent *new* local runtime data files from being added accidentally.
+# Current HEAD does not track runtime data; historical Git refs still need cleanup.
+data/*.json
+data/*.json.tmp
+
+# Private database snapshots, credentials and operator backups.
+data/**/*.json
+data/**/*.db
+*.sqlite
+*.sqlite3
+*.db
+*.backup
+*.bak
+*.dump
+*.pem
+*.p12
+*.pfx
+*.key
