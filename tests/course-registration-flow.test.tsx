@@ -1,0 +1,41 @@
+import React from 'react';
+import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { CourseRegistrationFlow, moveAlternative } from '../src/components/CourseRegistrationFlow';
+import type { CourseEligibilityResult } from '../src/types';
+
+const section = {
+  offeringId: 'offer-m1', courseId: 'math', courseName: 'ریاضی دو', courseCode: 'M2',
+  instructor: 'استاد الف', groupCode: '۰۱', canSelect: true, dayOfWeek: 'شنبه',
+  startTime: '۱۰:۰۰', endTime: '۱۲:۰۰', units: 3,
+} as CourseEligibilityResult;
+
+const props = {
+  curriculumId: null, profile: null, evaluations: [section], recommendations: [],
+  wishlistCourseIds: ['math'], selectedOfferingIds: [], coursePriorities: [],
+  offeringPriorities: {}, onSaveWishlist: async () => true,
+  onStage: () => {}, onPrimary: () => {}, onAddFallback: () => {},
+  onRemoveFallback: () => {}, onReorderAlternatives: () => {},
+  onReorderCourses: () => {},
+};
+
+describe('انتخاب درس قبل از استاد و صف ثبت مشترک', () => {
+  it('در مرحله اول نام استاد و کنترل گروه را نمایش نمی‌دهد', () => {
+    const html = renderToStaticMarkup(<CourseRegistrationFlow {...props} stage="courses"/>);
+    expect(html).toContain('۱. انتخاب درس‌ها');
+    expect(html).toContain('مرحله بعد: اولویت استاد');
+    expect(html).not.toContain('استاد الف');
+    expect(html).not.toContain('اولویت ۱');
+  });
+  it('فقط بعد از ورود به مرحله دوم، اولویت استاد را نمایش می‌دهد', () => {
+    const html = renderToStaticMarkup(<CourseRegistrationFlow {...props} stage="preferences"/>);
+    expect(html).toContain('استاد الف');
+    expect(html).toContain('استاد اول');
+    expect(html).toContain('همان اولویت‌ها در صف آمادهٔ ثبت');
+  });
+  it('جابجایی جایگزین‌ها مرتب‌سازی پایدار و بدون تکرار است', () => {
+    expect(moveAlternative(['p2', 'p3', 'p4'], 'p3', -1)).toEqual(['p3', 'p2', 'p4']);
+    expect(moveAlternative(['p2', 'p3', 'p3'], 'p3', 1)).toEqual(['p2', 'p3']);
+    expect(moveAlternative(['p2'], 'missing', 1)).toEqual(['p2']);
+  });
+});
