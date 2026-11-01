@@ -53,7 +53,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const root = document.documentElement;
       root.classList.toggle('dark', isDark);
       document.querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', isDark ? '#09111e' : '#f3f6fb');
+        ?.setAttribute('content', isDark ? '#0a1b1d' : '#f4faf7');
     };
 
     updateResolvedTheme();
