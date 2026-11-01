@@ -4,7 +4,7 @@ import request from 'supertest';
 import { db } from '../server/db/database';
 import { generateToken } from '../server/middleware/auth';
 import { syncRouter, type SyncJob } from '../server/routes/sync';
-import type { User, StudentProfile } from '../src/types';
+import type { User, StudentAcademicProfile } from '../src/types';
 
 const app = express();
 app.use('/api/sync', syncRouter);
@@ -47,7 +47,7 @@ beforeAll(async () => {
   managerToken = generateToken(manager);
   outsiderToken = generateToken(outsider);
 
-  const profile = (id: string, majorId: string): StudentProfile => ({
+  const profile = (id: string, majorId: string): StudentAcademicProfile => ({
     userId: id, universityId: prefix + 'university', campusId: campus,
     degreeLevelId: degree, majorId, entryYearId: prefix + 'year',
     isTrackSelected: false, desiredTrackIds: [], updatedAt: now,
