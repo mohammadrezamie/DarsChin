@@ -67,3 +67,7 @@ Root-only administrator creation and editing now validate accepted fields, norma
 ## API error redaction and evaluation input guard — 2026-11-01
 
 Internal 500 responses in administration and student eligibility must never reflect raw exception messages, stack traces, filesystem paths, secrets or mutable student records. Catch handlers return stable generic errors, including failed backup serialization. Student evaluation requires bounded arrays of valid course/offering identifiers before the engine runs. Regression tests intentionally throw synthetic path-bearing exceptions and ensure the response excludes their values. Neither these patches nor source-tree cleanup revokes credentials exposed in old Git history.
+
+## Sync-history personal-data scope (2026-11-01)
+
+The global admin-facing `GET /api/sync/jobs` must not reveal every student's import history merely because a delegated administrator has `admin.panel.access`. Verified root can see all records; delegated administrators can see their own jobs or jobs owned by students whose academic profile exactly matches an explicitly assigned `demandScopes` campus/degree/major and the recorded job campus. Raw reconciliation failure diagnostics are root-only because imported data can contain identifying details. An unscoped manager has no cross-student visibility. This change is a source patch and does not guarantee that the owner's currently deployed VPS has received the patch.
