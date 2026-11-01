@@ -4,6 +4,7 @@
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { scanZipArchive } = require('./scan-zip-archives.cjs');
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const TEXT_EXTENSIONS = /\.(?:cjs|mjs|js|jsx|ts|tsx|json|jsonl|md|txt|html|css|scss|yaml|yml|toml|xml|sql|sh|ps1|py|example|webmanifest|conf)$/i;
@@ -62,7 +63,8 @@ function scanTrackedFiles(root, names) {
       findings.push({ path: file, type: 'sensitive-file-path' });
       continue;
     }
-    if (!TEXT_EXTENSIONS.test(file) && !/(^|\/)Dockerfile$/i.test(file)) continue;
+    const isZip = /\.zip$/i.test(file);
+    if (!TEXT_EXTENSIONS.test(file) && !/(^|\/)Dockerfile$/i.test(file) && !isZip) continue;
     const full = path.resolve(root, file);
     // Do not follow tracked symlinks to arbitrary files outside checkout.
     const stat = fs.lstatSync(full, { throwIfNoEntry: false });
@@ -70,8 +72,14 @@ function scanTrackedFiles(root, names) {
       findings.push({ path: file, type: 'unreadable-or-symlink' });
       continue;
     }
-    if (!stat.isFile() || stat.size > MAX_TEXT_BYTES) {
+    if (!stat.isFile() || stat.size > (isZip ? 8 * 1024 * 1024 : MAX_TEXT_BYTES)) {
       findings.push({ path: file, type: 'unscanned-text' });
+      continue;
+    }
+    if (isZip) {
+      for (const result of scanZipArchive(fs.readFileSync(full), findSecretKinds, findPopulatedEnvTemplateFields)) {
+        findings.push({ path: file, type: result.type });
+      }
       continue;
     }
     const contents = fs.readFileSync(full, 'utf8');
