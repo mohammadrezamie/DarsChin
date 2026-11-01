@@ -201,18 +201,18 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
 
   return (
     <section dir="rtl" aria-labelledby="visual-dependency-heading"
-      className="min-w-0 space-y-4 rounded-3xl border border-indigo-200 bg-gradient-to-b from-indigo-50/70 to-white p-3 shadow-sm sm:p-6 dark:border-indigo-900 dark:from-indigo-950/40 dark:to-slate-900">
+      className="min-w-0 space-y-4 rounded-3xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white p-3 shadow-sm sm:p-6 dark:border-emerald-950 dark:from-emerald-950/40 dark:to-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 id="visual-dependency-heading" className="flex items-center gap-2 text-lg font-black text-slate-950 sm:text-xl dark:text-white">
-            <GitBranch aria-hidden="true" className="h-5 w-5 text-indigo-600" /> کارگاه اتصال درس‌ها
+            <GitBranch aria-hidden="true" className="h-5 w-5 text-emerald-700" /> کارگاه اتصال درس‌ها
           </h3>
           <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             درس پیش‌نیاز را به درس مقصد وصل کن. روی رایانه گرهٔ اول را روی گرهٔ دوم بکش؛ روی موبایل یا با صفحه‌کلید دو گره را به‌ترتیب انتخاب کن.
             فلش آبی پیش‌نیاز است و خط‌چین طلایی هم‌نیاز. تا پیش از زدن «ثبت اتصال» چیزی ذخیره نمی‌شود.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-indigo-800 dark:bg-slate-800 dark:text-indigo-200">
+        <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-900 dark:bg-slate-800 dark:text-emerald-200">
           <MousePointer2 aria-hidden="true" className="h-4 w-4" /> ویژهٔ مدیران مجاز
         </span>
       </div>
@@ -267,7 +267,7 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
             <p className="rounded-xl bg-white p-4 text-sm text-slate-700 dark:bg-slate-800 dark:text-white">ابتدا درس‌ها را در بخش «چارت تحصیلی» به این چارت اضافه کن.</p>
           ) : (
             <div role="region" tabIndex={0} aria-label="محیط گرافیکی قابل اسکرول اتصال درس‌ها"
-              className="max-h-[580px] min-w-0 overflow-auto rounded-2xl border border-indigo-200 bg-slate-50 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:border-indigo-900 dark:bg-slate-950">
+              className="max-h-[580px] min-w-0 overflow-auto rounded-2xl border border-emerald-200 bg-slate-50 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 dark:border-emerald-950 dark:bg-slate-950">
               <div style={{ width: layout.width * zoom, height: layout.height * zoom }}>
                 <div className="relative" style={{ width: layout.width, height: layout.height, transform: 'scale(' + zoom + ')', transformOrigin: 'top left' }}>
                   <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width={layout.width} height={layout.height}>
@@ -335,10 +335,10 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                         }
                       }}
                       style={{ position: 'absolute', left: point.x, top: point.y, width: NODE_WIDTH, height: NODE_HEIGHT }}
-                      className={'flex flex-col justify-center gap-0.5 rounded-xl border-2 px-3 text-right shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400 ' +
-                        (picked ? 'border-indigo-600 bg-indigo-100 text-indigo-950 dark:bg-indigo-900 dark:text-white ' :
+                      className={'flex flex-col justify-center gap-0.5 rounded-xl border-2 px-3 text-right shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ' +
+                        (picked ? 'border-emerald-700 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-white ' :
                           'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white ') +
-                        (!highlight ? 'opacity-25' : 'hover:border-indigo-400')}>
+                        (!highlight ? 'opacity-25' : 'hover:border-emerald-400')}>
                       <span className="block w-full truncate text-xs font-extrabold">{course?.name ?? 'درس نامشخص'}</span>
                       <span className="block w-full truncate text-[11px] text-slate-500 dark:text-slate-300">
                         {course?.code ?? 'بدون کد'} · {importance.toLocaleString('fa-IR')} درس در ادامهٔ زنجیره
@@ -365,8 +365,8 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                     selectedExisting.from === edge.from && selectedExisting.to === edge.to;
                   return <div role="listitem" key={edge.kind + edge.from + edge.to}>
                     <button type="button" aria-pressed={selected} onClick={() => selectExistingEdge(edge)}
-                    className={'min-h-11 w-full rounded-xl border px-3 py-2 text-right text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
-                      (selected ? 'border-indigo-500 bg-indigo-50 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200' :
+                    className={'min-h-11 w-full rounded-xl border px-3 py-2 text-right text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ' +
+                      (selected ? 'border-emerald-600 bg-emerald-50 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-200' :
                         'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200')}>
                     {nameOf(edge.from)} — {edge.kind === 'PREREQUISITE' ? 'پیش‌نیازِ' : 'هم‌نیازِ'} — {nameOf(edge.to)}
                     </button>
@@ -435,12 +435,12 @@ export const AdminDependencyWorkbench: React.FC<Props> = ({ rules, courses, curr
                 <RotateCcw size={16} aria-hidden="true" /> پاک‌کردن انتخاب
               </button>
               <button type="button" onClick={save} disabled={!pending || !assessment.valid || saving}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-indigo-700 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
                 <Check size={16} aria-hidden="true" /> {saving ? 'در حال ثبت…' : 'ثبت اتصال'}
               </button>
             </div>
           </div>
-          {feedback && <p role="status" className="rounded-xl bg-indigo-50 p-3 text-sm leading-7 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">{feedback}</p>}
+          {feedback && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm leading-7 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100">{feedback}</p>}
           {!analysis.valid && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{analysis.errors.join(' ')}</p>}
         </>
       )}
