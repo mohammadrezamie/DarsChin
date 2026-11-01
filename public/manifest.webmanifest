@@ -1,0 +1,48 @@
+{
+  "id": "/",
+  "name": "درس‌چین | دستیار انتخاب واحد",
+  "short_name": "درس‌چین",
+  "description": "مدیریت برنامهٔ هفتگی، بررسی تداخل و آماده‌سازی انتخاب واحد",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f6fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "برنامهٔ هفتگی",
+      "short_name": "برنامه",
+      "url": "/dashboard?tab=schedule",
+      "icons": [
+        {
+          "src": "/app-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "صف ثبت دروس",
+      "short_name": "صف ثبت",
+      "url": "/dashboard?tab=registration",
+      "icons": [
+        {
+          "src": "/app-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

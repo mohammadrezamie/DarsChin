@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="application-name" content="درس‌چین" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="درس‌چین" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/app-icon.svg" />
+    <title>درس‌چین - سامانه هوشمند تصمیم‌یار انتخاب واحد</title>
+    <meta name="description" content="سامانه تصمیم‌یار انتخاب واحد دانشگاهی و بررسی تطبیقی پیش‌نیازها و هم‌نیازها" />
+    <meta name="theme-color" content="#f3f6fb" />
+    <script>
+      // Apply the saved display preference before rendering React to avoid
+      // the wrong light/dark background flashing on small screens.
+      try {
+        const mode = localStorage.getItem('darschyn_theme_mode') || 'system';
+        const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        const dark = mode === 'dark' || (mode === 'system' && prefersDark);
+        document.documentElement.classList.toggle('dark', dark);
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute('content', dark ? '#09111e' : '#f3f6fb');
+      } catch {
+        // Storage may be inaccessible in private browser contexts.
+        const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        document.documentElement.classList.toggle('dark', dark);
+      }
+    </script>
+    
+    
+    
+  </head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

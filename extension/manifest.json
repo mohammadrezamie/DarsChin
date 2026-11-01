@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Darschyn Educationalyar Extension",
+  "version": "3.3.6",
+  "description": "Premium Smart Batching Extractor for Educationalyar",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.iau.ir/*",
+    "*://*.iau.ac.ir/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.iau.ir/*",
+        "*://*.iau.ac.ir/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}
