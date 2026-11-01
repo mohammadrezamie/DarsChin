@@ -238,7 +238,7 @@ adminRouter.put('/academic-settings', authenticate, requirePermission('academic-
 });
 
 // Get detailed list of students and their final-semester eligibility
-adminRouter.get('/students-overview', authenticate, requirePermission('student-management.read'), (req, res) => {
+adminRouter.get('/students-overview', authenticate, requireSuperAdmin, (req, res) => {
   try {
     const studentUsers = db.users.filter((u) => u.roles.includes('student'));
     const list = studentUsers.map((u) => {
@@ -261,7 +261,7 @@ adminRouter.get('/students-overview', authenticate, requirePermission('student-m
 });
 
 // Admin override for student final-semester status
-adminRouter.put('/students/:userId/final-semester-override', authenticate, requirePermission('academic-policy.manage'), validate(overrideFinalSemesterSchema), (req, res) => {
+adminRouter.put('/students/:userId/final-semester-override', authenticate, requireSuperAdmin, validate(overrideFinalSemesterSchema), (req, res) => {
   try {
     const { userId } = req.params;
     const { isFinalSemesterOverride, finalSemesterNotes } = req.body;
@@ -271,24 +271,45 @@ adminRouter.put('/students/:userId/final-semester-override', authenticate, requi
       return res.status(404).json({ success: false, error: 'پروفایل تحصیلی دانشجو یافت نشد.' });
     }
 
+    // Persist profile and audit entry together. Previously the audit was
+    // appended AFTER db.save(), so an override could survive without an audit.
+    const previous = {
+      isFinalSemesterOverride: profile.isFinalSemesterOverride,
+      finalSemesterNotes: profile.finalSemesterNotes,
+      updatedAt: profile.updatedAt,
+    };
+    const priorAuditLogs = db.auditLogs.slice();
+    const changedAt = new Date().toISOString();
     profile.isFinalSemesterOverride = isFinalSemesterOverride;
     profile.finalSemesterNotes = finalSemesterNotes || '';
-    profile.updatedAt = new Date().toISOString();
-    db.save();
-
-    const updatedLimits = db.calculateStudentAcademicLimits(userId);
-
-    if (db.auditLogs) {
-      db.auditLogs.unshift({
-        id: `audit-${Date.now()}`,
-        adminId: (req as any).user?.id || 'admin',
-        action: 'UPDATE_FINAL_SEMESTER_OVERRIDE',
-        entityType: 'StudentAcademicProfile',
-        entityId: userId,
-        details: JSON.stringify({ isFinalSemesterOverride, finalSemesterNotes }),
-        createdAt: new Date().toISOString(),
+    profile.updatedAt = changedAt;
+    db.auditLogs.unshift({
+      id: `audit-${randomUUID()}`,
+      adminId: (req as any).user?.id || 'admin',
+      action: 'UPDATE_FINAL_SEMESTER_OVERRIDE',
+      entityType: 'StudentAcademicProfile',
+      entityId: userId,
+      // Keep potentially sensitive free-text notes out of audit detail strings.
+      details: JSON.stringify({
+        previousOverride: previous.isFinalSemesterOverride ?? null,
+        isFinalSemesterOverride,
+        notesUpdated: finalSemesterNotes !== undefined,
+      }),
+      createdAt: changedAt,
+    });
+    try {
+      db.save();
+    } catch {
+      profile.isFinalSemesterOverride = previous.isFinalSemesterOverride;
+      profile.finalSemesterNotes = previous.finalSemesterNotes;
+      profile.updatedAt = previous.updatedAt;
+      db.data.auditLogs = priorAuditLogs;
+      return res.status(500).json({
+        success: false,
+        error: 'ذخیرهٔ وضعیت ترم آخری انجام نشد؛ دوباره تلاش کنید.',
       });
     }
+    const updatedLimits = db.calculateStudentAcademicLimits(userId);
 
     res.json({
       success: true,
