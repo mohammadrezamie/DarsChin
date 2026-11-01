@@ -31,6 +31,30 @@ function findSecretKinds(contents) {
   return signatures.filter(([, pattern]) => pattern.test(contents)).map(([name]) => name);
 }
 
+// Committed examples must never contain an actual operator's identity or
+// credential. Safe non-secret feature defaults may remain for compatibility.
+const ENV_TEMPLATES = new Set([
+  '.env.example', 'deploy/.env.vps.example', 'deploy/.env.staging.example',
+]);
+const EMPTY_TEMPLATE_FIELDS = new Set([
+  'JWT_SECRET', 'ROOT_OWNER_MOBILE', 'ROOT_OWNER_PASSWORD',
+  'ROOT_OWNER_RECOVERY_KEY', 'TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY',
+  'TURNSTILE_ALLOWED_HOSTNAMES', 'NIAZPARDAZ_API_KEY',
+  'NIAZPARDAZ_SENDER_NUMBER', 'ACME_CONTACT_EMAIL', 'DARSCHYN_DOMAIN',
+  'DARSCHYN_RELEASE_SHA',
+]);
+
+function findPopulatedEnvTemplateFields(contents) {
+  const populated = [];
+  for (const line of contents.split(/\r?\n/)) {
+    const match = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (match && EMPTY_TEMPLATE_FIELDS.has(match[1]) && match[2].trim()) {
+      populated.push(match[1]);
+    }
+  }
+  return populated;
+}
+
 function scanTrackedFiles(root, names) {
   const findings = [];
   for (const file of names) {
@@ -51,6 +75,11 @@ function scanTrackedFiles(root, names) {
       continue;
     }
     const contents = fs.readFileSync(full, 'utf8');
+    if (ENV_TEMPLATES.has(file.replace(/\\/g, '/'))) {
+      for (const key of findPopulatedEnvTemplateFields(contents)) {
+        findings.push({ path: file, type: 'populated-example-' + key });
+      }
+    }
     for (const kind of findSecretKinds(contents)) {
       findings.push({ path: file, type: kind });
     }
@@ -85,4 +114,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { isSensitivePath, findSecretKinds, scanTrackedFiles };
+module.exports = { isSensitivePath, findSecretKinds, scanTrackedFiles, findPopulatedEnvTemplateFields };
