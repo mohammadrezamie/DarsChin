@@ -1,11 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requirePermission, AuthenticatedRequest, isRootOwner } from '../middleware/auth';
+import { authenticate, requirePermission, AuthenticatedRequest, isRootOwner } from '../middleware/auth';
 import { SupportTicket, SupportMessage, BugReport } from '../../src/types';
 import { validate } from '../middleware/validate';
 import { createTicketSchema, addMessageSchema, reportBugSchema, updateStatusSchema } from '../schemas/support';
 
 export const supportRouter = Router();
+
+// Tickets, messages and bug reports can contain personal student information.
+supportRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 // Get Student Tickets
 supportRouter.get('/tickets', authenticate, (req: AuthenticatedRequest, res) => {
@@ -16,15 +23,21 @@ supportRouter.get('/tickets', authenticate, (req: AuthenticatedRequest, res) => 
 // Create Ticket
 supportRouter.post('/tickets', authenticate, validate(createTicketSchema), (req: AuthenticatedRequest, res) => {
   const newTicket: SupportTicket = {
-    id: `tic-${Date.now()}`,
+    id: `tic-${randomUUID()}`,
     userId: req.user!.id,
     subject: req.body.subject,
     status: 'OPEN',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+  const index = db.supportTickets.length;
   db.supportTickets.push(newTicket);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.supportTickets.splice(index, 1);
+    return res.status(500).json({ success: false, error: 'ذخیرهٔ درخواست پشتیبانی ناموفق بود.' });
+  }
   res.json({ success: true, data: newTicket });
 });
 
@@ -52,18 +65,26 @@ supportRouter.post('/tickets/:id/messages', authenticate, validate(addMessageSch
   }
 
   const msg: SupportMessage = {
-    id: `msg-${Date.now()}`,
+    id: `msg-${randomUUID()}`,
     ticketId: req.params.id,
     senderId: req.user!.id,
     content: req.body.content,
     createdAt: new Date().toISOString()
   };
+  const index = db.supportMessages.length;
+  const previousStatus = ticket.status;
+  const previousUpdatedAt = ticket.updatedAt;
   db.supportMessages.push(msg);
-  
   ticket.updatedAt = new Date().toISOString();
   ticket.status = req.user!.roles?.includes('student') ? 'OPEN' : 'ANSWERED';
-  
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.supportMessages.splice(index, 1);
+    ticket.status = previousStatus;
+    ticket.updatedAt = previousUpdatedAt;
+    return res.status(500).json({ success: false, error: 'ذخیرهٔ پیام پشتیبانی ناموفق بود.' });
+  }
   res.json({ success: true, data: msg });
 });
 
@@ -75,7 +96,7 @@ supportRouter.get('/bugs', authenticate, (req: AuthenticatedRequest, res) => {
 
 supportRouter.post('/bugs', authenticate, validate(reportBugSchema), (req: AuthenticatedRequest, res) => {
   const bug: BugReport = {
-    id: `bug-${Date.now()}`,
+    id: `bug-${randomUUID()}`,
     userId: req.user!.id,
     title: req.body.title,
     category: req.body.category,
@@ -85,8 +106,14 @@ supportRouter.post('/bugs', authenticate, validate(reportBugSchema), (req: Authe
     status: 'OPEN',
     createdAt: new Date().toISOString()
   };
+  const index = db.bugReports.length;
   db.bugReports.push(bug);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.bugReports.splice(index, 1);
+    return res.status(500).json({ success: false, error: 'ذخیرهٔ گزارش خطا ناموفق بود.' });
+  }
   res.json({ success: true, data: bug });
 });
 
@@ -99,11 +126,27 @@ supportRouter.get('/admin/bugs', authenticate, requirePermission('support.manage
 });
 supportRouter.put('/admin/tickets/:id/status', authenticate, requirePermission('support.manage'), validate(updateStatusSchema), (req, res) => {
   const t = db.supportTickets.find(x => x.id === req.params.id);
-  if (t) { t.status = req.body.status; db.save(); }
+  if (!t) return res.status(404).json({ success: false, error: 'Ticket not found' });
+  const previousStatus = t.status;
+  t.status = req.body.status;
+  try {
+    db.save();
+  } catch {
+    t.status = previousStatus;
+    return res.status(500).json({ success: false, error: 'ذخیرهٔ وضعیت تیکت ناموفق بود.' });
+  }
   res.json({ success: true, data: t });
 });
 supportRouter.put('/admin/bugs/:id/status', authenticate, requirePermission('support.manage'), validate(updateStatusSchema), (req, res) => {
   const b = db.bugReports.find(x => x.id === req.params.id);
-  if (b) { b.status = req.body.status; db.save(); }
+  if (!b) return res.status(404).json({ success: false, error: 'Bug report not found' });
+  const previousStatus = b.status;
+  b.status = req.body.status;
+  try {
+    db.save();
+  } catch {
+    b.status = previousStatus;
+    return res.status(500).json({ success: false, error: 'ذخیرهٔ وضعیت گزارش خطا ناموفق بود.' });
+  }
   res.json({ success: true, data: b });
 });

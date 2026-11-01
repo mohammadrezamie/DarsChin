@@ -100,3 +100,8 @@ Although downloadable backup JSON excludes password hashes and SMS provider cred
 ## Root-only student-wide directory and final-semester overrides (2026-11-01)
 
 A previously delegated `student-management.read` permission could retrieve the full names, phone numbers and academic profiles of **all** students. Likewise, `academic-policy.manage` alone allowed editing the graduation-related override on any student profile, without a dedicated student-management scope. Until fine-grained student-scope authorization exists, both global operations are now restricted to the verified reserved root. The final-semester override audit entry is written **before the database save**, excludes free-text notes from audit details, and is rolled back with the profile edit when persistence fails before commit. These changes do not add Maaref/academic regulations or operate on a live VPS.
+
+
+## Support record isolation and failed writes (2026-11-01)
+
+Ticket, support-message and bug-report IDs use cryptographically random UUIDs instead of millisecond timestamps to prevent collisions between concurrent student requests. Authenticated support responses set `Cache-Control: no-store` because tickets and reports may contain private student information. On a JSON-database write failure, create/message/status operations restore the previous in-memory collections and ticket metadata, returning a generic 500 without echoing exception details. Synthetic HTTP regression tests cover cross-student ticket isolation, forced same-millisecond requests, and simulated disk failures. This does **not** resolve historical Git/PR refs, leaked credentials, multi-process JSON concurrency or live VPS security; see [public history incident](PUBLIC_HISTORY_RECOVERY_20261101_FA.md).
