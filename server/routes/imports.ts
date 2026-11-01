@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, AuthenticatedRequest, requirePermission } from '../middleware/auth';
+import { authenticate, AuthenticatedRequest, requirePermission, isRootOwner } from '../middleware/auth';
 import { processImportPayload } from '../../src/domain/import-validator';
 import { ImportBatch } from '../../src/types';
 import { validate } from '../middleware/validate';
@@ -28,8 +28,8 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
     const { payload, termId, campusId } = req.body;
 
     const studentProfile = db.studentProfiles.find((p) => p.userId === userId);
-    const isCatalogEditor = req.user!.roles?.includes('super-admin') ||
-      req.user!.permissions?.includes('offering.manage');
+    const isCatalogEditor = isRootOwner(req.user) ||
+      Boolean(req.user!.roles?.includes('admin') && req.user!.permissions?.includes('offering.manage'));
     if (!studentProfile && !isCatalogEditor) {
       return res.status(403).json({ success: false, error: 'برای واردکردن فایل، پرونده تحصیلی معتبر لازم است.' });
     }
@@ -108,8 +108,8 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
 // Get import batches history
 importsRouter.get('/batches', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  const isSuperAdmin = req.user!.roles?.includes('super-admin') ||
-    req.user!.permissions?.includes('admin.panel.access');
+  // Never grant access to other students' imports from a stale role or panel flag.
+  const isSuperAdmin = isRootOwner(req.user);
   const list = isSuperAdmin
     ? db.importBatches
     : db.importBatches.filter((b) => b.userId === userId);
@@ -123,8 +123,8 @@ importsRouter.get('/batches/:id', authenticate, (req: AuthenticatedRequest, res)
   const batch = db.importBatches.find((b) => b.id === req.params.id);
   if (!batch) return res.status(404).json({ success: false, error: 'شناسه بسته واردشده یافت نشد.' });
 
-  const isSuperAdmin = req.user!.roles?.includes('super-admin') ||
-    req.user!.permissions?.includes('admin.panel.access');
+  // Never grant access to other students' imports from a stale role or panel flag.
+  const isSuperAdmin = isRootOwner(req.user);
   if (batch.userId !== req.user!.id && !isSuperAdmin) {
     return res.status(403).json({ success: false, error: 'عدم دسترسی' });
   }

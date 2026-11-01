@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database';
-import { authenticate, AuthenticatedRequest, requirePermission } from '../middleware/auth';
+import { authenticate, AuthenticatedRequest, requirePermission, isRootOwner } from '../middleware/auth';
 import { hasCompleteChunkSequence, validateSyncChunk } from '../sync/validation';
 import { reconcileSyncRecords } from '../sync/reconciliation';
 
@@ -127,8 +127,8 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
   const termId = body.termId ?? studentProfile?.currentTermId ?? currentTerm?.id;
   const requestedCampusId = body.campusId;
   const campusOverrideAllowed =
-    (Array.isArray(req.user?.roles) && req.user.roles.includes('super-admin')) ||
-    Boolean(req.user?.permissions?.includes('admin.panel.access'));
+    isRootOwner(req.user) ||
+    Boolean(req.user?.roles?.includes('admin') && req.user?.permissions?.includes('admin.panel.access'));
 
   // TermId is untrusted request data too. Students can only submit for their
   // own configured/current term; a valid ID for another semester is not enough.
