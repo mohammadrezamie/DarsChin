@@ -37,7 +37,8 @@ adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'),
 });
 
 // Export Database Backup (without sensitive passwords)
-adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (req, res) => {
+// Backup exports contain student personal and academic records: reserved root only.
+adminRouter.get('/backup', authenticate, requireSuperAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   try {
     // Never start a downloadable response until serialization succeeds.
@@ -51,7 +52,8 @@ adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (re
 });
 
 // Restore Database Backup
-adminRouter.post('/restore', authenticate, requirePermission('backup.manage'), (req, res) => {
+// Global catalogue restoration can affect every student: reserved root only.
+adminRouter.post('/restore', authenticate, requireSuperAdmin, (req, res) => {
   try {
     const backupData = req.body;
     if (!backupData || !Array.isArray(backupData.courses)) {
