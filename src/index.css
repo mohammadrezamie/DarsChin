@@ -400,3 +400,248 @@
     box-shadow: 0 3px 18px -13px rgb(15 23 42 / 35%);
   }
 }
+
+
+/*
+ * هویت بصری درس‌چین — فیروزه، یشم و زعفران
+ * خوانایی و دسترس‌پذیری در هر دو حالت، بدون وابستگی به CDN یا تصویر خارجی.
+ * رنگ‌های معنایی خطا، موفقیت و هشدار در کامپوننت‌ها مستقل باقی می‌مانند.
+ */
+:root {
+  --dc-canvas: #f4faf7;
+  --dc-paper: #fffefa;
+  --dc-ink: #153831;
+  --dc-accent: #c78735;
+  --dc-accent-soft: #fff1d5;
+  --dc-jade: #0f766e;
+  --dc-jade-deep: #115e59;
+  --dc-glow: rgb(20 184 166 / 13%);
+  --dc-glass: rgb(255 254 250 / 88%);
+  --darschin-surface: #fffefa;
+  --darschin-subtle: #ebf6f1;
+  --darschin-stroke: #d4e8dc;
+  --darschin-text: #173b37;
+  --darschin-muted: #526f67;
+  --darschin-focus: #0f766e;
+  --darschin-brand: #0f766e;
+  --darschin-brand-soft: rgb(15 118 110 / 10%);
+  --darschin-accent: #ac6c20;
+  --darschin-page-glow: rgb(20 184 166 / 12%);
+  --darschin-focus-ring: 0 0 0 4px rgb(15 118 110 / 22%);
+  --darschin-shadow: 0 14px 38px -25px rgb(8 72 61 / 31%);
+}
+:root.dark {
+  --dc-canvas: #0a1b1d;
+  --dc-paper: #112c2c;
+  --dc-ink: #eaf9f2;
+  --dc-accent: #f4be72;
+  --dc-accent-soft: #3e3023;
+  --dc-jade: #5de0c7;
+  --dc-jade-deep: #b1f3e5;
+  --dc-glow: rgb(45 212 191 / 13%);
+  --dc-glass: rgb(16 42 43 / 91%);
+  --darschin-surface: #112c2c;
+  --darschin-subtle: #173737;
+  --darschin-stroke: #315450;
+  --darschin-text: #edfaf4;
+  --darschin-muted: #bdd5cd;
+  --darschin-focus: #5de0c7;
+  --darschin-brand: #5de0c7;
+  --darschin-brand-soft: rgb(45 212 191 / 13%);
+  --darschin-accent: #f4be72;
+  --darschin-page-glow: rgb(45 212 191 / 12%);
+  --darschin-focus-ring: 0 0 0 4px rgb(94 234 212 / 25%);
+  --darschin-shadow: 0 18px 44px -26px rgb(0 0 0 / 72%);
+}
+@layer base {
+  body {
+    background:
+      radial-gradient(ellipse min(82vw, 880px) 540px at 92% -6%, rgb(26 176 157 / 13%), transparent 73%),
+      radial-gradient(ellipse min(55vw, 680px) 420px at -9% 40%, rgb(243 186 98 / 9%), transparent 76%),
+      var(--dc-canvas);
+    color: var(--darschin-text);
+  }
+  .dark body {
+    background:
+      radial-gradient(ellipse min(82vw, 880px) 540px at 92% -6%, rgb(27 149 132 / 19%), transparent 73%),
+      radial-gradient(ellipse min(55vw, 680px) 420px at -9% 40%, rgb(243 186 98 / 5%), transparent 76%),
+      var(--dc-canvas);
+    color: var(--darschin-text);
+  }
+  ::selection { background: #0f766e; color: white; }
+  :where(a,button,input,select,textarea,summary):focus-visible {
+    outline-color: var(--darschin-focus);
+  }
+  input::placeholder, textarea::placeholder { color: #71867d; }
+  .dark input::placeholder, .dark textarea::placeholder { color: #b2c6bd; }
+}
+/* درشت‌نمایی مینیمال: کادرهای کمتر، عمق ظریف‌تر، مرزهای گرم و شفاف */
+.bg-glass-primary, .bg-liquid-glass {
+  background: var(--dc-glass);
+  border-color: var(--darschin-stroke);
+  box-shadow: var(--darschin-shadow);
+  backdrop-filter: blur(16px);
+}
+.bg-glass-elevated, .bg-glass-table {
+  background: var(--darschin-surface);
+  border-color: var(--darschin-stroke);
+  box-shadow: var(--darschin-shadow);
+}
+.bg-glass-modal { background: var(--darschin-surface); border-color: var(--darschin-stroke); }
+.bg-glass-input { background: var(--darschin-surface); border-color: var(--darschin-stroke); color: var(--darschin-text); }
+.darschin-surface {
+  border-color: var(--darschin-stroke);
+  background: var(--darschin-surface);
+  box-shadow: var(--darschin-shadow);
+}
+.darschin-admin-panel, .dark .darschin-admin-panel {
+  background: var(--darschin-surface);
+  border: 1px solid var(--darschin-stroke);
+  border-radius: 1.25rem;
+  box-shadow: var(--darschin-shadow);
+}
+.darschin-field:focus-visible {
+  border-color: var(--darschin-focus);
+  box-shadow: var(--darschin-focus-ring);
+}
+.darschin-app-shell {
+  background:
+    radial-gradient(ellipse min(74vw, 720px) 360px at 8% -15%, var(--darschin-page-glow), transparent 80%);
+}
+.darschin-global-nav, .dc-landing-header {
+  background: var(--dc-glass);
+  border-color: var(--darschin-stroke);
+  box-shadow: 0 9px 34px -24px rgb(4 60 52 / 31%);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+}
+.dark .darschin-global-nav, .dark .dc-landing-header {
+  box-shadow: 0 9px 34px -23px rgb(0 0 0 / 70%);
+}
+.dc-brand-mark {
+  background: linear-gradient(140deg, #0b695e 5%, #0b9184 67%, #c4924c 150%);
+  box-shadow: 0 9px 25px -9px rgb(15 118 110 / 52%), inset 0 1px 0 rgb(255 255 255 / 30%);
+  color: #ffffff;
+  border: 1px solid rgb(255 255 255 / 26%);
+}
+.dc-brand-name { color: var(--dc-ink); }
+.dc-brand-caption { color: var(--darschin-muted); }
+.dc-brand-text {
+  background: linear-gradient(110deg, #0c786d 2%, #087d75 42%, #bc7725 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.dark .dc-brand-text {
+  background: linear-gradient(110deg, #a0f4df 2%, #56d9c7 48%, #ffcd84 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.dc-primary-action {
+  background: linear-gradient(118deg, #075e58 0%, #0e8b7a 75%, #168879 100%);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 16%);
+  box-shadow: 0 15px 32px -17px rgb(4 112 96 / 66%);
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+.dc-primary-action:hover { filter: brightness(1.09); box-shadow: 0 18px 36px -17px rgb(4 112 96 / 75%); }
+.dc-primary-action:active { transform: translateY(1px); }
+.dc-primary-action:focus-visible { outline: 3px solid var(--darschin-focus); outline-offset: 3px; }
+.dc-secondary-action {
+  color: var(--darschin-text);
+  border: 1px solid var(--darschin-stroke);
+  background: var(--dc-glass);
+  box-shadow: 0 8px 24px -20px rgb(4 70 59 / 40%);
+}
+.dc-secondary-action:hover { border-color: var(--darschin-focus); background: var(--darschin-subtle); }
+.dc-hero {
+  background:
+    radial-gradient(ellipse 62% 75% at 96% 15%, rgb(79 209 177 / 16%), transparent 78%),
+    radial-gradient(ellipse 36% 50% at 0% 78%, rgb(244 189 102 / 13%), transparent 80%);
+}
+.dark .dc-hero {
+  background:
+    radial-gradient(ellipse 62% 75% at 96% 15%, rgb(32 169 150 / 18%), transparent 78%),
+    radial-gradient(ellipse 36% 50% at 0% 78%, rgb(244 189 102 / 7%), transparent 80%);
+}
+.dc-hero::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  inset-inline-end: -12rem;
+  inset-block-start: 4.5rem;
+  inline-size: min(60vw, 42rem);
+  block-size: min(60vw, 42rem);
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 52px, rgb(21 131 112 / 6%) 53px 54px, transparent 55px 85px);
+}
+.dark .dc-hero::before { opacity: .65; }
+.dc-hero-preview {
+  border-color: var(--darschin-stroke);
+  background: var(--dc-glass);
+  box-shadow: 0 28px 75px -36px rgb(5 91 78 / 42%);
+}
+.dc-hero-preview-top { border-color: var(--darschin-stroke); }
+.dc-hero-feature {
+  background: var(--dc-glass);
+  border-color: var(--darschin-stroke);
+  box-shadow: 0 10px 26px -24px rgb(7 90 76 / 65%);
+}
+.dc-demo-entry {
+  background: linear-gradient(135deg, var(--dc-paper), #e4f5ee 58%, #fff2dc);
+  border: 1px solid var(--darschin-stroke);
+  box-shadow: 0 25px 64px -36px rgb(16 103 79 / 40%);
+}
+.dark .dc-demo-entry {
+  background: linear-gradient(135deg, #102d2c, #173e37 60%, #473523);
+}
+.dc-final-cta {
+  background: #092c2d;
+  color: #fff;
+}
+.dc-final-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 90% at 95% 5%, rgb(35 172 140 / 38%), transparent 72%),
+    radial-gradient(ellipse 43% 70% at 1% 100%, rgb(240 172 89 / 20%), transparent 77%);
+}
+.dc-student-dock {
+  background: var(--dc-glass);
+  border-color: var(--darschin-stroke);
+  box-shadow: 0 -14px 28px -22px rgb(3 80 64 / 42%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.dc-workspace-card { background: var(--darschin-surface); border-color: var(--darschin-stroke); box-shadow: var(--darschin-shadow); }
+.dc-stepper {
+  border-color: var(--darschin-stroke);
+  background: linear-gradient(125deg, var(--darschin-surface) 60%, var(--darschin-subtle));
+  box-shadow: var(--darschin-shadow);
+}
+.dc-auth-backdrop {
+  background:
+    radial-gradient(ellipse 55% 40% at 92% 8%, rgb(46 186 162 / 18%), transparent),
+    radial-gradient(ellipse 40% 35% at 6% 90%, rgb(245 189 106 / 11%), transparent);
+}
+/* احترام به عملکرد و دسترس‌پذیری: بدون فیلتر سنگین در گوشی‌های کم‌قدرت */
+@media (max-width: 639px) {
+  .dc-hero::before { inline-size: 70vw; block-size: 70vw; inset-inline-end: -16vw; }
+  .dc-hero { background: radial-gradient(circle at 92% 6%, rgb(51 178 153 / 10%), transparent 53%); }
+  .darschin-global-nav, .dc-landing-header, .dc-student-dock {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--darschin-surface);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-primary-action { transition: none; }
+  .dc-primary-action:hover, .dc-primary-action:active { transform: none; }
+}
+@media (forced-colors: active) {
+  .dc-primary-action, .dc-secondary-action, .dc-demo-entry, .dc-brand-mark { border: 1px solid ButtonText; }
+  .dc-brand-text { background: none; color: CanvasText; }
+}
