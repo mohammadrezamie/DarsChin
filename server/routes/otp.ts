@@ -197,8 +197,14 @@ otpRouter.post('/send', async (req, res) => {
             createdAt: Date.now(), expiresAt: Date.now() + OTP_EXPIRY_MS, attempts: 0
          });
     }
-    db.save();
-    
+    try {
+        db.save();
+    } catch {
+        // Do not issue or send an OTP unless its verifier was persisted.
+        db.data.otpChallenges = db.otpChallenges.filter(row => row.id !== id);
+        return res.status(500).json({ success: false, error: 'ثبت کد تأیید ناموفق بود؛ لطفاً دوباره تلاش کنید.' });
+    }
+
     try {
         if (sendToAccount) await sendOtpSms(mobile, finalOtp, purpose);
     } catch {
@@ -262,35 +268,50 @@ otpRouter.post('/verify', (req, res) => {
     }
     
     if (!bcrypt.compareSync(code.toString(), challenge.hashedOtp)) {
+        const previousAttempts = challenge.attempts;
         challenge.attempts++;
-        db.save();
+        try {
+            db.save();
+        } catch {
+            challenge.attempts = previousAttempts;
+            return res.status(500).json({ success: false, error: 'ذخیرهٔ تلاش تأیید ناموفق بود.' });
+        }
         return res.status(400).json({ success: false, error: 'کد تایید اشتباه است.' });
     }
-    
+
+    // Validate account state before consuming a login challenge. A successful
+    // login has one durable write for both OTP consumption and its audit event.
+    const user = challenge.purpose === 'login'
+        ? db.users.find(u => normalizeIranianMobile(u.mobile) === mobile)
+        : undefined;
+    if (challenge.purpose === 'login' && (!user || user.deactivatedAt)) {
+        return res.status(400).json({ success: false, error: 'کد تایید نامعتبر یا منقضی شده است.' });
+    }
+
+    const previousConsumedAt = challenge.consumedAt;
+    const auditCount = db.auditLogs.length;
     challenge.consumedAt = Date.now();
-    db.save();
-    
-    if (challenge.purpose === 'login') {
-        let user = db.users.find(u => normalizeIranianMobile(u.mobile) === mobile);
-        if (!user) {
-            return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
-        }
-        if (user.deactivatedAt) {
-            return res.status(403).json({ success: false, error: 'حساب کاربری غیرفعال است.' });
-        }
-        
-        // Log audit
+    if (user) {
         db.auditLogs.push({
-            id: `log-${Date.now()}`,
+            id: `log-${crypto.randomUUID()}`,
             adminId: user.id,
             action: 'USER_LOGIN_OTP',
             entityType: 'USER',
             entityId: user.id,
-            details: `ورود با رمز یکبار مصرف`,
+            details: 'ورود با رمز یکبار مصرف',
             createdAt: new Date().toISOString()
         });
+    }
+
+    try {
         db.save();
-        
+    } catch {
+        challenge.consumedAt = previousConsumedAt;
+        db.auditLogs.splice(auditCount);
+        return res.status(500).json({ success: false, error: 'ثبت تأیید کد ناموفق بود؛ لطفاً دوباره تلاش کنید.' });
+    }
+
+    if (user) {
         const token = generateToken({ id: user.id, roles: user.roles, permissions: user.permissions });
         return res.json({
             success: true,
@@ -300,6 +321,6 @@ otpRouter.post('/verify', (req, res) => {
             }
         });
     }
-    
+
     res.json({ success: true, message: 'تایید شد.' });
 });
