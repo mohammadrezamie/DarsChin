@@ -103,3 +103,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - **[قرارداد قطعی جریان مرحله‌ای دانشجو و ثبت تمام الزامات مهم مالک](STUDENT_GUIDED_JOURNEY_REQUIREMENTS_FA.md)** — P0، سوابق پاس/مردودی، سقف واحد، سبد علاقه‌مندی مستقل، استاد/تداخل و صف ثبت، همراه با وضعیت انجام و گیت پذیرش.
 
 - [پیش‌نمایش جداگانهٔ ظاهر درس‌چین در GitHub Pages](GITHUB_PAGES_PREVIEW_FA.md) — راه‌اندازی، امنیت، انتشار دستی و بازگشت.
+
+- [گردش یکپارچهٔ انتخاب درس، استاد و صف ثبت و رنگ‌بندی جدید](COURSE_FIRST_UNIFIED_QUEUE_FA.md).
