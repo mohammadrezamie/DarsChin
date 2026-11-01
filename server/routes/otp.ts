@@ -156,16 +156,14 @@ otpRouter.post('/send', async (req, res) => {
         return res.status(409).json({ success: false, error: 'این شماره قبلاً ثبت‌نام شده است.' });
     }
 
-    // Verify user state before sending SMS
-    if (purpose === 'login' || purpose === 'password_recovery') {
-        const user = db.users.find(u => normalizeIranianMobile(u.mobile) === mobile);
-        if (!user) {
-            return res.status(404).json({ success: false, error: 'کاربری با این شماره یافت نشد.' });
-        }
-        if (user.deactivatedAt) {
-            return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال است.' });
-        }
-    }
+    // A recovery/login OTP request must not reveal whether a submitted number
+    // belongs to an active account. For unknown/deactivated numbers we issue an
+    // indistinguishable, short-lived decoy challenge and never send an SMS.
+    // No token/password reset can be obtained without a real eligible account.
+    const account = (purpose === 'login' || purpose === 'password_recovery')
+        ? db.users.find(u => normalizeIranianMobile(u.mobile) === mobile)
+        : undefined;
+    const sendToAccount = purpose === 'registration' || Boolean(account && !account.deactivatedAt);
     
     // Throttle checks
     const recentOtps = db.otpChallenges.filter(o => o.mobile === mobile && o.createdAt > Date.now() - 60000);
@@ -173,13 +171,19 @@ otpRouter.post('/send', async (req, res) => {
         return res.status(429).json({ success: false, error: 'لطفاً یک دقیقه صبر کنید.' });
     }
     
+    // Bounded persisted challenge pool: keep distributed OTP-request abuse from
+    // growing a JSON database indefinitely, including decoy account requests.
+    if (db.otpChallenges.length >= 4096) {
+        return res.status(429).json({ success: false, error: 'ظرفیت موقت کدهای تأیید تکمیل است؛ کمی بعد تلاش کنید.' });
+    }
+
     const otpCode = crypto.randomInt(100000, 1000000).toString();
     const hashedOtp = bcrypt.hashSync(otpCode, 10);
     const id = crypto.randomUUID();
     
     // Test mode fixed OTP override
     let finalOtp = otpCode;
-    if (process.env.NODE_ENV === 'test' && process.env.MOCK_OTP_CODE) {
+    if (sendToAccount && process.env.NODE_ENV === 'test' && process.env.MOCK_OTP_CODE) {
          finalOtp = process.env.MOCK_OTP_CODE;
          // Override hash to match the mock
          db.otpChallenges.push({
@@ -196,7 +200,7 @@ otpRouter.post('/send', async (req, res) => {
     db.save();
     
     try {
-        await sendOtpSms(mobile, finalOtp, purpose);
+        if (sendToAccount) await sendOtpSms(mobile, finalOtp, purpose);
     } catch {
         // A code with no confirmed delivery must not become usable or consume
         // the student's resend quota. An uncertain provider response is NOT retried.
@@ -209,7 +213,13 @@ otpRouter.post('/send', async (req, res) => {
     }
 
     // Do NOT return the OTP code
-    res.json({ success: true, message: 'کد تایید ارسال شد.', data: { challengeId: id } });
+    res.json({
+      success: true,
+      message: purpose === 'registration'
+        ? 'کد تأیید ارسال شد.'
+        : 'اگر حساب فعال و شرایط ارسال برقرار باشد، کد تأیید برای شماره واردشده ارسال می‌شود.',
+      data: { challengeId: id },
+    });
 });
 
 otpRouter.post('/verify', (req, res) => {
