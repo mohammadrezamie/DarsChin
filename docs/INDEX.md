@@ -8,6 +8,7 @@
 
 | موضوع | راهنما |
 | --- | --- |
+| **آغاز امن راهنمای دانشجو بدون ساخت پروندهٔ حدسی دانشگاه و رشته** | [STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md](STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md) |
 | **الزام دائمی فارسی‌بودن مستندات و حفظ هویت ایرانی محصول** | [PERSIAN_DOCUMENTATION_STANDARD_FA.md](PERSIAN_DOCUMENTATION_STANDARD_FA.md) |
 | **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |
 | **امن‌سازی صف اولویت/گروه جایگزین و جلوگیری از تأیید قانون ناقص پیش‌نیاز** | [PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md](PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md) |
