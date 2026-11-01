@@ -69,12 +69,12 @@ academicRouter.get('/provinces', (req, res) => {
   res.json({ success: true, data: db.provinces });
 });
 academicRouter.post('/provinces', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, active = true } = req.body;
-  if (!name) return res.status(400).json({ success: false, error: 'نام استان الزامی است.' });
-  const newProv: Province = { id: `prov-${Date.now()}`, name: name.trim(), active };
-  db.provinces.push(newProv);
-  db.save();
-  res.json({ success: true, data: newProv });
+  const { name, active = true } = req.body ?? {};
+  if (!validText(name)) return res.status(400).json({ success: false, error: 'نام استان معتبر الزامی است.' });
+  const newProv: Province = { id: `prov-${randomUUID()}`, name: name.trim(), active: active === true };
+  const saved = writeCatalog(['provinces'], () => { db.provinces.push(newProv); return newProv; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 // --- Universities CRUD ---
@@ -83,44 +83,61 @@ academicRouter.get('/universities', (req, res) => {
 });
 
 academicRouter.post('/universities', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, code, active = true } = req.body;
-  if (!name || !code) return res.status(400).json({ success: false, error: 'نام و کد دانشگاه الزامی است.' });
-
+  const { name, code, active = true } = req.body ?? {};
+  if (!validText(name) || !validText(code, 50)) {
+    return res.status(400).json({ success: false, error: 'نام و کد معتبر دانشگاه الزامی است.' });
+  }
+  const normalizedCode = code.trim().toUpperCase();
+  if (db.universities.some(u => u.code === normalizedCode)) {
+    return res.status(409).json({ success: false, error: 'کد دانشگاه تکراری است.' });
+  }
   const newUniv: University = {
-    id: `univ-${Date.now()}`,
-    name: name.trim(),
-    code: code.trim().toUpperCase(),
-    active: !!active,
+    id: `univ-${randomUUID()}`, name: name.trim(), code: normalizedCode, active: active === true,
   };
-  db.universities.push(newUniv);
-  db.save();
-  res.json({ success: true, data: newUniv });
+  const saved = writeCatalog(['universities'], () => { db.universities.push(newUniv); return newUniv; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
-  const { name, code, active } = req.body;
-  if (name) db.universities[idx].name = name.trim();
-  if (code) db.universities[idx].code = code.trim().toUpperCase();
-  if (typeof active === 'boolean') db.universities[idx].active = active;
-  db.save();
-  res.json({ success: true, data: db.universities[idx] });
+  const { name, code, active } = req.body ?? {};
+  if ((name !== undefined && !validText(name)) ||
+      (code !== undefined && !validText(code, 50)) ||
+      (active !== undefined && typeof active !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'اطلاعات ویرایش دانشگاه نامعتبر است.' });
+  }
+  if (code !== undefined && db.universities.some(u =>
+      u.id !== req.params.id && u.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد دانشگاه تکراری است.' });
+  }
+  const saved = writeCatalog(['universities'], () => {
+    if (name !== undefined) db.universities[idx].name = name.trim();
+    if (code !== undefined) db.universities[idx].code = code.trim().toUpperCase();
+    if (active !== undefined) db.universities[idx].active = active;
+    return db.universities[idx];
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
-  // Check if any campus references it
-  const hasCampuses = db.campuses.some((c) => c.universityId === req.params.id);
-  if (hasCampuses) {
-    db.universities[idx].active = false;
-    db.save();
-    return res.json({ success: true, message: 'به دلیل وابستگی اطلاعات، این دانشگاه غیرفعال شد.' });
-  }
-  db.universities.splice(idx, 1);
-  db.save();
-  res.json({ success: true, message: 'دانشگاه با موفقیت حذف شد.' });
+  // Keep historical references from campuses, charts, student academic
+  // profiles and demand surveys. Deactivation is reversible, deletion is not.
+  const referenced = db.campuses.some(c => c.universityId === req.params.id) ||
+    db.curricula.some(c => c.universityId === req.params.id) ||
+    db.studentProfiles.some(p => p.universityId === req.params.id) ||
+    db.demandSurveys.some(d => d.universityId === req.params.id);
+  const saved = writeCatalog(['universities'], () => {
+    if (referenced) db.universities[idx].active = false;
+    else db.universities.splice(idx, 1);
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, message: referenced
+    ? 'دانشگاه به دلیل سوابق وابسته غیرفعال شد.' : 'دانشگاه حذف شد.' });
 });
 
 // --- Campuses CRUD ---
@@ -133,7 +150,7 @@ academicRouter.get('/campuses', (req, res) => {
 });
 
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body;
+  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body ?? {};
   if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ success: false, error: 'نام و کد واحد دانشگاهی الزامی است.' });
   }
@@ -159,7 +176,7 @@ academicRouter.post('/campuses', authenticate, requirePermission('system.setting
 academicRouter.put('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
-  const { universityId, provinceId, type, name, code, active } = req.body;
+  const { universityId, provinceId, type, name, code, active } = req.body ?? {};
   if (universityId !== undefined &&
       (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId))) {
     return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر نیست.' });
@@ -192,7 +209,7 @@ academicRouter.get('/majors', (req, res) => res.json({ success: true, data: db.m
 academicRouter.get('/tracks', (req, res) => res.json({ success: true, data: db.tracks }));
 
 academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, code, active = true } = req.body;
+  const { name, code, active = true } = req.body ?? {};
   const newDeg: DegreeLevel = { id: `deg-${Date.now()}`, name: name.trim(), code: code.trim().toUpperCase(), active };
   db.degreeLevels.push(newDeg);
   db.save();
@@ -200,7 +217,7 @@ academicRouter.post('/degrees', authenticate, requirePermission('system.settings
 });
 
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { degreeLevelId, name, code, active = true } = req.body;
+  const { degreeLevelId, name, code, active = true } = req.body ?? {};
   if (typeof degreeLevelId !== 'string' || !db.degreeLevels.some(degree => degree.id === degreeLevelId && degree.active)) {
     return res.status(400).json({ success: false, error: 'مقطع تحصیلی معتبر و فعال انتخاب کنید.' });
   }
@@ -214,7 +231,7 @@ academicRouter.post('/majors', authenticate, requirePermission('system.settings.
 });
 
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { majorId, name, code, active = true } = req.body;
+  const { majorId, name, code, active = true } = req.body ?? {};
   if (typeof majorId !== 'string' || !db.majors.some(major => major.id === majorId && major.active)) {
     return res.status(400).json({ success: false, error: 'رشتهٔ مرتبط معتبر و فعال انتخاب کنید.' });
   }
@@ -245,7 +262,7 @@ academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.set
 // --- Entry Years & Academic Terms ---
 academicRouter.get('/entry-years', (req, res) => res.json({ success: true, data: db.entryYears }));
 academicRouter.post('/entry-years', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { year, active = true } = req.body;
+  const { year, active = true } = req.body ?? {};
   const newYear: EntryYear = { id: `yr-${year}`, year: Number(year), active };
   db.entryYears.push(newYear);
   db.save();
@@ -254,7 +271,7 @@ academicRouter.post('/entry-years', authenticate, requirePermission('system.sett
 
 academicRouter.get('/terms', (req, res) => res.json({ success: true, data: db.academicTerms }));
 academicRouter.post('/terms', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, year, termNumber, isCurrent = false } = req.body;
+  const { name, year, termNumber, isCurrent = false } = req.body ?? {};
   if (isCurrent) {
     db.academicTerms.forEach((t) => (t.isCurrent = false));
   }
@@ -275,7 +292,7 @@ academicRouter.post('/terms', authenticate, requirePermission('system.settings.m
 academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.courses }));
 
 academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
-  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body;
+  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body ?? {};
   if (!code || !name || units === undefined || !category) {
     return res.status(400).json({ success: false, error: 'کد، نام، تعداد واحد و دسته‌بندی درس الزامی است.' });
   }
@@ -303,7 +320,7 @@ academicRouter.post('/courses', authenticate, requirePermission('course.create')
 academicRouter.put('/courses/:id', authenticate, requirePermission('course.update'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
-  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body;
+  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body ?? {};
   if (code) db.courses[idx].code = code.trim();
   if (name) db.courses[idx].name = name.trim();
   if (units !== undefined) db.courses[idx].units = Number(units);
