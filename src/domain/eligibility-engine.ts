@@ -1,4 +1,3 @@
-import { calculateAcademicLimits } from './academic-policy';
 // ============================================================================
 // DARSCHYN (درس‌چین) - Core Eligibility Engine (Deterministic Rule-Based)
 // ============================================================================
@@ -30,6 +29,8 @@ export interface EligibilityContext {
   passedCourses: StudentPassedCourse[];
   currentOfferings: CourseOffering[];
   plannedOfferingIdsInSameTerm?: string[]; // Course IDs or offering IDs student has picked for current term
+  /** Only a verified manual administrative final-semester approval can waive configured prerequisites. */
+  allowFinalSemesterPrerequisiteOverride?: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export function evaluateStudentEligibility(
     passedCourses,
     currentOfferings,
     plannedOfferingIdsInSameTerm = [],
+    allowFinalSemesterPrerequisiteOverride = studentProfile.isFinalSemesterOverride === true,
   } = context;
 
   // Filter passed courses: only status PASSED or grade >= 10 count. Failed/Absent do NOT count.
@@ -78,7 +80,7 @@ export function evaluateStudentEligibility(
   // Find curriculum courses
   const curriculumCourseMap = new Map<string, CurriculumCourse[]>();
   for (const cc of curriculumCourses) {
-    if (cc.curriculumId === curriculum.id) {
+    if (cc.curriculumId === curriculum.id && cc.active !== false) {
       const existing = curriculumCourseMap.get(cc.courseId) || [];
       existing.push(cc);
       curriculumCourseMap.set(cc.courseId, existing);
@@ -232,6 +234,8 @@ export function evaluateStudentEligibility(
         (r) =>
           r.curriculumId === curriculum.id &&
           r.targetCourseId === course.id &&
+          (!r.majorId || r.majorId === studentProfile.majorId) &&
+          (!r.entryYearId || r.entryYearId === studentProfile.entryYearId) &&
           (r.trackId === null || r.trackId === undefined || r.trackId === trackId)
       );
 
@@ -256,16 +260,11 @@ export function evaluateStudentEligibility(
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
           const wasFailed = passedCourses.some(p => p.courseId === reqCourse.id && (p.status === 'FAILED' || (p.grade !== undefined && p.grade < 10)));
 
-          // Final Semester Rule Bypass
-          const { isFinalSemester } = calculateAcademicLimits(
-            studentProfile,
-            allCourses,
-            curriculumCourses,
-            passedCourses,
-            { finalSemesterRuleEnabled: true, finalSemesterThresholdUnits: 24, normalMinUnits: 12, normalMaxUnits: 20, gpaBonusThreshold: 17, gpaBonusMaxUnits: 24, summerMinUnits: 1, summerMaxUnits: 8, finalSemesterMaxUnits: 24 } as any
-          );
-          if (isFinalSemester) {
-             return { passed: true, missing: [], reasons: [] };
+          // Never infer a blanket prerequisite exemption from 24 remaining
+          // units across unrelated charts or hard-coded academic thresholds.
+          // Only an explicit, verified administrative override can request it.
+          if (allowFinalSemesterPrerequisiteOverride) {
+            return { passed: true, missing: [], reasons: [] };
           }
 
           if (isCorequisite) {
@@ -284,7 +283,7 @@ export function evaluateStudentEligibility(
             };
           }
 
-          console.log('Eval:', {courseId: reqCourse.id, isPassed, isFinalSemester, wasFailed, isContextualRetake, isCorequisite}); // Normal Prerequisite
+          // No logging individual student prerequisites or academic attempts.
           if (isPassed) return { passed: true, missing: [], reasons: [] };
           return {
             passed: false,

@@ -8,6 +8,7 @@ import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
+import { detectPlanConflicts } from '../../src/domain/plan-conflicts';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema } from '../schemas/student';
 
@@ -436,6 +437,8 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       allCourses: db.courses,
       tracks: db.tracks,
       academicRules: db.academicRules,
+      allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
+        db.academicSettings.finalSemesterRuleEnabled,
       passedCourses: db.studentPassedCourses.filter(row => row.userId === userId),
       currentOfferings: relevantOfferings,
       plannedOfferingIdsInSameTerm: selectedOfferingIds,
@@ -453,6 +456,17 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       return res.status(400).json({
         success: false, error: 'برخی گروه‌ها متعلق به این واحد/چارت نیستند، منع آموزشی دارند یا برای یک درس تکراری‌اند.',
         invalidIds,
+      });
+    }
+    const selectedOfferings = relevantOfferings.filter(offering =>
+      selectedOfferingIds.includes(offering.id)
+    );
+    const collisions = detectPlanConflicts(selectedOfferings);
+    if (collisions.length) {
+      return res.status(409).json({
+        success: false,
+        error: 'برنامهٔ انتخاب‌شده تداخل قطعی ساعت کلاس یا شروع امتحان دارد؛ گروه جایگزین انتخاب کنید.',
+        conflicts: collisions,
       });
     }
     // Bulk plan updates must not bypass the existing configured unit ceiling.
@@ -503,6 +517,10 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     blankStudentPlan(userId, currentTermId);
 
   if (action === 'remove') {
+    // Removing a group that was never selected is idempotent and read-only.
+    if (!plan.selectedOfferingIds.includes(offeringId)) {
+      return res.json({ success: true, action: 'removed', selectedOfferingIds: plan.selectedOfferingIds });
+    }
     const saved = saveStudentPlan(userId, currentTermId, draft => {
       draft.selectedOfferingIds = draft.selectedOfferingIds.filter(id => id !== offeringId);
       draft.updatedAt = new Date().toISOString();
@@ -542,7 +560,8 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     allCourses: db.courses,
     tracks: db.tracks,
     academicRules: db.academicRules,
-    
+    allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
+      db.academicSettings.finalSemesterRuleEnabled,
     passedCourses,
     currentOfferings: relevantOfferings,
     plannedOfferingIdsInSameTerm: plan.selectedOfferingIds,
@@ -609,6 +628,22 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     return res.status(400).json({
       success: false,
       error: `افزودن این درس (${targetUnits} واحد) باعث عبور از سقف مجاز انتخاب واحد ${limitLabel} می‌شود.`,
+    });
+  }
+
+  // The final schedule excludes the previous section when swapping groups.
+  // Validate against the entire resulting plan, not just the target group.
+  const finalIds = [
+    ...plan.selectedOfferingIds.filter(id => id !== sameCourseExistingOffering?.id),
+    offeringId,
+  ];
+  const finalOfferings = relevantOfferings.filter(row => finalIds.includes(row.id));
+  const collisions = detectPlanConflicts(finalOfferings);
+  if (collisions.length) {
+    return res.status(409).json({
+      success: false,
+      error: 'گروه انتخابی با کلاس یا امتحان برنامهٔ فعلی تداخل قطعی دارد؛ گروه جایگزین را بررسی کنید.',
+      conflicts: collisions,
     });
   }
 

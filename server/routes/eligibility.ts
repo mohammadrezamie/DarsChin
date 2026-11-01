@@ -84,6 +84,8 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       allCourses: db.courses,
       tracks: db.tracks,
       academicRules: db.academicRules,
+      allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
+        db.academicSettings.finalSemesterRuleEnabled,
       
       passedCourses,
       currentOfferings: relevantOfferings,
