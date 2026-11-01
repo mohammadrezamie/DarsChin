@@ -1,122 +1,118 @@
-# Security and demo-data policy
+# سیاست امنیت و داده‌های نمایشی درس‌چین
 
-**Demo-only today is not production-safe by default.** This guide documents present limits, not a security certification.
+**نمایشی‌بودن یک نصب به معنی امنیت آن برای استفادهٔ واقعی نیست.** این سند محدودیت‌ها و اصلاحات انجام‌شده در تاریخ‌های مشخص را توضیح می‌دهد؛ گواه امنیت کامل، پاکی تاریخچهٔ Git یا آماده‌بودن VPS نیست.
 
-## Credentials and source control
+## رمزها و کنترل نسخه
 
-- `JWT_SECRET` is required before the API can start. Use a unique high-entropy value, kept in a private runtime environment file.
-- Never commit configured `.env` files, SMS-provider keys, JWTs, passwords, password hashes, recovery keys, OTPs, raw exported student data or logs.
-- Older Git history and PR refs (not the current main tree) contain the once-tracked `data/darschyn-db.json` with account identifiers and authentication-related fields. See [issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4). `.gitignore` alone does **not** remove tracked content or Git history.
-- `server/db/seed.ts` contains **sample accounts with fixed demo passwords**. These must never be mistaken for production credentials. Before public launch, remove or disable public demo account access and independently review bootstrap behavior; do not migrate demo accounts to live accounts.
-- Do not quote identifiers or credentials from committed data in public docs, PR descriptions or logs.
+- پیش از راه‌اندازی API، یک `JWT_SECRET` تازه و پرآنتروپی در فایل محیطی خصوصی و رهگیری‌نشده لازم است.
+- فایل `.env` تکمیل‌شده، توکن JWT، کلید سرویس پیامک، رمز/هش رمز، کلید بازیابی، OTP، خروجی واقعی دادهٔ دانشجو و لاگ حساس را هرگز وارد Git نکنید.
+- دیتابیس قدیمی `data/darschyn-db.json` و برخی اسکریپت‌های سابق ممکن است در تاریخچهٔ قدیمی کامیت و PR باقی باشند؛ پاک‌کردن فایل در `main` یا اضافه‌کردن `.gitignore` آن تاریخچه را پاک نمی‌کند. [پروندهٔ امنیتی شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4).
+- حساب‌های ساختگی و رمزهای ثابت موجود در Fixtureهای دمو مجوز ورود واقعی نیستند. هیچ دادهٔ Seed را به حساب کاربر تولیدی تبدیل نکنید.
+- محتویات تاریخچهٔ حساس را در توضیح PR، Issue، تست یا مستندات عمومی دوباره منتشر نکنید.
 
-## Administrative responses
+## خروجی‌های مدیر و پشتیبان
 
-Review all authenticated API responses for secrets, including backup downloads and the administrator users listing. [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8) redacts recovery fields and transient OTP/CAPTCHA data in admin exports. The isolated Bun verification suite passed; production API authorization remains subject to deployment smoke tests.
+پاسخ همهٔ APIهای احرازشده ــ به‌ویژه `GET /api/admin/users` و دانلود بکاپ ــ باید از نظر اطلاعات بازیابی، OTP، CAPTCHA، توکن و دادهٔ شخصی بازبینی شوند. [PR شمارهٔ ۸](https://github.com/mohammadrezamie/DarsChin/pull/8) بخشی از فیلدهای بازیابی/چالش را در نسخهٔ مربوط حذف کرد. آزمون Bun آن زمان به معنی تست استقرار واقعی نیست.
 
-## Live launch gate
+## گیت راه‌اندازی با دانشجوی واقعی
 
-1. Deploy with a separate service user and environment secrets, HTTPS and reverse proxy.
-2. Ensure a persistent data directory that is not tracked by Git and not overwritten by releases.
-3. Validate account bootstrap, permissions and role boundaries; prevent privileged bypasses.
-4. Disable production debug/test endpoints, demo defaults and mock OTP behavior.
-5. Set up SMS/OTP provider credentials only if needed; test failure paths and request throttling.
-6. Verify backups by restoring to an isolated non-production directory.
-7. Perform security and dependency audit, update libraries deliberately rather than force-upgrading.
-8. Test authorization, cross-user access, state persistence and rollback at a named commit.
+1. حساب سرویس جدا و Secret خصوصی، HTTPS و پروکسی معکوس بسازید؛ پورت Node مستقیماً عمومی نشود.
+2. دادهٔ پایدار را بیرون پوشهٔ سورس و خارج از Git قرار دهید.
+3. Root، نقش‌ها، حوزهٔ دسترسی و جلوگیری از ارتقای مجوز را روی Backend واقعی بررسی کنید.
+4. مسیرهای Debug، حساب‌های پیش‌فرض و OTP Mock در Production باید غیرفعال یا با اعتبارسنجی بسته باشند.
+5. ارسال پیامک/OTP و مسیرهای شکست و محدودسازی درخواست را با سرویس واقعی تست کنید.
+6. بکاپ را با Restore در پوشهٔ غیرتولیدی اثبات کنید.
+7. وابستگی‌ها و هشدارهای امنیتی را آگاهانه بررسی و بدون ارتقای کورکورانه آزمون کنید.
+8. دسترسی افقی، دوام داده و بازگشت به نسخهٔ قبلی را روی SHA واقعی امتحان کنید.
 
-**Responsible reporting:** keep vulnerability details and real data in private project channels, redact samples, and do not publish exploits or identifiers in issues.
+گزارش مسئولانهٔ آسیب‌پذیری باید محرمانه و بدون شناسه‌های واقعی دانشجو باشد. [سیاست گزارش خصوصی](../SECURITY.md) را بخوانید.
 
+## CAPTCHA مهمان
 
-## Guest CAPTCHA (login, registration, OTP)
+- وقتی `TURNSTILE_ENABLED=true` است، سرور Express باید توکن Cloudflare Siteverify، هدف عملیات و دامنهٔ مجاز را بررسی کند؛ نبود توکن یا خطای سرویس به معنی رد درخواست است.
+- وقتی `TURNSTILE_ENABLED=false` است، ورود و ثبت‌نام عمومی از CAPTCHA تصویری محلی SVG با شناسهٔ محدود به زمان، تعداد تلاش، هدف عملیات و یک‌بارمصرف‌بودن استفاده می‌کنند. آغاز OTP پیامکی در این حالت نیز چالش اختصاصی دارد.
+- نمایش SVG یا تیک «من ربات نیستم» تأیید انسانی نیست؛ تأیید باید برای **هر درخواست** در سرور انجام شود. هیچ پرچم کلاینتی یا حالت fail-open کافی نیست.
+- دیتابیس JSON تک‌پردازشی و تولید CAPTCHA عمومی جای WAF، محدودسازی اشتراکی و سرویس ضدربات مقیاس‌پذیر را نمی‌گیرد. دسترسی از ایران، دسترس‌پذیری غیرتصویری، کیفیت محدودسازی و SMS باید پیش از دعوت دانشجوی واقعی آزموده شوند.
+- آزمون سورس و Build به‌تنهایی اثبات محیط عملیاتی نیست؛ [چک‌لیست پذیرش CAPTCHA](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) را ملاک بگیرید.
 
-- `TURNSTILE_ENABLED=true`: verify every submitted token on the Express server against Cloudflare Siteverify, expected action and permitted hostname. Missing token/provider error is denied.
-- `TURNSTILE_ENABLED=false`: the sign-in and sign-up UI uses the existing local SVG CAPTCHA service. The server validates a time-limited challenge ID and answer, increments failed attempts, and consumes a successful answer so replay is denied. SMS-OTP initiation already uses its own local image check in this mode.
-- A returned SVG/image is **not** proof that a human was verified. The server must verify the solution on every guest account-creation or login request. Fake checkboxes, unverified frontend flags and fail-open fallbacks are forbidden.
-- Limitations: the JSON database and public CAPTCHA generation endpoint remain single-process pilot infrastructure, not a production anti-abuse platform. Verify rate limits, bot resistance, storage scaling, visual accessibility and Iran connectivity before inviting real students; OTP verification itself remains a separate factor.
-- Current change is code-reviewed only until TypeScript/Vitest, live browser checks and a named preview build have completed; do not treat documentation as release approval.
+## ثبت تاریخی اصلاحات امنیتی
 
+### ۲۶ اکتبر ــ پذیرش CAPTCHA واقعی
 
-## Guest CAPTCHA acceptance — 2026-10-26
+مسیرهای عمومی نباید با Checkbox نمایشی باز شوند. در حالت Turnstile، بررسی توکن، Action و Hostname سمت سرور انجام می‌شود؛ در حالت محلی، چالش SVG یک‌بارمصرفِ مختص عمل استفاده می‌شود. تصویر به‌صورت `img` نمایش داده شود، نه تزریق HTML خام. دسترسی داخل ایران و سرویس پیامک در همان زمان هنوز نیازمند آزمون میدانی بودند.
 
-Public login and registration must never rely on a decorative checkbox or a browser-only flag. The server checks a one-use, action-scoped first-party image CAPTCHA when Turnstile is disabled; when enabled, it checks the real provider's Siteverify token, action and exact allowed hostname. The OTP request keeps its own scoped challenge. Challenge images are rendered using `img`, not inserted as raw SVG markup. A failed challenge/configuration must not authenticate a user.
+### ۲۸ اکتبر ــ ابطال نشست بعد از تغییر رمز
 
-Full deployment, Iranian connectivity, shared-store atomicity, proxy-level rate limits, accessible non-image fallback and real SMS must still be verified before inviting real students. See [CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md](CAPTCHA_PRODUCTION_ACCEPTANCE_FA.md) for the detailed checklist. No real secrets or other repositories were modified.
+هر JWT با مقدار پایدار `sessionVersion` حساب مرتبط شد. بازیابی رمز با OTP یا تغییر رمزِ احرازشده، این نسخه را افزایش می‌دهد تا توکن‌های قبلی بی‌اعتبار شوند. برای مرورگرِ تغییر‌دهنده، توکن تازه صادر می‌شود. توکن‌های قدیمیِ فاقد Claim نسخه فقط برای حسابی که هنوز نسخهٔ نشستش تغییر نکرده است مطابق رفتار سازگاری قبلی بررسی می‌شوند. [شرح فنی](AUTH_SESSION_REVOCATION_FA.md). این اصلاح به معنی تأیید نصب واقعی چندسروره یا آیفون نیست.
 
-## Password reset session revocation (2026-10-28)
+### ۱ نوامبر ــ متن‌بازبودن سورس و نصب خصوصی
 
-Every server-issued JWT is bound to the persisted per-account `sessionVersion`; an OTP recovery or authenticated password change increments it. JWTs issued beforehand must be rejected even before their original expiry. The password-change response supplies a fresh token for that same browser. Legacy JWTs without the version claim are accepted only for accounts that have not yet rotated their session version. Details, constraints and exact-source automated QA: [AUTH_SESSION_REVOCATION_FA.md](AUTH_SESSION_REVOCATION_FA.md). This change does not claim live VPS, multi-server or iPhone acceptance.
+هر شخص می‌تواند از مخزن عمومی یک نسخهٔ مستقل نصب کند؛ این امر به سرور یا دادهٔ مالک دسترسی نمی‌دهد. `DARSCHYN_ACCESS_MODE=owner_only` با توکن Root معتبر ثبت‌نام جدید را می‌بندد و APIهای محافظت‌شده را به مالک محدود می‌کند؛ حالت `multiuser` برای نصب مستقل مجاز است. این کنترل صفحات استاتیک یا دموی SPA را پنهان نمی‌کند؛ برای خصوصی‌کردن کامل سایت، محدودسازی در پروکسی لازم است. متغیرهای `DARSCHYN_REQUIRE_EXISTING_DB` و `DARSCHYN_REGISTRATION_OTP_REQUIRED` باید در ENV هر نصب آگاهانه تنظیم شوند. [راهنمای نصب مستقل](SELF_HOSTING_OPEN_SOURCE_FA.md).
 
-## Public-source / private-instance deployment (2026-11-01)
+### تعویض آفلاین رمز Root احتمالیِ افشاشده
 
-The source is published for independent self-hosting; no code contribution or clone is authorized to access the maintainer's live service. Optional `DARSCHYN_ACCESS_MODE=owner_only` requires a verified reserved root token on protected APIs and forbids new registrations, while `multiuser` remains available to other self-hosters. API-only gating is insufficient to hide static SPA/demo content; use a reverse-proxy access rule for complete site privacy. The Docker Compose service now explicitly forwards `DARSCHYN_REQUIRE_EXISTING_DB` and `DARSCHYN_REGISTRATION_OTP_REQUIRED`. Set them deliberately in the per-server private environment. See [self-hosting](SELF_HOSTING_OPEN_SOURCE_FA.md) and [public Git incident](PUBLIC_REPOSITORY_READINESS_20261101_FA.md).
+در نصب موجود، تغییر فایل ENV به‌تنهایی رمز ذخیره‌شده در دیتابیس را عوض نمی‌کند. از دستورالعمل بازیابیِ آفلاین [راهنمای نصب مستقل](SELF_HOSTING_OPEN_SOURCE_FA.md) استفاده شود: فرایند Node متوقف، هویت Root یکتا تأیید، بکاپ خصوصی گرفته و Verifier و `sessionVersion` تغییر کنند. این متن به معنی انجام آن روی VPS مالک نیست؛ کلیدهای پیامک، توکن‌های استقرار و سایر سرویس‌ها باید جداگانه توسط صاحبشان ابطال/تعویض شوند.
 
-## Offline repair of an exposed root account
+### پاک‌سازی الگوهای ENV و آرشیو افزونه
 
-If the root credentials of an existing installation may be exposed, update the private runtime ENV **and** the stored database password/recovery verifiers using the [offline repair steps](SELF_HOSTING_OPEN_SOURCE_FA.md#emergency-root-credential-rotation-without-a-second-codebase). The tool requires an existing persisted database, unique reserved root identity, stopped Node process and explicit operator confirmation; it backs up privately and increments sessionVersion. This is not proof that any live VPS has been rotated. Account/provider credentials beyond the root must be handled separately.
+سه فایل نمونهٔ `.env.example` نباید رمز، شمارهٔ مالک، کلید بازیابی، SMS/Turnstile، دامنهٔ واقعی یا اطلاعات تماس عملیاتی داشته باشند. فایل واقعی `.env` خصوصی و خارج Git بماند. گیت CI فایل‌های نمونه و آرشیو رهگیری‌شده را از نظر دادهٔ خصوصی بررسی می‌کند؛ **تاریخچهٔ قدیمی را پاک نمی‌کند**. [مرجع تنظیمات محیطی](ENV_CONFIGURATION_FA.md).
 
-## Repository ENV template scrub and archived extension check — 2026-11-01
+### صحت هویت مدیر تفویض‌شده
 
-The three tracked *.env.example templates are placeholders only: no passwords, root mobiles, recovery materials, SMS/Turnstile credentials, real hostnames, deployment SHA or contact email. The operator's already populated runtime `.env` remains untracked and unchanged. CI now rejects accidentally filled private fields in examples and examines tracked ZIP extension contents using bounded archive scanning. This is a HEAD check, **not** assurance that historic Git objects or PR snapshots are clean. See [Persian field reference](ENV_CONFIGURATION_FA.md). No VPS config or credential has been modified.
+ساخت و ویرایش حساب مدیریت باید شمارهٔ همراه ایران را یکسان‌سازی کند، تکرار سراسری شماره/مجوز و رمز ضعیف را رد کند، نشست قدیمی را بعد از تغییر اطلاعات حساس بی‌اعتبار سازد و در شکست ذخیره رکورد را به حالت قبلی برگرداند. هیچ تغییر خودکاری روی حساب واقعی مستقر انجام نمی‌شود.
 
-## Delegated administrator identity integrity (2026-11-01)
+### حذف پیام خطای داخلی و محدودیت ارزیابی صلاحیت
 
-Root-only administrator creation and editing now validate accepted fields, normalize Iranian phone numbers before enforcing global uniqueness, reject malformed or duplicate permission strings and weak new delegated passwords, and invalidate pre-update session tokens. Importantly, a failed update must not partially change a persisted record. This protects identity binding for SMS login and permission checks without changing existing accounts. Deployed servers are not auto-migrated or modified until operators update their own running instance; historic Git objects remain a separate incident.
+پاسخ HTTP ۵۰۰ نباید Exception خام، مسیر فایل، Stack یا رکورد دانشجو را به کلاینت برگرداند. ارزیابی صلاحیت فقط آرایه‌های شناسهٔ معتبر و محدود را پیش از اجرای موتور می‌پذیرد. آزمون‌ها از Exception دارای مسیر خصوصیِ **ساختگی** استفاده می‌کنند. این اصلاح کلید تاریخی را ابطال نمی‌کند.
 
+### حریم خصوصی تاریخچهٔ همگام‌سازی
 
-## API error redaction and evaluation input guard — 2026-11-01
+`GET /api/sync/jobs` نباید فهرست همهٔ کارهای دانشجویان را صرف داشتن `admin.panel.access` در اختیار مدیر تفویض‌شده بگذارد. Root معتبر امکان مشاهدهٔ سراسری دارد؛ مدیر تفویض‌شده فقط کارهای خودش یا دانشجویان حوزهٔ صریح `demandScopes` مطابق دانشگاه/واحد/مقطع/رشته را می‌بیند. خطاهای خام تطبیق فقط در حوزهٔ Root نمایش داده شوند. مدیر بدون حوزه مجوز دیدن دادهٔ فرد دیگر ندارد.
 
-Internal 500 responses in administration and student eligibility must never reflect raw exception messages, stack traces, filesystem paths, secrets or mutable student records. Catch handlers return stable generic errors, including failed backup serialization. Student evaluation requires bounded arrays of valid course/offering identifiers before the engine runs. Regression tests intentionally throw synthetic path-bearing exceptions and ensure the response excludes their values. Neither these patches nor source-tree cleanup revokes credentials exposed in old Git history.
+### محدودیت حافظه در ورود ناموفق
 
-## Sync-history personal-data scope (2026-11-01)
+ردیاب تلاش ناموفق به تعداد و زمان محدود شد؛ شماره‌های ناشناس نمی‌توانند حافظهٔ فرآیند را بی‌نهایت پر کنند. محدودسازی IP و CAPTCHA همچنان لازم‌اند. قفل پنج‌دقیقه‌ای شماره و پاک‌سازی رکوردهای قدیمی، جای Rate Limiter مشترک برای نصب چندپردازشی را نمی‌گیرد.
 
-The global admin-facing `GET /api/sync/jobs` must not reveal every student's import history merely because a delegated administrator has `admin.panel.access`. Verified root can see all records; delegated administrators can see their own jobs or jobs owned by students whose academic profile exactly matches an explicitly assigned `demandScopes` campus/degree/major and the recorded job campus. Raw reconciliation failure diagnostics are root-only because imported data can contain identifying details. An unscoped manager has no cross-student visibility. This change is a source patch and does not guarantee that the owner's currently deployed VPS has received the patch.
+### جلوگیری از شناسایی شمارهٔ حساب از طریق OTP
 
-## Failed-login memory exhaustion guard (2026-11-01)
+در ارسال OTP ورود یا بازیابی، شمارهٔ ناموجود/غیرفعال نباید با پاسخ مشخص ۴۰۴/۴۰۳ حضور حساب را افشا کند. پس از CAPTCHA و Rate Limit، پاسخ ظاهراً هم‌شکل با چالش ساختگیِ **بدون ارسال پیامک و بدون امکان صدور توکن** تولید می‌شود. نرخ ارسال مجدد یک دقیقه، انقضای دو دقیقه و سقف صف ثبت‌شدهٔ ۴۰۹۶ رکورد در گزارش مربوط ثبت شده‌اند. این راهکار همهٔ کانال‌های جانبیِ زمان‌بندی را حذف نمی‌کند.
 
-The per-mobile brute-force lockout now has a bounded, time-expiring in-memory tracker. Unknown-number login attempts can no longer add unlimited entries over months. Existing CAPTCHA and guest IP throttles still apply, failed attempts still lock a mobile for five minutes, and counters reset after completed lockouts or inactivity. This single-node pilot design is not a substitute for shared persistent rate limiting on a multi-instance production installation.
+### حذف اسکریپت‌های احراز هویت قدیمی از نسخهٔ جاری
 
-## OTP account-enumeration hardening (2026-11-01)
+۲۲ فایل اجراییِ بازنشستهٔ `scripts/legacy/` که بعضی مقدار ثابت احراز هویت داشتند از HEAD فعلی کنار گذاشته شدند. ابزار بررسی سورس از بازگرداندن فایل اجرایی به آن پوشه جلوگیری می‌کند. فایل‌های تاریخی Git، PRهای قدیمی و فورک‌های دیگر همچنان ممکن است دادهٔ قبلی داشته باشند؛ کلید معتبر باید جداگانه تعویض شود.
 
-The login and password-recovery OTP send endpoints no longer respond with distinct `404` / `403` errors to identify missing or deactivated phone numbers. Once CAPTCHA and per-mobile throttling pass, a missing/deactivated account receives a short-lived **non-delivered decoy challenge** with the same generic response shape as a legitimate send. No SMS is dispatched and no token can be issued for a non-account. OTP rows remain subject to one-minute resend throttling, two-minute expiration and a global persisted queue cap (4096).
+### اتمیک‌بودن نمایش واردسازی و خطا
 
-Limitations: this does not eliminate every possible timing/network side channel, and the regular registration duplicate-number response remains a distinct user-flow decision. A production deployment and rate limiting at the trusted reverse proxy remain important; source fixes are not yet applied to the VPS.
+ساخت `importBatches` و `importRecords` باید در شکست `db.save()` به وضعیت حافظهٔ پیشین برگردد و پیام عمومی بدون مسیر فایل/دادهٔ شخصی باشد. این تضمین فقط برای یک پردازش JSON است؛ چند نویسندهٔ مستقل نیازمند دیتابیس تراکنشی‌اند.
 
+### نسخهٔ پشتیبان کامل فقط با Root
 
-## Historical legacy authentication scripts in public Git (2026-11-01)
+فایل بکاپ JSON حتی بعد از حذف هش رمز و کلید پیامک ممکن است دادهٔ هویتی دانشجویان داشته باشد. مسیرهای `GET /api/admin/backup` و `POST /api/admin/restore` باید Root واقعی را با `requireSuperAdmin` کنترل کنند؛ مجوز تفویض‌شدهٔ `backup.manage` به‌تنهایی کافی نیست. آزمون مجوز منفی و مثبت ضروری است.
 
-The 22 retired, one-off scripts in `scripts/legacy/` have been deleted from current HEAD after discovering embedded authentication values and a password-printing utility. They were not supported production or test commands. Automated public-source checks now reject recommitting executable files under this deprecated directory. Source deletion **does not remove historical Git objects, old PR refs, third-party clones, or invalidate leaked secrets**. Create new independent deployment credentials, revoke anything exposed in history and coordinate full historical cleanup and GitHub Support separately. No active VPS or private environment was touched.
+### فهرست سراسری دانشجویان و Override ترم آخر فقط Root
 
-## Import preview persistence and error privacy — 2026-11-01
+مجوز عمومی `student-management.read` نباید به تمام نام‌ها و شماره‌ها و پروفایل‌ها دسترسی بدهد. تا وجود مدل حوزه‌بندی کامل، عملیات سراسری و تغییر Override ترم آخر فقط برای Root تأییدشده مجاز است. Audit پیش از ذخیره و بدون یادداشت آزاد خصوصی ثبت می‌شود و در شکست ذخیره همراه تغییر پروفایل برمی‌گردد. این اصلاح قانون معارف جدید وضع نمی‌کند.
 
-Student/administrator extension import previews now keep new review batches and rows **atomic in application memory** with respect to the durable JSON write: if `db.save()` fails, both in-memory collections revert to their prior values and the HTTP response is a generic 500 without file paths, provider details or raw imported content. This does not make the JSON database safe for multiple independent Node writers; a transactional database remains required for distributed deployments. The main service on the existing VPS has not been touched.
+### جداسازی تیکت پشتیبانی و ذخیرهٔ امن
 
+شناسهٔ پیام/تیکت و گزارش خطا با UUID تصادفی تولید شود تا درخواست‌های هم‌میلی‌ثانیه تداخل نداشته باشند. پاسخ خصوصی `Cache-Control: no-store` داشته باشد. ثبت پیام و تغییر وضعیت در شکست دیتابیس باید بدون نشت متن خطا قابل بازگشت باشد. تست‌ها دسترسی دانشجوی دیگر، خطای دیسک و برخورد زمان را پوشش دهند.
 
-## Full backup is root-only (2026-11-01)
+### ثبت یک‌بارمصرف OTP و دوام Audit
 
-Although downloadable backup JSON excludes password hashes and SMS provider credentials, it can still contain personally identifiable student data and academic plans. Therefore `GET /api/admin/backup` and global catalogue `POST /api/admin/restore` now require `requireSuperAdmin`, verifying the reserved root identity and the configured owner phone. A delegated administrator holding an obsolete `backup.manage` permission is refused. Tests exercise both unauthorised access and legitimate root access. This patch originates directly from the **new clean-root Git main** and introduces no ancestry from the exposed repository history.
+مصرف OTP و ثبت Audit آن باید با **یک ذخیره** انجام شود؛ اگر نوشتن شکست خورد، OTP در حافظه هم مصرف‌شده تلقی نشود و JWT بدون ثبت پایدار صادر نشود. صدور OTP تازه پیش از ذخیرهٔ ایمن Challenge نباید SMS بفرستد. این تضمین هم برای JSON تک‌پردازشی است.
 
+### ورود، ثبت‌نام و محافظت از فایل سرور
 
-## Root-only student-wide directory and final-semester overrides (2026-11-01)
+نتیجهٔ ناشناس/غیرفعال/رمز غلط در ورود با پاسخ عمومی مشابه و محاسبهٔ bcrypt غیرمعتبر کنترل شود. ثبت‌نام Production هنگام نبود مالکیت شماره با OTP تأییدشده باید بسته بماند. وب‌سرور خصوصی نباید `dist/server.cjs`، Source Map و فایل محیطی را از پوشهٔ عمومی به دانلود بگذارد؛ قراردادن Bundle خصوصی خارج Webroot در طراحی استقرار نیز توصیه می‌شود.
 
-A previously delegated `student-management.read` permission could retrieve the full names, phone numbers and academic profiles of **all** students. Likewise, `academic-policy.manage` alone allowed editing the graduation-related override on any student profile, without a dedicated student-management scope. Until fine-grained student-scope authorization exists, both global operations are now restricted to the verified reserved root. The final-semester override audit entry is written **before the database save**, excludes free-text notes from audit details, and is rolled back with the profile edit when persistence fails before commit. These changes do not add Maaref/academic regulations or operate on a live VPS.
+### فهرست مجاز ZIP، دانلودهای خصوصی و خطاهای عمومی
 
+ZIP افزونه فقط از `extension/public-files.json` ساخته شود؛ فایل‌های اضافی و symlinkها وارد آرشیو نشوند. دانلود بکاپ/Excel خصوصی باید پس از ثبت پایدار Audit صادر شود. لاگِ Exception عمومی متن/Stack/مسیر خصوصی را منعکس نکند. [گزارش فنی](PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md) برای رفع نشت مستقل مسیر مستقیم HTTP `/extension-files` و `/mock-portal-static` نیز اجرا شده است.
 
-## Support record isolation and failed writes (2026-11-01)
+## وضعیت واقعیِ باقی‌مانده
 
-Ticket, support-message and bug-report IDs use cryptographically random UUIDs instead of millisecond timestamps to prevent collisions between concurrent student requests. Authenticated support responses set `Cache-Control: no-store` because tickets and reports may contain private student information. On a JSON-database write failure, create/message/status operations restore the previous in-memory collections and ticket metadata, returning a generic 500 without echoing exception details. Synthetic HTTP regression tests cover cross-student ticket isolation, forced same-millisecond requests, and simulated disk failures. This does **not** resolve historical Git/PR refs, leaked credentials, multi-process JSON concurrency or live VPS security; see [public history incident](PUBLIC_HISTORY_RECOVERY_20261101_FA.md).
+هیچ‌یک از موارد بالا به‌تنهایی ادعای **امنیت نهایی یا اجرای تغییر روی VPS موجود** نیست. پاک‌سازی کامل تاریخچهٔ عمومی، پروندهٔ GitHub Support، Ruleset، Secret Scanning و تعویض اعتبارنامه‌ها در [چک‌لیست مالک](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) و [Issue شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4) باز مانده‌اند.
 
+## سیاست فارسی‌نویسی
 
-## OTP one-use durability — 2026-11-01
-
-An OTP login previously saved `consumedAt` and then recorded its audit event in a **second** database write. A failing second write could consume the OTP while leaving an unsaved audit entry in memory. OTP recovery verification and incorrect-code attempt counters likewise mutated in memory before a potentially failing save. OTP issuance could retain an unsaved challenge after storage failure. Successful verification now commits one-use consumption and login audit together, and restores prior in-memory values on failure; issuance refuses to send an OTP if the challenge cannot first be durably saved. Responses redact internal storage exceptions. Synthetic HTTP tests cover failure and retry without issuing a JWT for an unsaved login. These safeguards do **not** make the JSON database multi-process safe and do not revoke real credentials exposed in historical Git refs.
-
-
-## Permanent policy, password login, signup and static server artifact guards — 2026-11-01
-
-Every future contributor must follow [the permanent security contract](PERMANENT_SECURITY_POLICY_FA.md) and the repository PR checklist. Login failures for unknown, deactivated and wrong-password identities now share a generic 401 response and dummy bcrypt comparison path. Production signup fails closed with HTTP 503 when phone-ownership OTP is not enabled, without interrupting existing sign-ins; local/test demo behavior stays separate. The production Express static stack blocks `dist/server.cjs`, its source maps, environment-like files and other private build artifacts, which share `dist/` with public Vite files. Focused HTTP tests cover these restrictions; keep the private bundle outside any CDN or reverse-proxy webroot as a further hardening target. Bun and GitHub Actions dependency updates are reviewed in limited, grouped Dependabot PRs and are never auto-merged or auto-deployed. These changes do not claim to remove historical PR refs or revoke live credentials.
-
-
-## Private archive and root export security (2026-11-01)
-
-The built extension ZIP and dynamically downloaded archive use the same explicit regular-file allowlist in `extension/public-files.json`, instead of packaging every local directory entry. Root backups and user XLSX exports are only released after a durable privacy-safe audit entry is saved; failed writes must not produce downloads. The global API exception handler uses a static error code instead of logging exception stacks, paths or raw request data. Synthetic tests cover accidental untracked private files, symlinks, failed audit writes and error-message redaction. These controls do not remove historical leaked Git objects, forks or cached PR files.
+تمام توضیحات امنیتی و راهنماهای جدید به فارسی نوشته شوند؛ نام کلیدهای فنی، مسیرهای API و تنظیمات GitHub به همان شکل واقعی باقی بمانند. [استاندارد زبان](PERSIAN_DOCUMENTATION_STANDARD_FA.md).

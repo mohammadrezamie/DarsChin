@@ -1,5 +1,7 @@
-# Retired one-off scripts — do not restore
+# اسکریپت‌های قدیمیِ بازنشسته ــ بازیابی و اجرا ممنوع
 
-The original 22 one-off legacy scripts were removed from the public source tree because several contained hardcoded authentication values or printed secrets. They are not supported build, test, smoke or deployment commands.
+در نسخه‌های قدیمی پروژه ۲۲ اسکریپت یک‌بارمصرف وجود داشت که برخی از آن‌ها اطلاعات احراز هویت را به‌شکل ثابت در کد نگه می‌داشتند یا مقادیر حساس را چاپ می‌کردند. این فایل‌های اجرایی از درخت سورس فعلی کنار گذاشته شده‌اند و **دیگر ابزار رسمی ساخت، آزمون، استقرار یا بازیابی نیستند**.
 
-Old Git commits and pull request refs may still contain the files. Removing them from current HEAD does NOT erase past disclosures or revoke credentials. Do not restore or execute these scripts; use maintained synthetic tests under `tests/` and freshly generated installation secrets.
+ممکن است در کامیت‌ها و ارجاع‌های PR قدیمی، نسخهٔ این فایل‌ها باقی مانده باشد. حذف از `main` به‌تنهایی تاریخچه را پاک نمی‌کند و کلید افشاشده را بی‌اعتبار نمی‌سازد.
+
+**ممنوع است:** اجرای دوبارهٔ اسکریپت تاریخی، برگرداندن رمزهای قبلی یا انتشار آن‌ها در Issue و مستندات. به‌جای آن از آزمون‌های ساختگیِ نگهداری‌شده در `tests/` و اعتبارنامه‌های تازه و خصوصی برای هر نصب استفاده کنید. رسیدگی تاریخی در [Issue شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4) پیگیری می‌شود.

@@ -1,27 +1,30 @@
-# Contributing to DarsChin
+# راهنمای مشارکت در توسعهٔ درس‌چین
 
-Thanks for contributing to the DarsChin demo platform. For full procedures, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+از مشارکت در توسعهٔ درس‌چین سپاسگزاریم. **زبان اصلی و دائمی مستندات و توضیحات توسعه، فارسی است.** قبل از تغییر کد، [راهنمای توسعه](docs/DEVELOPMENT.md)، [دستورالعمل عامل‌ها](AGENTS.md)، [دفتر تصمیم‌های مالک](docs/OWNER_DECISIONS_FA.md)، [منشور امنیت](docs/PERMANENT_SECURITY_POLICY_FA.md) و [استاندارد زبان فارسی](docs/PERSIAN_DOCUMENTATION_STANDARD_FA.md) را بخوانید.
 
-> **Mandatory security policy:** Read and apply [the permanent Persian security contract](docs/PERMANENT_SECURITY_POLICY_FA.md), [SECURITY.md](SECURITY.md), and the [open historical incident runbook](docs/SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) before contributions or self-hosting. Security changes must include negative authorization/failed-write tests and explicit release limitations. Never claim a clean Git history because the main tree or CI passed.
+## تعهد غیرقابل چشم‌پوشی
 
-## Non-negotiable owner-request documentation
+هر دستور، برنامه، تغییر اولویت، گزارش خطا یا تصمیم جدید مالک ــ حتی اگر اجرای آن عقب بیفتد ــ باید با تاریخ، وضعیت واقعی و لینک مستند/PR در دفتر تصمیمات ثبت شود. ادغام PR با ثبت متن روی یک شاخه یکسان نیست. تصمیم‌های پیشین را پاک نکنید؛ تصمیم جایگزین را با ارجاع شفاف مشخص کنید.
 
-Before editing, read [AGENTS.md](AGENTS.md) and [the owner decisions register](docs/OWNER_DECISIONS_FA.md). **Every new instruction, plan, reported bug or changed priority from the project owner must be persisted in GitHub** with a dated register entry and relevant linked document, even if implementation is deferred. Keep superseded decisions with cross-references; never confuse a PR branch with merged `main`. Do not store student personal data or secrets.
+**هدف توسعه:** محیط امن و قابل استفاده برای دانشجویان مهندسی برق علوم و تحقیقات؛ کیفیت، حفظ حریم خصوصی و آزمون‌پذیری بر سرعت ادغام تقدم دارند.
 
-**Delivery priority:** reliable and independently tested course-demand management for the EE Science and Research pilot. The product is intended for sale; quality, data protection and maintainability are more important than speed.
+## روند شاخه و درخواست ادغام
 
-## Branch and PR process
+1. ابتدا وضعیت `main` و PRهای باز را بررسی کنید. برای تغییرات معنادار یک شاخهٔ کوتاه‌عمر `feat/` یا `fix/` بسازید و آن را بعد از آزمون و ادغام مناسب پاک‌سازی کنید.
+2. محدودهٔ تغییر، دلیل آن، رفتار قابل مشاهده، ریسک و برنامهٔ بازگشت را به **فارسی** بنویسید و مستندات مرتبط را به‌روز کنید.
+3. `bun run verify` را با `bun.lock` و دیتابیس مصنوعی ایزوله اجرا کنید. شواهد باید به SHA دقیق کامیت تعلق داشته باشد. اگر آزمونی اجرا نشده است، آشکارا بگویید؛ بازبینی کد یا ساخت فرانت‌اند جای آزمون سرور نیست.
+4. هیچ فایل `.env`، دادهٔ واقعی کاربر، خروجی محرمانهٔ دانشگاه، رمز، OTP، کلید بازیابی، بکاپ، ZIP ساخت یا لاگ حاوی اطلاعات شخصی را وارد Git نکنید.
+5. با [الگوی درخواست ادغام فارسی](.github/PULL_REQUEST_TEMPLATE.md) PR باز کنید؛ شمارهٔ تصمیم مالک و Issue مرتبط، نتیجهٔ تست‌ها و محدودیت‌ها را بنویسید.
+6. تغییرات امنیتی، داده‌ای و احراز هویت بدون تست منفیِ مجوز و ذخیرهٔ ناموفق ادغام نمی‌شوند. پس از ادغام، نسخهٔ اصلی هم باید بررسی شود.
 
-1. Keep short, reviewed changes on current `main` when explicitly authorized. For large/high-risk changes use one short-lived `feat/` or `fix/` branch; remove it once the work is merged and verified. Never accumulate abandoned branches.
-2. Keep each change focused and document its intended observable behavior.
-3. Run `bun run verify` (Bun uses the committed `bun.lock` and a temporary test-only database) **when possible**. If a check is unavailable, mark it as not run; never claim that GitHub Actions or static inspection passed it.
-4. Do not commit `.env` files, real user or university exports, password/OTP/recovery materials, mutable database state, build archives, or debug logs.
-5. Open a PR using the repository template. Link the related issue and explain rollback and test boundaries.
+## مرز مقررات دانشگاهی
 
-### Academic rules
+تغییر معنای پیش‌نیاز یا هم‌نیاز، استثنای مردودی، ترم آخر، سقف واحد، معدل، چارت و گرایش **نیازمند تأیید صریح مالک** است؛ حتی اگر تغییر ظاهراً یک اصلاح باگ باشد. به‌ویژه **تا زمانی که مالک جزئیات، استثناها و چیدمان چارت معارف دانشگاه آزاد برای کارشناسی پیوستهٔ رشته‌های غیرپزشکی را توضیح و تأیید نکرده است، هیچ قانون قطعی برای آن اضافه نکنید.**
 
-Changes to prerequisites, co-requisites, failed-prerequisite exceptions, eligibility criteria, grade thresholds, curriculum rules or semester limits **require explicit project-owner approval**, even when a change appears corrective. See the owner-approved brief on development PR #1.
+## امنیت و حریم خصوصی
 
-### Code review
+مجوزهای سرور، مالکیت هر رکورد، دامنهٔ دانشگاه/رشته/ورودی، خطای ذخیره‌سازی، لاگ‌ها و ورودی خصمانه را بازبینی کنید. دسترسی به سرور، مخزن دیگر، دادهٔ خصوصی یا تنظیمات عملیاتی مالک بدون اجازهٔ جداگانه ممنوع است. پروندهٔ افشای تاریخی GitHub [Issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4) هنوز بدون تأیید اقدامات مالک بسته نمی‌شود.
 
-Review data ownership, authorization, migration risks, and student privacy first. A frontend preview is not proof that the Express API works; Graphify is useful for impact analysis but is not a test runner. Do not merge runtime, security or persistence changes based only on source review.
+## زبان
+
+متن‌های قابل خواندن برای انسان در مستندات، README، توضیحات PR و چک‌لیست‌ها فارسی باشند. نام API، کد، شناسه، مسیر و دستورهای قابل اجرا را برای ترجمه تغییر ندهید. متن حقوقی `LICENSE` باید دست‌نخورده بماند.

@@ -1,102 +1,93 @@
-# DarsChin (DARSCHYN)
+# درس‌چین | DarsChin
 
-> **Public open-source source, private-by-configuration instances.** See the [self-hosting guide](docs/SELF_HOSTING_OPEN_SOURCE_FA.md). A historical committed database contained sensitive material; the current HEAD no longer tracks it, but Git history/old PR references still require remediation. Do not reuse affected credentials.
+> **پروژه‌ای ایرانی، فارسی‌محور و متن‌باز با مجوز MIT؛ اطلاعات و سرور هر نصب مستقل و خصوصی هستند.** سورس عمومی به معنی عمومی‌بودن حساب‌ها، داده‌های دانشجویان یا دسترسی به سرور مالک نیست. برای جزئیات به [راهنمای نصب مستقل](docs/SELF_HOSTING_OPEN_SOURCE_FA.md) مراجعه کنید.
 
-DarsChin is a student-focused helper for course planning and workflows around Educationalyar. The web application includes a React/Vite frontend and a Node.js/Express backend, with an accompanying browser-extension codebase.
+**هشدار مهم امنیتی:** در تاریخچهٔ قدیمی Git و برخی ارجاع‌های درخواست‌های ادغام، داده‌های حساس وجود داشته است. فایل‌های مشکل‌دار از نسخهٔ فعلی حذف شده‌اند، اما پاک‌سازی تاریخچه و تعویض اعتبارنامه‌های احتمالیِ افشاشده هنوز نیازمند اقدامات مالک و هماهنگی پشتیبانی GitHub است. از اعتبارنامه‌های قدیمی استفاده نکنید. [پروندهٔ باز امنیتی](https://github.com/mohammadrezamie/DarsChin/issues/4)
 
-Project homepage (frontend demo only, subject to deployment status): https://dars-chin.vercel.app
+## درس‌چین چیست؟
 
-## Pilot demo — no account needed
+درس‌چین دستیار دانشجویان ایرانی برای شناخت چارت رشته، بررسی سوابق و پیش‌نیازها، اولویت‌بندی دروس، مقایسهٔ گروه‌های ارائه‌شده، مدیریت آماده‌باش انتخاب واحد و ساخت برنامهٔ هفتگی است. این سامانه به مدیران مجاز هم در تنظیم چارت و نیازسنجی دروس کمک می‌کند. **درس‌چین آموزشیار نیست، ثبت رسمی واحد انجام نمی‌دهد و اعلام نیاز به معنی تضمین ارائهٔ درس نیست.**
 
-The first scope is **B.E. Electrical Engineering at Islamic Azad University, Science and Research Branch**. All demo courses, lecturers, capacity and eligibility results are **synthetic, not official**.
+فناوری‌ها: **React، TypeScript و Vite** در رابط کاربری، **Node.js و Express** برای API، **Vitest** برای آزمون و افزونهٔ مرورگر برای دریافت دادهٔ ارائه‌ها از منبع مجاز. منطق تحصیلی باید مستقل از افزونه و منبع ورود داده باقی بماند.
 
-- `/demo/student` — full browser-only student workspace.
-- `/demo/admin` — browser-only administrator workspace; no server authorization is granted.
-- `/demo` — interactive course-planning playground.
+**نشانی دموی فرانت‌اند، وابسته به وضعیت استقرار:** https://dars-chin.vercel.app
 
-Links are provided on the homepage and `/login`. Browser-only demo state lives in the visitor's own storage. The continuous timetable spans **07:00–20:00** with arbitrary start/end times and a separate list for unscheduled/out-of-range classes. Theme controls (day/system/night) and right-edge RTL hamburger menus are visible in demo screens. Read the [pilot and quick VPS launch guide](docs/PILOT_LAUNCH_FA.md).
+## دموی قابل آزمایش بدون حساب
 
-## SMS, human verification and GitHub layout
+پایلوت اولیه برای **کارشناسی مهندسی برق دانشگاه آزاد اسلامی، واحد علوم و تحقیقات** تعریف شده است. اطلاعات درس، استاد، ظرفیت، نتایج ارزیابی و حساب‌های محیط نمایشی **ساختگی و غیررسمی** هستند.
 
-- **Unified SMS center** for login/recovery codes and Niazpardaz: `/demo/admin?tab=sms-center` (browser-only fake settings) or the authorized real admin route. Private keys are set on the server only. See [Takin reference and DarsChin implementation](docs/TAKIN_REFERENCE_SMS_CAPTCHA_FA.md).
-- **«من ربات نیستم»** on guest sign-in/sign-up/OTP forms uses server-verified Cloudflare Turnstile **only when configured**. With the integration disabled, guest login and registration now require the same **server-validated, single-use local SVG CAPTCHA** already used for OTP. Neither mode is a frontend-only checkbox; demo pages still use synthetic browser state. Test access from Iran before enabling on the public domain.
-- **Clean repository:** 22 one-off root scripts were preserved under `scripts/legacy/`; run `bun run repo:check` and read [repository structure](docs/REPOSITORY_STRUCTURE_FA.md).
-- **Separate domain on the same VPS as Takin:** use the existing Nginx and a different localhost port, without deploying a competing Caddy instance. See [shared-VPS/domain guide](docs/VPS_SHARED_DOMAIN_FA.md).
+- `/demo/student`: محیط آزمایشی دانشجو، بدون دسترسی به حساب واقعی یا سرور اصلی.
+- `/demo/admin`: محیط آزمایشی مدیر با دادهٔ ساختگی؛ هیچ مجوز مدیریتی واقعی ایجاد نمی‌کند.
+- `/demo`: برنامه‌ریز تعاملی انتخاب واحد.
 
-## Open-source license and independent server installations
+در محیط نمایشی جدول هفتگی پیوستهٔ ۷ تا ۲۰، کلاس‌های خارج از محدوده یا بدون ساعت، حالت روز/شب/سیستم و ناوبری راست‌به‌چپ قابل بررسی‌اند. جزئیات: [راهنمای پایلوت و راه‌اندازی](docs/PILOT_LAUNCH_FA.md).
 
-Original project code is available under the [MIT License](LICENSE). Anyone may clone the public repository and run a **separate, privately configured** instance; that does not provide access to the maintainer's server or data. `package.json` sets `private: true` only to block accidental publication to the npm registry. To keep a personal deployment restricted to its operator, set `DARSCHYN_ACCESS_MODE=owner_only` in its **untracked** `deploy/.env.vps` and preserve its separate data volume. This controls backend APIs, not public static/demo pages; protect those at the reverse proxy if necessary. Existing deployments preserve the legacy `multiuser` mode until deliberately changed.
+## قابلیت‌ها و مرزهای اعتماد
 
-**[Complete clone, configure, update, offline root credential rotation and shared-Nginx self-hosting instructions](docs/SELF_HOSTING_OPEN_SOURCE_FA.md).**
+- **آماده‌باش و برنامه‌ریز:** اولویت دروس و گروه‌های جایگزین، بررسی صلاحیت در سرور، تداخل ساعت کلاس و امتحان و حسابرسی محدودهٔ چارت/واحد/ورودی.
+- **نیازسنجی:** فرم‌های مناسب ورودی و رشته، پاسخ‌های دانشجو و گزارش‌های دارای کنترل دسترسی؛ نیازسنجی با انتخاب واحد رسمی متفاوت است.
+- **افزونهٔ آموزشیار:** جمع‌آوری اطلاعات عمومیِ قابل دسترس از صفحات مجاز. دادهٔ افزونه پس از اعتبارسنجی در **صف بررسی مدیر** قرار می‌گیرد؛ دادهٔ خام دانشجو نباید خودکار به ارائهٔ رسمی تبدیل شود.
+- **مرکز پیامک:** برای ورود، بازیابی و نیازپرداز؛ رمز سرویس پیامک فقط روی سرور خصوصی ذخیره می‌شود.
+- **کپچا:** در صورت فعال‌بودن Turnstile، توکن روی سرور بررسی می‌شود؛ در غیر این صورت کپچای SVG یک‌بارمصرفِ سمت سرور استفاده می‌شود. تیک نمایشیِ کلاینت به‌تنهایی محافظت ایجاد نمی‌کند. پیش از انتشار برای دانشجویان، دسترسی از داخل ایران و رفتار ضدربات را واقعاً امتحان کنید.
 
-**[راهنمای فارسی ENV و فیلدهای خالی امنیتی](docs/ENV_CONFIGURATION_FA.md):** The three committed example ENV files contain no operator credentials or contact values. Copy a template to a **private** untracked file on each server and fill it with that installation's own values. Never overwrite an existing server's working `.env` with a blank example during `git pull`.
+راهنماهای مرتبط: [مرکز پیامک و کپچا](docs/TAKIN_REFERENCE_SMS_CAPTCHA_FA.md)، [دریافت امن اطلاعات آموزشیار](docs/EDUCATIONALYAR_IMPORT_REVIEW_FA.md)، [برنامهٔ تجربهٔ دانشجو](docs/STUDENT_GUIDED_JOURNEY_REQUIREMENTS_FA.md).
 
-## VPS quick start
+## نصب محلی توسعه
 
-An initial **single-process** Node.js + HTTPS Caddy Docker Compose stack lives in `Dockerfile`, `compose.yaml` and `deploy/`. This full stack is suitable for a **dedicated VPS only**. For a VPS **shared with Takin/Nginx**, do **not** start the bundled Caddy proxy: use the existing Nginx and run only the `darschin` container via the localhost-only compose overlay, as shown in [the shared server guide](docs/VPS_SHARED_DOMAIN_FA.md). Both configurations keep independent persistence and private secrets and avoid known-password demo users in production.
+پیش‌نیاز: Node.js نسخهٔ ۲۲ یا جدیدتر و [Bun](https://bun.sh). فایل قفل معتبر پروژه **`bun.lock`** است. برای نصب وابستگی از فایل قفل استفاده کنید.
 
 ```bash
-cp deploy/.env.vps.example deploy/.env.vps
-chmod 600 deploy/.env.vps
-# Set secrets and DNS/domain inside deploy/.env.vps before running:
-docker compose --env-file deploy/.env.vps config -q
-# DEDICATED VPS only; existing Nginx hosts should NOT start Caddy:
-docker compose --env-file deploy/.env.vps up -d --build
+bun install --frozen-lockfile
+cp .env.example .env
+# یک JWT_SECRET تصادفی و اختصاصی در فایل خصوصی .env تعیین کنید.
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+bun run dev
 ```
 
-Do not deploy publicly until tests, DNS/TLS, backups, official pilot policies and permissions have been reviewed. **These deployment files are committed but have not yet been tested on an actual VPS.**
+مقدار تولیدشده را فقط در فایل محلیِ رهگیری‌نشده وارد کنید؛ آن را در Git، Issue یا پیام عمومی منتشر نکنید. رمز مالک، کلید بازیابی، پیامک و CAPTCHA را برای هر نصب جداگانه و خارج از مخزن تنظیم کنید. هیچ کلید آزمایشی را در محیط واقعی استفاده نکنید.
 
-## Development stack
-
-- TypeScript and React
-- Vite for the web frontend
-- Node.js and Express for server routes
-- Vitest for automated tests
-
-Use Node.js 22+ and Bun. **bun.lock is the canonical dependency lockfile**; npm's stale lockfile has been removed.
-
-## Getting started
-
-1. Install [Bun](https://bun.sh) and run `bun install --frozen-lockfile` to use the committed dependency versions.
-2. Copy `.env.example` to `.env` (on Windows, copy the file manually or use PowerShell).
-3. Generate a unique development JWT secret with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and set `JWT_SECRET` in the **untracked** `.env` file. Never use this development secret in production.
-4. Run `bun run dev`.
-
-The authentication middleware requires a nonempty `JWT_SECRET` at startup. The `ROOT_OWNER_*` settings are used for privileged account bootstrap; configure them privately when needed, and do not reuse development credentials in production. This repository is not a ready-to-deploy production configuration. Do not commit real passwords, recovery keys, OTP-provider credentials, or tokens.
-
-## Validation and build
+### آزمون، ساخت و بررسی API
 
 ```bash
 bun run verify
+bun run build
+bun run smoke:api
+bun run repo:check
 ```
 
-- `bun run verify` calls a portable Node verification runner: frozen install, TypeScript check, Vitest suite and full build.
-- Each verification run uses newly generated **test-only** secrets and an isolated temporary JSON database.
-- `bun run build` packages the extension, verifies it, builds the frontend and bundles the Express server.
-- After a successful build, `bun run smoke:api` can check an isolated production-mode Express listener, synthetic login and sync persistence across a service restart; no real account or university data is required.
+`bun run verify` شامل نصب قفل‌شده، TypeScript، آزمون‌های Vitest و ساخت کامل پروژه است. آزمون‌ها با رمزهای مصنوعی و دیتابیس ایزوله اجرا می‌شوند. ساخت، خروجی فرانت‌اند، افزونه و سرور را تولید می‌کند. آزمون دود API فقط برای محیط جداگانهٔ آزمایش و پس از ساخت است. **سبزشدن دموی Vercel به معنی فعال یا آزموده‌شدن API واقعی نیست.**
 
-## Repository layout
+## ساختار مخزن
 
-- `src/` — frontend source
-- `server/` — server-side routes, validation, authentication, and data access
-- `extension/` — browser extension source
-- `public/` and `assets/` — static assets
-- `scripts/` — development and build helpers
-- `tests/` — automated tests
+| پوشه | کاربرد |
+| --- | --- |
+| `src/` | رابط کاربری و منطق دامنهٔ دانشجو |
+| `server/` | API، احراز هویت، امنیت، اعتبارسنجی و ذخیره‌سازی |
+| `extension/` | افزونهٔ مرورگر و فهرست فایل‌های مجاز انتشار |
+| `public/` و `assets/` | دارایی‌های عمومی |
+| `scripts/` | ابزار توسعه، آزمون و ساخت |
+| `tests/` | آزمون‌های خودکار و رگرسیون |
+| `docs/` | مستندات رسمی فارسیِ محصول و توسعه |
+| `deploy/` | الگوهای استقرار؛ نه گواه استقرار انجام‌شده |
 
-## Data and security
+## نصب مستقل و محدودیت‌های سرور
 
-Use synthetic or explicitly approved test data during development. Do not commit real student information, exported university data, local databases, logs, or populated `.env` files. Treat sync input as untrusted and validate it before processing.
+هر فرد می‌تواند تحت شرایط [مجوز MIT](LICENSE) یک نسخهٔ مستقل نصب کند؛ این کار هیچ مجوزی برای دسترسی به سرور یا دادهٔ مالک ایجاد نمی‌کند. `"private": true` در `package.json` تنها از انتشار ناخواستهٔ بسته در npm جلوگیری می‌کند و خصوصی‌بودن GitHub را تعیین نمی‌کند.
 
-**Historical sensitive data is still exposed in old Git refs:** `data/darschyn-db.json` was removed from the current main tree, but older commits and PR references may retain account/contact and credential-related data. Treat affected credentials as compromised, rotate/revoke them, and plan a coordinated history/ref cleanup without breaking live server checkout.
+برای محدودکردن API یک نصب مستقل به مالک، گزینهٔ `DARSCHYN_ACCESS_MODE=owner_only` با اعتبارنامهٔ معتبر قابل استفاده است؛ این گزینه صفحات استاتیک و دموی عمومی را مخفی نمی‌کند و در صورت نیاز باید محدودیت وب‌سرور هم اعمال شود.
 
-**راهنمای توسعه و وضعیت محصول (فارسی):** [معرفی درس‌چین](docs/PRODUCT_GUIDE_FA.md)، [قوانین آموزشی در انتظار جلسه و تأیید](docs/ACADEMIC_RULES_INTAKE_FA.md)، [نقشه Vercel فول‌استک](docs/VERCEL_FULLSTACK_PLAN_FA.md)، [همکاری تیمی](docs/TEAM_WORKFLOW_FA.md).
+در سرور اختصاصی می‌توان از فایل‌های Docker Compose و پروکسی مناسب استفاده کرد؛ **روی VPS مشترک با تکین و Nginx موجود، Caddy دوم را اجرا نکنید و اتصال فعلی سرور را تغییر ندهید.** استقرار تازه فقط پس از اجازهٔ جداگانه، آزمون، بکاپ و بررسی HTTPS مجاز است. پایگاه دادهٔ JSON فعلی برای چند پردازش نویسنده مناسب نیست.
 
-Start with the [documentation index](docs/INDEX.md) for local development, security, deployment, rollback and the outstanding [repository audit](docs/REPOSITORY_AUDIT.md).
+راهنماها: [نصب مستقل و به‌روزرسانی](docs/SELF_HOSTING_OPEN_SOURCE_FA.md)، [VPS مشترک](docs/VPS_SHARED_DOMAIN_FA.md)، [استقرار و بازگشت](docs/DEPLOYMENT.md).
 
-## Contribution workflow
+## امنیت و داده‌های شخصی
 
-For the current owner-directed demo/pilot work, use `main` as the integration branch and avoid unnecessary feature branches. Run the quality gate for each commit. Preexisting open Draft PRs must be reconciled file-by-file before merging or closing; never overwrite newer main fixes. Remove completed branches only after verifying their unique work is retained.
+فقط دادهٔ ساختگی یا داده‌ای را که استفاده از آن صریحاً مجاز شده است، در توسعه به‌کار ببرید. فایل `.env` تکمیل‌شده، دادهٔ دانشجو، دیتابیس محلی، خروجی آموزشیار، بکاپ، لاگ، رمز و توکن **هرگز نباید در Git قرار گیرد**. محتوای ورودی افزونه غیرقابل اعتماد است و باید در سرور اعتبارسنجی شود.
 
+درخواست‌های ادغام باید روی SHA دقیق تست شوند و پس از ادغام، `main` دوباره بررسی شود. خطاهای باقی‌مانده و مواردی که تست نشده‌اند صریح گزارش شوند؛ ادعای بی‌نقص بودن سامانه یا بسته‌شدن پروندهٔ امنیتی بدون شواهد ممنوع است.
 
-> **Public source security:** Obsolete one-off login scripts with historically hardcoded authentication values have been removed from current HEAD; never use their old credentials or restore old published data. This does **not** erase public Git history or old PR references. See [security incident](docs/PUBLIC_REPOSITORY_READINESS_20261101_FA.md) and [security policy](docs/SECURITY.md).
+**شروع مطالعه:** [فهرست کامل مستندات](docs/INDEX.md)، [راهنمای مشارکت](CONTRIBUTING.md)، [سیاست امنیت](SECURITY.md)، [دفتر تصمیمات مالک](docs/OWNER_DECISIONS_FA.md)، [اقدامات شخصی مالک](docs/OWNER_SECURITY_ACTION_CHECKLIST_FA.md).
+
+## زبان و هویت پروژه
+
+درس‌چین محصولی **ایرانی و فارسی‌محور** است. متن تازه و ویرایش‌شدهٔ مستندات، توضیح درخواست‌های ادغام و متن‌های راهنمای کاربر باید به فارسی روان باشند. نام فایل‌ها، دستورات برنامه‌نویسی، شناسه‌ها و متن رسمی مجوز MIT برای حفظ سازگاری فنی/حقوقی تغییر داده نمی‌شوند. [استاندارد دائمی زبان فارسی](docs/PERSIAN_DOCUMENTATION_STANDARD_FA.md).

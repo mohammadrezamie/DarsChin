@@ -1,38 +1,39 @@
-# Security policy / سیاست امنیتی درس‌چین
+# سیاست امنیتی درس‌چین
 
-DarsChin is a public, self-hostable codebase. The maintainer's private deployment, passwords, access tokens, SMS service keys, students' data and other operators' deployments are **not** public development resources.
+درس‌چین پروژه‌ای **متن‌باز و قابل نصب مستقل** است؛ ولی داده‌های دانشجویان، کلیدهای ورود و پیامک، رمزها، توکن‌ها، بکاپ‌ها و سرور نگهدارندهٔ پروژه **عمومی نیستند**.
 
-## Owner action checklist (persistent)
+## اقدامات باز مالک پروژه
 
-The owner-only unresolved work after making this repository public is documented with exact UI steps, evidence and safe execution boundaries in [the permanent owner action checklist (Persian)](docs/OWNER_SECURITY_ACTION_CHECKLIST_FA.md). Do not mark any item complete without independent verification or a clearly qualified owner confirmation.
+مراحل دقیق، ترتیب انجام، مسیر تنظیمات موبایل و دسکتاپ، معیار پذیرش و وضعیت اقدامات مخصوص مالک در [چک‌لیست دائمی مالک](docs/OWNER_SECURITY_ACTION_CHECKLIST_FA.md) ثبت شده است. بدون مشاهدهٔ شواهد مستقل یا اعلام تأییدشدهٔ مالک، هیچ موردی را انجام‌شده فرض نکنید.
 
-## Permanent security requirements
+## منشور دائمی امنیت
 
-Every contributor and independent operator must follow the [permanent security contract (Persian)](docs/PERMANENT_SECURITY_POLICY_FA.md): source/data separation, server-side authorization, no unsafe production registration, durable writes, sensitive logging/cache protections, sanitized Git and reviewed dependencies, exact-SHA testing, backups, and incident response. The repository's historical exposure is **not closed** simply because these rules are documented.
+هر مشارکت‌کننده و هر مدیر نصب مستقل موظف است [منشور امنیت](docs/PERMANENT_SECURITY_POLICY_FA.md) را رعایت کند: تفکیک سورس و داده، احراز هویت و مجوز سمت سرور، جلوگیری از ارتقای دسترسی، ذخیرهٔ قابل بازیابی، لاگ فاقد دادهٔ حساس، کنترل خروجی خصوصی، امنیت وابستگی‌ها، آزمون روی SHA دقیق و بکاپ/بازگردانی آزموده‌شده.
 
-For the latest broad vulnerability status and step-by-step owner settings, see [comprehensive security audit and owner actions](docs/SECURITY_COMPREHENSIVE_AUDIT_AND_OWNER_ACTIONS_20261101_FA.md). **This does not certify that historical exposure is closed.**
+تغییرات کدِ موفق و سبزشدن CI **به معنی رفع افشای قدیمی تاریخچهٔ Git نیست**. وضعیت فنی و اقدامات مالک در [ممیزی امنیتی](docs/SECURITY_COMPREHENSIVE_AUDIT_AND_OWNER_ACTIONS_20261101_FA.md) آمده است.
 
-## Private vulnerability reporting
+## گزارش محرمانهٔ آسیب‌پذیری
 
-Please **do not** disclose real secrets, student identifiers, account records, reproducible credential data, exploit details, or private database samples in public Issues, Discussions or Pull Requests.
+**رمز واقعی، توکن، شمارهٔ دانشجویی، اطلاعات حساب، دادهٔ آزمون قابل سوءاستفاده یا جزئیات بهره‌برداری را در Issue، Discussion یا PR عمومی منتشر نکنید.** اگر گزینهٔ «گزارش خصوصی آسیب‌پذیری» در GitHub فعال شده، از مسیر `Security → Advisories → Report a vulnerability` استفاده کنید. این سند به‌تنهایی آن گزینه را فعال نمی‌کند؛ مالک باید آن را در تنظیمات امنیت مخزن بررسی کند. در غیر این صورت ابتدا از مدیر مخزن یک مسیر ارتباطی خصوصی بخواهید.
 
-If GitHub **Private vulnerability reporting** is enabled, open the repository's **Security → Advisories → Report a vulnerability** form to contact the maintainer privately. This file does not itself enable that feature. Maintainers should enable it under **Settings → Advanced Security → Private vulnerability reporting**. If the private form is not available, request a private disclosure channel from the repository maintainer without publishing the technical details.
+در صورت افشای کلید معتبر، ابتدا توسط صاحب سرویس آن را **باطل/تعویض** کنید و سپس پاک‌سازی اطلاعات تاریخی را با پشتیبانی GitHub هماهنگ کنید. مقدار کلید افشاشده را برای اثبات مشکل دوباره منتشر نکنید.
 
-For urgent exposed credentials: revoke/rotate them at the affected service immediately through its owner/operator, then follow GitHub's sensitive-data removal guidance. Do not commit credentials to prove the issue.
+## مرز انتشار و استقرار
 
-## Deployment and operational boundaries
+- عمومی‌شدن سورس به معنی آمادگی پذیرش دادهٔ واقعی دانشجویان نیست.
+- محیط مستقل باید با Secret اختصاصی، HTTPS، کنترل دسترسی، مسیر پایدار دیتابیس خارج از Git، تست بازیابی و برنامهٔ بازگشت راه‌اندازی شود.
+- اتصال نصب دیگران به سرور یا سرویس احراز هویت مالک مجاز نیست.
+- دادهٔ نمایشی و دادهٔ واقعی باید کاملاً جدا بمانند.
+- اتصال فعلی VPS پروژه بدون مجوز مشخص مالک تغییر نمی‌کند.
 
-- Public source is **not** proof that the service is ready to deploy with real students.
-- Deploy a fresh, separately configured instance with private environment variables and persistent data outside source control; never reuse exposed credentials or a historical Git checkout.
-- Do not attach an unrelated instance to the maintainer's server, data or authentication services.
-- Keep public demo fixtures separate from real user data.
+## حادثهٔ قدیمیِ انتشار داده
 
-## Historical disclosure incident
+فایل دیتابیس و اسکریپت‌های مسئله‌دار از نسخهٔ جاری `main` کنار گذاشته شده‌اند، ولی تاریخچهٔ کامیت‌ها، PRهای قدیمی، حافظهٔ نهان، کپی‌های ثالث، فورک‌ها و کلیدهای افشاشده ممکن است باقی باشند. [راهنمای رسیدگی](docs/SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) و [پروندهٔ باز](https://github.com/mohammadrezamie/DarsChin/issues/4) مرجع پیگیری هستند.
 
-The current main tree no longer tracks the previously exposed runtime database and retired executable scripts. This does **not** purge old pull request refs, cached diffs, forks, third-party clones or previously leaked credentials.
+## نسخه‌های پشتیبانی‌شده
 
-See [Security incident runbook](docs/SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) and [technical safeguards](docs/SECURITY.md) for exact status and operator-only tasks.
+اصلاحات امنیتی برای آخرین نسخهٔ نگهداری‌شدهٔ `main` انجام می‌شوند. شاخه‌های تاریخی، PRهای قدیمی و نسخه‌های آزمایشی منسوخ، نسخهٔ استقرارِ پشتیبانی‌شده نیستند.
 
-## Supported versions
+## زبان اسناد امنیتی
 
-Security fixes are applied to the latest maintained `main` source. Old snapshots, stale branches and historical PR commits are **not** supported deployment releases.
+اطلاعیه‌های عمومی امنیت، مستندات فنی و پیام‌های راهنما به زبان **فارسی** نوشته شوند؛ نام تنظیمات واقعی GitHub، API و فرمان‌ها به شکل قابل جست‌وجو و اجرا حفظ می‌شوند.

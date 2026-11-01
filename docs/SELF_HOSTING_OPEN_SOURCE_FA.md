@@ -1,15 +1,19 @@
-# DarsChin — Self-hosted open-source deployment (2026-11-01)
+# راهنمای نصب مستقل نسخهٔ متن‌باز درس‌چین
 
-**GitHub repo stays public. A public source repository does not expose a running server's private environment or make its accounts public by itself.** MIT permits others to clone, modify and run their **own** instances. The author's VPS, data, credentials, domain and brand identity are separate concerns.
+**وضعیت: راهنمای فارسی برای نصب مستقل، ۱ نوامبر ۲۰۲۶؛ نه گواه نصب روی سرور واقعی.**
 
-## Goal: one upstream, independent installs
+مخزن درس‌چین با مجوز MIT **عمومی و متن‌باز** باقی می‌ماند. عمومی‌بودن سورس به‌خودی‌خود به معنی عمومی‌شدن حساب‌ها، اعتبارنامه‌ها، دامنه یا دیتابیسِ یک نصب نیست. دیگران می‌توانند طبق مجوز قانونی نسخهٔ مستقل خود را اجرا کنند؛ این حق به معنی دسترسی به سرور یا اطلاعات خصوصی مالک یا سوءاستفاده از هویت برند نیست.
 
-- The canonical source is `mohammadrezamie/DarsChin`, `main`. Existing deployments should continue tracking the **same repository**; do not fork or re-create a second server codebase just to keep a private instance.
-- Separate installations configure different `JWT_SECRET`, `ROOT_OWNER_*`, domains, persisted volumes and SMS settings. Do **not** share those across installations, and do not keep mutable data in the Git checkout.
-- Public code does not imply open account registration. `DARSCHYN_ACCESS_MODE=owner_only` restricts **backend APIs** to the configured and authenticated reserved root owner. `multiuser` keeps the existing student-facing platform behavior and is the compatibility default.
-- **Static pages and browser-only demos remain publicly reachable** with `owner_only`. To make *everything* private, additionally use reverse-proxy authentication, IP allowlisting or a private VPN/tunnel. Do not rely on hidden frontend buttons for access control.
+## هدف: یک سورس مرجع، نصب‌های مستقل
 
-## Installation on a new dedicated server (Docker Compose + Caddy)
+- مرجع کد `mohammadrezamie/DarsChin` و شاخهٔ `main` است. برای خصوصی‌کردن **داده یا API** لازم نیست سورس عمومی را Fork کنید یا کدبیس دوم بسازید؛ نصب‌های مستقل می‌توانند همان مخزن را با تنظیمات مجزا به‌کار گیرند.
+- هر نصب باید `JWT_SECRET`، `ROOT_OWNER_*`، دامنه، Volume پایدار، سرویس پیامک و کلیدهای خصوصی خودش را داشته باشد. نصب‌ها نباید دیتابیس یا Secret مشترک داشته باشند؛ فایل دادهٔ قابل‌تغییر را داخل Git نگه ندارید.
+- `DARSCHYN_ACCESS_MODE=owner_only` دسترسی به **APIهای سرور** را به Root معتبر و احرازشدهٔ همان نصب محدود و ثبت‌نام جدید را مسدود می‌کند. `multiuser` رفتار چنددانشجویی سامانه است و حالت سازگار برای نصب‌های عمومی مستقل باقی می‌ماند.
+- **صفحات استاتیک و دموی فقط‌مرورگری با `owner_only` خصوصی نمی‌شوند.** برای محدودکردن تمام دامنه از احراز هویت در پروکسی معکوس، فهرست IPهای مجاز یا VPN/تونل خصوصی استفاده کنید؛ مخفی‌کردن دکمهٔ UI کنترل دسترسی نیست.
+
+## نصب روی سرور اختصاصیِ تازه با Docker Compose و Caddy
+
+**فقط برای سرور مستقلِ تأییدشده که Nginx/Caddy دیگری پورت‌های ۸۰ و ۴۴۳ را اشغال نکرده باشد.** دستورات زیر در این نوبت اجرا نشده‌اند.
 
 ```bash
 git clone https://github.com/mohammadrezamie/DarsChin.git
@@ -18,12 +22,13 @@ cp deploy/.env.vps.example deploy/.env.vps
 chmod 600 deploy/.env.vps
 ```
 
-Edit `deploy/.env.vps` **locally on your server**, setting at minimum:
-- `DARSCHYN_DOMAIN` and `ACME_CONTACT_EMAIL` for the proxy, with DNS/HTTPS ready.
-- Strong independent `JWT_SECRET`, `ROOT_OWNER_MOBILE`, `ROOT_OWNER_PASSWORD`, `ROOT_OWNER_RECOVERY_KEY`.
-- `DARSCHYN_ACCESS_MODE=owner_only` for a private root-run site, or `multiuser` for a student-facing platform.
-- On first **verified** provisioning only, `DARSCHYN_REQUIRE_EXISTING_DB=false`. In all later deployments, after checking the persisted database/backup/restore, set it to `true`.
-- `DARSCHYN_REGISTRATION_OTP_REQUIRED=true` **before accepting public student registration**, only after real SMS provider readiness is verified. The default `false` is not proof of mobile ownership.
+فایل `deploy/.env.vps` را **فقط روی سرور خصوصی و خارج از Git** باز کنید و حداقل موارد زیر را تنظیم کنید:
+
+- `DARSCHYN_DOMAIN` و `ACME_CONTACT_EMAIL` برای پروکسیِ سرور اختصاصی، با DNS و HTTPS معتبر.
+- `JWT_SECRET`، `ROOT_OWNER_MOBILE`، `ROOT_OWNER_PASSWORD` و `ROOT_OWNER_RECOVERY_KEY` تازه، قوی و مستقل.
+- `DARSCHYN_ACCESS_MODE=owner_only` برای API محدود به مالک یا `multiuser` برای کاربری چنددانشجویی.
+- فقط در **بوت اولیهٔ واقعی و تأییدشده** `DARSCHYN_REQUIRE_EXISTING_DB=false`؛ پس از اطمینان از Volume پایدار و Restore بکاپ، `true`.
+- پیش از ثبت‌نام عمومی واقعی، `DARSCHYN_REGISTRATION_OTP_REQUIRED=true` را فقط بعد از آزمون پیامک و تأیید مالکیت شماره فعال کنید. مقدار `false` به معنی اثبات مالکیت تلفن نیست.
 
 ```bash
 docker compose --env-file deploy/.env.vps config -q
@@ -31,14 +36,16 @@ docker compose --env-file deploy/.env.vps up -d --build
 docker compose --env-file deploy/.env.vps ps
 ```
 
-This starts a Caddy HTTPS proxy and Node container with a **named persistent volume** mounted at `/app/data`. It is only suitable if no other Nginx/Caddy owns ports 80/443 and the dedicated VPS setup is compatible. **No real-VPS smoke test is claimed here.**
+این ترکیب در صورت سازگاری محیط، سرویس Node و Caddy HTTPS را با Volume پایدارِ نام‌دار در `/app/data` راه‌اندازی می‌کند. روی میزبان دارای Nginx فعال اجرا نشود. **هیچ آزمون میدانی VPS برای این متن ادعا نشده است.**
 
-## Existing shared VPS using Nginx (do not touch other sites)
+## VPS مشترک با Nginx و سایت تکین ــ بدون دست‌کاری سایت‌های دیگر
 
-Never run the bundled `proxy` service on a shared 80/443 host. The blank `DARSCHYN_DOMAIN` and `ACME_CONTACT_EMAIL` placeholders must **not** prevent running only the `darschin` service: Compose now treats those Caddy-only settings as optional at YAML interpolation time. A dedicated Caddy installation still needs both populated in its private ENV before launch. Keep the existing Nginx untouched and run the same application image in the optional loopback port overlay:
+روی سرور دارای Nginx در پورت‌های ۸۰/۴۴۳ **سرویس `proxy` از Compose کامل را اجرا نکنید**. کلیدهای `DARSCHYN_DOMAIN` و `ACME_CONTACT_EMAIL` مختص Caddy هستند؛ برای اجرای تنها سرویس `darschin` از Overlay محلی می‌توانند خالی باشند. اگر سرور اختصاصی با Caddy استفاده می‌شود باید هر دو مقدار خصوصی تکمیل شوند.
+
+**این‌ها نمونهٔ راه‌اندازی تازه‌اند؛ به اتصال فعلی VPS مالک دست نزنید.**
 
 ```bash
-# Choose a free localhost port in your private deploy/.env.vps (for example 3001).
+# در محیط خصوصی، یک پورت Loopback واقعاً آزاد انتخاب کنید؛ 3001 فقط نمونه است.
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml \
   --env-file deploy/.env.vps config -q
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml \
@@ -46,33 +53,48 @@ docker compose -f compose.yaml -f compose.pilot-ssh.yaml \
 curl -fsS http://127.0.0.1:3001/api/health
 ```
 
-Proxy configuration for the separate domain must be validated against the VPS's real upstream port and TLS. Never copy this sample over TakinTech's active virtual host. The mounted `darschin-data` volume is outside `git pull`, but its retention must be verified before any destructive Docker operation; do **not** use `docker compose down -v` on a real installation.
+دامنهٔ مستقل باید با Upstream و TLS واقعیِ Nginx تطبیق داده شود؛ هیچ الگوی جدیدی را روی Virtual Host فعال تکین کپی نکنید. Volume `darschin-data` خارج از `git pull` باقی می‌ماند، ولی ماندگاری آن قبل از عملیات Docker مخرب باید بررسی شود. **`docker compose down -v` روی دادهٔ واقعی ممنوع است.**
 
-## Update without a second source tree
+## به‌روزرسانی روی همان سورس، بدون ساخت کدبیس دوم
 
-1. Back up the existing application data and verify a **test restore** to a separate location. Do not include private database snapshots in public CI.
-2. Identify the last green integration SHA. Check that the server's `deploy/.env.vps` remains untracked and that its database volume is healthy.
-3. In the existing DarsChin checkout, run `git pull --ff-only origin main` and rebuild **only** the `darschin` service with the existing Compose file combination.
-4. Confirm `/api/health`, login, authorization, persistence after restart, and the surrounding site on the shared host. Revert using a separately preserved release plus data-safe restore procedures if required.
-5. Keep `DARSCHYN_REQUIRE_EXISTING_DB=true` after initial verification; a missing or corrupt DB must fail the startup rather than silently regenerate sample accounts.
+1. از دادهٔ موجود بکاپ خصوصی بگیرید و Restore آن را در یک محیط جدا آزمایش کنید؛ نسخهٔ دیتابیس واقعی وارد CI عمومی نشود.
+2. SHA آخرین نسخهٔ واقعاً سبز را مشخص و سلامت فایل `deploy/.env.vps` خصوصی و Volume ذخیره‌سازی را تأیید کنید.
+3. فقط در برنامهٔ استقرار مجاز، داخل Checkout موجود اجرا کنید:
 
-A server tracking `main` is **not compatible with an uncoordinated force-push history rewrite**; do not attempt this as a shortcut to scrub old secrets. Coordinate clones, PRs, tags and GitHub Support first.
+```bash
+git pull --ff-only origin main
+```
 
-## Emergency root credential rotation without a second codebase
+4. تصویر و **فقط سرویس `darschin`** را با همان ترکیب فایل‌های Compose مورد تأیید بازسازی کنید، نه سرویس‌های میزبان را.
+5. `/api/health`، ورود، مجوز، دوام پس از Restart و کارکرد سایت‌های کنار آن را بررسی کنید؛ برای اختلال از Release قبلی محافظت‌شده و روش بازگشت امن داده استفاده کنید.
+6. پس از اولین راه‌اندازی تأییدشده، `DARSCHYN_REQUIRE_EXISTING_DB=true` باقی بماند تا دیتابیس غایب/خراب باعث **توقف امن** شود، نه ساخت حساب‌های Seed یا دیتابیس خالی.
 
-If an old root credential may have been disclosed, **changing the private env file alone does not change the password hash stored in an existing database**. This repository includes an offline-only command in the normal Docker image. It is **not** an HTTP API or a recurring startup migration.
+سروری که `main` را دنبال می‌کند با Force Push بی‌هماهنگ برای پاک‌کردن تاریخچه سازگار نیست. قبل از بازنویسی تاریخچه باید Cloneها، PRها، Tagها، بکاپ و پاسخ GitHub Support را هماهنگ کرد؛ این کار راه‌حل فوری پاک‌سازی رمز نیست.
 
-1. Confirm a verified, access-restricted copy of the real data and a test restore **outside Git**; verify the running service's DB volume and the root's configured phone match.
-2. During a controlled maintenance window, **stop only DarsChin**, not the shared Nginx or other applications: `docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps stop darschin` (omit `-f compose.pilot-ssh.yaml` on a dedicated installation).
-3. Update **both** `ROOT_OWNER_PASSWORD` and `ROOT_OWNER_RECOVERY_KEY` to **new, distinct** strong values in the server's private `deploy/.env.vps`. Preserve the configured root mobile and volume name. Ensure `DARSCHYN_REQUIRE_EXISTING_DB=true`.
-4. Run a read-only identity check using the same Compose file combination and **without** starting the web server:
+## تعویض اضطراری و آفلاین رمز Root در همان نصب
+
+اگر رمز Root قدیمی احتمالاً منتشر شده باشد، **تغییر مقدار `ROOT_OWNER_PASSWORD` در ENV به‌تنهایی هشِ رمز ذخیره‌شده در دیتابیس موجود را عوض نمی‌کند.** ابزار آفلاین داخل تصویر استاندارد درس‌چین وجود دارد؛ این ابزار API عمومی و مهاجرت خودکار در هر بوت نیست.
+
+### پیش‌شرط‌ها و ترتیب اجرا
+
+1. بکاپ واقعی با دسترسی محدود و Restore آزمایشیِ جدا از Git را تأیید کنید. بررسی کنید Volume سرویس و شمارهٔ Root با تنظیمات واقعی مطابقت دارند.
+2. در زمان نگهداریِ هماهنگ‌شده و با اجازهٔ مالک، **فقط فرایند درس‌چین** را متوقف کنید، نه Nginx مشترک یا تکین:
+
+```bash
+docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps stop darschin
+```
+
+در نصب اختصاصی، گزینهٔ `-f compose.pilot-ssh.yaml` را حذف کنید.
+
+3. در فایل خصوصی سرور، **هر دو** مقدار `ROOT_OWNER_PASSWORD` و `ROOT_OWNER_RECOVERY_KEY` را با رمزهای تازه، مستقل و قوی جایگزین کنید. شمارهٔ Root و نام Volume واقعی ثابت بمانند. `DARSCHYN_REQUIRE_EXISTING_DB=true` باشد.
+4. پیش از اعمال تغییر، بررسی فقط‌خواندنی هویت Root را بدون راه‌اندازی سرور انجام دهید:
 
 ```bash
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps \
   run --rm --no-deps --entrypoint node darschin scripts/rotate-root-credentials.cjs --check
 ```
 
-5. Only after verifying the service is stopped, run the explicit apply (the confirmation is a boolean, **not** a password passed on the command line):
+5. پس از تأیید توقف تمام فرایندهای نویسنده، با تأیید صریحِ Boolean نه درج رمز در آرگومان، عملیات واقعی را انجام دهید:
 
 ```bash
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps \
@@ -80,21 +102,21 @@ docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.
   --entrypoint node darschin scripts/rotate-root-credentials.cjs --apply
 ```
 
-6. The command validates a single reserved root, saves a `0600` private backup of the **old, sensitive** database in the existing volume, atomically replaces the database with new bcrypt password/recovery verifiers and increments the root `sessionVersion`. It changes no student records. Keep the old backup restricted and remove it later only under a tested retention/restore policy.
-7. Restart **only DarsChin** and test root login, denial of old tokens, persistence and health. Do not rerun with the same credentials; the tool intentionally refuses a same-password rotation.
+6. ابزار باید فقط Root رزروشدهٔ یکتا را بپذیرد، یک بکاپ حساسِ خصوصی با مجوز `0600` از دیتابیس قدیمی در همان Volume بسازد، هش bcrypt رمز/بازیابی تازه را به‌صورت اتمیک ذخیره و `sessionVersion` را افزایش دهد؛ سوابق دانشجویان نباید تغییر کنند. بکاپ قدیمی را با سیاست نگهداری و Restore ایمن محافظت کنید.
+7. **فقط درس‌چین** را دوباره روشن کنید و ورود جدید Root، رد JWT قدیمی، دوام دیتابیس و سلامت سرویس را بررسی کنید. ابزار نباید برای همان رمز تکرار شود.
 
-**Critical:** The web process must be stopped for the **entire** offline operation. A second process using this JSON database can overwrite the rotated file with old in-memory data. The command cannot automatically prove all processes are stopped. This only rotates the reserved root; **any other affected account, provider API keys, JWT signing secrets, caches, backup copies and historical Git refs need separate review/rotation.** The root change does not remove an old personal phone number from public history.
+**هشدار حیاتی:** در تمام زمان عملیات آفلاین، همهٔ فرایندهای نویسندهٔ JSON باید خاموش باشند. پردازش دوم می‌تواند دیتابیسِ رمزِ تعویض‌شده را با حالت قدیمی حافظه بازنویسی کند؛ ابزار لزوماً توقف همهٔ آن‌ها را ثابت نمی‌کند. این عملیات فقط Root را اصلاح می‌کند؛ کلیدهای سایر حساب‌ها، پیامک/API، JWT، نسخه‌های بکاپ و تاریخچهٔ Git به پیگیری جداگانه نیاز دارند.
 
-For complete privacy of static pages and browser-only demo as well as the API, use a **VPN or carefully reviewed IP allowlist** on the existing Nginx vhost. This avoids conflicting with the Bearer Authorization header used by the app. Test access from the operator's devices before restricting an existing public hostname.
+برای محدودسازی صفحهٔ استاتیک و دمو علاوه بر API، استفاده از VPN یا فهرست IP مجازِ آزموده‌شده در Virtual Host موجود Nginx مناسب‌تر است؛ مراقب Header احراز هویت Bearer برنامه باشید. پیش از محدودکردن دامنهٔ فعال، دسترسی از دستگاه‌های خود اپراتور را تست کنید.
 
-## Security incident — unresolved public history
+## پروندهٔ امنیتیِ تاریخچهٔ عمومی ــ هنوز باز
 
-The repository once tracked a JSON database with an identifiable non-demo account, a password verifier and a recovery key. Removing it from current HEAD **does not remove it from Git history, old PRs or caches**. Treat that credential material as disclosed: revoke/rotate any affected credentials and sessions, including active root/provider secrets if those were ever committed. In particular, modifying `ROOT_OWNER_PASSWORD` in the ENV **does not reset an existing root password hash in the persisted database**. Use an authenticated password-change flow or a reviewed offline repair, then check session invalidation.
+مخزن در گذشته یک دیتابیس JSON با اطلاعات حساب غیرنمایشی و دادهٔ مرتبط با احراز هویت را رهگیری می‌کرد. حذف فایل از HEAD **نه تاریخچه و PRهای قدیمی را پاک می‌کند و نه اعتبارنامهٔ منتشرشده را باطل**. هر کلید در معرض خطر باید توسط صاحب سرویس تعویض و نشست‌های قبلی در صورت نیاز باطل شوند؛ تعویض تنها ENV رمز Root موجود را تغییر نمی‌دهد.
 
-GitHub's [sensitive-data removal instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) discuss first rotating credentials, then carefully rewriting history and coordinating with support if needed. No destructive rewrite or real-server rotation is claimed by this guide.
+طبق [راهنمای رسمی GitHub](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)، ابتدا ابطال اعتبارنامه و سپس برنامهٔ پاک‌سازی تاریخچه و همکاری Support لازم است. این سند هیچ بازنویسی مخرب یا تعویض واقعی روی سرور مالک را ادعا نمی‌کند. [چک‌لیست مالک](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) و [Issue شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4).
 
-## Open-source license and contributions
+## مجوز متن‌باز و مشارکت
 
-Project-authored code is released under [MIT](../LICENSE), subject to any distinct license notices on bundled third-party assets/dependencies. You may run your own instance; that does **not** grant access to the author's private runtime data, server or credentials, or imply permission to impersonate the brand. `package.json` uses `"private": true` to prevent accidental npm registry publication; it does **not** make the GitHub repository private or block `git clone`.
+کد نوشته‌شدهٔ خود پروژه تحت [مجوز MIT](../LICENSE) ارائه شده است؛ دارایی‌ها و وابستگی‌های شخص ثالث ممکن است مجوز جداگانه داشته باشند. نصب مستقل به معنی حق استفاده از داده/رمز/سرور خصوصی مالک یا جعل هویت برند نیست. تنظیم `"private": true` در `package.json` فقط از انتشار ناخواستهٔ بسته در npm جلوگیری می‌کند و مخزن GitHub را خصوصی نمی‌سازد یا `git clone` را منع نمی‌کند.
 
-See [security](SECURITY.md), [private-data incident](PUBLIC_REPOSITORY_READINESS_20261101_FA.md), [existing shared VPS](VPS_SHARED_DOMAIN_FA.md), and [quality gate](QA_WITHOUT_ACTIONS_FA.md).
+اسناد مکمل: [امنیت](SECURITY.md)، [حادثهٔ عمومی‌شدن](PUBLIC_REPOSITORY_READINESS_20261101_FA.md)، [VPS مشترک](VPS_SHARED_DOMAIN_FA.md)، [کنترل کیفیت](QA_WITHOUT_ACTIONS_FA.md) و [استاندارد زبان فارسی](PERSIAN_DOCUMENTATION_STANDARD_FA.md).
