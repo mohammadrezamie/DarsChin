@@ -158,8 +158,14 @@ describe('opt-in proof of phone ownership during registration', () => {
     const profilesBefore = db.studentProfiles.length;
     const auditsBefore = db.auditLogs.length;
 
-    const failed = vi.spyOn(db, 'save').mockImplementationOnce(() => {
-      throw new Error('SYNTHETIC_PRIVATE_PATH:/secrets/registration.env');
+    // CAPTCHA verification also persists state. Fail only the signup transaction,
+    // after the CAPTCHA has been validated and the new user is staged.
+    const originalSave = db.save.bind(db);
+    const failed = vi.spyOn(db, 'save').mockImplementation(() => {
+      if (db.users.some(user => user.mobile === phone)) {
+        throw new Error('SYNTHETIC_PRIVATE_PATH:/secrets/registration.env');
+      }
+      return originalSave();
     });
     let response;
     try {
