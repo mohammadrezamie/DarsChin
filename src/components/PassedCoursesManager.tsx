@@ -235,7 +235,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                 onClick={() => setViewMode('checklist')}
                 className={`px-3 py-1 rounded-lg font-medium transition-all ${
                   viewMode === 'checklist'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -246,7 +246,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                 onClick={() => setViewMode('table')}
                 className={`px-3 py-1 rounded-lg font-medium transition-all ${
                   viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -300,10 +300,10 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                     aria-label={(isPassed ? 'حذف قبولی ' : 'ثبت قبولی ') + course.name}
                     disabled={adding}
                     onClick={() => void handleToggleCoursePassed(course.id)}
-                    className={`w-full p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 text-right focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 ${
+                    className={`w-full p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2 text-right focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 ${
                       isPassed
                         ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 shadow-xs'
-                        : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500'
+                        : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-teal-400 dark:hover:border-teal-600'
                     }`}
                   >
                     <div className="space-y-0.5 pr-1">
@@ -317,7 +317,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                         <span>•</span>
                         <span>{course.units} واحد</span>
                         <span>•</span>
-                        <span className="text-blue-600 dark:text-blue-400 font-medium">
+                        <span className="text-teal-700 dark:text-teal-400 font-medium">
                           {course.category}
                         </span>
                       </div>
@@ -362,7 +362,7 @@ export const PassedCoursesManager: React.FC<PassedCoursesManagerProps> = ({
                     </td>
                     <td className="py-2.5 px-3">{pc.course?.units || '-'} واحد</td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-medium">
+                      <span className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 text-[10px] font-medium">
                         {pc.course?.category || '---'}
                       </span>
                     </td>
