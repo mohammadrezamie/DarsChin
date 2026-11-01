@@ -266,6 +266,25 @@ export const StudentDashboard: React.FC = () => {
         apiRequest<{ selectedOfferingIds?: string[]; coursePriorities?: string[] | Record<string, number>; offeringPriorities?: Record<string, string[]>; wishlistCourseIds?: string[]; journeyStep?: number }>('/api/student/plan'),
       ]);
       if (version !== evaluationVersionRef.current) return;
+      if (profileRes.success && profileRes.data?.profile === null) {
+        // A new student's account has no academic affiliation until they
+        // submit it. Show step zero, not a fake chart or a network-error state.
+        setProfile(null);
+        setCurriculumId(null);
+        setSelectedOfferingIds([]);
+        setCoursePriorities([]);
+        setOfferingPriorities({});
+        setWishlistCourseIds([]);
+        setJourneyStep(0);
+        setJourneyReady(true);
+        setEvaluations([]);
+        setRecommendations([]);
+        setAcademicLimits(null);
+        setCurrentTerm(null);
+        setPlanError(null);
+        setLoadError(null);
+        return;
+      }
       // Both responses are required before evaluating a plan. Never silently
       // use an old browser selection if the persisted plan request failed.
       if (!profileRes.success || !profileRes.data?.profile ||

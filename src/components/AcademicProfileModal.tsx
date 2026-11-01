@@ -104,6 +104,21 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
         setIsTrackSelected(Boolean(p.isTrackSelected));
         setSelectedTrackId(p.selectedTrackId || '');
         setDesiredTrackIds(p.desiredTrackIds || []);
+        setPreviousTermGpa(typeof p.previousTermGpa === 'number' ? String(p.previousTermGpa) : '');
+      } else {
+        // Never show a previous account's affiliation as the new student's
+        // selection after logging out or switching accounts in the browser.
+        setUniversityId('');
+        setProvinceId('');
+        setCampusId('');
+        setDegreeLevelId('');
+        setMajorId('');
+        setEntryYearId('');
+        setCurrentTermId('');
+        setIsTrackSelected(false);
+        setSelectedTrackId('');
+        setDesiredTrackIds([]);
+        setPreviousTermGpa('');
       }
 
       setLoading(false);
@@ -135,7 +150,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
     setMessage(null);
 
     // Validation
-    if (!campusId || !degreeLevelId || !majorId || !entryYearId) {
+    if (!universityId || !campusId || !degreeLevelId || !majorId || !entryYearId) {
       setMessage({ type: 'error', text: 'لطفاً تمامی مشخصات اصلی پرونده تحصیلی را مشخص فرمایید.' });
       setSaving(false);
       return;
@@ -147,14 +162,8 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
       return;
     }
 
-    if (!isTrackSelected && desiredTrackIds.length === 0) {
-      setMessage({ type: 'error', text: 'لطفاً حداقل یک گرایش مدنظر جهت بررسی وضعیت چارت انتخاب نمایید.' });
-      setSaving(false);
-      return;
-    }
-
     const payload: Partial<StudentAcademicProfile> = {
-      universityId: universityId || 'univ-azad',
+      universityId,
 
 
       provinceId,

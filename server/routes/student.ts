@@ -17,42 +17,17 @@ export const studentRouter = Router();
 // Get student academic profile
 studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
-  let profile = db.studentProfiles.find((p) => p.userId === userId);
-
+  const profile = db.studentProfiles.find(p => p.userId === userId);
   if (!profile) {
-    // Create initial profile if doesn't exist
-    const defaultUniv = db.universities[0];
-    const defaultCampus = db.campuses[0];
-    const defaultDeg = db.degreeLevels[0];
-    const defaultMaj = db.majors[0];
-    const defaultYear = db.entryYears.find((y) => y.year === 1403) || db.entryYears[0];
-    const defaultTerm = db.academicTerms.find((t) => t.isCurrent) || db.academicTerms[0];
-
-    profile = {
-      userId,
-      universityId: defaultUniv?.id || '',
-      campusId: defaultCampus?.id || '',
-      degreeLevelId: defaultDeg?.id || '',
-      majorId: defaultMaj?.id || '',
-      entryYearId: defaultYear?.id || '',
-      isTrackSelected: false,
-      selectedTrackId: null,
-      desiredTrackIds: db.tracks.filter((t) => t.majorId === defaultMaj?.id).map((t) => t.id),
-      currentTermId: defaultTerm?.id || '',
-      updatedAt: new Date().toISOString(),
-    };
-    db.studentProfiles.push(profile);
-    try {
-      db.save();
-    } catch {
-      db.data.studentProfiles = db.studentProfiles.filter(row => row.userId !== userId);
-      return res.status(500).json({ success: false, error: 'ایجاد پروندهٔ تحصیلی ذخیره نشد.' });
-    }
+    // Reading must never silently assign the first seeded university, major
+    // and entry year to a real new student. Their onboarding starts empty.
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({ success: true, data: { profile: null, curriculum: null, needsSetup: true } });
   }
 
   // Never fall back to the first unrelated university/entry-year chart.
   // Academic recommendations and demand must share the student's exact scope.
-  const matchingCurriculum = db.curricula.find(
+  const matchingCurricula = db.curricula.filter(
     (c) =>
       c.status === 'active' &&
       c.universityId === profile!.universityId &&
@@ -60,13 +35,15 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
       c.degreeLevelId === profile!.degreeLevelId &&
       c.majorId === profile!.majorId &&
       c.entryYearId === profile!.entryYearId
-  ) || null;
-
+  );
+  // Multiple matching active chart versions require a manager to resolve the
+  // collision; never pick an arbitrary active version for a student's report.
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json({
     success: true,
     data: {
       profile,
-      curriculum: matchingCurriculum,
+      curriculum: matchingCurricula.length === 1 ? matchingCurricula[0] : null,
     },
   });
 });
@@ -87,21 +64,66 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     previousTermGpa,
   } = req.body;
 
-  let idx = db.studentProfiles.findIndex((p) => p.userId === userId);
+  const idx = db.studentProfiles.findIndex(p => p.userId === userId);
+  const existing = idx === -1 ? undefined : db.studentProfiles[idx];
+  // A new record must be based on deliberate student input, never seed row 0.
+  // Partial updates to an existing record retain unrelated academic metadata.
+  const resolvedUniversityId = universityId ?? existing?.universityId;
+  const resolvedCampusId = campusId ?? existing?.campusId;
+  const resolvedDegreeLevelId = degreeLevelId ?? existing?.degreeLevelId;
+  const resolvedMajorId = majorId ?? existing?.majorId;
+  const resolvedEntryYearId = entryYearId ?? existing?.entryYearId;
+  const resolvedTermId = currentTermId ?? existing?.currentTermId ??
+    db.academicTerms.find(term => term.isCurrent && term.active)?.id;
+  const university = db.universities.find(row => row.id === resolvedUniversityId && row.active);
+  const campus = db.campuses.find(row =>
+    row.id === resolvedCampusId && row.active && row.universityId === university?.id
+  );
+  const degree = db.degreeLevels.find(row => row.id === resolvedDegreeLevelId && row.active);
+  const major = db.majors.find(row =>
+    row.id === resolvedMajorId && row.active && row.degreeLevelId === degree?.id
+  );
+  const entryYear = db.entryYears.find(row => row.id === resolvedEntryYearId && row.active);
+  const term = db.academicTerms.find(row => row.id === resolvedTermId && row.active);
+  if (!university || !campus || !degree || !major || !entryYear || !term) {
+    return res.status(400).json({
+      success: false,
+      error: 'دانشگاه، واحد، مقطع، رشته، سال ورود و نیمسال باید معتبر و با یکدیگر سازگار باشند.',
+    });
+  }
+  const officialTrack = isTrackSelected ?? existing?.isTrackSelected ?? false;
+  const resolvedSelectedTrackId = officialTrack
+    ? selectedTrackId ?? existing?.selectedTrackId : null;
+  const resolvedDesiredTrackIds = desiredTrackIds ?? existing?.desiredTrackIds ?? [];
+  if (officialTrack && !db.tracks.some(track =>
+    track.id === resolvedSelectedTrackId && track.majorId === major.id && track.active
+  )) {
+    return res.status(400).json({
+      success: false, error: 'گرایش رسمی باید فعال و متعلق به رشتهٔ همین پرونده باشد.',
+    });
+  }
+  if (resolvedDesiredTrackIds.some((id: string) => !db.tracks.some(track =>
+    track.id === id && track.majorId === major.id && track.active
+  ))) {
+    return res.status(400).json({
+      success: false, error: 'گرایش‌های موردعلاقه باید به رشتهٔ انتخاب‌شده تعلق داشته باشند.',
+    });
+  }
   const updatedProfile: StudentAcademicProfile = {
     userId,
-    universityId: universityId || db.universities[0]?.id || '',
-    campusId: campusId || db.campuses[0]?.id || '',
-    degreeLevelId: degreeLevelId || db.degreeLevels[0]?.id || '',
-    majorId: majorId || db.majors[0]?.id || '',
-    entryYearId: entryYearId || db.entryYears[0]?.id || '',
-    isTrackSelected: Boolean(isTrackSelected),
-    selectedTrackId: isTrackSelected ? selectedTrackId : null,
-    desiredTrackIds: Array.isArray(desiredTrackIds) ? desiredTrackIds : [],
-    currentTermId: currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || '',
-    // Student identifier was collected for demand planning; profile edits must preserve it.
-    studentNumber: idx !== -1 ? db.studentProfiles[idx].studentNumber : undefined,
-    previousTermGpa: previousTermGpa !== undefined ? Number(previousTermGpa) : null,
+    universityId: university.id,
+    campusId: campus.id,
+    degreeLevelId: degree.id,
+    majorId: major.id,
+    entryYearId: entryYear.id,
+    isTrackSelected: officialTrack,
+    selectedTrackId: resolvedSelectedTrackId,
+    desiredTrackIds: resolvedDesiredTrackIds,
+    currentTermId: term.id,
+    // Student number is separately verified by demand; never erase it here.
+    studentNumber: existing?.studentNumber,
+    previousTermGpa: previousTermGpa !== undefined
+      ? previousTermGpa : existing?.previousTermGpa ?? null,
     updatedAt: new Date().toISOString(),
   };
 

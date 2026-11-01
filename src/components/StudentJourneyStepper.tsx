@@ -86,7 +86,7 @@ export const StudentJourneyStepper: React.FC<Props> = ({
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {(step === 0 || step === 2) && <button type="button" onClick={onOpenProfile}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-xs font-bold text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
-          <BookOpen className="h-4 w-4" aria-hidden="true" /> اصلاح پرونده
+          <BookOpen className="h-4 w-4" aria-hidden="true" /> {hasProfile ? 'اصلاح پرونده' : 'تکمیل پروندهٔ تحصیلی'}
         </button>}
         {step < 6 ? <button type="button" disabled={busy || (step === 0 && (!hasProfile || !hasCurriculum)) || (step === 2 && !academicLimits) || (step === 4 && wishlistCount === 0) || (step === 5 && selectedGroupCount === 0)}
           onClick={() => onStep(step + 1)}
