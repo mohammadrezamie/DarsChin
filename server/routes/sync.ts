@@ -350,8 +350,22 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
 });
 
 // Admin-only sync history. Never return raw snapshots or extracted student-facing data.
-syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (req, res) => {
-  const jobs = [...(db.syncJobs as SyncJob[])]
+syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (req: AuthenticatedRequest, res) => {
+  const root = isRootOwner(req.user);
+  // admin.panel.access alone is NOT authority over all imported student data.
+  // A delegated administrator may see their own sync jobs plus students whose
+  // academic profile matches an explicit, root-assigned demand scope.
+  const scopes = Array.isArray(req.user?.demandScopes) ? req.user.demandScopes : [];
+  const authorizedStudents = new Set(db.studentProfiles
+    .filter(profile => scopes.some(scope =>
+      scope.campusId === profile.campusId &&
+      scope.degreeLevelId === profile.degreeLevelId &&
+      scope.majorId === profile.majorId))
+    .map(profile => profile.userId));
+  const jobs = (db.syncJobs as SyncJob[])
+    .filter(job => root || job.userId === req.user!.id ||
+      (authorizedStudents.has(job.userId) && db.studentProfiles.some(profile =>
+        profile.userId === job.userId && profile.campusId === job.campusId)))
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
     .slice(0, 100)
     .map((job) => ({
@@ -371,8 +385,10 @@ syncRouter.get('/jobs', authenticate, requirePermission('admin.panel.access'), (
       importBatchId: job.importBatchId,
       requiresReview: requiresSyncReview(job),
       duplicateRecords: job.duplicateRecords ?? 0,
-      reconciliationErrors: job.reconciliationErrors ?? [],
-      error: job.error,
+      // Raw reconciliation diagnostics may include imported record details.
+      // Only the verified root can inspect these across all student accounts.
+      reconciliationErrors: root ? (job.reconciliationErrors ?? []) : [],
+      error: root ? job.error : (job.error ? 'جزئیات خطا فقط برای مالک قابل مشاهده است.' : undefined),
     }));
 
   return res.json({ success: true, data: jobs });
