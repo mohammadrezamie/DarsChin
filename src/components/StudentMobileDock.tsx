@@ -12,7 +12,7 @@ const PRIMARY = [
 
 const SECONDARY = [
   { id: 'recommendations', label: 'پیشنهادهای هوشمند', detail: 'بررسی پیشنهادهای قابل انتخاب', icon: Sparkles },
-  { id: 'wishlist', label: 'سبد علاقه‌مندی', detail: 'درس‌های مدنظر قبل از انتخاب نهایی', icon: BookOpen },
+
   { id: 'passed', label: 'دروس پاس‌شده', detail: 'ثبت و مرور سوابق تحصیلی', icon: BookOpen },
   { id: 'demand', label: 'نیازسنجی ترم آینده', detail: 'پس از بازشدن فرم توسط مدیر گروه', icon: Layers3 },
   { id: 'support', label: 'پشتیبانی و گزارش خطا', detail: 'راهنما و ارسال درخواست', icon: MessageCircle },

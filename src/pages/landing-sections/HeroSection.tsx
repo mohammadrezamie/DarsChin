@@ -42,7 +42,7 @@ export const HeroSection: React.FC = () => {
           <motion.h1 initial={heroAnimation(18)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.06 }}
             className="mb-5 max-w-2xl text-[clamp(1.9rem,7.5vw,3.65rem)] font-black leading-[1.45] tracking-tight text-slate-950 dark:text-white">
             انتخاب واحد را
-            <span className="mt-1 block dc-brand-text bg-gradient-to-l from-teal-700 via-emerald-700 to-amber-700 bg-clip-text text-transparent dark:from-teal-400 dark:via-emerald-400 dark:to-amber-400">با آگاهی برنامه‌ریزی کن</span>
+            <span className="mt-1 block dc-brand-text bg-gradient-to-l from-violet-700 via-fuchsia-700 to-orange-600 bg-clip-text text-transparent dark:from-violet-400 dark:via-fuchsia-400 dark:to-orange-300">با آگاهی برنامه‌ریزی کن</span>
           </motion.h1>
 
           <motion.p initial={heroAnimation(14)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12 }}
@@ -51,7 +51,7 @@ export const HeroSection: React.FC = () => {
           </motion.p>
 
           <motion.div initial={heroAnimation(12)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }} className="mb-4 flex flex-col gap-2.5 min-[380px]:flex-row min-[380px]:flex-wrap">
-            <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-gradient-to-l from-teal-700 to-emerald-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
+            <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-gradient-to-l from-violet-700 to-fuchsia-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-violet-800 hover:to-fuchsia-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
               تست رایگان پنل دانشجو <ArrowLeft className="h-4 w-4" />
             </Link>
             <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-secondary-action border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-teal-600">

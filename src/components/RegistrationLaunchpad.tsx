@@ -16,6 +16,7 @@ interface Props {
   evaluations: CourseEligibilityResult[];
   selectedOfferingIds: string[];
   coursePriorities: string[];
+  offeringPriorities?: Record<string, string[]>;
   profile: StudentAcademicProfile | null;
   curriculumId: string | null;
   onEditPriorities: () => void;
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
-  evaluations,selectedOfferingIds,coursePriorities,profile,curriculumId,onEditPriorities,onReorderCourses,
+  evaluations,selectedOfferingIds,coursePriorities,offeringPriorities = {},profile,curriculumId,onEditPriorities,onReorderCourses,
 }) => {
   const [rules,setRules]=useState<AcademicRule[]>([]);
   const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
@@ -163,7 +164,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-3 dark:border-teal-950 dark:bg-teal-950/40">
       <div className="min-w-0">
         <h2 className="flex items-center gap-2 text-base font-bold text-teal-950 dark:text-teal-100">
-          <Zap className="h-4 w-4"/> صف سریع ثبت دروس
+          <Zap className="h-4 w-4"/> صف ثبت و اولویت‌ها
         </h2>
         <p className="mt-0.5 text-xs leading-6 text-teal-900 dark:text-teal-300">
           {queue.steps.length} درس · {completedCourses.size} گروه علامت‌خورده در همین مرورگر · یک لمس برای کپی
@@ -179,7 +180,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           className={`min-h-11 rounded-lg border px-3 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-45 ${sortMode?'border-teal-800 bg-teal-800 text-white':'border-teal-300 text-teal-950 dark:text-teal-100'}`}>
           {sortMode?'اتمام چیدمان':'چیدمان'}
         </button>
-        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-teal-300 px-3 text-xs font-bold text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-teal-100">برنامه</button>
+        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-teal-300 px-3 text-xs font-bold text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-teal-100">ویرایش درس‌ها</button>
       </div>
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
@@ -235,6 +236,16 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
+          {(offeringPriorities[step.courseId] || []).filter(id => id !== step.offeringId).length > 0 &&
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-amber-100 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-900 dark:text-amber-200">
+              <span className="font-black">جایگزین‌ها به ترتیب:</span>
+              {(offeringPriorities[step.courseId] || []).filter(id => id !== step.offeringId).map((id, order) => {
+                const alternative = evaluations.find(item => item.offeringId === id && item.courseId === step.courseId);
+                return alternative ? <span key={id} className="rounded-lg bg-amber-50 px-2 py-1 dark:bg-amber-950/40">
+                  {(order + 2).toLocaleString('fa-IR')}. {alternative.instructor || 'استاد نامشخص'} · گروه {alternative.groupCode}
+                </span> : null;
+              })}
+            </div>}
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-')||Boolean(step.groupCode && step.copyCode!==step.groupCode))&&
             <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
               <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>

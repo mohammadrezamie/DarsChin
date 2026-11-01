@@ -67,6 +67,7 @@ interface SchedulePlannerProps {
   onRemoveFallbackOffering?: (courseId: string, offeringId: string) => void;
   onReorderCourses?: (newCourseOrder: string[]) => void;
   onClearSchedule: () => void;
+  hidePriorityTab?: boolean;
 }
 
 export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
@@ -83,8 +84,9 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
   profile,
   currentTerm,
   academicLimits,
+  hidePriorityTab = false,
 }) => {
-  const [activePlannerTab, setActivePlannerTab] = useState<'priorities' | 'timetable' | 'exams'>('priorities');
+  const [activePlannerTab, setActivePlannerTab] = useState<'priorities' | 'timetable' | 'exams'>(hidePriorityTab ? 'timetable' : 'priorities');
   const [copyFeedback, setCopyFeedback] = useState<{ code: string; success: boolean } | null>(null);
   useEffect(() => {
     if (!copyFeedback) return;
@@ -512,7 +514,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
 
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 dark:bg-slate-800/70 rounded-2xl border border-slate-300/60 dark:border-slate-700/60 print:hidden">
-        <button
+        {!hidePriorityTab && <button
           id="tabPlannerPriorities"
           onClick={() => setActivePlannerTab('priorities')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
@@ -523,7 +525,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         >
           <BookOpen className="w-4 h-4" />
           <span>چینش اولویت دروس و جایگزین‌ها ({plannedCourses.length})</span>
-        </button>
+        </button>}
 
         <button
           id="tabPlannerTimetable"

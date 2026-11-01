@@ -30,7 +30,7 @@ import { OfferingsList } from './OfferingsList';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
-import { RegistrationLaunchpad } from './RegistrationLaunchpad';
+import { CourseRegistrationFlow } from './CourseRegistrationFlow';
 import { StudentMobileDock } from './StudentMobileDock';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { StudentJourneyStepper } from './StudentJourneyStepper';
@@ -44,7 +44,7 @@ const studentTabs = [
   // remain reachable via the same horizontal nav without a vertical menu.
   { id: 'offerings', label: 'بررسی تطبیقی دروس ارائه‌شده', short: 'دروس ارائه‌شده', icon: Layers },
   { id: 'schedule', label: 'برنامه‌ریز و جدول زمانی', short: 'برنامه من', icon: Calendar },
-  { id: 'registration', label: 'صف سریع ثبت دروس', short: 'صف ثبت', icon: Zap },
+  { id: 'registration', label: 'انتخاب درس، استاد و صف ثبت', short: 'انتخاب و صف ثبت', icon: Zap },
   { id: 'recommendations', label: 'پیشنهاد هوشمند انتخاب واحد', short: 'پیشنهادها', icon: Sparkles },
   { id: 'wishlist', label: 'سبد علاقه‌مندی', short: 'سبد من', icon: BookOpen },
   { id: 'passed', label: 'دروس پاس‌شده', short: 'پاس‌شده‌ها', icon: BookOpen },
@@ -71,6 +71,7 @@ export const StudentDashboard: React.FC = () => {
   const [offeringPriorities, setOfferingPriorities] = useState<Record<string, string[]>>({});
   const [wishlistCourseIds, setWishlistCourseIds] = useState<string[]>([]);
   const [journeyStep, setJourneyStep] = useState(0);
+  const [registrationStage, setRegistrationStage] = useState<'courses' | 'preferences'>('courses');
   const [journeyReady, setJourneyReady] = useState(false);
   const [journeyBusy, setJourneyBusy] = useState(false);
 
@@ -212,7 +213,7 @@ export const StudentDashboard: React.FC = () => {
     });
   };
 
-  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'wishlist', 'offerings', 'registration'];
+  const stageDestination: StudentTab[] = ['offerings', 'passed', 'offerings', 'recommendations', 'registration', 'registration', 'registration'];
   const updateJourney = async (next: number) => {
     if (journeyBusy || !user || next < 0 || next > 6) return;
     setJourneyBusy(true);
@@ -220,6 +221,7 @@ export const StudentDashboard: React.FC = () => {
     setJourneyBusy(false);
     if (!res.success) { setPlanError(res.error || 'گام جدید ذخیره نشد؛ دوباره تلاش کن.'); return; }
     setJourneyStep(next);
+    if (next >= 4) setRegistrationStage(next >= 5 ? 'preferences' : 'courses');
     navigateWorkspace(stageDestination[next]);
   };
 
@@ -457,7 +459,9 @@ export const StudentDashboard: React.FC = () => {
 
     const updatedOfferingList = [
       offeringId,
-      ...currentCourseOfferings.filter((id) => id !== offeringId),
+      // هنگام تغییر استاد اول، استاد قبلی به جای حذف، جایگزین دوم می‌شود.
+      ...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : []),
+      ...currentCourseOfferings.filter((id) => id !== offeringId && id !== currentPrimary),
     ];
     const newOfferingPriorities = {
       ...offeringPriorities,
@@ -497,6 +501,18 @@ export const StudentDashboard: React.FC = () => {
     if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
       setOfferingPriorities(newOfferingPriorities);
     }
+  };
+
+  // One persisted preference list per course: instructor first, alternates next.
+  const handleReorderAlternatives = async (courseId: string, ids: string[]) => {
+    const known = new Set(evaluations.filter(item => item.courseId === courseId).map(item => item.offeringId));
+    const primary = selectedOfferingIds.find(id => known.has(id));
+    const reordered = [...new Set(ids)].filter(id => known.has(id));
+    const next = {
+      ...offeringPriorities,
+      [courseId]: [...(primary ? [primary] : []), ...reordered.filter(id => id !== primary)],
+    };
+    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, next)) setOfferingPriorities(next);
   };
 
   // Calculate schedule conflicts
@@ -812,7 +828,7 @@ export const StudentDashboard: React.FC = () => {
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
       <nav aria-label="بخش‌های میز کار دانشجو" className={`sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden ${isBrowserDemo ? 'md:top-0' : ''}`}>
         <div ref={tabStripRef} className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
-          {studentTabs.map(tab => {
+          {studentTabs.filter(tab => tab.id !== 'wishlist').map(tab => {
             const TabIcon = tab.icon;
             const current = activeTab === tab.id;
             return (
@@ -897,7 +913,7 @@ export const StudentDashboard: React.FC = () => {
                 onOpenProfileModal={() => setProfileModalOpen(true)}
                 wishlistCourseIds={wishlistCourseIds}
                 initiallyShowWishlist={journeyStep === 5}
-                onOpenWishlist={() => navigateWorkspace('wishlist')}
+                onOpenWishlist={() => { setRegistrationStage('courses'); navigateWorkspace('registration'); }}
               />
             )}
             
@@ -930,6 +946,7 @@ export const StudentDashboard: React.FC = () => {
                 onRemoveFallbackOffering={handleRemoveFallbackOffering}
                 onReorderCourses={handleReorderCourses}
                 onClearSchedule={handleClearSchedule}
+                hidePriorityTab={true}
                 profile={profile}
                 currentTerm={currentTerm}
                 academicLimits={academicLimits}
@@ -937,13 +954,15 @@ export const StudentDashboard: React.FC = () => {
             )}
 
             {activeTab === 'registration' && (
-              <RegistrationLaunchpad
-                evaluations={evaluations}
-                selectedOfferingIds={selectedOfferingIds}
-                coursePriorities={coursePriorities}
-                profile={profile}
-                curriculumId={curriculumId}
-                onEditPriorities={() => navigateWorkspace('schedule')}
+              <CourseRegistrationFlow
+                stage={registrationStage} onStage={setRegistrationStage}
+                curriculumId={curriculumId} profile={profile} evaluations={evaluations}
+                recommendations={recommendations} wishlistCourseIds={wishlistCourseIds}
+                selectedOfferingIds={selectedOfferingIds} coursePriorities={coursePriorities}
+                offeringPriorities={offeringPriorities} onSaveWishlist={saveWishlist}
+                onPrimary={handleSelectPrimaryOffering} onAddFallback={handleAddFallbackOffering}
+                onRemoveFallback={handleRemoveFallbackOffering}
+                onReorderAlternatives={handleReorderAlternatives}
                 onReorderCourses={handleReorderCourses}
               />
             )}
