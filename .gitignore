@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+server_log.txt
+.env*
+!.env.example
+
+# Prevent *new* local runtime data files from being added accidentally.
+# data/darschyn-db.json is already tracked and must be handled separately.
+data/*.json
+data/*.json.tmp

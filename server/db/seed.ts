@@ -1,0 +1,647 @@
+// ============================================================================
+// DARSCHYN (درس‌چین) - Demo Seed Data (CLEARLY LABELED AS DEMO DATA)
+// NOTE: DEMO DATA — NOT OFFICIAL UNIVERSITY DATA
+// ============================================================================
+
+import bcrypt from 'bcryptjs';
+import { DatabaseSchema } from './database';
+import { AcademicRule } from '../../src/types';
+
+export function getInitialSeedData(): DatabaseSchema {
+  const superAdminPasswordHash = bcrypt.hashSync('1010', 10);
+  const studentPasswordHash = bcrypt.hashSync('student123', 10);
+
+  const users = [
+    {
+      id: 'usr-admin-1',
+      mobile: '09121111111',
+      name: 'مدیر آموزش',
+      password: superAdminPasswordHash,
+      recoveryKey: 'admin-recovery-123',
+      roles: ['admin', 'student'] as any,
+      createdAt: new Date('2026-01-01').toISOString(),
+    },
+    {
+      id: 'usr-student-1',
+      mobile: '09120000000',
+      name: 'دانشجوی نمونه',
+      password: studentPasswordHash,
+      recoveryKey: 'student-recovery-123',
+      roles: ['student'] as any,
+      createdAt: new Date('2026-01-02').toISOString(),
+    }
+  ];
+  
+  const provinces = [
+    { id: 'prov-tehran', name: 'استان تهران', active: true },
+    { id: 'prov-isfahan', name: 'استان اصفهان', active: true },
+    { id: 'prov-khorasan', name: 'استان خراسان رضوی', active: true }
+  ];
+
+  const campuses = [
+    {
+      id: 'camp-srbiau',
+      universityId: 'univ-azad',
+      provinceId: null,
+      type: 'INDEPENDENT_UNIT' as const,
+      name: 'واحد علوم و تحقیقات',
+      code: 'SRB',
+      active: true,
+    },
+    {
+      id: 'camp-tehran-south',
+      universityId: 'univ-azad',
+      provinceId: 'prov-tehran',
+      type: 'PROVINCE_UNIT' as const,
+      name: 'واحد تهران جنوب',
+      code: 'STB',
+      active: true,
+    },
+    {
+      id: 'camp-tehran-central',
+      universityId: 'univ-azad',
+      provinceId: 'prov-tehran',
+      type: 'PROVINCE_UNIT' as const,
+      name: 'واحد تهران مرکزی',
+      code: 'CTB',
+      active: true,
+    },
+    {
+      id: 'camp-khorasgan',
+      universityId: 'univ-azad',
+      provinceId: 'prov-isfahan',
+      type: 'PROVINCE_UNIT' as const,
+      name: 'واحد اصفهان (خوراسگان)',
+      code: 'KHU',
+      active: true,
+    }
+  ];
+
+  const degreeLevels = [
+    {
+      id: 'deg-bs',
+      name: 'کارشناسی پیوسته',
+      code: 'BSC',
+      active: true,
+    },
+    {
+      id: 'deg-ms',
+      name: 'کارشناسی ارشد',
+      code: 'MSC',
+      active: true,
+    },
+    {
+      id: 'deg-phd',
+      name: 'دکتری تخصصی',
+      code: 'PHD',
+      active: true,
+    },
+  ];
+
+  const majors = [
+    {
+      id: 'maj-ee',
+      degreeLevelId: 'deg-bs',
+      name: 'مهندسی برق',
+      code: '21041',
+      active: true,
+    },
+    {
+      id: 'maj-ce',
+      degreeLevelId: 'deg-bs',
+      name: 'مهندسی کامپیوتر',
+      code: '21042',
+      active: true,
+    },
+  ];
+
+  const tracks = [
+    {
+      id: 'trk-digital',
+      majorId: 'maj-ee',
+      name: 'سیستم‌های دیجیتال',
+      code: 'DIG',
+      active: true,
+    },
+    {
+      id: 'trk-electronics',
+      majorId: 'maj-ee',
+      name: 'الکترونیک',
+      code: 'ELC',
+      active: true,
+    },
+    {
+      id: 'trk-power',
+      majorId: 'maj-ee',
+      name: 'قدرت',
+      code: 'PWR',
+      active: true,
+    },
+    {
+      id: 'trk-telecom',
+      majorId: 'maj-ee',
+      name: 'مخابرات',
+      code: 'TEL',
+      active: true,
+    },
+    {
+      id: 'trk-control',
+      majorId: 'maj-ee',
+      name: 'کنترل',
+      code: 'CTR',
+      active: true,
+    },
+  ];
+
+  const entryYears = [
+    { id: 'yr-1402', year: 1402, active: true },
+    { id: 'yr-1403', year: 1403, active: true },
+    { id: 'yr-1404', year: 1404, active: true },
+    { id: 'yr-1405', year: 1405, active: true },
+  ];
+
+  const academicTerms = [
+    {
+      id: 'term-1405-1',
+      name: 'نیمسال اول ۱۴۰۵–۱۴۰۶',
+      year: 1405,
+      termNumber: 1 as const,
+      isCurrent: true,
+      active: true,
+    },
+    {
+      id: 'term-1404-2',
+      name: 'نیمسال دوم ۱۴۰۴–۱۴۰۵',
+      year: 1404,
+      termNumber: 2 as const,
+      isCurrent: false,
+      active: true,
+    },
+  ];
+
+  const courses = [
+    // پایه (Basic)
+    { id: 'crs-math-1', code: '2104101', name: 'ریاضی عمومی ۱', units: 3, category: 'پایه' as const, active: true },
+    { id: 'crs-math-2', code: '2104102', name: 'ریاضی عمومی ۲', units: 3, category: 'پایه' as const, active: true },
+    { id: 'crs-diffeq', code: '2104103', name: 'معادلات دیفرانسیل', units: 3, category: 'پایه' as const, active: true },
+    { id: 'crs-engmath', code: '2104104', name: 'ریاضیات مهندسی', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-phys-1', code: '2104105', name: 'فیزیک ۱ (مکانیک)', units: 3, category: 'پایه' as const, active: true },
+    { id: 'crs-phys-2', code: '2104106', name: 'فیزیک ۲ (الکتریسیته و مغناطیس)', units: 3, category: 'پایه' as const, active: true },
+    { id: 'crs-prog', code: '2104107', name: 'برنامه‌نویسی کامپیوتر (C/C++)', units: 3, category: 'پایه' as const, active: true },
+
+    // اصلی (Core)
+    { id: 'crs-circ-1', code: '2104111', name: 'مدارهای الکتریکی ۱', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-circ-2', code: '2104112', name: 'مدارهای الکتریکی ۲', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-circ-lab', code: '2104113', name: 'آزمایشگاه مدارهای الکتریکی', units: 1, category: 'آزمایشگاه' as const, active: true },
+    { id: 'crs-signals', code: '2104114', name: 'سیگنال‌ها و سیستم‌ها', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-elec-1', code: '2104115', name: 'الکترونیک ۱', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-elec-2', code: '2104116', name: 'الکترونیک ۲', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-logic', code: '2104117', name: 'سیستم‌های دیجیتال ۱ (مدارهای منطقی)', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-em-waves', code: '2104118', name: 'الکترومغناطیس مهندسی', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-control', code: '2104119', name: 'سیستم‌های کنترل خطی', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-telecom-1', code: '2104120', name: 'سیستم‌های مخابراتی ۱', units: 3, category: 'اصلی' as const, active: true },
+    { id: 'crs-power-1', code: '2104121', name: 'بررسی سیستم‌های قدرت ۱', units: 3, category: 'اصلی' as const, active: true },
+
+    // تخصصی دیجیتال و الکترونیک (Track-Specific)
+    { id: 'crs-comp-arch', code: '2104131', name: 'معماری کامپیوتر', units: 3, category: 'تخصصی' as const, active: true },
+    { id: 'crs-micro', code: '2104132', name: 'میکروکنترلرها و ریزپردازنده‌ها', units: 3, category: 'تخصصی' as const, active: true },
+    { id: 'crs-fpga', code: '2104133', name: 'طراحی سیستم‌های دیجیتال با FPGA', units: 3, category: 'تخصصی' as const, active: true },
+    { id: 'crs-vlsi', code: '2104134', name: 'طراحی مدارهای مجتمع بسیار فشرده (VLSI)', units: 3, category: 'تخصصی' as const, active: true },
+    { id: 'crs-dsp', code: '2104135', name: 'پردازش سیگنال‌های دیجیتال (DSP)', units: 3, category: 'تخصصی' as const, active: true },
+
+    // عمومی و عملی (General / Project)
+    { id: 'crs-project', code: '2104191', name: 'پروژه تخصصی کارشناسی', units: 3, category: 'پروژه' as const, active: true },
+    { id: 'crs-internship', code: '2104192', name: 'کارآموزی مهندسی برق', units: 1, category: 'کارآموزی' as const, active: true },
+    { id: 'crs-gen-persian', code: '1101001', name: 'فارسی عمومی', units: 3, category: 'عمومی' as const, active: true },
+    { id: 'crs-gen-english', code: '1101002', name: 'زبان انگلیسی عمومی', units: 3, category: 'عمومی' as const, active: true },
+    { id: 'crs-gen-islam-1', code: '1101003', name: 'اندیشه اسلامی ۱ (مبدأ و معاد)', units: 2, category: 'عمومی' as const, active: true },
+    { id: 'crs-gen-morals', code: '1101004', name: 'آیین زندگی (اخلاق کاربردی)', units: 2, category: 'عمومی' as const, active: true },
+    { id: 'crs-gen-sport', code: '1101005', name: 'تربیت بدنی ۱', units: 1, category: 'عمومی' as const, active: true },
+  ];
+
+  const curricula = [
+    {
+      id: 'curr-ee-1403',
+      universityId: 'univ-azad',
+      campusId: 'camp-srbiau',
+      degreeLevelId: 'deg-bs',
+      majorId: 'maj-ee',
+      trackId: null, // Shared across all tracks with track-specific courses
+      entryYearId: 'yr-1403',
+      version: '1403-1',
+      name: 'چارت مصوب کارشناسی مهندسی برق ورودی ۱۴۰۳',
+      notes: 'داده‌های دمو برای تست اعتبارسنجی چارت و انتخاب واحد (غیررسمی)',
+      status: 'active' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
+  ];
+
+  const curriculumCourses = [
+    // Semester 1
+    { id: 'cc-1', curriculumId: 'curr-ee-1403', courseId: 'crs-math-1', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-2', curriculumId: 'curr-ee-1403', courseId: 'crs-phys-1', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-3', curriculumId: 'curr-ee-1403', courseId: 'crs-prog', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-4', curriculumId: 'curr-ee-1403', courseId: 'crs-gen-persian', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-5', curriculumId: 'curr-ee-1403', courseId: 'crs-gen-english', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' as any, active: true },
+
+    // Semester 2
+    { id: 'cc-6', curriculumId: 'curr-ee-1403', courseId: 'crs-math-2', suggestedSemester: 2, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-7', curriculumId: 'curr-ee-1403', courseId: 'crs-diffeq', suggestedSemester: 2, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-8', curriculumId: 'curr-ee-1403', courseId: 'crs-phys-2', suggestedSemester: 2, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-9', curriculumId: 'curr-ee-1403', courseId: 'crs-logic', suggestedSemester: 2, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-10', curriculumId: 'curr-ee-1403', courseId: 'crs-gen-islam-1', suggestedSemester: 2, classification: 'MAJOR_REQUIRED' as any, active: true },
+
+    // Semester 3
+    { id: 'cc-11', curriculumId: 'curr-ee-1403', courseId: 'crs-circ-1', suggestedSemester: 3, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-12', curriculumId: 'curr-ee-1403', courseId: 'crs-engmath', suggestedSemester: 3, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-13', curriculumId: 'curr-ee-1403', courseId: 'crs-comp-arch', suggestedSemester: 3, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-14', curriculumId: 'curr-ee-1403', courseId: 'crs-gen-morals', suggestedSemester: 3, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-15', curriculumId: 'curr-ee-1403', courseId: 'crs-gen-sport', suggestedSemester: 3, classification: 'MAJOR_REQUIRED' as any, active: true },
+
+    // Semester 4
+    { id: 'cc-16', curriculumId: 'curr-ee-1403', courseId: 'crs-circ-2', suggestedSemester: 4, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-17', curriculumId: 'curr-ee-1403', courseId: 'crs-circ-lab', suggestedSemester: 4, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-18', curriculumId: 'curr-ee-1403', courseId: 'crs-elec-1', suggestedSemester: 4, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-19', curriculumId: 'curr-ee-1403', courseId: 'crs-signals', suggestedSemester: 4, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-20', curriculumId: 'curr-ee-1403', courseId: 'crs-micro', suggestedSemester: 4, classification: 'MAJOR_REQUIRED' as any, active: true },
+
+    // Semester 5
+    { id: 'cc-21', curriculumId: 'curr-ee-1403', courseId: 'crs-elec-2', suggestedSemester: 5, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-22', curriculumId: 'curr-ee-1403', courseId: 'crs-control', suggestedSemester: 5, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-23', curriculumId: 'curr-ee-1403', courseId: 'crs-telecom-1', suggestedSemester: 5, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-24', curriculumId: 'curr-ee-1403', courseId: 'crs-em-waves', suggestedSemester: 5, classification: 'MAJOR_REQUIRED' as any, active: true },
+
+    // Semester 6 & 7 (Specialized)
+    { id: 'cc-25', curriculumId: 'curr-ee-1403', courseId: 'crs-fpga', suggestedSemester: 6, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-26', curriculumId: 'curr-ee-1403', courseId: 'crs-vlsi', suggestedSemester: 6, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-27', curriculumId: 'curr-ee-1403', courseId: 'crs-dsp', suggestedSemester: 7, classification: 'MAJOR_ELECTIVE' as any, active: true },
+    { id: 'cc-28', curriculumId: 'curr-ee-1403', courseId: 'crs-power-1', suggestedSemester: 5, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-29', curriculumId: 'curr-ee-1403', courseId: 'crs-internship', suggestedSemester: 7, classification: 'MAJOR_REQUIRED' as any, active: true },
+    { id: 'cc-30', curriculumId: 'curr-ee-1403', courseId: 'crs-project', suggestedSemester: 8, classification: 'MAJOR_REQUIRED' as any, active: true },
+  ];
+
+    const academicRules: AcademicRule[] = [
+    { id: 'pr-1', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-math-2', expression: { type: 'COURSE', courseId: 'crs-math-1' } },
+    { id: 'pr-2', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-diffeq', expression: { type: 'COURSE', courseId: 'crs-math-1' } },
+    { id: 'pr-3', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-phys-2', expression: { type: 'COURSE', courseId: 'crs-phys-1' } },
+    
+    { id: 'pr-4', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-engmath', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-diffeq' }, { type: 'COURSE', courseId: 'crs-math-2' }] } },
+    { id: 'pr-6', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-1', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-phys-2' }, { type: 'COURSE', courseId: 'crs-math-1' }] } },
+    { id: 'pr-8', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-2', expression: { type: 'COURSE', courseId: 'crs-circ-1' } },
+    { id: 'pr-9', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-signals', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-engmath' }, { type: 'COURSE', courseId: 'crs-circ-1' }] } },
+    { id: 'pr-11', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-1', expression: { type: 'COURSE', courseId: 'crs-circ-1' } },
+    { id: 'pr-12', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-elec-2', expression: { type: 'COURSE', courseId: 'crs-elec-1' } },
+    { id: 'pr-13', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-comp-arch', expression: { type: 'COURSE', courseId: 'crs-logic' } },
+    { id: 'pr-14', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-micro', expression: { type: 'COURSE', courseId: 'crs-logic' } },
+    
+    { id: 'pr-15', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-digital', targetCourseId: 'crs-fpga', expression: { type: 'GROUP', operator: 'AND', operands: [{ type: 'COURSE', courseId: 'crs-comp-arch' }, { type: 'COURSE', courseId: 'crs-micro' }] } },
+    { id: 'pr-16', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-telecom', targetCourseId: 'crs-fpga', expression: { type: 'COURSE', courseId: 'crs-comp-arch' } },
+    
+    { id: 'pr-17', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-power-1', expression: { type: 'COURSE', courseId: 'crs-circ-2' } },
+    { id: 'pr-18', relationshipType: 'PREREQUISITE', curriculumId: 'curr-ee-1403', trackId: 'trk-power', targetCourseId: 'crs-power-lab', expression: { type: 'COURSE', courseId: 'crs-power-1' } },
+    
+    { id: 'cr-1', relationshipType: 'COREQUISITE', curriculumId: 'curr-ee-1403', targetCourseId: 'crs-circ-lab', expression: { type: 'COURSE', courseId: 'crs-circ-1' } }
+  ];
+
+  const courseOfferings = [
+    // 1. Math 2 (Already Passed by student)
+    {
+      id: 'off-1',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-math-2',
+      rawCourseCode: '2104102',
+      rawCourseName: 'ریاضی عمومی ۲',
+      groupCode: '01',
+      instructor: 'دکتر صابری',
+      dayOfWeek: 'یکشنبه',
+      startTime: '۰۸:۰۰',
+      endTime: '۱۰:۰۰',
+      location: 'ساختمان علوم پایه، کلاس ۲۰۴',
+      capacity: 40,
+      enrolledCount: 32,
+      examDate: '۱۴۰۵/۱۰/۱۵ - ۱۰:۰۰',
+      source: 'manual' as const,
+      active: true,
+    },
+    // 2. Differential Equations (Eligible, prereq Math 1 is passed)
+    {
+      id: 'off-2',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-diffeq',
+      rawCourseCode: '2104103',
+      rawCourseName: 'معادلات دیفرانسیل',
+      groupCode: '01',
+      instructor: 'دکتر علوی',
+      dayOfWeek: 'دوشنبه',
+      startTime: '۱۰:۰۰',
+      endTime: '۱۲:۰۰',
+      location: 'دانشکده فنی، کلاس ۳۰۱',
+      capacity: 35,
+      enrolledCount: 20,
+      examDate: '۱۴۰۵/۱۰/۱۸ - ۰۸:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 3. Circuits 2 (Eligible, prereq Circuits 1 passed)
+    {
+      id: 'off-3',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-circ-2',
+      rawCourseCode: '2104112',
+      rawCourseName: 'مدارهای الکتریکی ۲',
+      groupCode: '01',
+      instructor: 'دکتر خسروی',
+      dayOfWeek: 'شنبه',
+      startTime: '۰۸:۰۰',
+      endTime: '۱۰:۰۰',
+      location: 'دانشکده برق، کلاس ۱۰۵',
+      capacity: 30,
+      enrolledCount: 25,
+      examDate: '۱۴۰۵/۱۰/۲۰ - ۱۴:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 4. Circuit Lab (Corequisite of Circuits 2)
+    {
+      id: 'off-4',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-circ-lab',
+      rawCourseCode: '2104113',
+      rawCourseName: 'آزمایشگاه مدارهای الکتریکی',
+      groupCode: '02',
+      instructor: 'مهندس رستمی',
+      dayOfWeek: 'چهارشنبه',
+      startTime: '۱۴:۰۰',
+      endTime: '۱۶:۰۰',
+      location: 'آزمایشگاه مدارهای الکتریکی',
+      capacity: 15,
+      enrolledCount: 12,
+      source: 'extension' as const,
+      active: true,
+    },
+    // 5. Electronics 1 (Eligible, prereq Circuits 1 is passed)
+    {
+      id: 'off-5',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-elec-1',
+      rawCourseCode: '2104115',
+      rawCourseName: 'الکترونیک ۱',
+      groupCode: '01',
+      instructor: 'دکتر یزدانی',
+      dayOfWeek: 'یکشنبه',
+      startTime: '۱۰:۰۰',
+      endTime: '۱۲:۰۰',
+      location: 'دانشکده برق، کلاس ۲۰۱',
+      capacity: 35,
+      enrolledCount: 28,
+      examDate: '۱۴۰۵/۱۰/۲۲ - ۱۰:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 6. Computer Architecture (Eligible, prereq Logic is passed)
+    {
+      id: 'off-6',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-comp-arch',
+      rawCourseCode: '2104131',
+      rawCourseName: 'معماری کامپیوتر',
+      groupCode: '01',
+      instructor: 'دکتر حسینی',
+      dayOfWeek: 'سه‌شنبه',
+      startTime: '۰۸:۰۰',
+      endTime: '۱۰:۰۰',
+      location: 'دانشکده برق، کلاس ۱۰۲',
+      capacity: 30,
+      enrolledCount: 18,
+      examDate: '۱۴۰۵/۱۰/۲۴ - ۰۸:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 7. Microcontrollers (Eligible, prereq Logic is passed)
+    {
+      id: 'off-7',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-micro',
+      rawCourseCode: '2104132',
+      rawCourseName: 'میکروکنترلرها و ریزپردازنده‌ها',
+      groupCode: '01',
+      instructor: 'دکتر تقوی',
+      dayOfWeek: 'سه‌شنبه',
+      startTime: '۱۳:۳۰',
+      endTime: '۱۵:۳۰',
+      location: 'دانشکده برق، سایت میکرو',
+      capacity: 25,
+      enrolledCount: 20,
+      examDate: '۱۴۰۵/۱۰/۲۶ - ۱۰:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 8. FPGA: MULTI-TRACK HIGHLIGHT!
+    // In Digital Systems: Prereqs are Arch + Micro (neither passed yet -> BLOCKED)
+    // In Electronics: Prereq is Logic (passed -> AVAILABLE)
+    {
+      id: 'off-8',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-fpga',
+      rawCourseCode: '2104133',
+      rawCourseName: 'طراحی سیستم‌های دیجیتال با FPGA',
+      groupCode: '01',
+      instructor: 'دکتر میرزایی',
+      dayOfWeek: 'دوشنبه',
+      startTime: '۱۳:۳۰',
+      endTime: '۱۵:۳۰',
+      location: 'آزمایشگاه FPGA',
+      capacity: 20,
+      enrolledCount: 14,
+      examDate: '۱۴۰۵/۱۰/۲۸ - ۱۴:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 9. Engineering Math (BLOCKED: Prereq DiffEq is not passed yet)
+    {
+      id: 'off-9',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-engmath',
+      rawCourseCode: '2104104',
+      rawCourseName: 'ریاضیات مهندسی',
+      groupCode: '01',
+      instructor: 'دکتر صابری',
+      dayOfWeek: 'شنبه',
+      startTime: '۱۰:۰۰',
+      endTime: '۱۲:۰۰',
+      location: 'دانشکده فنی، کلاس ۳۰۴',
+      capacity: 40,
+      enrolledCount: 35,
+      examDate: '۱۴۰۵/۱۰/۱۶ - ۱۰:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 10. Signals & Systems (BLOCKED: Prereq EngMath is not passed)
+    {
+      id: 'off-10',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-signals',
+      rawCourseCode: '2104114',
+      rawCourseName: 'سیگنال‌ها و سیستم‌ها',
+      groupCode: '01',
+      instructor: 'دکتر محمودی',
+      dayOfWeek: 'چهارشنبه',
+      startTime: '۰۸:۰۰',
+      endTime: '۱۰:۰۰',
+      location: 'دانشکده برق، کلاس ۱۰۱',
+      capacity: 35,
+      enrolledCount: 22,
+      examDate: '۱۴۰۵/۱۰/۳۰ - ۱۰:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 11. Internship (BLOCKED by Min Units rule: requires 80 units, student has ~25 units)
+    {
+      id: 'off-11',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-internship',
+      rawCourseCode: '2104192',
+      rawCourseName: 'کارآموزی مهندسی برق',
+      groupCode: '01',
+      instructor: 'دفتر ارتباط با صنعت',
+      dayOfWeek: 'پنج‌شنبه',
+      startTime: '۰۹:۰۰',
+      endTime: '۱۱:۰۰',
+      capacity: 100,
+      enrolledCount: 15,
+      source: 'manual' as const,
+      active: true,
+    },
+    // 12. General Islamic Studies (AVAILABLE)
+    {
+      id: 'off-12',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-gen-islam-1',
+      rawCourseCode: '1101003',
+      rawCourseName: 'اندیشه اسلامی ۱ (مبدأ و معاد)',
+      groupCode: '۰۳',
+      instructor: 'حجت‌الاسلام موسوی',
+      dayOfWeek: 'سه‌شنبه',
+      startTime: '۱۰:۰۰',
+      endTime: '۱۲:۰۰',
+      location: 'ساختمان علوم انسانی، کلاس ۱۰۲',
+      capacity: 50,
+      enrolledCount: 41,
+      examDate: '۱۴۰۵/۱۰/۱۹ - ۱۴:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+    // 13. General Morals (AVAILABLE)
+    {
+      id: 'off-13',
+      termId: 'term-1405-1',
+      campusId: 'camp-srbiau',
+      courseId: 'crs-gen-morals',
+      rawCourseCode: '1101004',
+      rawCourseName: 'آیین زندگی (اخلاق کاربردی)',
+      groupCode: '۰۱',
+      instructor: 'استاد کریمی',
+      dayOfWeek: 'دوشنبه',
+      startTime: '۰۸:۰۰',
+      endTime: '۱۰:۰۰',
+      location: 'ساختمان علوم انسانی، کلاس ۱۰۸',
+      capacity: 45,
+      enrolledCount: 30,
+      examDate: '۱۴۰۵/۱۰/۲۱ - ۱۰:۰۰',
+      source: 'extension' as const,
+      active: true,
+    },
+  ];
+
+  const importBatches = [
+    {
+      id: 'batch-demo-1',
+      userId: 'usr-student-1',
+      termId: 'term-1405-1',
+      source: 'extension' as const,
+      schemaVersion: '1.0',
+      totalRecords: 12,
+      matchedRecords: 11,
+      reviewRecords: 1,
+      invalidRecords: 0,
+      createdAt: '2026-02-10T11:30:00.000Z',
+    },
+  ];
+
+  const importRecords = [
+    {
+      id: 'rec-demo-1',
+      batchId: 'batch-demo-1',
+      rawData: {
+        courseCode: '2104133',
+        courseName: 'طراحی سیستم‌های دیجیتال با FPGA',
+        group: '01',
+        instructor: 'دکتر میرزایی',
+        units: 3,
+        day: 'دوشنبه',
+        startTime: '۱۳:۳۰',
+        endTime: '۱۵:۳۰',
+        capacity: 20,
+        availableCapacity: 6,
+      },
+      matchedCourseId: 'crs-fpga',
+      status: 'MATCHED' as const,
+      reviewReason: 'تطبیق دقیق بر اساس کد درس',
+    },
+  ];
+
+  const academicSettings: any = {
+    normalMinUnits: 12,
+    normalMaxUnits: 20,
+    gpaBonusThreshold: 17.0,
+    gpaBonusMaxUnits: 24,
+    summerMinUnits: 1,
+    summerMaxUnits: 8,
+    finalSemesterMaxUnits: 24,
+    finalSemesterThresholdUnits: 24,
+    finalSemesterRuleEnabled: true,
+  };
+
+  return {
+    users,
+    universities: [],
+    provinces,
+    campuses,
+    degreeLevels,
+    majors,
+    tracks,
+    entryYears,
+    academicTerms,
+    curricula,
+    courses,
+    curriculumCourses,
+    academicRules,
+        courseOfferings,
+    studentProfiles: [],
+    studentPassedCourses: [],
+    importBatches,
+    importRecords,
+    academicSettings,
+    supportTickets: [],
+    supportMessages: [],
+    bugReports: [],
+    auditLogs: [],
+    errorLogs: [],
+    otpChallenges: [],
+    captchaChallenges: [],
+    syncJobs: [],
+    syncSnapshots: [],
+  };
+}
