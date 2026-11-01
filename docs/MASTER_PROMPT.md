@@ -1,194 +1,120 @@
-# DARSCHYN Master Development Prompt
+# قرارداد اصلی توسعهٔ درس‌چین برای برنامه‌نویسان و عامل‌های هوش مصنوعی
 
-> Canonical project brief and operating contract for any AI coding agent working on DARSCHYN (درس‌چین). Read this file before planning or changing code. If it conflicts with a more recent explicit instruction from the project owner, follow the newer instruction and update this document only when appropriate.
+> **مرجع فارسی و دائمی عملیات توسعه.** قبل از برنامه‌ریزی یا تغییر کد این سند، [دستورالعمل عامل‌ها](../AGENTS.md)، [تصمیم‌های مالک](OWNER_DECISIONS_FA.md)، [استاندارد زبان فارسی](PERSIAN_DOCUMENTATION_STANDARD_FA.md) و [منشور امنیت](PERMANENT_SECURITY_POLICY_FA.md) را مطالعه کنید. تصمیم صریح تازهٔ مالک بر دستورهای تاریخی مقدم است و باید در GitHub ثبت شود.
 
-## 0. Mandatory GitHub record of **every** owner instruction
+## صفر. ثبت همیشگی تمام درخواست‌های مالک
 
-**The owner confirmed this as a permanent top-priority project rule on 2026-10-25.** Every owner request, feature idea or plan, changed priority, reported defect, decision, restriction, pending question and superseding instruction **must be committed into the DarsChin GitHub repository**, even if the actual implementation is postponed. Do not rely on chat history, agent memory or an unmerged branch as the canonical record. For each new instruction:
+این الزام از ۲۵ اکتبر ۲۰۲۶ برقرار است: **هر دستور، گزارش ایراد، ایده، برنامهٔ توسعه، تغییر اولویت، محدودیت، پرسش باز و تصمیم جایگزین مالک باید در ریپو ثبت شود**؛ حتی اگر هنوز پیاده نشده باشد.
 
-1. Read and append a dated, non-sensitive entry to [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md), including a stable reference ID, priority, implementation/verification status, dependency and related PR/Issue; link to a more detailed document when appropriate.
-2. Update the relevant product/architecture/testing/academic document, and [INDEX.md](INDEX.md) for new documents. Mark superseded decisions explicitly instead of quietly deleting history; apply the owner's newer explicit instruction.
-3. Show what was **committed on a branch**, what was **merged into main**, and what was only **planned, untested or undeployed**. Test evidence must belong to the exact commit.
-4. Never commit personal data, live student responses, secrets or private project material just to preserve an instruction.
-5. Read [AGENTS.md](../AGENTS.md) as the stable agent contract. All other sections of this prompt remain subordinate to owner decisions recorded after them, within security and policy boundaries.
+1. در `OWNER_DECISIONS_FA.md` یادداشت تاریخ‌دار با شناسهٔ پایدار، دامنه، اولویت، وضعیت اجرایی و آزمون و مرجع PR/Issue اضافه کنید.
+2. سند تخصصی محصول/معماری/امنیت/آزمون را نیز به‌روز کنید؛ سند تازه در `INDEX.md` فهرست شود. تصمیم منسوخ را حذف نکنید، بلکه با تصمیم جایگزین مرتبط کنید.
+3. تفاوت «روی شاخه نوشته شد»، «PR ایجاد شد»، «در main ادغام شد»، «تست شد» و «استقرار یافت» را دقیق گزارش کنید.
+4. اطلاعات دانشجوی واقعی، شماره/رمز شخصی، خروجی خصوصی یا Secret را برای مستندسازی وارد Git نکنید.
+5. هیچ عامل حق ندارد از حافظهٔ چت یا شاخهٔ ادغام‌نشده به‌جای فایل‌های مرجع و وضعیت واقعی GitHub نتیجه‌گیری قطعی کند.
 
-**Immediate owner priority:** a sale-ready, thoroughly verified **demand-survey workflow** (multi-entry-year surveys, per-student manager reports and self-reported final-term segmentation) before secondary features. Target is approximately 2–3 weeks after 2026-10-25, not an unverified production promise. Prefer clean code, local quality gates and safe authorization over rushed merges.
+**درخواست تازهٔ ۱ نوامبر ۲۰۲۶:** تمام متن‌های مستندات رسمی و توضیحات قابل خواندنِ ریپو باید فارسی باشند؛ پروژه هویت ایرانی و پیش‌فرض RTL خود را حفظ کند. دستورهای فنی و متن حقوقی `LICENSE` استثنا هستند و تغییر نمی‌کنند.
 
-## 1. Mission and product boundary
+**اولویت تاریخی ثبت‌شده در ۲۵ اکتبر:** نیازسنجی واقعی و آزموده‌شدهٔ گروه برق علوم و تحقیقات، با پوشش چند ورودی، گزارش فردی محرمانه و تفکیک خوداظهاری فارغ‌التحصیلی. بازهٔ ۲ تا ۳ هفتهٔ اعلام‌شده در آن تاریخ یک **هدف برنامه‌ریزی** بود، نه وعدهٔ نصب و تأیید کیفیت.
 
-Build DARSCHYN as a reliable, secure, maintainable web platform that helps Islamic Azad University (IAU) students understand course eligibility, plan course selection, compare offerings, build a weekly timetable, and helps authorized academic/department staff manage curriculum data and estimate course demand.
+## یک. مأموریت و مرز محصول
 
-**The web application is the product. The Chrome extension is only one data-collection adapter for Educationalyar (آموزشیار).** Do not treat the extension as the main application or couple academic rules to a particular ingestion source.
+درس‌چین سامانه‌ای امن، قابل نگهداری و کاربرپسند برای دانشجویان دانشگاه آزاد است تا صلاحیت اخذ درس را بفهمند، برنامه بسازند، گروه‌ها را مقایسه و اولویت‌بندی کنند، تداخل را بررسی و برای ثبت رسمی در سامانهٔ دانشگاه آماده شوند. مدیر مجاز دادهٔ چارت، شرایط دروس و تقاضای واقعی دانشجویان را اداره می‌کند.
 
-The platform must explain why a course is eligible or blocked. It is an assistant/planning tool, not the official university registration system; a demand survey is not registration and does not promise that a course will be offered.
+**محصول، اپلیکیشن وب است؛ افزونهٔ کروم فقط یکی از درگاه‌های جمع‌آوری دادهٔ آموزشیار است.** نیازسنجی ثبت‌نام رسمی نیست و پاسخ مثبت موتور برنامه‌ریز مجوز رسمی دانشگاه یا تضمین ارائهٔ درس محسوب نمی‌شود.
 
-## 2. Autonomy and approval boundary
+پیش‌فرض تجربهٔ کاربر ایرانی باید **فارسی معیار، راست‌به‌چپ، موبایل‌محور، ساده و شفاف** باشد. پشتیبانی زبان دیگری اگر قبلاً تأیید شده است حذف نشود؛ ناوبری انگلیسی متناسب با چیدمان چپ‌به‌راست بماند.
 
-The project owner has delegated broad autonomy for product ideation and implementation. Work independently on non-academic implementation, architecture, UX, accessibility, security, testing, documentation, maintainability, and operational reliability.
+## دو. استقلال توسعه و مرز تأیید
 
-**Explicit approval is mandatory before changing, inventing, broadening, narrowing, or reinterpreting any educational policy or eligibility rule.** When an implementation task exposes an ambiguous academic rule:
-1. Preserve current behavior rather than silently changing it.
-2. Document the exact ambiguity and affected behavior.
-3. Ask the owner a focused question and wait for approval before changing the rule.
-4. Continue independent work on unrelated, non-policy areas where possible.
+مالک برای بررسی ایده و اصلاح **فنی، امنیت، دسترس‌پذیری، UX، آزمون و معماری** اختیار توسعهٔ منسجم داده است؛ بااین‌حال تغییر بدون مجوز در **مقررات آموزشی، معنای پیش‌نیاز/هم‌نیاز، استثنای مردودی، ترم آخر، حداقل واحد، آستانهٔ معدل، انتخاب گرایش یا هر معافیت خاص درس** ممنوع است.
 
-Examples of academic-policy changes requiring approval include prerequisite/corequisite semantics, failed-prerequisite exceptions, final-semester exceptions, unit limits, GPA thresholds, curriculum/track eligibility, and course-specific exceptions.
+در برخورد با قانون آموزشی مبهم، رفتار معتبر موجود را بدون گسترش حفظ و ابهام را با شناسهٔ چارت، اثر و مستند رسمی ثبت کنید؛ برای تغییر معنا از مالک تأیید صریح بگیرید و کارهای مستقل دیگر را ادامه دهید. اصلاح امنیتِ دورزدن قانون یا رد دادهٔ نامعتبر، مجوز **اختراع قانون تازه** نیست.
 
-## 2.1 Per-curriculum academic condition configuration (owner decision 2026-10-25)
+### شرایط درس وابسته به چارت
 
-**Owner decision [OWN-022–023](OWNER_DECISIONS_FA.md) overrides earlier hardcoded assumptions.** Course-specific requirements, including internship/project credit thresholds, are **admin-editable data scoped to an explicit university/campus/degree/major/entry-year/curriculum version**, not constants or universals. A course may have zero, one or multiple prerequisites/corequisites; support minimum passed-credit predicates and AND/OR relations. Never insert real numeric thresholds automatically into new chart conditions, and never ask the owner to enumerate per-course thresholds; the owner will maintain them in the panel. Prior sample course names/numbers are not official policy.
+طبق تصمیم‌های [OWN-022 و OWN-023](OWNER_DECISIONS_FA.md)، حداقل واحد گذرانده برای پروژه/کارآموزی و هر شرط ویژه باید به‌صورت دادهٔ **قابل ویرایش مدیر و مختص دانشگاه، واحد، مقطع، رشته، ورودی و نسخهٔ چارت** باشد؛ نه عدد ثابت یا حکم همگانی. هر درس ممکن است صفر، یک یا چند پیش‌نیاز/هم‌نیاز، شرط حداقل واحد و ترکیب AND/OR داشته باشد. بدون اطلاعات مصوب، هیچ مقدار واقعی را به‌صورت خودکار در چارت ننویسید.
 
-**Educational-policy semantics and overrides remain a separate approved layer.** Before asking the owner anything, review the applicable current regulation, issued by a verifiable official authority, including edition/date/entry-year scope. Ask only unresolved broad interpretation questions with a source reference. If the valid source cannot be verified, disclose the gap and never claim an officially approved eligibility result. See [academic source research](ACADEMIC_REGULATION_RESEARCH_FA.md).
+قبل از پرسش دربارهٔ تفسیر آیین‌نامه، [پژوهش منابع مقررات](ACADEMIC_REGULATION_RESEARCH_FA.md) را با مرجع رسمی، تاریخ، نسخه و محدودهٔ ورودی بررسی کنید. هرجا سند قابل اعتبارسنجی نبود، نتیجه را «نیازمند تأیید» نشان دهید.
 
-## 3. Confirmed academic requirements
+**تذکر قطعی معارف:** تا زمانی که مالک «چارت معارف دانشگاه آزاد برای کارشناسی پیوستهٔ غیرپزشکی»، استثناها و شیوهٔ چیدمان آن را توضیح و تأیید نکرده، هیچ قانون قطعی معارف به موتور افزوده نشود.
 
-Treat these as owner-confirmed requirements, but inspect current code and tests before claiming they are implemented correctly:
+## سه. نیازمندی‌های علمی که باید از تصمیم‌های معتبر خوانده شوند
 
-- A prerequisite normally must have been passed.
-- Example: Mathematics 2 has Mathematics 1 as its prerequisite; do not relabel this relationship as a co-requisite.
-- Where a true co-requisite applies, the student must either have already passed the required course or select that course in the same target-term selection set.
-- The owner has specified the same paired-selection behavior for an applicable IAU failed-prerequisite exception: if the student is permitted to take the failed prerequisite together with its dependent course, the required course must be selected alongside the dependent course in that same term.
-- If the required course is neither passed nor included in the same selection set, block the dependent course and clearly identify the missing course. Enforce this on the server, not only in the UI.
-- The failed-prerequisite exception is limited to the applicable approved IAU rule. Do not generalize it to every prerequisite relationship.
-- Eligibility must be evaluated against the student's curriculum, entry-year, major, track where applicable, and academic history.
-- Previously passed courses are not normally selectable for repeat study unless an explicitly approved rule allows it.
-- Normal term load: 12–20 units.
-- If the **previous term's GPA** is above 17, the maximum may rise to 24 units. Do not substitute cumulative GPA.
-- Final semester: 2–24 units, subject to the approved policy configuration.
-- Extra-unit courses must be configurable by an administrator (for example, an `isExtraUnit` property), not hardcoded by course name.
-- These rules must be enforced by the canonical policy/eligibility engine. Do not create a second competing implementation in the demand survey, frontend, extension, or import code.
+- پیش‌نیاز در حالت عادی باید قبلاً گذرانده شده باشد؛ نمونهٔ «ریاضی ۲ پس از ریاضی ۱» نشان‌دهندهٔ رابطهٔ پیش‌نیازی است، نه هم‌نیازی.
+- هم‌نیاز واقعی می‌تواند با درس مقصد در یک نیمسال انتخاب شود یا قبلاً گذرانده شده باشد.
+- استثنای مردودی فقط در دامنهٔ قانون **مصوب و قابل اعمال** مجاز است؛ در صورت نیاز به اخذ هم‌زمان، هر دو درس باید در مجموعهٔ یک نیمسال دانشجو باشند.
+- اگر درس لازم نه گذرانده شده و نه در مجموعهٔ مجاز همان نیمسال آمده، درس وابسته باید با دلیل روشن مسدود شود.
+- صلاحیت به چارت فعال و یکتا، دانشگاه، واحد، مقطع، رشته، ورودی، گرایش واقعاً انتخاب‌شده و سوابق شخص بستگی دارد.
+- درس قبلاً گذرانده معمولاً دوباره قابل انتخاب نیست مگر استثنای صریح مصوب.
+- در دادهٔ تاریخی مقررات، ترم عادی ۱۲ تا ۲۰ واحد، احتمال سقف ۲۴ با معدل **ترم قبلی** بالای ۱۷ و ترم آخر ۲ تا ۲۴ مطرح شده‌اند؛ این اعداد تنها در چهارچوب تنظیمات مصوب و دامنهٔ معتبر قابل استفاده‌اند. معدل کل جایگزین معدل ترم قبل نیست.
+- درس خارج از سقف واحد تنها با ویژگی صریح `isExtraUnit` و تصمیم مصوب مدیر معتبر است؛ **از نام فارسی درس استثنا حدس نزنید**.
+- منطق تحصیلی در موتور واحد دامنه باقی بماند؛ فرانت‌اند، نیازسنجی و افزونه نباید نسخه‌های ناسازگار بسازند.
 
-If existing code conflicts with a confirmed rule, first add a focused regression test or evidence report where feasible, then propose the smallest safe correction. Do not use the need for a code fix as permission to introduce additional academic policy.
+اگر کد موجود با الزام قطعیِ مستند مغایر است، ابتدا تست رگرسیون یا گزارش مستند بنویسید؛ اصلاح را بدون افزودن تفسیر تازه انجام دهید.
 
-## 4. Core product capabilities
+## چهار. بخش‌های اصلی محصول
 
-### Student experience
-- Student profile and academic history.
-- Curriculum-aware eligible and blocked offerings with clear explanations.
-- Course prioritization; copying a prioritized item copies only that course's code.
-- A weekly timetable generated from selected offerings, with schedule collision detection.
-- Eligibility recalculates when academic history, chosen offerings, or the target selection set changes.
-- Accessible, responsive, understandable Persian-first experience; preserve English-language support where the app provides it.
+### محیط دانشجو
 
-### Course demand assessment
-- An authorized department/group manager selects a term and applicable cohort context, then creates a survey using courses from the approved curriculum.
-- Students see only surveys applicable to their academic profile.
-- The student can select only courses allowed by the canonical eligibility engine.
-- For dependencies that require paired selection, evaluate the proposed set as a whole: the required course must already be passed or be included in the same response.
-- Revalidate every submission on the server; never trust client-side eligibility.
-- One current response per student per survey; editing replaces the prior selection.
-- Demand counts are derived from response records. Preserve survey history and audit events.
-- Show aggregate results by default; do not expose individual student choices without an approved operational need.
-- Clearly state that demand assessment is not official course registration and does not guarantee a course will be offered.
+پرونده و تاریخچهٔ درسی؛ ارائه‌های قابل انتخاب یا مسدود با توضیح؛ صف فشردهٔ اولویت‌ها و کپی **فقط کد همان درس**؛ گروه اصلی و جایگزین‌ها؛ جدول پیوستهٔ هفتگی؛ تشخیص دقیقه‌ای تداخل کلاس و امتحان؛ محاسبهٔ مجدد پس از تغییر سابقه یا گروه‌ها؛ راهنمای مرحله‌به‌مرحله و UX مناسب موبایل.
 
-### Administration
-- Manage courses, curricula, curriculum-to-course mappings, tracks, academic rules, offerings, users, roles/permissions, and applicable configuration.
-- Validate on the server, apply least privilege, and audit sensitive changes.
-- Do not bypass authorization in UI-only logic.
+### نیازسنجی
 
-### Ingestion and synchronization
-- Normalize incoming records into canonical offerings independent of source.
-- Track ownership, provenance, term, source timestamps, sync jobs, snapshots, and reconciliation outcomes.
-- Replaying the same complete snapshot should be idempotent.
-- Partial, malformed, or failed syncs must never deactivate unseen active offerings.
-- Sync history must survive process restarts.
-- Validate chunk order, payload size/schema, ownership, job state, and finalization before processing.
-- Prefer official authorized APIs where available; retain the extension as one adapter rather than hardcoding source behavior into the domain engine.
+مدیر دارای حوزهٔ مجاز برای نیمسال و یک، چند یا همهٔ ورودی‌های مجاز فرم می‌سازد؛ دانشجوی هر ورودی فقط محتوای سازگار با چارت خودش را می‌بیند. درخواست کامل با قواعد موجود در سرور بررسی می‌شود و پیش‌نیازهای نیازمند انتخاب هم‌زمان در **کل مجموعه** اعتبارسنجی می‌شوند. هر فرد یک پاسخ فعلی در هر فرم دارد و ویرایش آن نسخهٔ قبلی را جایگزین می‌کند. تاریخچه، گزارش تجمیعی و در صورت مجوز صریح، گزارش فردی قابل مشاهده است؛ دادهٔ شخصی نباید برای مدیر نامرتبط افشا شود.
 
-**Collector freeze:** While the Educationalyar offered-courses interface/source is unavailable or has not been made available for verification, do not live-debug, invent portal DOM/data, or perform speculative refactors to the collector. Work on isolated normalization, API contracts, sync reconciliation, and fixture-based tests is allowed when it does not assume unverified portal behavior. Clearly label fixture checks versus live verification.
+**نیازسنجی مساوی ثبت رسمی درس یا تعهد ارائه نیست.**
 
-## 5. Architecture principles
+### مدیریت
 
-Expected layers:
-1. React/Vite client UI.
-2. Express API with authentication and server-side authorization.
-3. Domain services for eligibility, academic limits, schedule conflicts, and recommendations.
-4. Source-specific ingestion adapters.
-5. Validation, normalization, deduplication, and complete-snapshot reconciliation.
-6. Persistence for users, academic data, offerings, sync history, surveys/responses, and audit records.
+مدیریت دروس، چارت‌ها، ورودی‌ها و گرایش‌ها، پیش‌نیاز، گروه‌های ارائه، کاربران، نقش و پیکربندی مجاز؛ اعتبارسنجی سمت سرور، حداقل دسترسی، ممیزی و جلوگیری از نمایش امکانات مدیر برای دانشجو.
 
-Keep academic domain rules independent from external data sources. Avoid duplicate frontend/backend policy logic; the server and canonical domain engine are authoritative. Preserve existing capabilities unless a change is deliberate, documented, and regression-tested.
+### ورود و همگام‌سازی
 
-## 6. Security and privacy requirements
+درگاه‌های ورودی مستقل با بررسی منبع، مالک، نیمسال، ساختار داده و ترتیب بخش‌ها؛ نرمال‌سازی، حذف تکرار، بازپخش امن، حفظ سوابق و عدم غیرفعال‌سازی اطلاعات فعال در شکست. دادهٔ افزونه فقط وارد صف بررسی مدیر شود. تا وقتی نمونهٔ DOM واقعی آموزشیار موجود نیست، توسعه‌دهنده حق ندارد آن را حدس بزند یا تغییرات بدون آزمون زنده را معتبر اعلام کند.
 
-Treat security issues as high priority. Inspect and fix confirmed issues autonomously when the fix does not change academic policy:
-- Never expose secrets, tokens, hashes, recovery material, personal data, or privileged bootstrap credentials in source control, public assets, logs, demo endpoints, or API responses.
-- Keep privileged access server-enforced; no client-controlled role escalation or demo bypass in production.
-- Enforce authorization and object ownership on every protected route to prevent IDORs.
-- Validate and bound all request bodies, IDs, file imports, chunk counts, and payload sizes.
-- Use redacted structured logging; avoid logging passwords, OTPs, tokens, or student academic details unnecessarily.
-- Separate test/demo data from real development/production data.
-- Validate environment configuration and fail safely in production when required secrets/configuration are missing.
-- Do not print or reproduce live secrets while reporting an issue. Never commit credentials to the master prompt or documentation.
+## پنج. معماری پیشنهادی
 
-## 7. Required development workflow
+React/Vite برای UI، Express برای API و مجوز، موتور مستقل برای صلاحیت/تداخل/پیشنهاد، درگاه منبع، اعتبارسنجی/تطبیق و ذخیره‌سازی سوابق کاربر/داده/ممیزی. قوانین دامنه در UI یا افزونه تکرار نشوند. قابلیت موجود بدون تصمیم مستند و تست حذف نشود. [معماری](ARCHITECTURE.md).
 
-For each meaningful task:
-1. **Inspect** current branch, relevant code, tests, documentation, and repository status before editing.
-2. **State evidence**: distinguish observed source behavior from assumptions, earlier claims, and unavailable external verification.
-3. **Plan** the smallest coherent change and identify any academic-policy boundary.
-4. **Implement** on a dedicated branch; do not commit directly to `main`.
-5. **Test** targeted regression tests first, then typecheck, full tests, and production build where possible.
-6. **Review** diffs for regressions, privacy/security issues, accidental generated files, and removed capabilities.
-7. **Report** exact changed files, commit/branch/PR links, checks actually executed, failures, and remaining risks.
+## شش. الزامات امنیت و حریم خصوصی
 
-Do not claim a test, build, CI run, deployment, or live integration passed unless it was actually run and its result observed. If execution is unavailable, label the change code-reviewed but untested and give a reproducible next step. Do not merge PRs or change production state without an explicit request.
+- هیچ رمز، توکن، هش، کلید بازیابی، اطلاعات دانشجو یا فایل تولید حاوی Secret در Git، صفحات عمومی، پاسخ API یا لاگ منتشر نشود.
+- مجوز و مالکیت رکورد برای **هر مسیر محافظت‌شده** سمت سرور بررسی شود؛ دسترسی افقی (IDOR) و ارتقای نقش از دادهٔ کلاینت ممنوع است.
+- شناسه، حجم/تعداد درخواست، فایل واردشده و Snapshot محدود و اعتبارسنجی شوند.
+- خطای ذخیره، ممیزی و احراز هویت باید امن و قابل بازگشت باشد؛ جزئیات داخلی در پاسخ عمومی لو نروند.
+- حساب نمایشی و Seed واقعی از هم جدا باشند؛ تنظیمات Production ناقص باید امن و بسته شکست بخورند.
+- مخزن عمومی دسترسی به سرور شخصی مالک یا دادهٔ واقعی ایجاد نمی‌کند.
+- [چک‌لیست امنیتی شخصی مالک](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) تا تأیید واقعی مراحل باز می‌ماند.
 
-## 8. Testing expectations
+## هفت. گردش کار لازم برای هر تغییر
 
-Prefer regression tests for:
-- Authentication success/failure, role redirects, token/session behavior, and server-side authorization.
-- Cross-user object access and role escalation denial.
-- Academic eligibility positive and negative cases, without changing policy unless approved.
-- Prerequisite versus co-requisite distinction; paired selection; failed-prerequisite exception boundaries; final-semester and unit-limit boundaries.
-- Dynamic eligibility recalculation and server revalidation of the complete selection set.
-- Sync ownership, chunk order/duplicates, payload validation, interrupted/failed jobs, idempotent replay, persistence after restart, and reconciliation safety.
-- Demand survey permissions, scope, opening/closing state, duplicate response prevention, tampered course IDs, aggregate counts, and privacy.
-- Timetable conflicts and course/offering identity.
-- Build packaging and extension release artifact correctness.
+1. SHA `main`، PRهای باز، وضعیت مسئله، کد، آزمون‌ها و اسناد مربوطه را بررسی کنید.
+2. دادهٔ مشاهده‌شده و حدس/گزارش قدیمی را از هم جدا کنید.
+3. یک تغییر منسجم و قابل سنجش طراحی کنید و مرز تأیید مقررات را مشخص کنید.
+4. شاخهٔ مستقل کوتاه‌عمر بسازید؛ مستقیم روی `main` کار نکنید.
+5. آزمون هدفمند، سپس `bun run verify` و برای تغییرات مناسب `smoke:api` اجرا کنید.
+6. Diff را از حیث دادهٔ خصوصی، رگرسیون، فایل اتفاقی، رفتار حذف‌شده و عملکرد موبایل/دسکتاپ مرور کنید.
+7. PR و توضیحات آن را **به فارسی** ثبت کنید؛ نتیجهٔ واقعی با SHA دقیق، محدودیت‌ها و فایل‌ها را اعلام کنید.
+8. پس از گیت سبز و مجوز مالک، ادغام کنید و `main` را دوباره با CI/آزمون معتبر تأیید کنید. هیچ‌وقت موفقیت یا استقرار ندیده را ادعا نکنید.
 
-Use deterministic fixtures and isolated temporary/test persistence. Tests against fixtures do not prove that Educationalyar currently works.
+## هشت. آزمون‌های ضروری
 
-## 9. Repository and delivery discipline
+احراز هویت، نقش و نشست، منع دسترسی کاربر دیگر، قواعد مثبت/منفی پیش‌نیاز و هم‌نیاز و استثناهای تصویب‌شده، ارزیابی کل مجموعهٔ دروس، محدودهٔ چارت/گرایش/ورودی، محدودیت سقف، تداخل کلاس/امتحان و شناسهٔ گروه، هویت کار واردسازی، ترتیب و تکرار Snapshot، آزمون شکست دیسک و Restart، محرمانگی گزارش نیازسنجی، ساخت و افزونه.
 
-- Treat the current default branch as the stable baseline; work in focused feature/fix branches and pull requests.
-- Never merge or deploy without explicit owner instruction.
-- Do not add dependencies or change dependency versions without a clear need; document risk and verify compatibility.
-- Do not delete duplicate-looking app/extension directories, generated artifacts, data files, migrations, or legacy code until the canonical source and runtime references have been verified.
-- Avoid large unrelated refactors. Preserve functionality and explain any intentional behavior changes.
-- Keep project status and architecture documentation accurate: distinguish implemented, partially implemented, proposed, tested, and live-verified capabilities.
-- A green status badge or successful HTTP response is not proof of correctness.
+**دادهٔ نمونه ثابت نمی‌کند آموزشیار زنده هم سازگار است.** تست‌ها باید از دیتابیس و اعتبارنامهٔ ساختگی مجزا استفاده کنند.
 
-## 10. Current known baseline / next priorities
+## نه. انضباط نگهداری مخزن و انتشار
 
-The following were identified in prior source review and must be re-verified against the active branch before relying on them:
-- React/Vite frontend and Express API exist; package scripts include `lint` (TypeScript), `test` (Vitest), and `build`.
-- Authentication previously mishandled the object returned by `login()`; a fix exists on the current development branch and needs executed regression checks.
-- Sync history persistence and accessors have been adjusted on the development branch; the current tests may not fully prove persistence across a real restart.
-- `server/routes/sync.ts` previously accepted snapshots and marked jobs complete while explicitly leaving processing into canonical `courseOfferings` unimplemented. Audit and build this safely with fixture tests, without inventing Educationalyar behavior.
-- Course demand is documented as a proposed feature; its full UI/API/persistence implementation remains outstanding.
-- The academic eligibility engine has a same-term planned-course input, but verify complete-set semantics and edge cases before integrating demand selection.
-- CI configuration and Actions execution have not been confirmed as working. Never claim CI passed without a real run.
-- Production readiness and live Educationalyar verification are not established.
+`main` مرجع پایدار است. وابستگی بدون نیاز موجه، بررسی سازگاری و آزمون ارتقا نیابد. فایل‌های مشابه، داده، مهاجرت و خروجی ZIP بدون ردیابی مبنا حذف نشوند. وضعیت «پیاده شده»، «تست شده»، «روی محیط آزمایشی» و «در تولید» همیشه جدا ثبت شود. رنگ سبز گیت یا HTTP ۲۰۰ دلیل قطعی سلامت تمام سامانه نیست. فارسی‌نویسی و قابلیت دسترسی داخل ایران الزامی هستند.
 
-Recommended priority order:
-1. Verify branch/PR state and run available checks.
-2. Improve test isolation and persistence/security regression coverage.
-3. Harden sync job/snapshot API validation and idempotent reconciliation using fixtures.
-4. Complete and test authentication/authorization fixes.
-5. Implement demand survey domain/API/persistence/UI using canonical eligibility, after inspecting policy behavior.
-6. Improve admin UX, accessibility, error handling, observability, deployment/recovery, and documentation.
-7. Verify collector only when the real supported Educationalyar source is available.
+## ده. اولویت‌های تاریخی و نیازهای فعلی
 
-## 11. Definition of done
+در گزارش قدیمی: رفع ورود نقش‌محور، پایدارسازی تاریخچهٔ Sync، سخت‌سازی OTP، توسعهٔ نیازسنجی، بررسی افزونه و UI، سپس استقرار و امنیت مطرح بودند. بخش‌هایی از آن‌ها در PRهای بعدی تکمیل شده‌اند؛ **وضعیت تاریخیِ «تست‌نشده» را به امروز تعمیم ندهید**. قبل از برنامه‌ریزی جدید آخرین PR/CI و اسناد تصمیم مالک را بررسی کنید.
 
-A task is complete only when:
-- Its intended behavior is explicit and the change is scoped.
-- Academic policy was not silently changed.
-- Server-side validation/authorization exists where relevant.
-- Regression tests cover the critical behavior.
-- The change has been reviewed for security, privacy, and regressions.
-- Actual verification status is reported honestly.
-- Documentation and the PR explain remaining limitations.
+اولویت‌گذاری همواره بر پایهٔ ریسک امنیتی فعال، درستی انتخاب واحد، مسیر تا فارغ‌التحصیلی، نیازسنجیِ قابل استفاده، UX موبایل ایرانی، پایداری داده و آزمون واقعی انجام شود.
 
-**Working instruction:** Continue independently with the highest-value safe task. Do not stop after writing a plan or documentation. If a policy decision is required, isolate that decision, ask the owner, and continue unrelated safe engineering work.
+## یازده. معیار پایان کار
+
+در پایان هر نوبت باید محدودهٔ تغییر، تأیید یا عدم تغییر مقررات، مجوز سمت سرور، تست‌های مثبت و منفی، مرور امنیت/حریم خصوصی، نتیجهٔ واقعی اجرای تست، سند فارسی، لینک PR/کامیت، خطرات باز و وضعیت استقرار مشخص باشند.
+
+**دستور ادامه:** کار فنی مؤثر را بر حسب اولویت ادامه دهید؛ صرفاً برنامه‌ریزی یا مستندسازی را جای توسعهٔ قابل مشاهده نگذارید. هرجا تصمیم دانشگاهی نیاز به تأیید دارد، آن بخش را جدا و کار مستقل امن را پیش ببرید.
