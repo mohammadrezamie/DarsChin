@@ -24,6 +24,15 @@ export function completedRegistrationCourseIds(
     .map(step => step.courseId));
 }
 
+/** A removed/replaced group must not become checked again if later reselected. */
+export function pruneRegistrationTokens(
+  steps: readonly RegistrationStep[],
+  storedTokens: readonly string[],
+): string[] {
+  const current = new Set(steps.map(registrationProgressToken));
+  return storedTokens.filter(token => current.has(token));
+}
+
 /** Discard legacy, malformed and oversized values from tab storage. */
 export function parseStoredRegistrationTokens(raw: string | null): string[] {
   if (!raw || raw.length > 64_000) return [];
