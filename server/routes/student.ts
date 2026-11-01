@@ -560,7 +560,8 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     allCourses: db.courses,
     tracks: db.tracks,
     academicRules: db.academicRules,
-    
+    allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
+      db.academicSettings.finalSemesterRuleEnabled,
     passedCourses,
     currentOfferings: relevantOfferings,
     plannedOfferingIdsInSameTerm: plan.selectedOfferingIds,
