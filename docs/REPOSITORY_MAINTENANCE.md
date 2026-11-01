@@ -1,31 +1,33 @@
-# Repository maintenance checklist
+# برنامهٔ نگهداری دائمی مخزن درس‌چین
 
-This repo is a demo intended for quick future launch **after one-time infrastructure preparation**. The goal is repeatable delivery, not implying production readiness.
+درس‌چین یک پروژهٔ ایرانی و فارسی‌محور است. هدفِ نگهداری، انتشار تکرارپذیر، امن و قابل بررسی است؛ **وجود دمو به‌معنی آمادگی استقرار Production نیست.**
 
-## Weekly / before merging
+## چک‌لیست هفتگی و پیش از هر ادغام
 
-- [ ] Confirm default branch, open PRs and overlapping changes
-- [ ] Review CODEOWNERS-sensitive areas (`server/`, `src/domain/`, `extension/`, `data/`)
-- [ ] Check TypeScript, tests, and build at the **exact PR SHA** using a disposable runner when Actions quota is unavailable
-- [ ] Review credentials, user data, fixtures and binary artifacts in the diff
-- [ ] Confirm academic rules were not silently changed
-- [ ] Check lockfile/toolchain consistency; do not force-upgrade dependencies without compatibility review
-- [ ] Update README and release notes for operational or product changes
+- [ ] وضعیت `main`، PRهای باز، شاخه‌های متروک و تغییرات هم‌پوشان بررسی شود.
+- [ ] قسمت‌های حساس `server/`، `src/domain/`، `extension/` و داده‌های محلی طبق CODEOWNERS و منشور امنیت بازبینی شوند.
+- [ ] TypeScript، Vitest و Build روی SHA دقیق PR با دیتابیس مصنوعی اجرا شوند؛ اگر Actions محدود است، runner ایزوله جایگزین شود.
+- [ ] Diff از نظر دادهٔ هویتی، Secret، بکاپ، Fixture واقعی و فایل باینری ساخت بررسی شود.
+- [ ] هیچ مقررهٔ آموزشی، به‌ویژه چارت معارف، بدون تأیید مالک اعمال نشده باشد.
+- [ ] سازگاری نسخهٔ ابزارها و `bun.lock` و ریسک ارتقای وابستگی بررسی شود؛ آپدیت بی‌تست یا با `force` ممنوع است.
+- [ ] README، مستند فنی، دفتر تصمیمات مالک و تاریخچهٔ تغییرات **به فارسی** به‌روز شوند.
+- [ ] فایل جدید یا اصلاح‌شده طبق [استاندارد زبان فارسی](PERSIAN_DOCUMENTATION_STANDARD_FA.md) نوشته شود.
 
-## Release gate
+## گیت انتشار
 
-Use [deployment runbook](DEPLOYMENT.md). Freeze the release commit, validate the Express API separately from frontend preview, smoke-test a restart and isolated backup restore, and document rollback.
+از [راهنمای استقرار و بازگشت](DEPLOYMENT.md) استفاده کنید: SHA مشخص، آزمون جداگانهٔ Express API و فرانت‌اند، Restart، بکاپ/Restore ایزوله و طرح بازگشت. **اتصال فعلی VPS بدون مجوز تغییر نکند.**
 
-## Backlog / retained risks
+## ریسک‌ها و بدهی‌های فنی
 
-- [Issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4): classify the tracked JSON database and migrate runtime storage safely; do not rewrite Git history based on guesses
-- [Legacy PR #1](https://github.com/mohammadrezamie/DarsChin/pull/1): original large sync and UX feature; its contents were rebased onto the verified toolchain, but live-source assumptions must still be checked separately from fixtures
-- [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8): administrative response redaction, regression tested and merged
-- Resolve source duplication and packaging artifacts only after import/build provenance checks
+- [Issue شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4): داده و کلیدهای احتمالیِ موجود در تاریخچهٔ قدیمی Git، پاک‌سازی PR refs/cache و تعویض کلیدها.
+- [PR تاریخی شمارهٔ ۱](https://github.com/mohammadrezamie/DarsChin/pull/1): تغییرات بزرگ اولیهٔ UX و همگام‌سازی؛ بررسی منبع زندهٔ آموزشیار همچنان مستقل از دادهٔ نمونه لازم است.
+- [PR شمارهٔ ۸](https://github.com/mohammadrezamie/DarsChin/pull/8): اصلاح تاریخی محرمانگی خروجی‌های مدیریتی.
+- حذف کپی‌های به‌ظاهر مشابه یا فایل‌های تولیدی تنها پس از بررسی مسیر Build، انتشار و وابستگی‌ها مجاز است.
 
-## GitHub configuration guidance
+## تنظیمات GitHub
 
-- CODEOWNERS and PR templates are versioned in this repository.
-- `main` was unprotected during the October 24 review. Introduce branch protection when dependable checks and reviewer availability are established. Do not require an exhausted Actions check that nobody can satisfy.
-- Keep deploy keys and environment secrets in provider secret stores, not repository files.
-- Graphify's latest observed DarsChin index is `61837f9` from September 23; refresh it after major mergers before using change-impact results as current source context.
+- `CODEOWNERS` و الگوی PR فارسی باید در مخزن نسخه‌بندی شوند.
+- در بازبینی ۲۴ اکتبر، حفاظت شاخهٔ اصلی کامل نبود؛ **وضعیت امروز را بررسی کنید**، نه اینکه از گزارش تاریخی نتیجه بگیرید.
+- Ruleset باید از Push مستقیم/Force Push مخرب جلوگیری کند و گیت تستِ واقعی را قبل از Merge الزام کند.
+- Deploy key و متغیر محیطی محرمانه فقط در نگهدارندهٔ رسمی Secret سرویس باشند.
+- ایندکس تاریخی Graphify در سپتامبر ۲۰۲۶ مربوط به `61837f9` بود؛ قبل از استفادهٔ جدید تازه‌بودن آن را بررسی کنید.
