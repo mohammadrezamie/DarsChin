@@ -437,6 +437,8 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
       allCourses: db.courses,
       tracks: db.tracks,
       academicRules: db.academicRules,
+      allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
+        db.academicSettings.finalSemesterRuleEnabled,
       passedCourses: db.studentPassedCourses.filter(row => row.userId === userId),
       currentOfferings: relevantOfferings,
       plannedOfferingIdsInSameTerm: selectedOfferingIds,
