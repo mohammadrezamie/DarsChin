@@ -45,7 +45,7 @@ describe('P0 privileged root identity isolation', () => {
 });
 
 describe('P0 concurrent public registration identity durability', () => {
-  it('creates independent UUID identities and random recovery tokens with an identical millisecond clock', async () => {
+  it('creates independent UUID identities and one-way recovery verifiers with an identical millisecond clock', async () => {
     const mobiles = ['09988000001', '09988000002'];
     async function challenge() {
       const response = await request(app).get('/api/auth/otp/captcha/generate?action=register');
@@ -78,7 +78,8 @@ describe('P0 concurrent public registration identity durability', () => {
         const saved = db.users.find(u => u.id === id);
         expect(saved).toBeDefined();
         expect(saved?.roles).toEqual(['student']);
-        expect(saved?.recoveryKey).toMatch(/^rec-[A-Za-z0-9_-]{32}$/);
+        expect(saved?.recoveryKey).toMatch(/^\$2[aby]\$\d{2}\$/);
+        expect(saved?.recoveryKey).not.toContain('rec-');
         expect(db.studentProfiles.filter(p => p.userId === id)).toHaveLength(1);
       }
       const rootUser = db.users.find(u => u.id === 'usr-super');
