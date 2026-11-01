@@ -1,46 +1,67 @@
-# Deployment and rollback runbook
+# راهنمای استقرار و بازگشت امن درس‌چین
 
-**2026-10-26 staging/production split:** The reviewed, *read-only* deployment target contract, exact-SHA staging-first HTTP gate and sample isolated staging unit are documented in [STAGING_AND_PRODUCTION_FA.md](../deploy/STAGING_AND_PRODUCTION_FA.md). Run `bun run deploy:gate --target staging --sha <FULL_SHA>` for a dry run; `--check` performs loopback GET readiness only and does not deploy or restart anything. Production promotion remains operator-controlled. The existing template's legacy port must be reconciled with pending VPS P0 #42; never assume it is already in service.
+**این راهنما مجوز اجرای عملیات روی VPS فعلی نیست.** مالک صریحاً خواسته اتصال کنونی سرور و ریپو دست‌نخورده بماند و نصب جدید در برنامه‌ای مستقل و با بکاپ/تأیید جداگانه اجرا شود.
 
+## مرجع معماری استقرار
 
-DarsChin's current stack includes a React/Vite frontend, Express API and JSON file persistence. A frontend-only Vercel deployment **does not host the Express API**. A fully functional release needs a persistent Node.js host, writable database storage and reverse proxy (or a separately implemented backend deployment). This is a repeatable checklist, not an automatic production launch.
-
-## 1. Prepare (one-time infrastructure)
-
-- Choose a domain, DNS, TLS certificates and a Node.js 22 host.
-- Reserve an unused local service port (configure `PORT` and `HOST` in the service environment; production defaults to loopback). Prevent port conflicts with other services.
-- Create a dedicated service account, private secrets file and separate persistent database path with restricted permissions.
-- Restore **sanitized demo fixtures** or a separately verified backup; never ship hardcoded demo credentials as a live public service.
-- Verify that `ROOT_OWNER_MOBILE`, `ROOT_OWNER_PASSWORD` and `JWT_SECRET` have been safely configured **before initial bootstrap**; changing root env variables after a database exists may not trigger bootstrap.
-- Use the reviewed templates in `deploy/` and verify the actual host, domain, ports and writable data path before starting the service.
-
-## 2. Validate the selected release commit (offline checks)
+در راهنمای [تفکیک محیط آزمایشی و اصلی](../deploy/STAGING_AND_PRODUCTION_FA.md) قرارداد اجرای `deploy:gate` با SHA دقیق، نمونهٔ سرویس Staging و آزمون آماده‌بودن HTTP ثبت شده است:
 
 ```bash
+bun run deploy:gate --target staging --sha <FULL_SHA>
+```
+
+این دستور در حالت بررسی اولیه و بدون گزینه‌های اجرایی فقط وضعیت هدف را ارزیابی می‌کند؛ `--check` بررسی HTTP از Loopback است و به‌تنهایی استقرار یا Restart انجام نمی‌دهد. پیش از اجرا، نسخهٔ فعلی اسکریپت را بازبینی کنید و هرگز شمارهٔ پورت الگوی قدیمی را نشانهٔ وضعیت واقعی VPS ندانید.
+
+**تفاوت فرانت‌اند و API:** یک بیلد موفق React/Vite روی Vercel به معنای در دسترس بودن Express و دیتابیس نیست. محصول کامل به سرویس Node.js پایدار، مسیر نوشتنی دیتابیس، HTTPS و پروکسی معکوس نیاز دارد.
+
+## ۱. آماده‌سازی زیرساخت، فقط پس از مجوز مالک
+
+- دامنه، DNS، گواهی TLS و میزبان سازگار با Node.js را تعیین کنید.
+- پورت Loopback آزاد برای سرویس انتخاب و با `PORT` و `HOST` مشخص کنید. تداخل با تکین یا سرویس دیگر مجاز نیست.
+- حساب سرویس مستقل، فایل Secret خصوصی و پوشهٔ پایدار داده با حداقل دسترسی ایجاد کنید.
+- فقط دادهٔ آزمایشی پاک یا بکاپِ بررسی‌شده را Restore کنید؛ حساب Seed با رمز قابل پیش‌بینی نباید به سرویس عمومی منتقل شود.
+- `ROOT_OWNER_MOBILE`، `ROOT_OWNER_PASSWORD`، `ROOT_OWNER_RECOVERY_KEY` و `JWT_SECRET` باید پیش از راه‌اندازی اولیه تازه، قوی و مختص همان نصب باشند. عوض‌کردن ENV بعد از ساخته‌شدن دیتابیس لزوماً Root جدید ایجاد نمی‌کند.
+- الگوهای `deploy/` و راهنمای [VPS مشترک](VPS_SHARED_DOMAIN_FA.md) را با مسیر، دامنه، پورت و نسخهٔ **واقعی** تطبیق دهید.
+
+## ۲. آزمون نسخهٔ معین پیش از نصب
+
+```bash
+bun install --frozen-lockfile
 bun run verify
 bun run smoke:api
 ```
 
-Install Bun on the verification machine; the command uses synthetic credentials and an isolated temporary database. The smoke command uses only a temporary local JSON database and loopback listener. Use a separate synthetic test database, not the deployment database. Capture the exact SHA and test results. Check the extension version/ZIP and ensure no unreviewed generated artifact will be committed.
+از دیتابیس موقت و حساب مصنوعی استفاده کنید و SHA کامل کامیت و نتیجهٔ واقعی را ثبت کنید. بستهٔ افزونه و فایل‌های تولیدی را بررسی کنید و از ورود تصادفی فایل ZIP، بکاپ یا دادهٔ واقعی به Git جلوگیری کنید. ابزار آزمون دود فقط روی سرویس ایزوله استفاده شود.
 
-## 3. Release and smoke test
+## ۳. ساخت و راه‌اندازی کنترل‌شده
 
-Build on an isolated machine with `bun install --frozen-lockfile` and `bun run build`. Install the release under a versioned directory; install only its runtime dependencies and required build outputs. Make the persistent data directory survive release swaps. Start the Node service through a process manager (systemd or equivalent), behind a TLS reverse proxy.
+پس از عبور از آزمون‌ها، ساخت را در محیط جدا انجام دهید:
 
-- `/api/health` must return JSON, not HTML. The current health endpoint has a legacy version field; do not use it alone as release evidence.
-- Test login, admin authorization, course planning, and read/write behavior on a controlled fixture.
-- Restart the service and verify state persists.
-- Request an invalid `/api/*` route and verify JSON 404.
-- Check logs for secrets and errors; audit the extension download only if enabled.
-- Keep public release closed to real student data until privacy/security checks and a tested backup restore have passed.
+```bash
+bun run build
+```
 
-## 4. Roll back
+خروجی معتبر را زیر پوشهٔ نسخه‌دار نصب کنید. پوشهٔ دیتابیس پایدار باید با تعویض Release باقی بماند. سرویس Node.js را با `systemd` یا مدیر پردازش مناسب و در پشت Nginx/HTTPS روشن کنید؛ آن را مستقیماً روی اینترنت باز نکنید.
 
-Stop writes, make a restricted backup of runtime state, switch the release symlink or service command back to the last known good SHA, and restart. Verify health, login and persistence. **Do not roll back the database file automatically**: it may contain newer user data and schema changes. Review compatibility and migrate only with a verified backup.
+## ۴. آزمون دود محیط Staging
 
-## Important limitations
+- `/api/health` باید JSON معتبر بدهد، نه HTML فرانت‌اند. شماره نسخهٔ داخل این پاسخ لزوماً شاهد SHA استقرار نیست.
+- ورود حساب مصنوعی، دسترسی مدیر، ثبت برنامهٔ آزمایشی و رد دسترسی غیرمجاز را بررسی کنید.
+- پس از Restart، پایداری وضعیت را آزمایش کنید.
+- درخواست `/api/...` ناموجود باید JSON با وضعیت ۴۰۴ برگرداند.
+- خروجی‌ها و لاگ‌ها نباید Secret یا اطلاعات دانشجو داشته باشند.
+- دانلود نسخهٔ مجاز افزونه و ممیزی دانلود خصوصی را در محدودهٔ تست بررسی کنید.
+- قبل از ثبت کاربر واقعی، بازگردانی بکاپ و بررسی امنیت/حریم خصوصی باید واقعاً موفق شده باشد.
 
-- The JSON database is not multi-instance-safe by default. Use one controlled Node process; do not enable horizontal scaling without replacing/reviewing persistence.
-- OTP/SMS requires separately configured production credentials, and the external university collector requires real-source verification. Neither follows from a green frontend preview.
-- A minutes-long cutover is realistic **only after** the host, DNS/TLS, secrets, backups, and validated release have been prepared in advance.
-- No production deployment, DNS, cloud resource or live database is changed by this document.
+## ۵. برنامهٔ بازگشت
+
+در صورت اختلال، ابتدا نوشتن را متوقف و از دادهٔ موجود بکاپ محافظت‌شده بگیرید؛ سپس به آخرین Release تأییدشده برگردید و سلامت، ورود و ذخیره را آزمایش کنید. **دیتابیس را خودکار به نسخهٔ قبلی برنگردانید**؛ ممکن است رکوردهای جدید یا ساختار متفاوت داشته باشد. مهاجرت/Restore فقط با بررسی سازگاری، بکاپ و مجوز انجام شود.
+
+## محدودیت‌ها و خطرهای باقی‌مانده
+
+- دیتابیس JSON با چند فرایند مستقل نویسنده ایمن نیست؛ برای مقیاس چند Replica به ذخیره‌سازی تراکنشی نیاز دارید.
+- پیامک/OTP واقعی و استخراج‌گر آموزشیار به کلید اختصاصی و آزمون منبع رسمی نیاز دارند.
+- کوتاه‌بودن زمان قطع سرویس فقط بعد از آماده‌سازی کامل زیرساخت، Secretها، بکاپ و نسخهٔ آزمایش‌شده ممکن است.
+- هیچ سرور، DNS، سرویس ابری یا دیتابیس زنده‌ای با **نوشتن این سند** تغییر نمی‌کند.
+
+**مرجع اقدامات مالک:** [چک‌لیست گام‌به‌گام](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) و [پروندهٔ امنیتی](https://github.com/mohammadrezamie/DarsChin/issues/4).
