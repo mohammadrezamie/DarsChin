@@ -20,7 +20,7 @@ export const SiteFooter: React.FC<{ withMobileDock?: boolean }> = ({ withMobileD
     <div className={`mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-center md:flex-row md:gap-8 md:px-6 ${withMobileDock ? 'pb-28 md:pb-6' : ''}`}>
       <div className="min-w-0 shrink-0 text-center md:text-right">
         <p className="inline-flex items-center justify-center gap-2 text-base font-black text-white md:justify-start">
-          <GraduationCap aria-hidden="true" className="h-5 w-5 text-blue-400" />
+          <GraduationCap aria-hidden="true" className="h-5 w-5 text-teal-400" />
           درس‌چین
         </p>
         <p className="mt-1 text-xs leading-6 text-slate-400">
@@ -39,11 +39,11 @@ export const SiteFooter: React.FC<{ withMobileDock?: boolean }> = ({ withMobileD
         target="_blank"
         rel="noopener noreferrer"
         aria-label="بازدید از وب‌سایت شرکت تکین نوآوران آینده، در زبانهٔ جدید"
-        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-white transition-colors hover:border-blue-500 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-white transition-colors hover:border-teal-600 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
       >
         <span>وب‌سایت شرکت</span>
-        <span dir="ltr" className="text-[11px] text-blue-200">tnacompany.ir</span>
-        <ExternalLink aria-hidden="true" className="h-4 w-4 text-blue-300" />
+        <span dir="ltr" className="text-[11px] text-teal-200">tnacompany.ir</span>
+        <ExternalLink aria-hidden="true" className="h-4 w-4 text-teal-300" />
       </a>
     </div>
   </footer>
