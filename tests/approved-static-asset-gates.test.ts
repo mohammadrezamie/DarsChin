@@ -43,7 +43,8 @@ describe('strict extension / mock-portal HTTP static allowlists',()=>{
       '/extension-files/icons/icon16.png','/extension-files/fonts/vazirmatn.css']) {
       const response=await request(app).get(url);
       expect(response.status).toBe(200);
-      expect(JSON.stringify(response.body || '') + (response.text || '')).toContain('SAFE_PUBLIC_ASSET');
+      const responseData = response.text || (Buffer.isBuffer(response.body) ? response.body.toString('utf8') : JSON.stringify(response.body));
+      expect(responseData).toContain('SAFE_PUBLIC_ASSET');
     }
     for (const url of ['/extension-files/private.key','/extension-files/backup.json',
       '/extension-files/.env','/extension-files/public-files.json',
