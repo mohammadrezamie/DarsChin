@@ -16,7 +16,7 @@ const courses:Course[]=[
 ];
 const links:CurriculumCourse[]=courses.map(course=>({
   id:'cc-'+course.id,curriculumId:curriculum.id,courseId:course.id,
-  classification:'MAJOR_REQUIRED',active:true,
+  classification:'MAJOR_REQUIRED',suggestedSemester:1,active:true,
 }));
 const advanced:CourseOffering={
   id:'off-advanced',courseId:'advanced',termId:'synthetic-term',campusId:'c',
