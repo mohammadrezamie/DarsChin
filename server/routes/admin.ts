@@ -39,10 +39,15 @@ adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'),
 // Export Database Backup (without sensitive passwords)
 adminRouter.get('/backup', authenticate, requirePermission('backup.manage'), (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
-  const backup = db.exportBackup();
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
-  res.json(backup);
+  try {
+    // Never start a downloadable response until serialization succeeds.
+    const backup = db.exportBackup();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
+    return res.json(backup);
+  } catch {
+    return res.status(500).json({ success: false, error: 'آماده‌سازی فایل پشتیبان ناموفق بود.' });
+  }
 });
 
 // Restore Database Backup
@@ -79,7 +84,7 @@ adminRouter.post('/reset-seed', authenticate, requirePermission('system.settings
     db.resetToSeed();
     res.json({ success: true, message: 'پایگاه داده به داده‌های آزمایشی اولیه بازنشانی شد.' });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 
@@ -137,7 +142,7 @@ adminRouter.get('/users', authenticate, requireSuperAdmin, (req, res) => {
     });
     res.json({ success: true, data: safeUsers });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 
@@ -164,7 +169,7 @@ adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(upd
     db.save();
     res.json({ success: true, message: 'نقش کاربر با موفقیت به‌روزرسانی شد.' });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 
@@ -226,7 +231,7 @@ adminRouter.put('/academic-settings', authenticate, requirePermission('academic-
 
     res.json({ success: true, data: db.academicSettings, message: 'تنظیمات آیین‌نامه آموزشی با موفقیت به‌روزرسانی شد.' });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 
@@ -249,7 +254,7 @@ adminRouter.get('/students-overview', authenticate, requirePermission('student-m
     });
     res.json({ success: true, data: list });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 
@@ -289,7 +294,7 @@ adminRouter.put('/students/:userId/final-semester-override', authenticate, requi
       data: { profile, limits: updatedLimits },
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'عملیات در حال حاضر قابل انجام نیست؛ لطفاً بعداً دوباره تلاش کنید.' });
   }
 });
 

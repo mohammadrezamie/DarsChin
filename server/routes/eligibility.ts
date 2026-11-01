@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { z } from 'zod';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
@@ -10,11 +11,20 @@ import { generateCourseRecommendations } from '../../src/domain/recommendation-e
 
 export const eligibilityRouter = Router();
 
+const evaluateInputSchema = z.object({
+  // Keep the current optional payload shape for existing mobile/web clients.
+  plannedCourseIds: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
+});
+
 // Evaluate student eligibility for current offerings
 eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, res) => {
   try {
+    const input = evaluateInputSchema.safeParse(req.body);
+    if (!input.success) {
+      return res.status(400).json({ success: false, error: 'درخواست ارزیابی دروس معتبر نیست.' });
+    }
     const userId = req.user!.id;
-    const { plannedCourseIds = [] } = req.body;
+    const plannedCourseIds = input.data.plannedCourseIds ?? [];
 
     // Get student profile
     const profile = db.studentProfiles.find((p) => p.userId === userId);
@@ -45,8 +55,7 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     const relevantOfferings = db.courseOfferings.filter(
       (o) => o.termId === currentTermId && o.active
     );
-    console.log("EVAL Offerings count:", relevantOfferings.length, "TermId:", currentTermId);
-    
+
 
     // Get student passed courses
     const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
@@ -66,7 +75,6 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     });
 
     // Also compute recommendations for eligible courses
-    console.log("Eval Res count:", report?.results?.length);
     const recommendations = generateCourseRecommendations({
       curriculum,
       curriculumCourses: db.curriculumCourses,
@@ -96,7 +104,8 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
         },
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+  } catch {
+    // Never return engine stack, academic record values or filesystem details.
+    return res.status(500).json({ success: false, error: 'ارزیابی دروس با خطای داخلی مواجه شد.' });
   }
 });
