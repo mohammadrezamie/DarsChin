@@ -1,4 +1,3 @@
-| **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |
 # DarsChin documentation index
 
 **Latest owner decision (2026-11-01): source is MIT open source, but hosted runtime access and data remain independently private.** [Self-hosting, VPS safety, optional owner-only API mode and upstream updates](SELF_HOSTING_OPEN_SOURCE_FA.md).
@@ -8,6 +7,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |
 | **امن‌سازی صف اولویت/گروه جایگزین و جلوگیری از تأیید قانون ناقص پیش‌نیاز** | [PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md](PRIORITY_FALLBACK_COHORT_AND_FAIL_CLOSED_RULES_20261101_FA.md) |
 | **مسدودسازی مسیر مستقیم نشت فایل‌های اضافی افزونه/دموی آموزشیار** | [PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md](PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md) |
 | **گیت واقعی تداخل ساعت کلاس/امتحان و پیش‌نیازهای تأییدشدهٔ هر ورودی** | [PLANNER_CONFLICTS_AND_VERIFIED_ELIGIBILITY_20261101_FA.md](PLANNER_CONFLICTS_AND_VERIFIED_ELIGIBILITY_20261101_FA.md) |
