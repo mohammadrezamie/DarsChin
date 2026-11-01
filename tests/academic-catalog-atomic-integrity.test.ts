@@ -29,9 +29,9 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); db.data = previous; });
 
-const post = (path:string,payload:unknown) =>
+const post = (path:string,payload:object) =>
   request(app).post(prefix+path).set('Authorization',rootAuth).send(payload);
-const put = (path:string,payload:unknown) =>
+const put = (path:string,payload:object) =>
   request(app).put(prefix+path).set('Authorization',rootAuth).send(payload);
 const remove = (path:string) => request(app).delete(prefix+path).set('Authorization',rootAuth);
 const failSave = () => vi.spyOn(db,'save').mockImplementationOnce(() => { throw Error(sensitive); });
