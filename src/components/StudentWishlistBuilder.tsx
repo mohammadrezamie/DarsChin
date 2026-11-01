@@ -71,15 +71,15 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
 
   return (
     <section dir="rtl" aria-labelledby="wishlist-heading" className="space-y-4">
-      <header className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
-        <h3 id="wishlist-heading" className="flex items-center gap-2 text-base font-extrabold text-indigo-950 dark:text-indigo-100">
+      <header className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-950 dark:bg-emerald-950/30">
+        <h3 id="wishlist-heading" className="flex items-center gap-2 text-base font-extrabold text-emerald-950 dark:text-emerald-100">
           <BookOpenCheck className="h-5 w-5" aria-hidden="true" /> سبد علاقه‌مندی به درس‌ها
         </h3>
-        <p className="mt-1 text-xs leading-7 text-indigo-900 dark:text-indigo-200">
+        <p className="mt-1 text-xs leading-7 text-emerald-950 dark:text-emerald-200">
           این فقط فهرست درس‌هایی است که دوست داری بررسی کنی؛ حتی ۴۰ واحد یا بیشتر هم می‌توانی در آن نگه داری.
           این‌ها <strong>انتخاب واحد نهایی نیستند</strong>؛ پیش‌نیاز، ظرفیت، استاد، تداخل و سقف واحد هنگام ساخت برنامهٔ نهایی جداگانه بررسی می‌شوند.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-indigo-900 dark:text-indigo-200">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-emerald-950 dark:text-emerald-200">
           <span>{selected.length.toLocaleString('fa-IR')} درس علاقه‌مندی</span>
           <span aria-hidden="true">·</span>
           <span>{totalUnits.toLocaleString('fa-IR')} واحد پیشنهادی، غیرالزام‌آور</span>
@@ -121,18 +121,18 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                 </div>
                 <button type="button" disabled={saving || loading} onClick={() => void mutate([...wishlistCourseIds, c.id])}
                   aria-label={'افزودن ' + c.name + ' به سبد'}
-                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:opacity-50"><Plus className="h-5 w-5" aria-hidden="true" /></button>
+                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-50"><Plus className="h-5 w-5" aria-hidden="true" /></button>
               </div>;
             })}
             {!loading && !available.length && <p className="p-4 text-xs text-slate-500">درسی با این نام پیدا نشد یا همه به سبد افزوده شده‌اند.</p>}
           </div>
         </div>
-        <div className="min-w-0 rounded-2xl border border-indigo-200 bg-white p-3 dark:border-indigo-900 dark:bg-slate-900">
+        <div className="min-w-0 rounded-2xl border border-emerald-200 bg-white p-3 dark:border-emerald-950 dark:bg-slate-900">
           <h4 className="mb-3 text-sm font-bold">ترتیب علاقه‌مندی‌ها</h4>
           <div className="max-h-[28rem] space-y-2 overflow-y-auto">
             {selected.map((c, index) => (
-              <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-indigo-50/70 p-2.5 dark:bg-indigo-950/30">
-                <span className="w-5 shrink-0 text-xs font-bold text-indigo-700 dark:text-indigo-300">{(index + 1).toLocaleString('fa-IR')}</span>
+              <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-emerald-50/70 p-2.5 dark:bg-emerald-950/30">
+                <span className="w-5 shrink-0 text-xs font-bold text-emerald-800 dark:text-emerald-300">{(index + 1).toLocaleString('fa-IR')}</span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold" title={c.name}>{c.name}</div>
                   <div className="text-xs text-slate-600 dark:text-slate-400">{c.units.toLocaleString('fa-IR')} واحد</div>
