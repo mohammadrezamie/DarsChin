@@ -95,3 +95,8 @@ Student/administrator extension import previews now keep new review batches and 
 ## Full backup is root-only (2026-11-01)
 
 Although downloadable backup JSON excludes password hashes and SMS provider credentials, it can still contain personally identifiable student data and academic plans. Therefore `GET /api/admin/backup` and global catalogue `POST /api/admin/restore` now require `requireSuperAdmin`, verifying the reserved root identity and the configured owner phone. A delegated administrator holding an obsolete `backup.manage` permission is refused. Tests exercise both unauthorised access and legitimate root access. This patch originates directly from the **new clean-root Git main** and introduces no ancestry from the exposed repository history.
+
+
+## Root-only student-wide directory and final-semester overrides (2026-11-01)
+
+A previously delegated `student-management.read` permission could retrieve the full names, phone numbers and academic profiles of **all** students. Likewise, `academic-policy.manage` alone allowed editing the graduation-related override on any student profile, without a dedicated student-management scope. Until fine-grained student-scope authorization exists, both global operations are now restricted to the verified reserved root. The final-semester override audit entry is written **before the database save**, excludes free-text notes from audit details, and is rolled back with the profile edit when persistence fails before commit. These changes do not add Maaref/academic regulations or operate on a live VPS.
