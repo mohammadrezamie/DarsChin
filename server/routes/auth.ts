@@ -12,15 +12,12 @@ import { canRecoverPasswordWithChallenge, completePasswordRecovery } from '../au
 import { smsReadiness } from '../sms/service';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, changePasswordSchema, otpPasswordRecoverySchema } from '../schemas/auth';
+import { FailedLoginTracker } from '../security/login-attempts';
 
 export const authRouter = Router();
 
-// Brute-force protection: Rate limit failed logins by mobile number
-interface FailedAttempt {
-  count: number;
-  lockedUntil: number;
-}
-const failedLogins = new Map<string, FailedAttempt>();
+// Per-mobile lockout, with bounded in-memory state for public servers.
+const failedLogins = new FailedLoginTracker();
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes lockout
