@@ -159,7 +159,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
               placeholder="جستجو در سطرها..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="darschin-field w-full pr-9 pl-3 py-2 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="darschin-field w-full pr-9 pl-3 py-2 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-600/50"
             />
           </div>
 
@@ -174,7 +174,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
 
           <button
             onClick={handleAdd}
-            className="flex min-h-11 items-center justify-center gap-1.5 text-xs bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl font-bold shrink-0"
+            className="flex min-h-11 items-center justify-center gap-1.5 text-xs bg-teal-700 shadow-lg shadow-teal-600/20 active:scale-95 transition-all hover:bg-teal-800 text-white px-3.5 py-1.5 rounded-xl font-bold shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>افزودن مورد جدید</span>
@@ -204,8 +204,8 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
           <tbody className="divide-y divide-slate-200/60 dark:divide-slate-700/50">
             {/* New Item Form Row */}
             {editingId === 'new' && (
-              <tr className="bg-blue-50/60 dark:bg-blue-950/40 animate-in fade-in">
-                <td data-label="ردیف" className="py-3 px-4 text-right font-bold text-blue-600 dark:text-blue-400">+</td>
+              <tr className="bg-teal-50/60 dark:bg-teal-950/40 animate-in fade-in">
+                <td data-label="ردیف" className="py-3 px-4 text-right font-bold text-teal-700 dark:text-teal-400">+</td>
                 {columns.map((c) => (
                   <td key={c.key} data-label={c.label} className="py-3 px-4">
                     {c.type === 'boolean' ? (
@@ -214,7 +214,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                           type="checkbox"
                           checked={Boolean(editForm[c.key])}
                           onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.checked })}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                          className="rounded border-slate-300 text-teal-700 focus:ring-teal-600 w-4 h-4"
                         />
                         <span className="text-xs text-slate-700 dark:text-slate-300">
                           {editForm[c.key] ? 'فعال' : 'غیرفعال'}
@@ -222,7 +222,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                       </label>
                     ) : c.type === 'select' && (c.options || c.lookupEndpoint) ? (
                       <select
-                        className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-600"
                         value={editForm[c.key] || ''}
                         onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                       >
@@ -237,7 +237,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                       <input
                         type={c.type === 'number' ? 'number' : 'text'}
                         placeholder={`ورود ${c.label}...`}
-                        className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-600"
                         value={editForm[c.key] !== undefined ? editForm[c.key] : ''}
                         onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                       />
@@ -269,7 +269,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
               <tr>
                 <td colSpan={columns.length + 2} className="py-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
+                    <RefreshCw className="w-5 h-5 animate-spin text-teal-600" />
                     <span>در حال بارگذاری داده‌های سامانه...</span>
                   </div>
                 </td>
@@ -295,7 +295,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                               type="checkbox"
                               checked={Boolean(editForm[c.key])}
                               onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.checked })}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                              className="rounded border-slate-300 text-teal-700 focus:ring-teal-600 w-4 h-4"
                             />
                             <span className="text-xs">{editForm[c.key] ? 'فعال' : 'غیرفعال'}</span>
                           </label>
@@ -315,7 +315,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                         ) : (
                           <input
                             type={c.type === 'number' ? 'number' : 'text'}
-                            className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-600"
                             value={editForm[c.key] !== undefined ? editForm[c.key] : ''}
                             onChange={(e) => setEditForm({ ...editForm, [c.key]: e.target.value })}
                           />
@@ -362,7 +362,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
                             setEditForm({ ...item });
                           }}
                           title="ویرایش"
-                          className="flex h-10 w-10 items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                          className="flex h-10 w-10 items-center justify-center p-1.5 text-slate-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
