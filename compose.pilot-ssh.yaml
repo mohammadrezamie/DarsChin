@@ -1,0 +1,8 @@
+# Local-only pilot access: run the Node app without starting the public HTTPS proxy.
+# Use with: docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps up -d --build darschin
+# SSH tunnel from your own computer: ssh -L 3000:127.0.0.1:3000 USER@VPS_IP
+# Open http://localhost:3000/demo/student on that computer. NEVER bind 0.0.0.0:3000 on the VPS.
+services:
+  darschin:
+    ports:
+      - "127.0.0.1:${DARSCHYN_LOCAL_PORT:-3000}:3000"

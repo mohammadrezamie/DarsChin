@@ -1,0 +1,192 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+import { db } from '../server/db/database';
+import { generateToken } from '../server/middleware/auth';
+import { syncRouter } from '../server/routes/sync';
+
+const app = express();
+app.use(express.json({ limit: '2mb' }));
+app.use('/api/sync', syncRouter);
+
+let authHeader = '';
+let termId = '';
+let campusId = '';
+let courseCode = '';
+let courseName = '';
+const createdJobIds: string[] = [];
+const testAdminId = 'test-sync-staging-root';
+const testStudentId = 'test-sync-staging-student';
+
+beforeAll(async () => {
+  await db.init(true);
+  // Test authorization with a dedicated root fixture, independent of env bootstrap.
+  const admin = {
+    id: testAdminId, name: 'مدیر مصنوعی همگام‌سازی',
+    mobile: '09000000772', roles: ['super-admin'] as ['super-admin'],
+    permissions: ['admin.panel.access', 'offering.manage'],
+    createdAt: new Date().toISOString(),
+  };
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.users.push(admin);
+  const course = db.courses.find(item => item.active && item.code && item.name);
+  if (!course || !db.campuses[0] || !db.academicTerms[0]) {
+    throw new Error('Synthetic academic fixtures unavailable');
+  }
+  authHeader = 'Bearer ' + generateToken(admin);
+  courseCode = course.code;
+  courseName = course.name;
+  termId = db.academicTerms[0].id;
+  campusId = db.campuses[0].id;
+  // An authenticated student with a precise academic profile must not be
+  // allowed to change the term or campus of an import job by request body.
+  db.data.users = db.users.filter(user => user.id !== testStudentId);
+  db.users.push({
+    id: testStudentId,
+    name: 'دانشجوی مصنوعی همگام‌سازی',
+    mobile: '09000000773',
+    roles: ['student'],
+    permissions: ['student.access'],
+    createdAt: new Date().toISOString(),
+  });
+  db.data.studentProfiles = db.studentProfiles.filter(profile => profile.userId !== testStudentId);
+  db.studentProfiles.push({
+    userId: testStudentId,
+    universityId: db.campuses[0].universityId,
+    campusId,
+    degreeLevelId: db.degreeLevels[0].id,
+    majorId: db.majors[0].id,
+    entryYearId: db.entryYears[0].id,
+    isTrackSelected: false,
+    desiredTrackIds: [],
+    currentTermId: termId,
+    updatedAt: new Date().toISOString(),
+  });
+});
+
+afterAll(() => {
+  db.data.users = db.users.filter(user => user.id !== testAdminId && user.id !== testStudentId);
+  db.data.studentProfiles = db.studentProfiles.filter(profile => profile.userId !== testStudentId);
+  const keys = new Set(createdJobIds);
+  const batchKeys = new Set(createdJobIds.map(id => `batch-sync-${id}`));
+  db.syncJobs = db.syncJobs.filter(job => !keys.has(job.id));
+  db.syncSnapshots = db.syncSnapshots.filter(snapshot => !keys.has(snapshot.jobId));
+  db.data.importBatches = db.data.importBatches.filter(batch => !batchKeys.has(batch.id));
+  db.data.importRecords = db.data.importRecords.filter(record => !batchKeys.has(record.batchId));
+  db.save();
+});
+
+const validRecord = () => ({
+  course: { courseCode, courseName },
+  courseClass: {
+    courseClassRef: 'SYNTHETIC-CLASS-ABCD1234',
+    offeringCode: 'SAMPLE-01',
+    group: '93',
+    instructor: 'مدرس آزمایشی',
+    schedule: 'شنبه 08:00 - 10:00',
+    capacity: '30',
+  },
+});
+
+async function startJob() {
+  const created = await request(app).post('/api/sync/jobs')
+    .set('Authorization', authHeader).send({ termId, campusId });
+  expect(created.status).toBe(201);
+  const jobId = created.body.data.id as string;
+  createdJobIds.push(jobId);
+  return jobId;
+}
+async function finalChunk(jobId: string, data = [validRecord()]) {
+  return request(app).post(`/api/sync/jobs/${jobId}/snapshots`)
+    .set('Authorization', authHeader)
+    .send({ chunkIndex: 0, isFinal: true, data });
+}
+
+describe('student extension sync has a no-autopublish boundary', () => {
+  it('stages a complete normalized snapshot for admin review only', async () => {
+    const jobId = await startJob();
+    const beforeIds = db.courseOfferings.map(item => item.id);
+    const completed = await finalChunk(jobId);
+    expect(completed.status).toBe(200);
+    expect(completed.body.success).toBe(true);
+    expect(completed.body.data.jobStatus).toBe('AWAITING_REVIEW');
+    expect(completed.body.data.requiresReview).toBe(true);
+    expect(completed.body.data.reconciledOfferings).toBe(0);
+    expect(completed.body.data.reviewCandidates).toBe(1);
+    expect(db.courseOfferings.map(item => item.id)).toEqual(beforeIds);
+    const batch = db.importBatches.find(item => item.id === `batch-sync-${jobId}`);
+    expect(batch?.matchedRecords).toBe(1);
+    const queued = db.importRecords.filter(item => item.batchId === batch?.id);
+    expect(queued).toHaveLength(1);
+    expect(queued[0].status).toBe('MATCHED');
+    expect(queued[0].matchedCourseId).toBeTruthy();
+    expect(queued[0].reviewDecision).toBeUndefined();
+    expect(db.syncSnapshots.filter(item => item.jobId === jobId)).toHaveLength(0);
+    expect(batch?.rawJson).toBeUndefined();
+
+    const again = await finalChunk(jobId);
+    expect(again.status).toBe(200);
+    expect(again.body.data.duplicate).toBe(true);
+    expect(db.importBatches.filter(item => item.id === batch?.id)).toHaveLength(1);
+    expect(db.importRecords.filter(item => item.batchId === batch?.id)).toHaveLength(1);
+    expect(db.courseOfferings.map(item => item.id)).toEqual(beforeIds);
+
+    const changedRetry = await finalChunk(jobId, [{
+      ...validRecord(),
+      courseClass: { ...validRecord().courseClass, capacity: '29' },
+    }]);
+    expect(changedRetry.status).toBe(409);
+    expect(db.importBatches.filter(item => item.id === batch?.id)).toHaveLength(1);
+    expect(db.courseOfferings.map(item => item.id)).toEqual(beforeIds);
+
+    const wrongRetry = await request(app).post(`/api/sync/jobs/${jobId}/snapshots`)
+      .set('Authorization', authHeader).send({ chunkIndex: 1, isFinal: true, data: [validRecord()] });
+    expect(wrongRetry.status).toBe(409);
+    const state = await request(app).get('/api/sync/state').set('Authorization', authHeader);
+    expect(state.body.data.lastSyncStatus).toBe('AWAITING_REVIEW');
+  });
+
+  it('rejects malformed source records without publishing anything', async () => {
+    const jobId = await startJob();
+    const beforeIds = db.courseOfferings.map(item => item.id);
+    const completed = await finalChunk(jobId, [{
+      ...validRecord(),
+      courseClass: { ...validRecord().courseClass, schedule: 'NOT-A-REAL-CLASS-TIME' },
+    }]);
+    expect(completed.status).toBe(422);
+    expect(completed.body.data.jobStatus).toBe('FAILED');
+    expect(db.courseOfferings.map(item => item.id)).toEqual(beforeIds);
+    expect(db.importBatches.some(item => item.id === `batch-sync-${jobId}`)).toBe(false);
+    expect(db.syncSnapshots.filter(item => item.jobId === jobId)).toHaveLength(0);
+  });
+
+  it('rejects a student sync from a different semester or campus, even when IDs exist', async () => {
+    const student = db.users.find(user => user.id === testStudentId)!;
+    const authorization = 'Bearer ' + generateToken(student);
+    const otherTerm = db.academicTerms.find(term => term.id !== termId);
+    const otherCampus = db.campuses.find(campus => campus.id !== campusId);
+    if (!otherTerm || !otherCampus) throw new Error('Secondary synthetic campus and term fixtures required');
+
+    const wrongTerm = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId: otherTerm.id, campusId });
+    expect(wrongTerm.status).toBe(403);
+
+    const wrongCampus = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId, campusId: otherCampus.id });
+    expect(wrongCampus.status).toBe(403);
+
+    const valid = await request(app).post('/api/sync/jobs')
+      .set('Authorization', authorization)
+      .send({ termId, campusId });
+    expect(valid.status).toBe(201);
+    createdJobIds.push(valid.body.data.id);
+    expect(valid.body.data.userId).toBe(testStudentId);
+  });
+
+  it('requires authentication to start a sync session', async () => {
+    const result = await request(app).post('/api/sync/jobs').send({ termId, campusId });
+    expect(result.status).toBe(401);
+  });
+});
