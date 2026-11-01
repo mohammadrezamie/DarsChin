@@ -1,5 +1,5 @@
 // Lightweight, offline repository hygiene audit. Never deletes or modifies files.
-// The preexisting tracked data/darschyn-db.json requires a deliberate safe migration.
+// Repository source safety is checked separately by check-public-source.cjs.
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
@@ -23,5 +23,5 @@ if (unsafe.length || missing.length) {
   process.exitCode=1;
 } else {
   console.log('PASS: repository layout conventions and legacy script archive.');
-  console.log('WARNING: tracked JSON database requires planned migration before Git untracking.');
+  console.log('Run bun run repo:public-check before source publication; review Git history separately.');
 }
