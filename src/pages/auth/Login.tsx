@@ -61,7 +61,7 @@ export const Login: React.FC = () => {
   return (
     <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
         <h2 className="mb-2 text-right text-2xl font-black leading-snug text-slate-900 dark:text-white sm:text-3xl">
@@ -69,19 +69,19 @@ export const Login: React.FC = () => {
         </h2>
         <p className="text-right text-sm leading-7 text-slate-600 dark:text-slate-400">
           حساب کاربری ندارید؟{' '}
-          <Link to="/register" className="font-bold text-blue-600 hover:text-blue-500">
+          <Link to="/register" className="font-bold text-teal-700 hover:text-teal-600">
             ثبت‌نام کنید
           </Link>
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-900 dark:bg-blue-950/40">
-          <h3 className="text-base font-black text-blue-900 dark:text-blue-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
-          <p className="mt-1 text-xs leading-6 text-blue-800 dark:text-blue-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 shadow-sm dark:border-teal-950 dark:bg-teal-950/40">
+          <h3 className="text-base font-black text-teal-950 dark:text-teal-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
+          <p className="mt-1 text-xs leading-6 text-teal-900 dark:text-teal-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-blue-700 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
-            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-blue-300 bg-white px-2 text-center text-sm font-bold text-blue-900 dark:bg-slate-900 dark:text-blue-100">ورود دمو مدیر</Link>
+            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-teal-800 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
+            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-teal-300 bg-white px-2 text-center text-sm font-bold text-teal-950 dark:bg-slate-900 dark:text-teal-100">ورود دمو مدیر</Link>
           </div>
         </div>
       </div>
@@ -111,7 +111,7 @@ export const Login: React.FC = () => {
                     dir="ltr"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-colors"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                     placeholder="09123456789"
                     autoFocus
                   />
@@ -119,7 +119,7 @@ export const Login: React.FC = () => {
               </div>
               <button
                 type="submit"
-                className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors"
               >
                 ادامه
               </button>
@@ -139,7 +139,7 @@ export const Login: React.FC = () => {
                   <button 
                     type="button" 
                     onClick={() => setStep(1)}
-                    className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                    className="text-xs text-teal-700 hover:text-teal-600 font-medium"
                   >
                     تغییر شماره
                   </button>
@@ -149,14 +149,14 @@ export const Login: React.FC = () => {
                   dir="ltr"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-colors"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                   placeholder="••••••••"
                   autoFocus
                 />
               </div>
 
               <div className="flex items-center justify-between">
-                <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/forgot-password" className="text-sm font-medium text-teal-700 hover:text-teal-600">
                   رمز عبور را فراموش کرده‌اید؟
                 </Link>
               </div>
@@ -165,7 +165,7 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-70"
+                className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors disabled:opacity-70"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ورود'}
               </button>
