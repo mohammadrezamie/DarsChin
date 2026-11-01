@@ -41,6 +41,7 @@
 | Safe deployment & rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **محیط آزمایشی و اصلی مستقل، گیت Dry-run و تست نسخهٔ یکسان (با اقتباس خواندنی از تکین)** | [STAGING_AND_PRODUCTION_FA.md](../deploy/STAGING_AND_PRODUCTION_FA.md) |
 | Security and privacy | [SECURITY.md](SECURITY.md) |
+| **فایل‌های ENV نمونه، مقادیر حساسِ خالی و توضیح همهٔ تنظیمات هر سرور** | [ENV_CONFIGURATION_FA.md](ENV_CONFIGURATION_FA.md) |
 | Architecture and risks | [Repository audit](REPOSITORY_AUDIT.md) |
 | Sync ingestion and reconciliation | [Architecture](ARCHITECTURE.md) and [project status](PROJECT_STATUS.md) |
 | Sensitive export remediation | [Merged PR #8](https://github.com/mohammadrezamie/DarsChin/pull/8) |

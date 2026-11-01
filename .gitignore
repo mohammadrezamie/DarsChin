@@ -12,3 +12,17 @@ server_log.txt
 # Current HEAD does not track runtime data; historical Git refs still need cleanup.
 data/*.json
 data/*.json.tmp
+
+# Private database snapshots, credentials and operator backups.
+data/**/*.json
+data/**/*.db
+*.sqlite
+*.sqlite3
+*.db
+*.backup
+*.bak
+*.dump
+*.pem
+*.p12
+*.pfx
+*.key
