@@ -7,6 +7,12 @@ import { reconcileSyncRecords } from '../sync/reconciliation';
 
 export const syncRouter = Router();
 
+// A malicious or broken browser client must not fill the JSON database with
+// 10,000 one-megabyte chunks or unlimited abandoned jobs.
+export const MAX_SYNC_JOB_CHUNKS = 64;
+export const MAX_SYNC_JOB_BYTES = 8_000_000;
+export const MAX_PENDING_SYNC_JOBS_PER_USER = 10;
+
 export interface SyncJob {
   id: string;
   userId: string;
@@ -216,6 +222,15 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ success: false, error: 'واحد دانشگاهی انتخاب‌شده در سامانه تعریف نشده است.' });
   }
 
+  const pending = (db.syncJobs as SyncJob[]).filter(job =>
+    job.userId === userId && (job.status === 'RUNNING' || job.status === 'PENDING' || job.status === 'RECEIVED')
+  );
+  if (pending.length >= MAX_PENDING_SYNC_JOBS_PER_USER) {
+    return res.status(429).json({
+      success: false, error: 'تعداد همگام‌سازی‌های نیمه‌تمام زیاد است؛ برای بررسی و پاک‌سازی ایمن به پشتیبانی مراجعه کنید.',
+    });
+  }
+
   const job: SyncJob = {
     id: `sync-job-${crypto.randomUUID()}`,
     userId,
@@ -278,10 +293,23 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   if ('error' in validation) {
     return res.status(400).json({ success: false, error: validation.error });
   }
+  if (chunkIndex >= MAX_SYNC_JOB_CHUNKS) {
+    return res.status(413).json({ success: false, error: 'تعداد بخش‌های این همگام‌سازی بیش از حد مجاز است.' });
+  }
 
   const allSnapshots = db.syncSnapshots as SyncSnapshot[];
   const existingForJob = allSnapshots.filter((snapshot) => snapshot.jobId === jobId);
   const existingChunk = existingForJob.find((snapshot) => snapshot.chunkIndex === chunkIndex);
+  if (!existingChunk) {
+    const oldBytes = existingForJob.reduce(
+      (total, item) => total + Buffer.byteLength(JSON.stringify(item.data), 'utf8'), 0
+    );
+    if (oldBytes + Buffer.byteLength(validation.serialized, 'utf8') > MAX_SYNC_JOB_BYTES) {
+      return res.status(413).json({
+        success: false, error: 'حجم کل این همگام‌سازی بیش از حد مجاز است؛ آن را به دسته‌های مستقل تقسیم کنید.',
+      });
+    }
+  }
 
   if (existingChunk && JSON.stringify(existingChunk.data) !== validation.serialized) {
     return res.status(409).json({ success: false, error: 'این شماره بخش قبلاً با داده متفاوت ثبت شده است.' });
