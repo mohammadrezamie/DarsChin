@@ -90,3 +90,8 @@ The 22 retired, one-off scripts in `scripts/legacy/` have been deleted from curr
 ## Import preview persistence and error privacy — 2026-11-01
 
 Student/administrator extension import previews now keep new review batches and rows **atomic in application memory** with respect to the durable JSON write: if `db.save()` fails, both in-memory collections revert to their prior values and the HTTP response is a generic 500 without file paths, provider details or raw imported content. This does not make the JSON database safe for multiple independent Node writers; a transactional database remains required for distributed deployments. The main service on the existing VPS has not been touched.
+
+
+## Full backup is root-only (2026-11-01)
+
+Although downloadable backup JSON excludes password hashes and SMS provider credentials, it can still contain personally identifiable student data and academic plans. Therefore `GET /api/admin/backup` and global catalogue `POST /api/admin/restore` now require `requireSuperAdmin`, verifying the reserved root identity and the configured owner phone. A delegated administrator holding an obsolete `backup.manage` permission is refused. Tests exercise both unauthorised access and legitimate root access. This patch originates directly from the **new clean-root Git main** and introduces no ancestry from the exposed repository history.
