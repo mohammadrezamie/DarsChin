@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requirePermission, requireSuperAdmin } from '../middleware/auth';
+import { authenticate, requireSuperAdmin } from '../middleware/auth';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -8,15 +8,8 @@ import { User, UserRole } from '../../src/types';
 
 export const adminManagementRouter = Router();
 
-// Get all admins (requires admin.manage or admin.create)
-adminManagementRouter.get('/', authenticate, (req: any, res) => {
-  const perms = req.user.permissions || [];
-  const isSuper = req.user.roles.includes('super-admin');
-  
-  if (!isSuper && !perms.includes('admin.manage') && !perms.includes('admin.create')) {
-    return res.status(403).json({ success: false, error: 'دسترسی غیرمجاز.' });
-  }
-
+// Only the root may inspect administrator identities and grants.
+adminManagementRouter.get('/', authenticate, requireSuperAdmin, (req: any, res) => {
   const admins = db.users
     .filter(u => u.roles.includes('admin') || u.roles.includes('super-admin'))
     .map(u => ({
@@ -75,7 +68,7 @@ adminManagementRouter.put('/:id/demand-scopes', authenticate, requireSuperAdmin,
 });
 
 // Create new admin
-adminManagementRouter.post('/', authenticate, requirePermission('admin.create'), (req: any, res) => {
+adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res) => {
   const { name, mobile, password, permissions, roles } = req.body;
   if (roles !== undefined && (!Array.isArray(roles) || roles.length === 0 ||
     roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
@@ -91,17 +84,11 @@ adminManagementRouter.post('/', authenticate, requirePermission('admin.create'),
   }
 
   
-  // Ensure delegated admins can only grant permissions they themselves possess
-  if (permissions && !req.user.roles.includes('super-admin')) {
-      const myPerms = req.user.permissions || [];
-      const hasUnallowed = permissions.some((p: string) => !myPerms.includes(p));
-      if (hasUnallowed) {
-          return res.status(403).json({ success: false, error: 'شما نمی‌توانید دسترسی‌هایی بیشتر از دسترسی‌های خودتان اختصاص دهید.' });
-      }
+  // Admin creation always preserves the user's student workspace.
+  if (roles && !roles.includes('admin')) {
+    return res.status(400).json({ success: false, error: 'این مسیر فقط برای ایجاد مدیر است.' });
   }
-
-  const allowedRoles: UserRole[] = ['admin', 'student'];
-  const userRoles: UserRole[] = roles ? roles.filter((r: any) => allowedRoles.includes(r)) : ['admin'];
+  const userRoles: UserRole[] = ['student', 'admin'];
 
   const newUser: User = {
     id: `usr-${randomUUID()}`,
@@ -129,15 +116,8 @@ adminManagementRouter.post('/', authenticate, requirePermission('admin.create'),
   res.json({ success: true, message: 'مدیر با موفقیت ایجاد شد.' });
 });
 
-// Update admin (requires admin.manage or root)
-adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
-  const perms = req.user.permissions || [];
-  const isSuper = req.user.roles.includes('super-admin');
-  
-  if (!isSuper && !perms.includes('admin.manage')) {
-    return res.status(403).json({ success: false, error: 'دسترسی غیرمجاز.' });
-  }
-
+// Only the unique root may update delegated identities.
+adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, res) => {
   const target = db.users.find(u => u.id === req.params.id);
   if (!target) return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
   // Even the root session must not produce another privileged identity or
@@ -151,39 +131,29 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
     return res.status(403).json({ success: false, error: 'ایجاد مدیر ارشد یا تخصیص نقش نامعتبر مجاز نیست.' });
   }
 
-  // A delegated admin cannot manage someone they didn't create, UNLESS they are super-admin
-  if (!isSuper && target.createdBy !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'شما مجاز به ویرایش این کاربر نیستید (فقط کاربران ایجاد شده توسط خودتان).' });
-  }
-  
-  if (target.roles.includes('super-admin') && !isSuper) {
-      return res.status(403).json({ success: false, error: 'شما مجاز به ویرایش مدیر ارشد نیستید.' });
-  }
-
   const { name, mobile, permissions, roles, password } = req.body;
   if (name) target.name = name;
   if (mobile) target.mobile = mobile;
   
-  if (permissions && !isSuper) {
-      const myPerms = req.user.permissions || [];
-      const hasUnallowed = permissions.some((p: string) => !myPerms.includes(p));
-      if (hasUnallowed) {
-          return res.status(403).json({ success: false, error: 'شما نمی‌توانید دسترسی‌هایی بیشتر از دسترسی‌های خودتان اختصاص دهید.' });
-      }
-  }
-
   if (permissions) target.permissions = permissions;
   
   if (roles) {
-      const allowedRoles: UserRole[] = ['admin', 'student'];
-      const userRoles: UserRole[] = roles.filter((r: any) => allowedRoles.includes(r));
-      target.roles = userRoles;
+    target.roles = roles.includes('admin') ? ['student', 'admin'] : ['student'];
+  }
+  if (!target.roles.includes('admin')) {
+    // Prevent stale privileged grants on demoted student accounts, even when
+    // roles and permissions were changed in the same request.
+    target.permissions = [];
+    target.demandScopes = [];
   }
 
   if (password && password.trim() !== '') {
       target.password = bcrypt.hashSync(password, 10);
   }
 
+  // A profile or permission update can change login/authority; force a
+  // fresh token rather than leaving old browser sessions apparently valid.
+  target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
     id: `log-${Date.now()}`,
     adminId: req.user.id,
@@ -198,21 +168,10 @@ adminManagementRouter.put('/:id', authenticate, (req: any, res) => {
   res.json({ success: true, message: 'اطلاعات با موفقیت بروزرسانی شد.' });
 });
 
-// Deactivate admin (requires admin.remove or root)
-adminManagementRouter.delete('/:id', authenticate, (req: any, res) => {
-  const perms = req.user.permissions || [];
-  const isSuper = req.user.roles.includes('super-admin');
-  
-  if (!isSuper && !perms.includes('admin.remove')) {
-    return res.status(403).json({ success: false, error: 'دسترسی غیرمجاز.' });
-  }
-
+// Only root may deactivate or reactivate a delegated administrator.
+adminManagementRouter.delete('/:id', authenticate, requireSuperAdmin, (req: any, res) => {
   const target = db.users.find(u => u.id === req.params.id);
   if (!target) return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
-
-  if (!isSuper && target.createdBy !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'شما مجاز به غیرفعال‌سازی این کاربر نیستید (فقط کاربران ایجاد شده توسط خودتان).' });
-  }
 
   if (target.roles.includes('super-admin')) {
       return res.status(403).json({ success: false, error: 'غیرفعال‌سازی مدیر ارشد امکان‌پذیر نیست.' });
@@ -227,6 +186,8 @@ adminManagementRouter.delete('/:id', authenticate, (req: any, res) => {
       target.deactivatedBy = req.user.id;
   }
 
+  // Reactivation must not revive a JWT issued before deactivation.
+  target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
     id: `log-${Date.now()}`,
     adminId: req.user.id,

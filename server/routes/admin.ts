@@ -153,10 +153,14 @@ adminRouter.put('/users/:id/role', authenticate, requireSuperAdmin, validate(upd
     if (u.id === 'usr-super' || u.roles?.includes('super-admin')) {
       return res.status(403).json({ success: false, error: 'تغییر نقش مدیر ارشد اصلی سامانه امکان‌پذیر نیست.' });
     }
-    u.roles =
-      role === 'admin'
-        ? ['admin', 'student']
-        : ['student'];
+    u.roles = role === 'admin' ? ['admin', 'student'] : ['student'];
+    if (role === 'student') {
+      // A demoted student must never retain administrative data grants.
+      u.permissions = [];
+      u.demandScopes = [];
+    }
+    // Invalidate previously issued tokens at every role transition.
+    u.sessionVersion = (u.sessionVersion ?? 0) + 1;
     db.save();
     res.json({ success: true, message: 'نقش کاربر با موفقیت به‌روزرسانی شد.' });
   } catch (err: any) {

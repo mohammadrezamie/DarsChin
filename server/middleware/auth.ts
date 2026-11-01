@@ -70,13 +70,36 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
 }
 
 
+/**
+ * A persisted role label alone must never grant owner powers.
+ * Only the reserved bootstrap identity bound to the configured owner mobile
+ * can use the root bypass, including when old databases contain stale roles.
+ */
+export function isRootOwner(user: User | undefined): boolean {
+  const configuredMobile = process.env.ROOT_OWNER_MOBILE;
+  return Boolean(
+    configuredMobile &&
+    user?.id === 'usr-super' &&
+    user.mobile === configuredMobile &&
+    Array.isArray(user.roles) &&
+    user.roles.includes('super-admin')
+  );
+}
+
 export function requirePermission(permission: string) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const permissions = req.user?.permissions || [];
     const roles = Array.isArray(req.user?.roles) ? req.user.roles : [];
     
-    if (roles.includes('super-admin')) {
-      return next(); // root owner bypass
+    if (isRootOwner(req.user)) {
+      return next(); // verified reserved root owner only
+    }
+    // Stale permission strings on a student must not grant admin access.
+    if (!roles.includes('admin')) {
+      return res.status(403).json({
+        success: false,
+        error: 'نقش مدیریت معتبر برای این عملیات وجود ندارد.',
+      });
     }
 
     if (!permissions.includes(permission)) {
@@ -92,7 +115,7 @@ export function requirePermission(permission: string) {
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const roles = Array.isArray(req.user?.roles) ? req.user.roles : [];
   const permissions = req.user?.permissions || [];
-  if (!roles.includes('super-admin') && !permissions.includes('admin.panel.access')) {
+  if (!isRootOwner(req.user) && (!roles.includes('admin') || !permissions.includes('admin.panel.access'))) {
     return res.status(403).json({
       success: false,
       error: 'دسترسی غیرمجاز. فقط مدیران سامانه مجاز به انجام این عملیات هستند.',
@@ -103,8 +126,7 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
 
 
 export function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const roles = Array.isArray(req.user?.roles) ? req.user.roles : [];
-  if (!roles.includes('super-admin')) {
+  if (!isRootOwner(req.user)) {
     return res.status(403).json({
       success: false,
       error: 'دسترسی غیرمجاز. این بخش فقط مختص مدیر ارشد سیستم می‌باشد.',

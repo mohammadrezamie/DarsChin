@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requirePermission, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requirePermission, AuthenticatedRequest, isRootOwner } from '../middleware/auth';
 import { SupportTicket, SupportMessage, BugReport } from '../../src/types';
 import { validate } from '../middleware/validate';
 import { createTicketSchema, addMessageSchema, reportBugSchema, updateStatusSchema } from '../schemas/support';
@@ -32,7 +32,8 @@ supportRouter.post('/tickets', authenticate, validate(createTicketSchema), (req:
 supportRouter.get('/tickets/:id/messages', authenticate, (req: AuthenticatedRequest, res) => {
   const ticket = db.supportTickets.find(t => t.id === req.params.id);
   if (!ticket) return res.status(404).json({ success: false, error: 'Ticket not found' });
-  const isAdmin = req.user!.roles?.includes('admin') || req.user!.roles?.includes('super-admin');
+  const isAdmin = isRootOwner(req.user) || Boolean(req.user!.roles?.includes('admin') && req.user!.permissions?.includes('support.manage'));
+
   if (ticket.userId !== req.user!.id && !isAdmin) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
@@ -44,7 +45,8 @@ supportRouter.get('/tickets/:id/messages', authenticate, (req: AuthenticatedRequ
 supportRouter.post('/tickets/:id/messages', authenticate, validate(addMessageSchema), (req: AuthenticatedRequest, res) => {
   const ticket = db.supportTickets.find(t => t.id === req.params.id);
   if (!ticket) return res.status(404).json({ success: false, error: 'Ticket not found' });
-  const isAdmin = req.user!.roles?.includes('admin') || req.user!.roles?.includes('super-admin');
+  const isAdmin = isRootOwner(req.user) || Boolean(req.user!.roles?.includes('admin') && req.user!.permissions?.includes('support.manage'));
+
   if (ticket.userId !== req.user!.id && !isAdmin) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }

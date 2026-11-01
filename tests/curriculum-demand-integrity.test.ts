@@ -37,7 +37,7 @@ beforeAll(async()=>{
   }
   const now=new Date().toISOString();
   const root:User={id:userId,name:'مدیر آزمون چارت',mobile:'09999988111',
-    roles:['super-admin'],permissions:['curriculum.manage'],createdAt:now};
+    roles:['admin'],permissions:['curriculum.manage','system.settings.manage','course.create','course.update','course.delete','prerequisite.manage'],createdAt:now};
   const student:User={id:studentId,name:'دانشجوی آزمون',mobile:'09999988112',
     roles:['student'],createdAt:now};
   db.users.push(root,student);token='Bearer '+generateToken(root);studentToken='Bearer '+generateToken(student);
