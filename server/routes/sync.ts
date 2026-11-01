@@ -36,6 +36,42 @@ export interface SyncSnapshot {
   createdAt: string;
 }
 
+/**
+ * A staged import, its raw snapshot, and the sync job status must either
+ * become durable together or not happen at all. Existing arrays are copied
+ * shallowly because their entries are immutable here; job status fields are
+ * copied separately because reconciliation mutates a job in place.
+ *
+ * This is deliberately single-process JSON persistence. It is not a
+ * cross-process transaction; shared SQL storage is required for multi-worker.
+ */
+function commitSyncMutation<T>(mutate: () => T): { ok: true; value: T } | { ok: false } {
+  const previousJobs = (db.syncJobs as SyncJob[]).map(job => ({
+    ...job, reconciliationErrors: job.reconciliationErrors ? [...job.reconciliationErrors] : undefined,
+  }));
+  const previousSnapshots = (db.syncSnapshots as SyncSnapshot[]).slice();
+  const previousBatches = db.importBatches.slice();
+  const previousRecords = db.importRecords.slice();
+  try {
+    const value = mutate();
+    db.save();
+    return { ok: true, value };
+  } catch {
+    db.syncJobs = previousJobs;
+    db.syncSnapshots = previousSnapshots;
+    db.data.importBatches = previousBatches;
+    db.data.importRecords = previousRecords;
+    return { ok: false };
+  }
+}
+
+function storageFailure(res: import('express').Response) {
+  return res.status(503).json({
+    success: false,
+    error: 'ذخیرهٔ ایمن همگام‌سازی ممکن نیست؛ دوباره تلاش کنید.',
+  });
+}
+
 // Reconciliation updates the mutable job status. Checking through this helper
 // prevents incorrect control-flow narrowing after reconcileJob() has run.
 function requiresSyncReview(job: SyncJob): boolean {
@@ -65,7 +101,6 @@ function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
     job.reconciliationErrors = result.errors.slice(0, 50);
     db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
       .filter(snapshot => snapshot.jobId !== job.id);
-    db.save();
     return { ok: false, errors: result.errors };
   }
 
@@ -112,7 +147,6 @@ function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
   // Drop nested student-provided payloads once a normalized queue exists.
   db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
     .filter(snapshot => snapshot.jobId !== job.id);
-  db.save();
 
   return { ok: true, errors: [] };
 }
@@ -193,9 +227,12 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
     processedSnapshots: 0,
   };
 
-  db.syncJobs.push(job);
-  db.save();
-  return res.status(201).json({ success: true, data: job });
+  const created = commitSyncMutation(() => {
+    db.syncJobs.push(job);
+    return job;
+  });
+  if (!created.ok) return storageFailure(res);
+  return res.status(201).json({ success: true, data: created.value });
 });
 
 // 2. Upload a snapshot. A final chunk means "all chunks received", not "reconciled";
@@ -257,11 +294,15 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
 
     // A retry of the final request can recover a job left in RECEIVED after a process restart.
     if (isFinal && (job.status === 'RUNNING' || job.status === 'RECEIVED')) {
-      job.status = 'RECEIVED';
-      job.receivedAt = job.receivedAt || new Date().toISOString();
-      job.totalSnapshots = chunkIndex as number + 1;
-      job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
-      const result = reconcileJob(job);
+      const persisted = commitSyncMutation(() => {
+        job.status = 'RECEIVED';
+        job.receivedAt = job.receivedAt || new Date().toISOString();
+        job.totalSnapshots = chunkIndex as number + 1;
+        job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
+        return reconcileJob(job);
+      });
+      if (!persisted.ok) return storageFailure(res);
+      const result = persisted.value;
       return res.status(result.ok ? 200 : 422).json({
         success: result.ok,
         data: {
@@ -312,26 +353,28 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
     createdAt: new Date().toISOString(),
   };
 
-  allSnapshots.push(snapshot);
-  job.processedSnapshots = new Set([...existingForJob.map((item) => item.chunkIndex), chunkIndex as number]).size;
-  job.totalSnapshots = Math.max(job.totalSnapshots, (chunkIndex as number) + 1);
+  // One durable write for new snapshot + final reconciliation/staging.
+  // Never persist a half-completed RECEIVED job or private chunk by itself.
+  const committed = commitSyncMutation(() => {
+    allSnapshots.push(snapshot);
+    job.processedSnapshots = new Set([...existingForJob.map(item => item.chunkIndex), chunkIndex as number]).size;
+    job.totalSnapshots = Math.max(job.totalSnapshots, (chunkIndex as number) + 1);
+    if (!isFinal) return null;
 
+    job.status = 'RECEIVED';
+    job.receivedAt = new Date().toISOString();
+    job.totalSnapshots = (chunkIndex as number) + 1;
+    job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
+    return reconcileJob(job);
+  });
+  if (!committed.ok) return storageFailure(res);
   if (!isFinal) {
-    db.save();
     return res.json({
       success: true,
       data: { snapshotId: snapshot.id, jobStatus: job.status, duplicate: false },
     });
   }
-
-  job.status = 'RECEIVED';
-  job.receivedAt = new Date().toISOString();
-  job.totalSnapshots = (chunkIndex as number) + 1;
-  // Only the final-chunk fingerprint survives successful reconciliation.
-  job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
-  db.save();
-
-  const result = reconcileJob(job);
+  const result = committed.value!;
   return res.status(result.ok ? 200 : 422).json({
     success: result.ok,
     data: {
