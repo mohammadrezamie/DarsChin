@@ -7,6 +7,8 @@
 
 | Topic | Reference |
 | --- | --- |
+| **سیاست امنیت دائمی و الزام‌آور برای توسعه‌دهندگان و استفاده‌کنندگان/نصب‌کنندگان** | [PERMANENT_SECURITY_POLICY_FA.md](PERMANENT_SECURITY_POLICY_FA.md) |
+| **پروندهٔ افشای تاریخی GitHub، اقدامات مالک و GitHub Support (هنوز باز)** | [SECURITY_INCIDENT_RUNBOOK_20261101_FA.md](SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) |
 | **قرارداد دائمی دستیارها و توسعه‌دهنده‌ها: ثبت همهٔ دستورهای مالک در GitHub** | [AGENTS.md](../AGENTS.md) |
 | **دفتر تاریخ‌دار همهٔ درخواست‌ها، برنامه‌ها، اولویت‌ها و تغییر تصمیم مالک** | [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md) |
 | **معماری مدرن درس‌چین با الگوگیری فقط‌خواندنی از تکین، UI mobile-first و نقشهٔ فناوری** | [MODERN_ARCHITECTURE_TNA_INSPIRED_FA.md](MODERN_ARCHITECTURE_TNA_INSPIRED_FA.md) |
