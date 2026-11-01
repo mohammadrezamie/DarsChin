@@ -13,6 +13,18 @@ describe('one-repository deploy safety contract', () => {
     expect(compose).toContain('DARSCHYN_ACCESS_MODE: ${DARSCHYN_ACCESS_MODE:-multiuser}');
     expect(compose).toContain('darschin-data:/app/data');
   });
+  it('does not demand unused Caddy credentials on the shared Nginx stack', () => {
+    const compose = load('compose.yaml');
+    // Compose interpolates all services before selecting the one to start.
+    expect(compose).toContain('DARSCHYN_DOMAIN: ${DARSCHYN_DOMAIN:-}');
+    expect(compose).toContain('ACME_CONTACT_EMAIL: ${ACME_CONTACT_EMAIL:-}');
+    expect(compose).not.toContain('DARSCHYN_DOMAIN:?');
+    expect(compose).not.toContain('ACME_CONTACT_EMAIL:?');
+    const overlay = load('compose.pilot-ssh.yaml');
+    expect(overlay).toContain('127.0.0.1:');
+    expect(load('deploy/Caddyfile')).toContain('{$DARSCHYN_DOMAIN}');
+  });
+
   it('keeps private server configuration and data out of Docker build context', () => {
     const ignored = load('.dockerignore');
     expect(ignored).toMatch(/(^|\n)data(\n|$)/);
