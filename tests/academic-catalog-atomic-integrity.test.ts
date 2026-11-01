@@ -163,4 +163,17 @@ describe('academic catalogue validation and irreversible reference protection', 
     expect((await remove('/tracks/'+track.id)).status).toBe(409);
     expect(db.tracks.some(t=>t.id===track.id)).toBe(true);
   });
+  it('accepts exactly the international and comprehensive unit types shown in the real admin form',async()=>{
+    const university=db.universities.find(u=>u.active);
+    if (!university) throw Error('Missing active university');
+    const international=await post('/campuses',{universityId:university.id,
+      name:'واحد بین‌الملل آزمایشی',code:'SYNTH-INTL',type:'INTERNATIONAL'});
+    expect(international.status).toBe(200);
+    expect(international.body.data.type).toBe('INTERNATIONAL');
+    const comprehensive=await post('/campuses',{universityId:university.id,
+      name:'واحد جامع مستقل آزمایشی',code:'SYNTH-COMP',type:'COMPREHENSIVE_INDEPENDENT'});
+    expect(comprehensive.status).toBe(200);
+    expect(comprehensive.body.data.type).toBe('COMPREHENSIVE_INDEPENDENT');
+  });
+
 });
