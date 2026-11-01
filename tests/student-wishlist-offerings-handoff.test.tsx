@@ -69,7 +69,9 @@ describe('wishlist-to-offerings student handoff', () => {
       wishlistCount={3} selectedGroupCount={1}/>);
     expect(allowed).toContain('اکنون ۱ گروه');
     expect(allowed).not.toContain('حداقل یک گروه مجاز');
-    expect(source('src/components/StudentDashboard.tsx')).toContain("'wishlist', 'offerings', 'registration'");
+    // انتخاب درس، استاد و صف ثبت دیگر دانشجو را بین سه فضای نامرتبط جابه‌جا نمی‌کند.
+    expect(source('src/components/StudentDashboard.tsx')).toContain("'registration', 'registration', 'registration'");
+    expect(source('src/components/StudentDashboard.tsx')).toContain('<CourseRegistrationFlow');
   });
 
   it('never bypasses eligibility checks from the new basket-only filter', () => {
