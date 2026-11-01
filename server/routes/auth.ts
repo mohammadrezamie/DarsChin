@@ -21,6 +21,9 @@ const failedLogins = new FailedLoginTracker();
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes lockout
+// Run bcrypt even for unknown/deactivated accounts. Never authenticate this dummy.
+const UNKNOWN_LOGIN_PASSWORD_HASH = bcrypt.hashSync('darschin-nonexistent-account-sentinel', 10);
+const BAD_LOGIN_RESPONSE = { success: false, error: 'شماره موبایل یا رمز عبور اشتباه است.' } as const;
 
 // Normalize mobile phone numbers (converting Persian/Arabic numerals and international prefixes)
 function normalizeMobile(mobile: string): string {
@@ -72,6 +75,17 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     return res.status(400).json({
       success: false,
       error: 'لطفاً نام و نام خانوادگی خود را وارد کنید.',
+    });
+  }
+
+  // Public production accounts must prove phone ownership before creation.
+  // Keep the service online while declining unsafe registration when SMS
+  // verification has not been activated; existing logins remain unaffected.
+  if (process.env.NODE_ENV === 'production' &&
+      process.env.DARSCHYN_REGISTRATION_OTP_REQUIRED !== 'true') {
+    return res.status(503).json({
+      success: false,
+      error: 'ثبت‌نام تا فعال‌سازی تأیید شمارهٔ موبایل غیرفعال است.',
     });
   }
 
@@ -225,46 +239,18 @@ authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema),
     });
   }
 
-  // Find user by mobile
+  // Do not disclose if the mobile exists or was deactivated. Return the
+  // same status/body and apply the same lockout counter in all three cases.
   const user = db.users.find((u) => u.mobile === mobile);
-  // Do not log identifiers or whether an account exists for a supplied number.
-  if (user && user.deactivatedAt) {
-    return res.status(403).json({
-      success: false,
-      error: 'حساب کاربری شما غیرفعال شده است.',
-    });
-  }
-
-  if (!user || !user.password) {
-    // Record failed attempt
+  const validPassword = bcrypt.compareSync(password,
+    user && !user.deactivatedAt && user.password ? user.password : UNKNOWN_LOGIN_PASSWORD_HASH);
+  if (!user || user.deactivatedAt || !user.password || !validPassword) {
     const currentCount = (attempt ? attempt.count : 0) + 1;
-    const isLocked = currentCount >= MAX_FAILED_ATTEMPTS;
     failedLogins.set(mobile, {
       count: currentCount,
-      lockedUntil: isLocked ? now + LOCKOUT_DURATION_MS : 0,
+      lockedUntil: currentCount >= MAX_FAILED_ATTEMPTS ? now + LOCKOUT_DURATION_MS : 0,
     });
-
-    return res.status(401).json({
-      success: false,
-      error: 'شماره موبایل یا رمز عبور اشتباه است.',
-    });
-  }
-
-  // Verify password using bcrypt
-  const isMatch = bcrypt.compareSync(password, user.password);
-  if (!isMatch) {
-    const currentCount = (attempt ? attempt.count : 0) + 1;
-    const isLocked = currentCount >= MAX_FAILED_ATTEMPTS;
-    failedLogins.set(mobile, {
-      count: currentCount,
-      lockedUntil: isLocked ? now + LOCKOUT_DURATION_MS : 0,
-    });
-
-    return res.status(401).json({
-      success: false,
-      error: 'شماره موبایل یا رمز عبور اشتباه است.',
-      remainingAttempts: Math.max(0, MAX_FAILED_ATTEMPTS - currentCount),
-    });
+    return res.status(401).json(BAD_LOGIN_RESPONSE);
   }
 
   // Successful login: Reset failed attempts

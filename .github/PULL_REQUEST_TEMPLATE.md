@@ -1,3 +1,12 @@
+## Required security review
+
+- [ ] Read [Permanent Security Policy](../docs/PERMANENT_SECURITY_POLICY_FA.md) and [Security Policy](../SECURITY.md)
+- [ ] Checked public-source/secret exposure and considered historical PR refs; no real PII or credentials in commits, logs, screenshots or tests
+- [ ] Reviewed server-side authentication, identity ownership, authorization scopes, privacy/no-store and hostile inputs
+- [ ] Reviewed failed-write rollback, audit integrity, seed/demo isolation, dependency and supply-chain risks
+- [ ] Added negative HTTP/regression tests for security-sensitive changes, with exact SHA and result
+- [ ] Confirmed production, existing server, TNA and credentials untouched unless separately authorized
+
 ## Summary
 
 Describe the change and the behavior it affects.

@@ -24,6 +24,7 @@ import { adminManagementRouter } from './server/routes/admin-management';
 import { supportRouter } from './server/routes/support';
 import { logger } from './server/utils/logger';
 import { securityHeaders } from './server/middleware/security-headers';
+import { blockPrivateBuildArtifacts } from './server/middleware/public-static';
 import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
 
@@ -156,7 +157,10 @@ app.use('/api/admin-management', adminManagementRouter);
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // Public React files and the *private* Express bundle share dist/.
+    // Deny requests for server.cjs / .map and other sensitive artifacts first.
+    app.use(blockPrivateBuildArtifacts);
+    app.use(express.static(distPath, { dotfiles: 'deny' }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
