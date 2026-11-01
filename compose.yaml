@@ -16,6 +16,8 @@ services:
       DARSCHYN_ACCESS_MODE: ${DARSCHYN_ACCESS_MODE:-multiuser}
       # Explicitly forward the safety toggles from the operator's private env file.
       DARSCHYN_REQUIRE_EXISTING_DB: ${DARSCHYN_REQUIRE_EXISTING_DB:-false}
+      # With false in production, new public account creation fails closed (503).
+      # Configure a real approved SMS provider before enabling public signup.
       DARSCHYN_REGISTRATION_OTP_REQUIRED: ${DARSCHYN_REGISTRATION_OTP_REQUIRED:-false}
       DARSCHYN_RELEASE_SHA: ${DARSCHYN_RELEASE_SHA:-unidentified}
       SMS_PROVIDER: ${SMS_PROVIDER:-log}
