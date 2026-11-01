@@ -645,3 +645,18 @@
   .dc-primary-action, .dc-secondary-action, .dc-demo-entry, .dc-brand-mark { border: 1px solid ButtonText; }
   .dc-brand-text { background: none; color: CanvasText; }
 }
+
+/* صفحه‌ها و پنل‌ها هم‌رنگ هویت مشترک؛ بدون از بین بردن رنگ معنایی هشدار/خطا */
+.dc-landing { background-color: var(--dc-canvas); color: var(--darschin-text); }
+.dc-student-workspace, .dc-admin-workspace { color: var(--darschin-text); }
+.dc-auth-backdrop :where(form, section) { border-color: var(--darschin-stroke); }
+.dc-auth-backdrop :where(input, select, textarea):focus-visible { border-color: var(--darschin-focus); }
+.dc-student-workspace :where(.darschin-surface, .bg-glass-primary),
+.dc-admin-workspace :where(.darschin-surface, .bg-glass-primary) {
+  border-color: var(--darschin-stroke);
+}
+.dark .dc-landing { background-color: var(--dc-canvas); }
+@media print {
+  .dc-landing, .dc-student-workspace, .dc-admin-workspace { background: #fff !important; color: #111 !important; }
+  .dc-hero::before { display: none; }
+}
