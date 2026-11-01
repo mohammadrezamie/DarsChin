@@ -1,39 +1,43 @@
-## Required security review
+## بررسی الزامی امنیت و حریم خصوصی
 
-- [ ] Read [Permanent Security Policy](../docs/PERMANENT_SECURITY_POLICY_FA.md) and [Security Policy](../SECURITY.md)
-- [ ] Checked public-source/secret exposure and considered historical PR refs; no real PII or credentials in commits, logs, screenshots or tests
-- [ ] Reviewed server-side authentication, identity ownership, authorization scopes, privacy/no-store and hostile inputs
-- [ ] Reviewed failed-write rollback, audit integrity, seed/demo isolation, dependency and supply-chain risks
-- [ ] Added negative HTTP/regression tests for security-sensitive changes, with exact SHA and result
-- [ ] Confirmed production, existing server, TNA and credentials untouched unless separately authorized
+- [ ] [منشور دائمی امنیت](../docs/PERMANENT_SECURITY_POLICY_FA.md)، [سیاست امنیت](../SECURITY.md) و [استاندارد فارسی‌نویسی](../docs/PERSIAN_DOCUMENTATION_STANDARD_FA.md) را خواندم.
+- [ ] تاریخچهٔ عمومی، فایل‌های مخفی، داده‌های واقعی کاربران، کدهای قدیمی و اطلاعات محرمانهٔ احتمالی را بررسی کردم.
+- [ ] کنترل مجوز سمت سرور، مالکیت رکورد، محدودهٔ دانشگاه/رشته/ورودی و جلوگیری از دسترسی کاربر دیگر بررسی شده است.
+- [ ] بازگشت تغییرات در شکست ذخیره، محرمانگی لاگ و پاسخ، دادهٔ نمایشی و ریسک وابستگی‌ها بررسی شده است.
+- [ ] برای تغییر حساس آزمون منفی HTTP، موارد خطای دیسک و رگرسیون با SHA دقیق اضافه شده‌اند.
+- [ ] اتصال فعلی VPS، سرور تکین، اعتبارنامه‌ها و دادهٔ واقعی بدون اجازهٔ جداگانه تغییر نکرده‌اند.
 
-## Summary
+## خلاصهٔ تغییرات
 
-Describe the change and the behavior it affects.
+به فارسی توضیح دهید چه مشکلی رفع شده، کاربر چه تفاوتی می‌بیند و محدودهٔ واقعی چیست.
 
-## Scope
+## دامنه و تأیید مالک
 
-- [ ] No academic policy change (or owner approval is linked below)
-- [ ] No real student data, secrets, credentials, or generated binary accidentally included
-- [ ] Scoped changes only; relevant documentation updated
+- [ ] هیچ قانون آموزشی بدون تأیید صریح مالک تغییر نکرده است؛ اگر تأیید لازم بوده، پیوند آن پایین درج می‌شود.
+- [ ] هیچ دادهٔ واقعی، رمز، کلید، خروجی ساخت یا فایل باینری اتفاقی وارد PR نشده است.
+- [ ] مستندات و دفتر تصمیمات مالک به‌روز شده‌اند.
+- [ ] متن‌های جدید یا ویرایش‌شدهٔ مستندات فارسی هستند؛ کد، مسیرها و `LICENSE` بی‌دلیل ترجمه نشده‌اند.
 
-## Verification for exact commit
+**شمارهٔ تصمیم مالک / Issue مربوط:**
 
-**Commit SHA:**
+## شواهد آزمون دقیق همین کامیت
 
-| Check | Command | Result |
+**SHA دقیق کامیت:**
+
+| بررسی | دستور | نتیجهٔ واقعی |
 | --- | --- | --- |
-| Typecheck | `npm run lint` | Not run |
-| Tests | `npm test` | Not run |
-| Build | `npm run build` | Not run |
-| API/runtime | Document command | Not run |
+| بررسی نوع‌ها | `bun run lint` | اجرا نشده |
+| آزمون‌ها | `bun run test` | اجرا نشده |
+| ساخت کامل | `bun run build` | اجرا نشده |
+| کنترل یکپارچه | `bun run verify` | اجرا نشده |
+| API و محیط اجرا | `bun run smoke:api` در محیط جدا | اجرا نشده |
 
-If Actions minutes are exhausted, attach redacted evidence from a disposable local runner. Never label static review or a Vercel frontend preview as a passing API test.
+فقط نتیجهٔ **واقعی و مشاهده‌شده** را وارد کنید. اگر سهمیهٔ GitHub Actions تمام شده است از محیط آزمایشی ایزوله با دادهٔ ساختگی استفاده کنید؛ بازبینی کد یا پیش‌نمایش فرانت‌اند، تست موفق API نیست.
 
-## Risk / rollback
+## ریسک، بازگشت و موارد باز
 
-Describe any persistent data, authentication, external integration or deployment impacts. Include a rollback plan for runtime changes.
+تأثیر بر دادهٔ پایدار، دسترسی‌ها، سرویس خارجی و استقرار، نحوهٔ بازگشت و آزمون‌های انجام‌نشده را توضیح دهید.
 
-## Academic policy approval (if needed)
+## تأیید تغییر مقررات آموزشی (در صورت نیاز)
 
-Link the owner's explicit approval; never silently reinterpret eligibility, prerequisites or unit limits.
+لینک تأیید صریح مالک را قرار دهید؛ از تفسیر خودسرانهٔ پیش‌نیازها، سقف واحد یا چارت معارف خودداری کنید.
