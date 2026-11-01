@@ -200,4 +200,43 @@ describe('real student term/chart-scoped planning and durable writes',()=>{
     expect(chosen.totalCurriculumUnits).toBe(before.totalCurriculumUnits+4);
   });
 
+  it('rejects cross-campus, wrong-term and wrong-course fallbacks even without primary selection',async()=>{
+    const foreign=await put('/plan').send({offeringPriorities:{[courseId]:[foreignId]}});
+    expect(foreign.status).toBe(400);
+    const wrongTerm='synthetic-old-semester-alternative';
+    db.courseOfferings.push({...db.courseOfferings[0],id:wrongTerm,termId:'different-term'});
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[wrongTerm]}})).status).toBe(400);
+    const wrongCourse='synthetic-mismatched-course-alternative';
+    db.courseOfferings.push({...db.courseOfferings[0],id:wrongCourse,courseId:'other-course'});
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[wrongCourse]}})).status).toBe(400);
+    db.courseOfferings.find(row=>row.id===alternateId)!.active=false;
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[alternateId]}})).status).toBe(400);
+    expect(db.studentPlans).toHaveLength(0);
+  });
+
+  it('preserves valid scoped section alternatives and both priority formats',async()=>{
+    const selected=await put('/plan').send({
+      selectedOfferingIds:[offeringId],
+      offeringPriorities:{[courseId]:[alternateId,offeringId]},
+      coursePriorities:[courseId],
+    });
+    expect(selected.status).toBe(200);
+    expect(selected.body.data.offeringPriorities[courseId]).toEqual([alternateId,offeringId]);
+    expect(selected.body.data.coursePriorities).toEqual([courseId]);
+    const legacy=await put('/plan').send({coursePriorities:{[courseId]:0}});
+    expect(legacy.status).toBe(200);
+    expect(legacy.body.data.coursePriorities).toEqual({[courseId]:0});
+  });
+
+  it('rejects unrelated course priorities and duplicated fallback IDs before any disk write',async()=>{
+    const spy=vi.spyOn(db,'save');
+    expect((await put('/plan').send({coursePriorities:['course-from-other-curriculum']})).status).toBe(400);
+    expect((await put('/plan').send({coursePriorities:{'foreign-course':0}})).status).toBe(400);
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[offeringId,offeringId]}})).status).toBe(400);
+    expect((await put('/plan').send({coursePriorities:[courseId,courseId]})).status).toBe(400);
+    expect((await put('/plan').send({selectedOfferingIds:[offeringId,offeringId]})).status).toBe(400);
+    expect(db.studentPlans).toHaveLength(0);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
 });

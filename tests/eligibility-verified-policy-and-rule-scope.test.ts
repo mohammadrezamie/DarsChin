@@ -70,4 +70,50 @@ describe('final semester and cohort rules never grant invented academic permissi
     check();
     expect(consoleSpy).not.toHaveBeenCalled();
   });
+  it('never waives a prerequisite when its referenced source is missing',()=>{
+    const broken:AcademicRule={...prerequisite,expression:{type:'COURSE',courseId:'deleted-course'}};
+    const result=check({rules:[broken]}).results[0];
+    expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    expect(result.canSelect).toBe(false);
+    expect(result.allReasons.join(' ')).toContain('شناسه');
+    const override=check({rules:[broken],profile:{...profile,isFinalSemesterOverride:true}}).results[0];
+    expect(override.canSelect).toBe(false);
+  });
+
+  it('rejects empty, malformed or unknown nested rule expressions instead of passing silently',()=>{
+    const variants=[
+      {type:'GROUP',operator:'AND',operands:[]},
+      {type:'GROUP',operator:'OR',operands:[]},
+      {type:'GROUP',operator:'UNKNOWN',operands:[{type:'COURSE',courseId:'basic'}]},
+      {type:'UNKNOWN'},
+      null,
+    ];
+    for(const expression of variants) {
+      const result=check({rules:[{...prerequisite,expression:expression as AcademicRule['expression']}]}).results[0];
+      expect(result.canSelect).toBe(false);
+      expect(result.overallStatus).toBe('BLOCKED_PREREQUISITE');
+    }
+  });
+
+  it('still permits an OR branch that is actually satisfied even if another branch is invalid',()=>{
+    const disjunction:AcademicRule={...prerequisite,expression:{
+      type:'GROUP',operator:'OR',operands:[
+        {type:'COURSE',courseId:'deleted-course'},
+        {type:'COURSE',courseId:'basic'},
+      ],
+    }};
+    const result=check({rules:[disjunction],profile:{...profile,isFinalSemesterOverride:true}}).results[0];
+    expect(result.overallStatus).toBe('AVAILABLE');
+  });
+
+  it('rejects a deactivated catalog course offered by a stale active group',()=>{
+    const result=evaluateStudentEligibility({
+      studentProfile:profile,curriculum,curriculumCourses:links,
+      allCourses:courses.map(row=>row.id==='advanced'?{...row,active:false}:row),
+      tracks:[],academicRules:[],passedCourses:[],currentOfferings:[advanced],
+    });
+    expect(result.results[0].canSelect).toBe(false);
+    expect(result.results[0].overallStatus).toBe('NEEDS_REVIEW');
+  });
+
 });
