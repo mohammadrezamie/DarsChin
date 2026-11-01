@@ -88,7 +88,7 @@ const AppRouteShell: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <AppErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={
             <div dir="rtl" role="status" aria-live="polite" className="mx-auto flex min-h-[65dvh] max-w-6xl flex-col justify-center gap-5 px-4 py-16 sm:px-6">
-              <div className="darschin-loading-pulse h-4 w-28 rounded-full bg-blue-200 dark:bg-blue-800" aria-hidden="true" />
+              <div className="darschin-loading-pulse h-4 w-28 rounded-full bg-teal-200 dark:bg-teal-900" aria-hidden="true" />
               <div className="darschin-loading-pulse h-10 w-[min(75%,340px)] rounded-xl bg-slate-200 dark:bg-slate-800" aria-hidden="true" />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
                 <div className="darschin-loading-pulse h-40 rounded-3xl bg-slate-200 dark:bg-slate-800" />
