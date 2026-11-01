@@ -963,7 +963,7 @@ export const StudentDashboard: React.FC = () => {
                 onReorderAlternatives={handleReorderAlternatives}
                 onReorderCourses={handleReorderCourses}
               />
-            )
+            )}
 
             {activeTab === 'demand' && demandSurveyAvailable && <DemandWorkspace role="student" />}
             {activeTab === 'passed' && (
