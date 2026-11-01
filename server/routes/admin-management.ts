@@ -99,6 +99,9 @@ adminManagementRouter.put('/:id/demand-scopes', authenticate, requireSuperAdmin,
 
 // Create new admin
 adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res) => {
+  if (Array.isArray(req.body?.roles) && req.body.roles.includes('super-admin')) {
+    return res.status(403).json({ success: false, error: 'ایجاد یا واگذاری نقش مدیر ارشد مجاز نیست.' });
+  }
   const parsed = newManagerSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ success: false, error: 'نام، شماره، رمز یا مجوزهای مدیر معتبر نیست.' });
@@ -112,9 +115,6 @@ adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res)
   }
 
   // Admin creation always preserves the user's student workspace.
-  if (roles && !roles.includes('admin')) {
-    return res.status(400).json({ success: false, error: 'این مسیر فقط برای ایجاد مدیر است.' });
-  }
   const userRoles: UserRole[] = ['student', 'admin'];
 
   const newUser: User = {
@@ -152,6 +152,9 @@ adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, re
     return res.status(403).json({ success: false, error: 'هویت مدیر ارشد در این مسیر قابل ویرایش نیست.' });
   }
 
+  if (Array.isArray(req.body?.roles) && req.body.roles.includes('super-admin')) {
+    return res.status(403).json({ success: false, error: 'ایجاد یا واگذاری نقش مدیر ارشد مجاز نیست.' });
+  }
   const parsed = updateManagerSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ success: false, error: 'داده‌های ویرایش مدیر معتبر نیست.' });
