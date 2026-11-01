@@ -673,27 +673,27 @@ export const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div dir="rtl" className="darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
+    <div dir="rtl" className="dc-student-workspace darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
       {/* Compact app home header: the desktop hero remains a separate layout. */}
-      <section className="darschin-mobile-home relative min-w-0 overflow-hidden rounded-2xl border border-blue-200/75 bg-gradient-to-bl from-white via-blue-50 to-indigo-50 px-3.5 py-3.5 shadow-sm dark:border-blue-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/35 md:hidden print:hidden" aria-label="ابزارهای سریع دانشجو">
+      <section className="darschin-mobile-home relative min-w-0 overflow-hidden rounded-2xl border border-teal-200/75 bg-gradient-to-bl from-white via-teal-50 to-emerald-50 px-3.5 py-3.5 shadow-sm dark:border-teal-950/70 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/35 md:hidden print:hidden" aria-label="ابزارهای سریع دانشجو">
         <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="truncate text-base font-extrabold text-slate-950 dark:text-white">سلام، {user.name} 👋</h2>
             <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">برنامهٔ این ترم، همیشه دم دستت</p>
           </div>
           <button type="button" onClick={() => selectMobileWorkspace('schedule')} aria-label="مشاهدهٔ برنامهٔ انتخابی"
-            className="inline-flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border border-blue-200 bg-white/90 px-3 text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-slate-800 dark:text-blue-200">
+            className="inline-flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border border-teal-200 bg-white/90 px-3 text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-teal-900 dark:bg-slate-800 dark:text-teal-200">
             <strong className="text-sm tabular-nums">{selectedOfferingIds.length.toLocaleString('fa-IR')}</strong>
             <span className="text-[10px] font-bold">گروه من</span>
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setProfileModalOpen(true)}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-extrabold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-extrabold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
             پروندهٔ تحصیلی
           </button>
           <button type="button" onClick={() => setImportModalOpen(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-xs font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-800 px-3 text-xs font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
             <UploadCloud aria-hidden="true" className="h-4 w-4" /> دریافت دروس
           </button>
         </div>
@@ -701,8 +701,8 @@ export const StudentDashboard: React.FC = () => {
       </section>
 
       {/* Header Panel */}
-      <div className="darschin-surface relative hidden min-w-0 overflow-hidden rounded-[1.35rem] md:block border border-blue-100/80 bg-gradient-to-bl from-white via-blue-50/50 to-indigo-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-blue-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30 print:hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+      <div className="darschin-surface relative hidden min-w-0 overflow-hidden rounded-[1.35rem] md:block border border-teal-100/80 bg-gradient-to-bl from-white via-teal-50/50 to-emerald-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-teal-950/30 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/30 print:hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-600/10 dark:bg-teal-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
@@ -717,9 +717,9 @@ export const StudentDashboard: React.FC = () => {
               از اینجا درس‌ها، برنامهٔ هفتگی و ترتیب ثبت را سریع مدیریت کن.
             </p>
             {academicLimits && (
-              <details className="group mt-3 min-w-0 rounded-xl border border-blue-100 bg-white/65 dark:border-slate-700/70 dark:bg-slate-900/50">
-                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-blue-800 dark:text-blue-200">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
-                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-blue-100 p-3 sm:grid-cols-3 dark:border-slate-700/70">
+              <details className="group mt-3 min-w-0 rounded-xl border border-teal-100 bg-white/65 dark:border-slate-700/70 dark:bg-slate-900/50">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-teal-900 dark:text-teal-200">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
+                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-teal-100 p-3 sm:grid-cols-3 dark:border-slate-700/70">
                 <div className="min-w-0 flex flex-col gap-1">
                   <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">رشته‌ای اجباری</span>
                   <span className="break-words text-[11px] font-bold leading-5 text-slate-700 dark:text-slate-300">
@@ -744,11 +744,11 @@ export const StudentDashboard: React.FC = () => {
           </div>
           <div className="grid w-full min-w-0 grid-cols-2 gap-2 lg:w-auto lg:min-w-[20rem]">
             <button type="button" onClick={() => setProfileModalOpen(true)}
-              className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-center text-xs font-extrabold leading-5 text-slate-800 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+              className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-center text-xs font-extrabold leading-5 text-slate-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
               پروندهٔ تحصیلی
             </button>
             <button type="button" onClick={() => setImportModalOpen(true)}
-              className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-blue-600 to-indigo-600 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-blue-600/15 transition hover:from-blue-700 hover:to-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+              className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-teal-700 to-emerald-700 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-teal-700/15 transition hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
               <UploadCloud aria-hidden="true" className="h-4 w-4 shrink-0" /> دریافت دروس
             </button>
             <p className="col-span-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
@@ -824,8 +824,8 @@ export const StudentDashboard: React.FC = () => {
                 title={tab.id === 'demand' && !demandSurveyAvailable ? 'پس از بازکردن نیازسنجی توسط مدیر گروه فعال می‌شود' : undefined}
                 onClick={() => navigateWorkspace(tab.id)}
                 aria-current={current ? 'page' : undefined}
-                className={`flex min-h-11 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${current
-                  ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200'
+                className={`flex min-h-11 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 ${current
+                  ? 'border-teal-200 bg-teal-50 text-teal-900 dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-200'
                   : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <TabIcon aria-hidden={true} className="h-4 w-4 shrink-0" />
@@ -839,7 +839,7 @@ export const StudentDashboard: React.FC = () => {
 
       <div aria-live="polite" className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900/80 sm:px-4">
         {planStatus !== 'idle' && <span role="status" className="flex min-w-0 items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
-          {planStatus === 'saving' ? <RefreshCw aria-hidden={true} className="h-4 w-4 animate-spin text-blue-600" />
+          {planStatus === 'saving' ? <RefreshCw aria-hidden={true} className="h-4 w-4 animate-spin text-teal-700" />
             : planStatus === 'saved' ? <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-emerald-600" />
             : planStatus === 'error' ? <AlertCircle aria-hidden={true} className="h-4 w-4 text-rose-600" />
             : <CheckCircle2 aria-hidden={true} className="h-4 w-4 text-slate-400" />}
@@ -868,23 +868,23 @@ export const StudentDashboard: React.FC = () => {
       <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
         <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
         {journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
-          <div className="mx-auto max-w-xl rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
-            <h3 className="text-base font-bold text-indigo-950 dark:text-indigo-100">
+          <div className="mx-auto max-w-xl rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-center dark:border-emerald-950 dark:bg-emerald-950/30">
+            <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
               {journeyStep === 0 ? 'از پروندهٔ خودت شروع کن' : 'شرایط انتخاب واحدت را بررسی کن'}
             </h3>
-            <p className="mt-2 text-sm leading-8 text-indigo-900 dark:text-indigo-200">
+            <p className="mt-2 text-sm leading-8 text-emerald-950 dark:text-emerald-200">
               {journeyStep === 0
                 ? 'بعد از بررسی مشخصات، درس‌هایی که واقعاً پاس کرده‌ای را ثبت می‌کنی. جدول گروه‌ها و انتخاب نهایی در مراحل بعد می‌آیند.'
                 : 'سقف واحد و شرایط این نیمسال در راهنمای بالا نمایش داده شده‌اند. پس از تأیید، پیشنهادهای درسی را می‌بینی.'}
             </p>
             <button type="button" onClick={() => setProfileModalOpen(true)}
-              className="mt-3 min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
+              className="mt-3 min-h-11 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-emerald-300">
               بررسی یا اصلاح پرونده
             </button>
           </div>
         ) : loading && activeTab !== 'demand' && activeTab !== 'support' ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-            <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin" />
             <span className="text-xs font-medium">در حال بارگذاری و تحلیل داده‌ها...</span>
           </div>
         ) : (
@@ -987,7 +987,7 @@ export const StudentDashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button ref={clearCancelRef} type="button" disabled={planStatus === 'saving'}
                 onClick={() => setClearConfirmOpen(false)}
-                className="min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">
+                className="min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">
                 انصراف
               </button>
               <button type="button" disabled={planStatus === 'saving'}
@@ -1028,7 +1028,7 @@ export const StudentDashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button type="button" ref={conflictCancelRef} disabled={planStatus === 'saving'}
                 onClick={() => setConflictWarning(null)}
-                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
               >
                 انصراف
               </button>
