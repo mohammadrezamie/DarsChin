@@ -86,3 +86,8 @@ Limitations: this does not eliminate every possible timing/network side channel,
 ## Historical legacy authentication scripts in public Git (2026-11-01)
 
 The 22 retired, one-off scripts in `scripts/legacy/` have been deleted from current HEAD after discovering embedded authentication values and a password-printing utility. They were not supported production or test commands. Automated public-source checks now reject recommitting executable files under this deprecated directory. Source deletion **does not remove historical Git objects, old PR refs, third-party clones, or invalidate leaked secrets**. Create new independent deployment credentials, revoke anything exposed in history and coordinate full historical cleanup and GitHub Support separately. No active VPS or private environment was touched.
+
+
+## Full backup scope and import diagnostics (2026-11-01)
+
+Full database backup downloads may contain student identities, profiles, plans and academic records even though password hashes and SMS keys are removed. Therefore **GET /api/admin/backup** is now reserved for the verified root owner; the corresponding **POST /api/admin/restore** (global academic catalogue restore) is root-only too. An ordinary admin with a legacy `backup.manage` permission is not authorized. Unexpected import processing/storage exceptions return a generic 500 response rather than filesystem paths, uploaded content or private configuration. Automated HTTP regressions verify these boundaries. This does not rewrite historical Git blobs or modify the running VPS.
