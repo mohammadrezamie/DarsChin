@@ -23,9 +23,8 @@ describe('administrative API internal exception privacy', () => {
     const spy = vi.spyOn(db, 'exportBackup').mockImplementationOnce(() => { throw new Error(secret); });
     try {
       const res = await request(app).get('/api/admin/backup').set('Authorization', rootAuth);
-      // If the handler does not catch the error, Express still should never
-      // send the raw message. Global server middleware owns unhandled faults.
-      expect([500]).toContain(res.status);
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ success: false, error: 'آماده‌سازی فایل پشتیبان ناموفق بود.' });
       expect(JSON.stringify(res.body)).not.toContain(secret);
     } finally {
       spy.mockRestore();
