@@ -1,0 +1,6 @@
+{
+  "name": "درس‌چین",
+  "description": "سامانه هوشمند تصمیم‌یار انتخاب واحد دانشگاهی و بررسی پیش‌نیازها و تطبیق دروس",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

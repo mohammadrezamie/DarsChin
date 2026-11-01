@@ -1,0 +1,13 @@
+{
+  email {$ACME_CONTACT_EMAIL}
+}
+
+{$DARSCHYN_DOMAIN} {
+  encode zstd gzip
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    X-Frame-Options DENY
+  }
+  reverse_proxy darschin:3000
+}
