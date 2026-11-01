@@ -43,14 +43,22 @@ export const batchPassedCoursesSchema = z.object({
   replaceAll: z.boolean().optional(),
 });
 
+const uniquePlanIds = (items: string[]) => new Set(items).size === items.length;
+const planId = z.string().trim().min(1).max(150);
+const rankedCourseIds = z.array(planId).max(200)
+  .refine(uniquePlanIds, 'اولویت یک درس نمی‌تواند تکراری باشد.');
+const rankedCourseMap = z.record(planId, z.number().int().min(0).max(200))
+  .refine(entries => Object.keys(entries).length <= 200, 'تعداد اولویت‌های درس بیش از حد است.');
+const rankedOfferingMap = z.record(planId, z.array(planId).max(30)
+  .refine(uniquePlanIds, 'یک گروه جایگزین نمی‌تواند تکرار شود.'))
+  .refine(entries => Object.keys(entries).length <= 150, 'تعداد درس‌های دارای گروه جایگزین بیش از حد است.');
+
 export const updatePlanSchema = z.object({
-  selectedOfferingIds: z.array(z.string()).optional(),
+  selectedOfferingIds: z.array(planId).max(120)
+    .refine(uniquePlanIds, 'یک گروه درسی نمی‌تواند چند بار انتخاب شود.').optional(),
   // Historical plans store priority ranks as a map; the current planner sends an ordered array.
-  coursePriorities: z.union([
-    z.array(z.string().min(1)).max(500),
-    z.record(z.string(), z.number().int().nonnegative()),
-  ]).optional(),
-  offeringPriorities: z.record(z.string(), z.array(z.string())).optional(),
+  coursePriorities: z.union([rankedCourseIds, rankedCourseMap]).optional(),
+  offeringPriorities: rankedOfferingMap.optional(),
 });
 
 export const planSelectSchema = z.object({
