@@ -35,6 +35,7 @@ import { ExamCalendar } from './ExamCalendar';
 import { FluidWeekTimetable } from './FluidWeekTimetable';
 import { generateExamsICS, downloadICSFile } from '../utils/calendar';
 import { copyTextWithFallback } from '../utils/clipboard';
+import { detectPlanConflicts, normalizedExamDay } from '../domain/plan-conflicts';
 
 export interface PlannedCourseCardData {
   courseId: string;
@@ -115,73 +116,61 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
     return evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
   }, [evaluations, selectedOfferingIds]);
 
-  // Detect lecture & exam collisions among ACTIVE selected offerings
+  // UI and API use exactly the same confirmed clash engine. Unknown class
+  // times are not conflicts; same-day non-overlapping exams remain warnings.
   const { lectureConflicts, examConflicts, conflictMap } = useMemo(() => {
     const lConflicts: { offering1: string; offering2: string; day: string; time: string }[] = [];
     const eConflicts: { offering1: string; offering2: string; date: string; type: 'exact' | 'sameday' }[] = [];
     const cMap = new Map<string, string[]>();
-
-    for (let i = 0; i < selectedOfferings.length; i++) {
-      for (let j = i + 1; j < selectedOfferings.length; j++) {
-        const o1 = selectedOfferings[i];
-        const o2 = selectedOfferings[j];
-
-        // Lecture time overlap check
-        if (
-          o1.dayOfWeek &&
-          o2.dayOfWeek &&
-          o1.dayOfWeek === o2.dayOfWeek &&
-          o1.startTime &&
-          o1.endTime &&
-          o2.startTime &&
-          o2.endTime
-        ) {
-          if (o1.startTime < o2.endTime && o1.endTime > o2.startTime) {
-            const desc = `تداخل ساعت کلاسی با درس «${o2.courseName}» (${o1.dayOfWeek} ساعت ${o1.startTime} تا ${o1.endTime})`;
-            lConflicts.push({
-              offering1: o1.courseName,
-              offering2: o2.courseName,
-              day: o1.dayOfWeek,
-              time: `${o1.startTime}-${o1.endTime}`,
-            });
-
-            if (!cMap.has(o1.offeringId)) cMap.set(o1.offeringId, []);
-            if (!cMap.has(o2.offeringId)) cMap.set(o2.offeringId, []);
-            cMap.get(o1.offeringId)!.push(desc);
-            cMap.get(o2.offeringId)!.push(`تداخل ساعت کلاسی با درس «${o1.courseName}» (${o1.dayOfWeek} ساعت ${o2.startTime} تا ${o2.endTime})`);
-          }
-        }
-
-        // Exam conflict check
-        if (o1.examDate && o2.examDate) {
-          const date1 = o1.examDate.split(' - ')[0].trim();
-          const date2 = o2.examDate.split(' - ')[0].trim();
-          if (date1 === date2) {
-            const isExact = o1.examDate === o2.examDate;
-            const desc = isExact
-              ? `تداخل دقیق زمان امتحان با درس «${o2.courseName}» (${o1.examDate})`
-              : `همزمانی روز امتحان با درس «${o2.courseName}» (هر دو در تاریخ ${date1})`;
-
-            eConflicts.push({
-              offering1: o1.courseName,
-              offering2: o2.courseName,
-              date: date1,
-              type: isExact ? 'exact' : 'sameday',
-            });
-
-            if (!cMap.has(o1.offeringId)) cMap.set(o1.offeringId, []);
-            if (!cMap.has(o2.offeringId)) cMap.set(o2.offeringId, []);
-            cMap.get(o1.offeringId)!.push(desc);
-            cMap.get(o2.offeringId)!.push(
-              isExact
-                ? `تداخل دقیق زمان امتحان با درس «${o1.courseName}» (${o2.examDate})`
-                : `همزمانی روز امتحان با درس «${o1.courseName}» (هر دو در تاریخ ${date2})`
-            );
-          }
-        }
+    const lookup = new Map(selectedOfferings.map(row => [row.offeringId, row]));
+    const source = selectedOfferings.map(row => ({
+      id: row.offeringId, courseId: row.courseId,
+      dayOfWeek: row.dayOfWeek, startTime: row.startTime, endTime: row.endTime,
+      examDate: row.examDate,
+    }));
+    const note = (id: string, message: string) => {
+      if (!cMap.has(id)) cMap.set(id, []);
+      cMap.get(id)!.push(message);
+    };
+    const pairKey = (a: string, b: string) => [a, b].sort().join('|');
+    const exactExamPairs = new Set<string>();
+    for (const collision of detectPlanConflicts(source)) {
+      const left = lookup.get(collision.offeringIds[0]);
+      const right = lookup.get(collision.offeringIds[1]);
+      if (!left || !right) continue;
+      if (collision.kind === 'CLASS') {
+        lConflicts.push({
+          offering1: left.courseName, offering2: right.courseName,
+          day: left.dayOfWeek, time: `${left.startTime}-${left.endTime}`,
+        });
+        note(left.offeringId, `تداخل ساعت کلاسی با درس «${right.courseName}» (${left.dayOfWeek} ساعت ${left.startTime} تا ${left.endTime})`);
+        note(right.offeringId, `تداخل ساعت کلاسی با درس «${left.courseName}» (${right.dayOfWeek} ساعت ${right.startTime} تا ${right.endTime})`);
+      } else {
+        const date = normalizedExamDay(left.examDate) || '';
+        exactExamPairs.add(pairKey(left.offeringId, right.offeringId));
+        eConflicts.push({
+          offering1: left.courseName, offering2: right.courseName,
+          date, type: 'exact',
+        });
+        note(left.offeringId, `تداخل دقیق زمان امتحان با درس «${right.courseName}» (${left.examDate})`);
+        note(right.offeringId, `تداخل دقیق زمان امتحان با درس «${left.courseName}» (${right.examDate})`);
       }
     }
-
+    for (let i = 0; i < selectedOfferings.length; i++) {
+      for (let j = i + 1; j < selectedOfferings.length; j++) {
+        const left = selectedOfferings[i], right = selectedOfferings[j];
+        if (left.courseId === right.courseId) continue;
+        const date = normalizedExamDay(left.examDate);
+        if (!date || date !== normalizedExamDay(right.examDate) ||
+            exactExamPairs.has(pairKey(left.offeringId, right.offeringId))) continue;
+        eConflicts.push({
+          offering1: left.courseName, offering2: right.courseName,
+          date, type: 'sameday',
+        });
+        note(left.offeringId, `همزمانی روز امتحان با درس «${right.courseName}» (تاریخ ${date}؛ ساعت‌ها را بررسی کنید)`);
+        note(right.offeringId, `همزمانی روز امتحان با درس «${left.courseName}» (تاریخ ${date}؛ ساعت‌ها را بررسی کنید)`);
+      }
+    }
     return { lectureConflicts: lConflicts, examConflicts: eConflicts, conflictMap: cMap };
   }, [selectedOfferings]);
 
