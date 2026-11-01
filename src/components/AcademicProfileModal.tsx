@@ -215,7 +215,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center">
             <GraduationCap className="w-5 h-5" />
           </div>
           <div>
@@ -265,7 +265,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   id="selectProfileProvince"
                   value={provinceId}
                   onChange={(e) => setProvinceId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   <option value="">-- همه واحدها / واحدهای مستقل --</option>
                   {provinces.map((p) => (
@@ -286,7 +286,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   value={campusId}
                   onChange={(e) => setCampusId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   <option value="">-- انتخاب واحد --</option>
                   {filteredCampuses.map((c) => (
@@ -307,7 +307,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   value={degreeLevelId}
                   onChange={(e) => setDegreeLevelId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   <option value="">-- انتخاب مقطع --</option>
                   {degreeLevels.map((d) => (
@@ -328,7 +328,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   value={majorId}
                   onChange={(e) => setMajorId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   <option value="">-- انتخاب رشته --</option>
                   {filteredMajors.map((m) => (
@@ -349,7 +349,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   value={entryYearId}
                   onChange={(e) => setEntryYearId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   <option value="">-- انتخاب سال ورود --</option>
                   {entryYears.map((y) => (
@@ -369,7 +369,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   id="selectProfileCurrentTerm"
                   value={currentTermId}
                   onChange={(e) => setCurrentTermId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                 >
                   {terms.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -381,9 +381,9 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
             </div>
 
             {/* TRACK SELECTION STATUS (CRITICAL REQUIREMENT) */}
-            <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 mt-4">
+            <div className="p-4 rounded-xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900/60 mt-4">
               <div className="flex items-center gap-2 mb-3">
-                <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <Layers className="w-4 h-4 text-teal-700 dark:text-teal-400" />
                 <span className="text-xs font-bold text-slate-900 dark:text-white">
                   وضعیت انتخاب گرایش تخصصی:
                 </span>
@@ -400,11 +400,11 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   onClick={() => setIsTrackSelected(true)}
                   className={`p-3 rounded-xl border text-right transition-all flex items-start gap-2.5 ${
                     isTrackSelected
-                      ? 'bg-white dark:bg-slate-800 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs'
+                      ? 'bg-white dark:bg-slate-800 border-teal-600 text-teal-950 dark:text-teal-200 shadow-xs'
                       : 'bg-transparent border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${isTrackSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-400'}`}>
+                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${isTrackSelected ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-400'}`}>
                     {isTrackSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                   <div>
@@ -419,11 +419,11 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                   onClick={() => setIsTrackSelected(false)}
                   className={`p-3 rounded-xl border text-right transition-all flex items-start gap-2.5 ${
                     !isTrackSelected
-                      ? 'bg-white dark:bg-slate-800 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs'
+                      ? 'bg-white dark:bg-slate-800 border-teal-600 text-teal-950 dark:text-teal-200 shadow-xs'
                       : 'bg-transparent border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${!isTrackSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-400'}`}>
+                  <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center ${!isTrackSelected ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-400'}`}>
                     {!isTrackSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                   <div>
@@ -444,7 +444,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                     value={selectedTrackId}
                     onChange={(e) => setSelectedTrackId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
                   >
                     <option value="">-- انتخاب گرایش رسمی --</option>
                     {filteredTracks.map((t) => (
@@ -464,7 +464,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                     <button
                       type="button"
                       onClick={selectAllTracks}
-                      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                      className="text-[11px] text-teal-700 dark:text-teal-400 hover:underline font-semibold"
                     >
                       انتخاب همه گرایش‌ها
                     </button>
@@ -479,7 +479,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                           onClick={() => toggleDesiredTrack(track.id)}
                           className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
                             isChecked
-                              ? 'bg-white dark:bg-slate-800 border-blue-500 text-blue-900 dark:text-blue-200'
+                              ? 'bg-white dark:bg-slate-800 border-teal-600 text-teal-950 dark:text-teal-200'
                               : 'bg-white/50 dark:bg-slate-850 border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-400'
                           }`}
                         >
@@ -487,7 +487,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => {}}
-                            className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                            className="rounded text-teal-700 focus:ring-teal-600 w-4 h-4"
                           />
                           <span className="text-xs font-medium">{track.name}</span>
                         </div>
@@ -510,7 +510,7 @@ export const AcademicProfileModal: React.FC<AcademicProfileModalProps> = ({
                 id="btnSaveAcademicProfile"
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs"
+                className="px-5 py-2 bg-teal-700 shadow-lg shadow-teal-600/20 active:scale-95 transition-all hover:bg-teal-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs"
               >
                 {saving ? 'در حال ذخیره...' : 'ذخیره پرونده تحصیلی'}
               </button>
