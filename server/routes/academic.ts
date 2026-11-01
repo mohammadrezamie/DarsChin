@@ -152,7 +152,7 @@ academicRouter.get('/campuses', (req, res) => {
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body ?? {};
   if (!validText(name) || !validText(code, 50) ||
-      !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type) ||
+      !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT','COMPREHENSIVE_INDEPENDENT','INTERNATIONAL'].includes(type) ||
       typeof active !== 'boolean') {
     return res.status(400).json({ success: false, error: 'نام، کد و نوع واحد دانشگاهی نامعتبر است.' });
   }
@@ -190,7 +190,7 @@ academicRouter.put('/campuses/:id', authenticate, requirePermission('system.sett
   }
   if ((name !== undefined && !validText(name)) ||
       (code !== undefined && !validText(code, 50)) ||
-      (type !== undefined && !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT'].includes(type)) ||
+      (type !== undefined && !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT','COMPREHENSIVE_INDEPENDENT','INTERNATIONAL'].includes(type)) ||
       (active !== undefined && typeof active !== 'boolean')) {
     return res.status(400).json({ success: false, error: 'اطلاعات ویرایش واحد نامعتبر است.' });
   }
