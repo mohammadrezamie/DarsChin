@@ -31,6 +31,8 @@ smsCenterRouter.put('/settings', (req:AuthenticatedRequest,res)=>{
     return res.status(400).json({success:false,error:'تنظیمات پیامک معتبر نیست؛ قالب باید دقیقاً یک {code} داشته باشد.'});
   }
   const before=smsConfiguration(), after=parsed.data;
+  const previousStored = db.data.smsSettings;
+  const auditCount = db.auditLogs.length;
   db.data.smsSettings=after;
   db.auditLogs.push({
     id:'sms-config-'+crypto.randomUUID(),adminId:req.user!.id,
@@ -40,7 +42,13 @@ smsCenterRouter.put('/settings', (req:AuthenticatedRequest,res)=>{
       senderChanged:before.senderLine!==after.senderLine,templateChanged:before.otpTemplate!==after.otpTemplate}),
     createdAt:new Date().toISOString(),
   });
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.data.smsSettings = previousStored;
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success:false, error:'تنظیمات پیامک ذخیره نشد.' });
+  }
   return res.json({success:true,data:{...smsConfiguration(),readiness:smsReadiness()}});
 });
 smsCenterRouter.get('/history', (_req,res)=>{
