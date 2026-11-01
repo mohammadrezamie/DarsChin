@@ -58,6 +58,35 @@ Proxy configuration for the separate domain must be validated against the VPS's 
 
 A server tracking `main` is **not compatible with an uncoordinated force-push history rewrite**; do not attempt this as a shortcut to scrub old secrets. Coordinate clones, PRs, tags and GitHub Support first.
 
+## Emergency root credential rotation without a second codebase
+
+If an old root credential may have been disclosed, **changing the private env file alone does not change the password hash stored in an existing database**. This repository includes an offline-only command in the normal Docker image. It is **not** an HTTP API or a recurring startup migration.
+
+1. Confirm a verified, access-restricted copy of the real data and a test restore **outside Git**; verify the running service's DB volume and the root's configured phone match.
+2. During a controlled maintenance window, **stop only DarsChin**, not the shared Nginx or other applications: `docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps stop darschin` (omit `-f compose.pilot-ssh.yaml` on a dedicated installation).
+3. Update **both** `ROOT_OWNER_PASSWORD` and `ROOT_OWNER_RECOVERY_KEY` to **new, distinct** strong values in the server's private `deploy/.env.vps`. Preserve the configured root mobile and volume name. Ensure `DARSCHYN_REQUIRE_EXISTING_DB=true`.
+4. Run a read-only identity check using the same Compose file combination and **without** starting the web server:
+
+```bash
+docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps \
+  run --rm --no-deps --entrypoint node darschin scripts/rotate-root-credentials.cjs --check
+```
+
+5. Only after verifying the service is stopped, run the explicit apply (the confirmation is a boolean, **not** a password passed on the command line):
+
+```bash
+docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps \
+  run --rm --no-deps -e DARSCHYN_OFFLINE_MAINTENANCE_CONFIRMED=true \
+  --entrypoint node darschin scripts/rotate-root-credentials.cjs --apply
+```
+
+6. The command validates a single reserved root, saves a `0600` private backup of the **old, sensitive** database in the existing volume, atomically replaces the database with new bcrypt password/recovery verifiers and increments the root `sessionVersion`. It changes no student records. Keep the old backup restricted and remove it later only under a tested retention/restore policy.
+7. Restart **only DarsChin** and test root login, denial of old tokens, persistence and health. Do not rerun with the same credentials; the tool intentionally refuses a same-password rotation.
+
+**Critical:** The web process must be stopped for the **entire** offline operation. A second process using this JSON database can overwrite the rotated file with old in-memory data. The command cannot automatically prove all processes are stopped. This only rotates the reserved root; **any other affected account, provider API keys, JWT signing secrets, caches, backup copies and historical Git refs need separate review/rotation.** The root change does not remove an old personal phone number from public history.
+
+For complete privacy of static pages and browser-only demo as well as the API, use a **VPN or carefully reviewed IP allowlist** on the existing Nginx vhost. This avoids conflicting with the Bearer Authorization header used by the app. Test access from the operator's devices before restricting an existing public hostname.
+
 ## Security incident — unresolved public history
 
 The repository once tracked a JSON database with an identifiable non-demo account, a password verifier and a recovery key. Removing it from current HEAD **does not remove it from Git history, old PRs or caches**. Treat that credential material as disclosed: revoke/rotate any affected credentials and sessions, including active root/provider secrets if those were ever committed. In particular, modifying `ROOT_OWNER_PASSWORD` in the ENV **does not reset an existing root password hash in the persisted database**. Use an authenticated password-change flow or a reviewed offline repair, then check session invalidation.

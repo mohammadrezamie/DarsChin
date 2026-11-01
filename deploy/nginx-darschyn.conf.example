@@ -5,6 +5,14 @@ server {
     listen [::]:80;
     server_name darschyn.example www.darschyn.example;
 
+    # Optional when this instance is entirely private and the operator has a
+    # stable access network: add vetted VPN/IP allow rules here. This protects
+    # static pages and /demo, which API owner_only mode does not hide.
+    # Do NOT turn on HTTP Basic Auth across all /api paths without designing
+    # around bearer-token Authorization headers used by the app.
+    # allow 192.0.2.10;  # example only; replace with operator's trusted address
+    # deny all;
+
     client_max_body_size 2m;
 
     location / {
