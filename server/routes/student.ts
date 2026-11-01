@@ -494,29 +494,24 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     return res.status(400).json({ success: false, error: 'پروفایل تحصیلی دانشجو یافت نشد.' });
   }
 
-  const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-  let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
-  if (!plan) {
-    plan = {
-      id: `plan-${userId}-${currentTermId}`,
-      userId,
-      termId: currentTermId,
-      selectedOfferingIds: [],
-      coursePriorities: {},
-      offeringPriorities: {},
-      updatedAt: new Date().toISOString(),
-    };
-    db.studentPlans.push(plan);
+  const currentTermId = currentStudentTerm(userId);
+  if (!currentTermId) {
+    return res.status(409).json({ success: false, error: 'نیمسال معتبر در پروندهٔ شما ثبت نشده است.' });
   }
+  // Never create a phantom plan before academic validation has completed.
+  const plan = db.studentPlans.find(p => p.userId === userId && p.termId === currentTermId) ??
+    blankStudentPlan(userId, currentTermId);
 
   if (action === 'remove') {
-    plan.selectedOfferingIds = plan.selectedOfferingIds.filter((id) => id !== offeringId);
-    plan.updatedAt = new Date().toISOString();
-    db.save();
+    const saved = saveStudentPlan(userId, currentTermId, draft => {
+      draft.selectedOfferingIds = draft.selectedOfferingIds.filter(id => id !== offeringId);
+      draft.updatedAt = new Date().toISOString();
+    });
+    if (!saved) return res.status(503).json({ success: false, error: 'حذف گروه در برنامه ذخیره نشد.' });
     return res.json({
       success: true,
       action: 'removed',
-      selectedOfferingIds: plan.selectedOfferingIds,
+      selectedOfferingIds: saved.selectedOfferingIds,
     });
   }
 
@@ -525,16 +520,18 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
   if (!targetOffering) {
     return res.status(404).json({ success: false, error: 'گروه درسی مورد نظر یافت نشد.' });
   }
-
-  const curriculum = db.curricula.find(
-    (c) =>
-      c.universityId === profile.universityId &&
-      c.majorId === profile.majorId &&
-      c.entryYearId === profile.entryYearId
-  ) || db.curricula[0];
+  if (!targetOffering.active || targetOffering.termId !== currentTermId ||
+      targetOffering.campusId !== profile.campusId) {
+    return res.status(403).json({ success: false, error: 'گروه درسی خارج از نیمسال یا واحد دانشگاهی پروندهٔ شماست.' });
+  }
+  const scope = curriculumForStudent(userId);
+  if (!scope) {
+    return res.status(409).json({ success: false, error: 'چارت فعال و یکتای رشته و ورودی شما باید مشخص شود.' });
+  }
+  const curriculum = scope.chart;
 
   const relevantOfferings = db.courseOfferings.filter(
-    (o) => o.termId === currentTermId && o.active
+    o => o.termId === currentTermId && o.campusId === profile.campusId && o.active
   );
   const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
 
@@ -588,19 +585,18 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
 
   let currentUnits = currentSelectedOfferings.reduce((sum, o) => {
     const c = db.courses.find((crs) => crs.id === o.courseId);
-    if (c?.name.includes('وصایا') || c?.name.includes('انس')) return sum;
-    return sum + (c?.units || 0);
+    return sum + (c && !c.isExtraUnit ? c.units : 0);
   }, 0);
 
   // If swapping section of same course, subtract old section's units
   if (sameCourseExistingOffering) {
     const oldCourse = db.courses.find((crs) => crs.id === sameCourseExistingOffering.courseId);
-    if (!oldCourse?.name.includes('وصایا') && !oldCourse?.name.includes('انس')) {
-      currentUnits -= oldCourse?.units || 0;
+    if (oldCourse && !oldCourse.isExtraUnit) {
+      currentUnits -= oldCourse.units;
     }
   }
 
-  const isExtra = targetCourse?.name.includes('وصایا') || targetCourse?.name.includes('انس');
+  const isExtra = targetCourse?.isExtraUnit === true;
   if (!isExtra && currentUnits + targetUnits > academicLimits.effectiveMaxUnits) {
     const limitLabel = academicLimits.isSummer
       ? 'ترم تابستان (۸ واحد)'
@@ -616,35 +612,30 @@ studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (re
     });
   }
 
-  // If a different section of this course was already selected, replace it in selectedOfferingIds
-  // and keep it as an alternative in offeringPriorities
-  if (sameCourseExistingOffering) {
-    plan.selectedOfferingIds = plan.selectedOfferingIds.filter(
-      (id) => id !== sameCourseExistingOffering.id
-    );
-  }
-
-  if (!plan.selectedOfferingIds.includes(offeringId)) {
-    plan.selectedOfferingIds.push(offeringId);
-  }
-
-  // Update offeringPriorities for this course
-  if (!plan.offeringPriorities) plan.offeringPriorities = {};
-  const currentCourseOfferings = plan.offeringPriorities[targetOffering.courseId] || [];
-  const updatedCourseOfferings = [
-    offeringId,
-    ...currentCourseOfferings.filter((id) => id !== offeringId),
-  ];
-  plan.offeringPriorities[targetOffering.courseId] = updatedCourseOfferings;
-
-  plan.updatedAt = new Date().toISOString();
-  db.save();
+  // Group swaps and alternative priorities are one atomic student-owned write.
+  const saved = saveStudentPlan(userId, currentTermId, draft => {
+    if (sameCourseExistingOffering) {
+      draft.selectedOfferingIds = draft.selectedOfferingIds.filter(
+        id => id !== sameCourseExistingOffering.id
+      );
+    }
+    if (!draft.selectedOfferingIds.includes(offeringId)) {
+      draft.selectedOfferingIds.push(offeringId);
+    }
+    if (!draft.offeringPriorities) draft.offeringPriorities = {};
+    const previous = draft.offeringPriorities[targetOffering.courseId] || [];
+    draft.offeringPriorities[targetOffering.courseId] = [
+      offeringId, ...previous.filter(id => id !== offeringId),
+    ];
+    draft.updatedAt = new Date().toISOString();
+  });
+  if (!saved) return res.status(503).json({ success: false, error: 'ثبت گروه یا جایگزین‌ها در برنامه ذخیره نشد.' });
 
   res.json({
     success: true,
     action: 'added',
-    selectedOfferingIds: plan.selectedOfferingIds,
-    plan,
+    selectedOfferingIds: saved.selectedOfferingIds,
+    plan: saved,
   });
 });
 
