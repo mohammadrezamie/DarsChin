@@ -80,9 +80,20 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
       createdAt: new Date().toISOString(),
     };
 
-    db.importBatches.unshift(newBatch);
-    db.importRecords.push(...validationResult.importRecords);
-    db.save();
+    // Persist the complete import transaction or restore the previous
+    // in-memory collections. A disk failure must not leave review-only rows
+    // visible to API callers when they were never actually saved.
+    const previousBatches = db.importBatches;
+    const previousRecords = db.importRecords;
+    db.data.importBatches = [newBatch, ...previousBatches];
+    db.data.importRecords = [...previousRecords, ...validationResult.importRecords];
+    try {
+      db.save();
+    } catch {
+      db.data.importBatches = previousBatches;
+      db.data.importRecords = previousRecords;
+      throw new Error('Import persistence failed');
+    }
 
     return res.json({
       success: true,
@@ -100,8 +111,11 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
         message: 'فایل تنها در صف تطبیق ثبت شد. هیچ گروهی بدون تأیید مدیر به بانک ارائه‌های اصلی اضافه نشده است.',
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      error: 'ذخیرهٔ فایل واردشده ناموفق بود؛ لطفاً بعداً دوباره تلاش کنید.',
+    });
   }
 });
 
