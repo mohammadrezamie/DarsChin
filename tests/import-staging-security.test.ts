@@ -1,0 +1,199 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+import { db } from '../server/db/database';
+import { importsRouter } from '../server/routes/imports';
+import { generateToken } from '../server/middleware/auth';
+
+const app = express();
+app.use(express.json({ limit: '2mb' }));
+app.use('/api/imports', importsRouter);
+
+const madeBatchIds: string[] = [];
+const testAdminId = 'test-import-staging-root';
+let authHeader = '';
+let campusId = '';
+let termId = '';
+let code = '';
+let courseName = '';
+let activeCourseId = '';
+
+beforeAll(async () => {
+  await db.init(true);
+  // Never depend on an environment-created production root account.
+  // The isolated fixture has the necessary capability and is cleaned up below.
+  const fixture = {
+    id: testAdminId,
+    name: 'مدیر مصنوعی بررسی واردات',
+    mobile: '09000000771',
+    roles: ['admin'] as ['admin'],
+    permissions: ['admin.panel.access', 'offering.manage'],
+    createdAt: new Date().toISOString(),
+  };
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.users.push({ ...fixture, roles: ['admin'] });
+  authHeader = 'Bearer ' + generateToken(fixture);
+  const course = db.courses.find(item => item.active);
+  if (!course || !db.campuses[0] || !db.academicTerms[0]) {
+    throw new Error('Synthetic academic fixtures missing');
+  }
+  code = course.code;
+  courseName = course.name;
+  activeCourseId = course.id;
+  campusId = db.campuses[0].id;
+  termId = db.academicTerms[0].id;
+});
+
+afterAll(() => {
+  db.data.users = db.users.filter(user => user.id !== testAdminId);
+  db.data.importBatches = db.data.importBatches.filter(batch => !madeBatchIds.includes(batch.id));
+  db.data.importRecords = db.data.importRecords.filter(record => !madeBatchIds.includes(record.batchId));
+  db.data.auditLogs = db.auditLogs.filter(log => !(log.adminId === testAdminId && log.action === 'IMPORT_COURSE_MAPPING_REVIEW'));
+  db.save();
+});
+
+describe('authenticated import preview can never publish offerings', () => {
+  it('requires a real signed-in user', async () => {
+    const response = await request(app).post('/api/imports/process').send({
+      payload: { records: [{ courseCode: 'X' }] },
+      campusId, termId,
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('accepts the object the UI submits, stores a review batch, not global offerings', async () => {
+    const before = db.courseOfferings.map(o => o.id);
+    const payload = { schemaVersion: '1.0', records: [{
+      courseCode: code, courseName, group: '91',
+      instructor: 'مدرس آزمایشی', day: 'شنبه',
+      startTime: '08:00', endTime: '10:00',
+      capacity: 30, availableCapacity: 9,
+    }] };
+    const response = await request(app).post('/api/imports/process')
+      .set('Authorization', authHeader).send({ payload, termId, campusId });
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.requiresReview).toBe(true);
+    expect(response.body.data.createdOfferingsCount).toBe(0);
+    expect(response.body.data.batch.rawJson).toBeUndefined();
+    madeBatchIds.push(response.body.data.batch.id);
+    expect(db.courseOfferings.map(o => o.id)).toEqual(before);
+    expect(db.importRecords.some(record => record.batchId === response.body.data.batch.id)).toBe(true);
+  });
+
+  it('rolls back unsaved import records and never exposes persistence paths', async () => {
+    const marker = 'SYNTHETIC_PRIVATE_PATH:/etc/darschyn/runtime.env';
+    const beforeBatches = [...db.importBatches];
+    const beforeRecords = [...db.importRecords];
+    const beforeOfferings = [...db.courseOfferings];
+    const spy = vi.spyOn(db, 'save').mockImplementationOnce(() => {
+      throw new Error(marker);
+    });
+    try {
+      const response = await request(app).post('/api/imports/process')
+        .set('Authorization', authHeader).send({
+          payload: { records: [{
+            courseCode: code, courseName, group: '91',
+            instructor: 'مدرس ساختگی', day: 'شنبه', startTime: '08:00',
+            endTime: '10:00', capacity: 20,
+          }] },
+          termId, campusId,
+        });
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
+      expect(JSON.stringify(response.body)).not.toContain(marker);
+      expect(response.body.error).toContain('ذخیره');
+      expect(db.importBatches).toEqual(beforeBatches);
+      expect(db.importRecords).toEqual(beforeRecords);
+      expect(db.courseOfferings).toEqual(beforeOfferings);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('reviews course matches with an audit trail, never publishing an offering', async () => {
+    const upload = await request(app).post('/api/imports/process')
+      .set('Authorization', authHeader).send({
+        payload: { records: [{ courseCode: code, courseName, group: '51',
+          instructor: 'مدرس ساختگی', day: 'شنبه', startTime: '09:00',
+          endTime: '11:00', capacity: 25 }] },
+        termId, campusId,
+      });
+    expect(upload.status).toBe(200);
+    const batchId = upload.body.data.batch.id;
+    const recordId = upload.body.data.records[0].id;
+    madeBatchIds.push(batchId);
+    const initialOfferings = db.courseOfferings.map(o => o.id);
+    const beforeAudit = db.auditLogs.length;
+    const endpoint = `/api/imports/batches/${batchId}/records/${recordId}/review`;
+    const missingReason = await request(app).put(endpoint)
+      .set('Authorization', authHeader).send({
+        action: 'CONFIRM_MATCH', courseId: activeCourseId, reason: 'x',
+      });
+    expect(missingReason.status).toBe(400);
+    const confirmed = await request(app).put(endpoint)
+      .set('Authorization', authHeader).send({
+        action: 'CONFIRM_MATCH', courseId: activeCourseId,
+        reason: 'شناسه و نام درس در کاتالوگ با نمونه بررسی شد.',
+      });
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.data.reviewDecision).toBe('COURSE_MATCH_CONFIRMED');
+    expect(confirmed.body.publicationStatus).toBe('NOT_PUBLISHED');
+    expect(db.courseOfferings.map(o => o.id)).toEqual(initialOfferings);
+    expect(db.auditLogs.length).toBe(beforeAudit + 1);
+    expect(db.auditLogs.at(-1)?.entityId).toBe(recordId);
+    const denied = await request(app).put(endpoint)
+      .set('Authorization', authHeader).send({
+        action: 'CONFIRM_MATCH', courseId: 'unknown-course',
+        reason: 'شناسه درس در کاتالوگ وجود ندارد و قابل انتخاب نیست.',
+      });
+    expect(denied.status).toBe(400);
+    const rejected = await request(app).put(endpoint)
+      .set('Authorization', authHeader).send({
+        action: 'REJECT_MATCH', reason: 'نام و کد این رکورد با اسناد معتبر تطابق ندارند.',
+      });
+    expect(rejected.status).toBe(200);
+    expect(rejected.body.data.reviewDecision).toBe('REJECTED');
+    expect(rejected.body.data.matchedCourseId).toBeNull();
+    expect(db.courseOfferings.map(o => o.id)).toEqual(initialOfferings);
+  });
+
+  it('never exposes a legacy raw source blob in import batch lists or details', async () => {
+    const batchId = 'legacy-private-import-' + Date.now();
+    madeBatchIds.push(batchId);
+    db.importBatches.push({
+      id: batchId,
+      userId: testAdminId,
+      termId,
+      source: 'extension',
+      schemaVersion: '1.0',
+      totalRecords: 0,
+      matchedRecords: 0,
+      reviewRecords: 0,
+      invalidRecords: 0,
+      rawJson: '{"privateStudentField":"DO_NOT_DISCLOSE"}',
+      createdAt: new Date().toISOString(),
+    });
+    db.save();
+    const list = await request(app).get('/api/imports/batches')
+      .set('Authorization', authHeader);
+    expect(list.status).toBe(200);
+    expect(list.body.data.find((item: { id: string }) => item.id === batchId)?.rawJson).toBeUndefined();
+    expect(list.headers['cache-control']).toContain('no-store');
+
+    const detail = await request(app).get(`/api/imports/batches/${batchId}`)
+      .set('Authorization', authHeader);
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.batch.rawJson).toBeUndefined();
+    expect(detail.headers['cache-control']).toContain('no-store');
+    expect(db.importBatches.find(batch => batch.id === batchId)?.rawJson).toContain('DO_NOT_DISCLOSE');
+  });
+
+  it('refuses to treat arbitrary campus IDs as a valid imported term context', async () => {
+    const response = await request(app).post('/api/imports/process')
+      .set('Authorization', authHeader)
+      .send({ payload: { records: [{ courseCode: code, courseName }] },
+        termId, campusId: 'unknown-campus' });
+    expect(response.status).toBe(400);
+  });
+});
