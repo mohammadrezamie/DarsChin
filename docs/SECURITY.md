@@ -6,7 +6,7 @@
 
 - `JWT_SECRET` is required before the API can start. Use a unique high-entropy value, kept in a private runtime environment file.
 - Never commit configured `.env` files, SMS-provider keys, JWTs, passwords, password hashes, recovery keys, OTPs, raw exported student data or logs.
-- The currently tracked `data/darschyn-db.json` includes account identifiers and authentication-related fields. See [issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4). `.gitignore` alone does **not** remove tracked content or Git history.
+- Older Git history and PR refs (not the current main tree) contain the once-tracked `data/darschyn-db.json` with account identifiers and authentication-related fields. See [issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4). `.gitignore` alone does **not** remove tracked content or Git history.
 - `server/db/seed.ts` contains **sample accounts with fixed demo passwords**. These must never be mistaken for production credentials. Before public launch, remove or disable public demo account access and independently review bootstrap behavior; do not migrate demo accounts to live accounts.
 - Do not quote identifiers or credentials from committed data in public docs, PR descriptions or logs.
 
@@ -46,3 +46,7 @@ Full deployment, Iranian connectivity, shared-store atomicity, proxy-level rate 
 ## Password reset session revocation (2026-10-28)
 
 Every server-issued JWT is bound to the persisted per-account `sessionVersion`; an OTP recovery or authenticated password change increments it. JWTs issued beforehand must be rejected even before their original expiry. The password-change response supplies a fresh token for that same browser. Legacy JWTs without the version claim are accepted only for accounts that have not yet rotated their session version. Details, constraints and exact-source automated QA: [AUTH_SESSION_REVOCATION_FA.md](AUTH_SESSION_REVOCATION_FA.md). This change does not claim live VPS, multi-server or iPhone acceptance.
+
+## Public-source / private-instance deployment (2026-11-01)
+
+The source is published for independent self-hosting; no code contribution or clone is authorized to access the maintainer's live service. Optional `DARSCHYN_ACCESS_MODE=owner_only` requires a verified reserved root token on protected APIs and forbids new registrations, while `multiuser` remains available to other self-hosters. API-only gating is insufficient to hide static SPA/demo content; use a reverse-proxy access rule for complete site privacy. The Docker Compose service now explicitly forwards `DARSCHYN_REQUIRE_EXISTING_DB` and `DARSCHYN_REGISTRATION_OTP_REQUIRED`. Set them deliberately in the per-server private environment. See [self-hosting](SELF_HOSTING_OPEN_SOURCE_FA.md) and [public Git incident](PUBLIC_REPOSITORY_READINESS_20261101_FA.md).

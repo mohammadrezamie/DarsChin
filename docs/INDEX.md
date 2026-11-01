@@ -1,5 +1,8 @@
 # DarsChin documentation index
 
+**Latest owner decision (2026-11-01): source is MIT open source, but hosted runtime access and data remain independently private.** [Self-hosting, VPS safety, optional owner-only API mode and upstream updates](SELF_HOSTING_OPEN_SOURCE_FA.md).
+
+
 **Status: DEMO.** Course and campus data are samples, not official university records. The Chrome extension is a data-collection adapter, not the core product.
 
 | Topic | Reference |

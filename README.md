@@ -1,6 +1,6 @@
 # DarsChin (DARSCHYN)
 
-> **Public repository status: NOT CLEARED.** Before changing GitHub visibility, follow the [public-source security gate (2026-11-01)](docs/PUBLIC_REPOSITORY_READINESS_20261101_FA.md). A committed local database has included an identifiable non-demo account and recovery credentials; deleting it from the latest branch does not remove Git history.
+> **Public open-source source, private-by-configuration instances.** See the [self-hosting guide](docs/SELF_HOSTING_OPEN_SOURCE_FA.md). A historical committed database contained sensitive material; the current HEAD no longer tracks it, but Git history/old PR references still require remediation. Do not reuse affected credentials.
 
 DarsChin is a student-focused helper for course planning and workflows around Educationalyar. The web application includes a React/Vite frontend and a Node.js/Express backend, with an accompanying browser-extension codebase.
 
@@ -22,6 +22,12 @@ Links are provided on the homepage and `/login`. Browser-only demo state lives i
 - **«من ربات نیستم»** on guest sign-in/sign-up/OTP forms uses server-verified Cloudflare Turnstile **only when configured**. With the integration disabled, guest login and registration now require the same **server-validated, single-use local SVG CAPTCHA** already used for OTP. Neither mode is a frontend-only checkbox; demo pages still use synthetic browser state. Test access from Iran before enabling on the public domain.
 - **Clean repository:** 22 one-off root scripts were preserved under `scripts/legacy/`; run `bun run repo:check` and read [repository structure](docs/REPOSITORY_STRUCTURE_FA.md).
 - **Separate domain on the same VPS as Takin:** use the existing Nginx and a different localhost port, without deploying a competing Caddy instance. See [shared-VPS/domain guide](docs/VPS_SHARED_DOMAIN_FA.md).
+
+## Open-source license and independent server installations
+
+Original project code is available under the [MIT License](LICENSE). Anyone may clone the public repository and run a **separate, privately configured** instance; that does not provide access to the maintainer's server or data. `package.json` sets `private: true` only to block accidental publication to the npm registry. To keep a personal deployment restricted to its operator, set `DARSCHYN_ACCESS_MODE=owner_only` in its **untracked** `deploy/.env.vps` and preserve its separate data volume. This controls backend APIs, not public static/demo pages; protect those at the reverse proxy if necessary. Existing deployments preserve the legacy `multiuser` mode until deliberately changed.
+
+**[Complete clone, configure, update and shared-Nginx self-hosting instructions](docs/SELF_HOSTING_OPEN_SOURCE_FA.md).**
 
 ## VPS quick start
 
@@ -80,7 +86,7 @@ bun run verify
 
 Use synthetic or explicitly approved test data during development. Do not commit real student information, exported university data, local databases, logs, or populated `.env` files. Treat sync input as untrusted and validate it before processing.
 
-**Existing tracked data requires review:** `data/darschyn-db.json` is already tracked and contains account/contact and credential-related fields. Adding an ignore rule does **not** remove a previously tracked file or erase Git history. Confirm whether it is synthetic or real before changing its storage and migration behavior. Do not use the checked-in data file as a production database.
+**Historical sensitive data is still exposed in old Git refs:** `data/darschyn-db.json` was removed from the current main tree, but older commits and PR references may retain account/contact and credential-related data. Treat affected credentials as compromised, rotate/revoke them, and plan a coordinated history/ref cleanup without breaking live server checkout.
 
 **راهنمای توسعه و وضعیت محصول (فارسی):** [معرفی درس‌چین](docs/PRODUCT_GUIDE_FA.md)، [قوانین آموزشی در انتظار جلسه و تأیید](docs/ACADEMIC_RULES_INTAKE_FA.md)، [نقشه Vercel فول‌استک](docs/VERCEL_FULLSTACK_PLAN_FA.md)، [همکاری تیمی](docs/TEAM_WORKFLOW_FA.md).
 
@@ -88,4 +94,4 @@ Start with the [documentation index](docs/INDEX.md) for local development, secur
 
 ## Contribution workflow
 
-For the current owner-directed demo/pilot work, use `main` as the integration branch and avoid unnecessary feature branches. Run the quality gate for each commit. The existing three Draft PRs must be reconciled file-by-file before merging or closing; never overwrite newer main fixes. Remove completed branches only after verifying their unique work is retained.
+For the current owner-directed demo/pilot work, use `main` as the integration branch and avoid unnecessary feature branches. Run the quality gate for each commit. Preexisting open Draft PRs must be reconciled file-by-file before merging or closing; never overwrite newer main fixes. Remove completed branches only after verifying their unique work is retained.

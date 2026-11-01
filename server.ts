@@ -25,8 +25,11 @@ import { supportRouter } from './server/routes/support';
 import { logger } from './server/utils/logger';
 import { securityHeaders } from './server/middleware/security-headers';
 import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
+import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
 
 async function startServer() {
+  // Reject invalid private-instance settings before touching the database.
+  assertInstanceAccessConfiguration();
   // Initialize and seed database
   await db.init(true);
 
@@ -49,6 +52,8 @@ async function startServer() {
   // JSON Body Parser with limit for batch imports (2MB is sufficient for text data and prevents OOM)
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+  // Enforce per-installation API access policy without changing normal multiuser defaults.
+  app.use(instanceAccessGate);
 
   // Health check route with diagnostics
   app.get('/api/health', (req, res) => {
