@@ -2,10 +2,10 @@
 // DARSCHYN (درس‌چین) - Curriculum Management & Rule Engine CRUD
 // ============================================================================
 
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
-import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
+import { authenticate, isRootOwner, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
 import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
 import { validate } from '../middleware/validate';
@@ -18,18 +18,30 @@ import {
 
 export const curriculumRouter = Router();
 
+// Anonymous and ordinary student requests may read published charts only.
+// A supplied Bearer token is actually verified before privileged draft access.
+const optionalIdentity: RequestHandler = (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return authenticate(req as AuthenticatedRequest, res, next);
+};
+const canSeeUnpublished = (req: AuthenticatedRequest) =>
+  isRootOwner(req.user) || Boolean(req.user?.roles?.includes('admin') &&
+    req.user?.permissions?.includes('curriculum.manage'));
+
 // Get full curriculum details with courses & rules
-curriculumRouter.get('/', (req, res) => {
+curriculumRouter.get('/', optionalIdentity, (req: AuthenticatedRequest, res) => {
   const { majorId, entryYearId } = req.query;
-  let list = db.curricula;
+  let list = canSeeUnpublished(req) ? db.curricula : db.curricula.filter(c => c.status === 'active');
   if (majorId) list = list.filter((c) => c.majorId === majorId);
   if (entryYearId) list = list.filter((c) => c.entryYearId === entryYearId);
   res.json({ success: true, data: list });
 });
 
-curriculumRouter.get('/:id/full', (req, res) => {
+curriculumRouter.get('/:id/full', optionalIdentity, (req: AuthenticatedRequest, res) => {
   const curriculum = db.curricula.find((c) => c.id === req.params.id);
-  if (!curriculum) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
+  if (!curriculum || (curriculum.status !== 'active' && !canSeeUnpublished(req))) {
+    return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
+  }
 
   const assignedCourses = db.curriculumCourses.filter((cc) => cc.curriculumId === curriculum.id);
   const prereqs = db.academicRules.filter((pr) => pr.curriculumId === curriculum.id && pr.relationshipType === 'PREREQUISITE');
