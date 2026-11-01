@@ -54,8 +54,8 @@ export const CompactMobileTimetable: React.FC<{
               tabIndex={selected ? 0 : -1}
               onClick={() => chooseDay(day)}
               onKeyDown={event => handleDayKeys(event, index)}
-              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${selected
-                ? 'border-blue-700 bg-blue-700 text-white shadow-sm'
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:ring-teal-600 ${selected
+                ? 'border-teal-800 bg-teal-800 text-white shadow-sm'
                 : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'}`}>
               <span>{day}</span>
               <span aria-label={`${entries.length} کلاس`}
@@ -118,7 +118,7 @@ export const CompactMobileTimetable: React.FC<{
             <button type="button" aria-expanded={showTimeline}
               aria-controls={showTimeline ? `${id}-timeline` : undefined}
               onClick={() => setShowTimeline(open => !open)}
-              className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-slate-200 px-3 text-xs font-bold text-blue-700 hover:bg-blue-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800">
+              className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-slate-200 px-3 text-xs font-bold text-teal-800 hover:bg-teal-50 dark:border-slate-700 dark:text-teal-300 dark:hover:bg-slate-800">
               <Clock3 className="h-4 w-4" aria-hidden="true" />
               {showTimeline ? 'بستن نمای زمانی' : 'نمای دقیق زمانی'}
               {showTimeline ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -139,7 +139,7 @@ export const CompactMobileTimetable: React.FC<{
                     <div key={item.id} title={`${item.title} · ${item.start} تا ${item.end}`}
                       className={`absolute overflow-hidden rounded-lg border p-1.5 text-right text-[11px] ${item.conflict
                         ? 'border-rose-400 bg-rose-100 text-rose-950 dark:border-rose-700 dark:bg-rose-950 dark:text-rose-100'
-                        : 'border-blue-300 bg-blue-100 text-blue-950 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100'}`}
+                        : 'border-teal-300 bg-teal-100 text-teal-950 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-100'}`}
                       style={{
                         top: item.top + 1,
                         height: Math.max(8, item.height - 2),
