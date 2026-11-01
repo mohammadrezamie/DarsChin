@@ -104,9 +104,16 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
   if (x.startsAt && x.endsAt && x.startsAt >= x.endsAt) return failure(res, 400, 'زمان پایان باید پس از آغاز باشد.');
   const survey: DemandSurvey = { ...x, id: 'demand-' + randomUUID(), status: 'DRAFT',
     createdBy: req.user!.id, createdAt: fresh(), updatedAt: fresh() };
+  const auditCount = db.auditLogs.length;
   db.demandSurveys.push(survey);
   audit(req.user!.id, 'DEMAND_SURVEY_CREATED', survey.id);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.data.demandSurveys = db.demandSurveys.filter(row => row.id !== survey.id);
+    db.auditLogs.splice(auditCount);
+    return failure(res, 503, 'ثبت نیازسنجی ناموفق بود؛ لطفاً دوباره تلاش کنید.');
+  }
   return res.status(201).json({ success: true, data: survey });
 });
 
@@ -120,10 +127,20 @@ demandRouter.put('/surveys/:id/status', (req: AuthenticatedRequest, res) => {
     DRAFT: ['OPEN','ARCHIVED'], OPEN: ['CLOSED'], CLOSED: ['OPEN','ARCHIVED'], ARCHIVED: [],
   };
   if (!changes[survey.status].includes(input.data.status)) return failure(res, 409, 'انتقال وضعیت مجاز نیست.');
+  const previousStatus = survey.status;
+  const previousUpdatedAt = survey.updatedAt;
+  const auditCount = db.auditLogs.length;
   survey.status = input.data.status;
   survey.updatedAt = fresh();
   audit(req.user!.id, 'DEMAND_SURVEY_' + survey.status, survey.id);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    survey.status = previousStatus;
+    survey.updatedAt = previousUpdatedAt;
+    db.auditLogs.splice(auditCount);
+    return failure(res, 503, 'تغییر وضعیت نیازسنجی ذخیره نشد.');
+  }
   return res.json({ success: true, data: survey });
 });
 
@@ -164,8 +181,19 @@ demandRouter.put('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
   const index = db.demandResponses.findIndex(r => r.surveyId === survey.id && r.userId === req.user!.id);
   if (index === -1) db.demandResponses.push(response); else db.demandResponses[index] = response;
   // Reuse the identifier on the next survey; students do not refill identical fields.
+  const originalStudentNumber = profile.studentNumber;
   profile.studentNumber = studentNumber;
-  db.save();
+  try {
+    db.save();
+  } catch {
+    if (index === -1) {
+      db.data.demandResponses = db.demandResponses.filter(row => row.id !== response.id);
+    } else {
+      db.demandResponses[index] = previous!;
+    }
+    profile.studentNumber = originalStudentNumber;
+    return failure(res, 503, 'پاسخ نیازسنجی ذخیره نشد؛ دوباره تلاش کنید.');
+  }
   return res.json({ success: true, data: response, message: 'تقاضای شما ثبت شد؛ این ثبت‌نام درسی نیست.' });
 });
 
@@ -187,8 +215,14 @@ demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => 
     new Map(db.tracks.map(t=>[t.id, t.name])),
     new Map(db.majors.map(m=>[m.id, m.name])),
   );
+  const auditCount = db.auditLogs.length;
   audit(req.user!.id, 'DEMAND_PERSONAL_REPORT_EXPORTED', survey.id);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.auditLogs.splice(auditCount);
+    return failure(res, 503, 'ثبت رویداد دانلود گزارش ممکن نیست.');
+  }
   if (req.query.format === 'json') return res.json({ success: true, data: { csv: contents } });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="darschin-demand-' + survey.id + '.csv"');
