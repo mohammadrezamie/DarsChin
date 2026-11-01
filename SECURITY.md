@@ -2,6 +2,10 @@
 
 DarsChin is a public, self-hostable codebase. The maintainer's private deployment, passwords, access tokens, SMS service keys, students' data and other operators' deployments are **not** public development resources.
 
+## Owner action checklist (persistent)
+
+The owner-only unresolved work after making this repository public is documented with exact UI steps, evidence and safe execution boundaries in [the permanent owner action checklist (Persian)](docs/OWNER_SECURITY_ACTION_CHECKLIST_FA.md). Do not mark any item complete without independent verification or a clearly qualified owner confirmation.
+
 ## Permanent security requirements
 
 Every contributor and independent operator must follow the [permanent security contract (Persian)](docs/PERMANENT_SECURITY_POLICY_FA.md): source/data separation, server-side authorization, no unsafe production registration, durable writes, sensitive logging/cache protections, sanitized Git and reviewed dependencies, exact-SHA testing, backups, and incident response. The repository's historical exposure is **not closed** simply because these rules are documented.
