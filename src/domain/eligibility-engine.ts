@@ -107,7 +107,7 @@ export function evaluateStudentEligibility(
 
   for (const offering of currentOfferings) {
     const course = coursesMap.get(offering.courseId);
-    if (!course) {
+    if (!course || !course.active) {
       results.push({
         offeringId: offering.id,
         courseId: offering.courseId,
@@ -251,10 +251,10 @@ export function evaluateStudentEligibility(
         isCorequisite: boolean,
         isContextualRetake: boolean
       ): { passed: boolean; missing: Array<{ id: string; name: string; code: string }>; reasons: string[] } => {
-        if (!node) return { passed: true, missing: [], reasons: [] };
+        if (!node || typeof node !== 'object') return { passed: false, missing: [], reasons: ['قانون آموزشی نامعتبر است و نیاز به بررسی مدیر دارد.'] };
         if (node.type === 'COURSE') {
           const reqCourse = coursesMap.get(node.courseId);
-          if (!reqCourse) return { passed: true, missing: [], reasons: [] };
+          if (!reqCourse || !reqCourse.active) return { passed: false, missing: [], reasons: ['شناسهٔ درس پیش‌نیاز نامعتبر است و باید بررسی شود.'] };
 
           const isPassed = passedCourseIdsSet.has(reqCourse.id);
           const isPlannedInSameTerm = plannedCourseIdsSet.has(reqCourse.id);
