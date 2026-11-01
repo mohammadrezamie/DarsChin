@@ -45,7 +45,7 @@ afterAll(() => {
   db.save();
 });
 
-async function withFailedSave<T>(action: () => Promise<T>): Promise<T> {
+async function withFailedSave<T>(action: () => PromiseLike<T>): Promise<T> {
   const save = vi.spyOn(db, 'save').mockImplementationOnce(() => { throw new Error(marker); });
   try {
     return await action();
