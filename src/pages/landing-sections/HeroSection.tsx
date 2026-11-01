@@ -25,7 +25,7 @@ export const HeroSection: React.FC = () => {
   );
 
   return (
-    <section id="hero" dir="rtl" className="scroll-mt-24 relative isolate overflow-hidden px-4 pb-12 pt-24 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8">
+    <section id="hero" dir="rtl" className="dc-hero scroll-mt-24 relative isolate overflow-hidden px-4 pb-12 pt-24 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-28 top-12 h-80 w-80 rounded-full bg-teal-400/15 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
         <div className="absolute -left-24 top-40 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
@@ -42,7 +42,7 @@ export const HeroSection: React.FC = () => {
           <motion.h1 initial={heroAnimation(18)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.06 }}
             className="mb-5 max-w-2xl text-[clamp(1.9rem,7.5vw,3.65rem)] font-black leading-[1.45] tracking-tight text-slate-950 dark:text-white">
             انتخاب واحد را
-            <span className="mt-1 block bg-gradient-to-l from-teal-700 via-emerald-700 to-amber-700 bg-clip-text text-transparent dark:from-teal-400 dark:via-emerald-400 dark:to-amber-400">با آگاهی برنامه‌ریزی کن</span>
+            <span className="mt-1 block dc-brand-text bg-gradient-to-l from-teal-700 via-emerald-700 to-amber-700 bg-clip-text text-transparent dark:from-teal-400 dark:via-emerald-400 dark:to-amber-400">با آگاهی برنامه‌ریزی کن</span>
           </motion.h1>
 
           <motion.p initial={heroAnimation(14)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12 }}
@@ -51,10 +51,10 @@ export const HeroSection: React.FC = () => {
           </motion.p>
 
           <motion.div initial={heroAnimation(12)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }} className="mb-4 flex flex-col gap-2.5 min-[380px]:flex-row min-[380px]:flex-wrap">
-            <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-teal-700 to-emerald-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
+            <Link to="/demo/student" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-gradient-to-l from-teal-700 to-emerald-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
               تست رایگان پنل دانشجو <ArrowLeft className="h-4 w-4" />
             </Link>
-            <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-teal-600">
+            <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-secondary-action border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-teal-600">
               ساخت حساب کاربری
             </Link>
           </motion.div>
@@ -69,7 +69,7 @@ export const HeroSection: React.FC = () => {
               { icon: CalendarDays, title: 'برنامه هفتگی', description: 'نمایش انتخاب‌ها در کنار هم' },
               { icon: LayoutGrid, title: 'اولویت‌بندی', description: 'مدیریت ساده‌تر گزینه‌ها' },
             ].map(({ icon: Icon, title, description }) => (
-              <div key={title} className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/65 p-2.5 text-center shadow-sm backdrop-blur-sm sm:flex-row sm:items-start sm:gap-3 sm:p-3 sm:text-right dark:border-slate-800 dark:bg-slate-900/55">
+              <div key={title} className="flex min-w-0 flex-col items-center gap-2 rounded-2xl dc-hero-feature border border-slate-200/70 bg-white/65 p-2.5 text-center shadow-sm backdrop-blur-sm sm:flex-row sm:items-start sm:gap-3 sm:p-3 sm:text-right dark:border-slate-800 dark:bg-slate-900/55">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-800 dark:bg-teal-600/10 dark:text-teal-300"><Icon className="h-4 w-4" /></span>
                 <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-5 text-slate-900 sm:text-sm dark:text-white">{title}</span><span className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block dark:text-slate-400">{description}</span></span>
               </div>
@@ -80,10 +80,10 @@ export const HeroSection: React.FC = () => {
         <motion.div initial={demoAnimation} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.65, delay: 0.12, ease: 'easeOut' }} className="relative mx-auto w-full min-w-0 max-w-2xl">
           <div aria-hidden="true" className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-br from-teal-600/20 via-emerald-600/10 to-amber-600/20 blur-2xl" />
-          <div className="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/90 shadow-[0_28px_90px_-32px_rgba(30,64,175,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90">
+          <div className="overflow-hidden rounded-[1.75rem] dc-hero-preview border border-slate-200/80 bg-white/90 shadow-[0_28px_90px_-32px_rgba(30,64,175,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-4 dark:border-slate-800 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/20"><GraduationCap className="h-5 w-5" /></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl dc-brand-mark text-white shadow-lg shadow-teal-700/20"><GraduationCap className="h-5 w-5" /></div>
                 <div><div className="font-black text-slate-900 dark:text-white">میز برنامه‌ریزی</div><div className="text-xs text-slate-500 dark:text-slate-400">پیش‌نمایش تعاملی محصول</div></div>
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300"><WandSparkles className="h-3.5 w-3.5" /> داده نمونه</span>
