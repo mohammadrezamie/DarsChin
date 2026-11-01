@@ -1,31 +1,30 @@
-# DarsChin repository audit — 2026-10-24
+# گزارش تاریخی ممیزی مخزن درس‌چین — ۲۴ اکتبر ۲۰۲۶
 
-This is a **source review** of the private GitHub repository. It is not a successful test run, an application runtime review, an audit of the live Educationalyar portal, or production approval.
+> **این سند یک گزارش تاریخی از بازبینی سورس در تاریخ مشخص است، نه نتیجهٔ جاری تست‌ها یا وضعیت فعلی PRها.** در زمان تنظیم آن مخزن خصوصی بوده، اما بعداً با تصمیم مالک Public شده است. وضعیت امروز باید دوباره از GitHub بررسی شود.
 
-## Confirmed findings
+## یافته‌های همان تاریخ
 
-| Finding | Evidence | Current handling |
+| یافتهٔ تاریخی | شاهد آن زمان | تصمیم یا پیگیری |
 | --- | --- | --- |
-| The default branch lacks a top-level README | `main` tree (2026-10-24) | Draft PR #3 adds setup, validation and contribution guidance |
-| Local setup omits required `JWT_SECRET` | `server/middleware/auth.ts` throws without it, while `.env.example` omits it | Draft PR #3 supplies the name and secure-generation instructions; no secret is committed |
-| Mutable local database is already versioned | `data/darschyn-db.json` contains account/contact and credential-related fields | [Issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4) requests owner classification and a safe persistence migration. No records were published, modified, or removed by this audit |
-| Three development PRs remain open | PR #1 (web UX and sync reconciliation), PR #3 (repository hygiene), PR #5 (sensitive export redaction) | PR #1 stays Draft until full verification; PR #3 is limited to repository setup, while PR #5 contains a narrowly scoped security fix and tests awaiting execution |
-| GitHub Actions verification for PR #1 has not succeeded | The latest PR #1 head reports two failed `verify` checks (2026-10-13) | Do not confuse Vercel preview success or feedback checks with passing tests. Follow the existing documented Actions quota constraint and verify locally/offline before merging |
-| Administrator exports include recovery credentials on `main` | `LocalDatabase.exportBackup()` and `GET /api/admin/users` omit hashes, but not recovery keys | [Draft PR #5](https://github.com/mohammadrezamie/DarsChin/pull/5) redacts credentials and ephemeral challenges; run tests and review before merge |
-| The default branch has no active branch protection | GitHub branch metadata for `main` | Recommend enabling review and passing check requirements **after** a reliable CI runner exists; no administrative change made |
-| Multiple source/artifact paths need provenance checks | `src/pages/landing-sections`, `app/applet/src/pages/landing-sections`, extension ZIP archives, root-level fix/test helper scripts | Do not delete or deduplicate before import, packaging, and release references are verified |
+| فایل معرفی ریشه هنوز در `main` نبود | ساختار شاخهٔ اصلی در ۲۴ اکتبر | PR شمارهٔ ۳ برای راهنمای نصب و مشارکت پیشنهاد شده بود؛ اکنون وجود README مجدداً قابل بررسی است |
+| تنظیم محلی `JWT_SECRET` به‌درستی توضیح داده نشده بود | Middleware ورود و الگوی قدیمی ENV | اضافه‌کردن نام تنظیم و راهنمای تولید محرمانهٔ کلید، بدون Commit مقدار واقعی |
+| دیتابیس JSON در Git رهگیری می‌شد | مسیر قدیمی `data/darschyn-db.json` | [Issue شمارهٔ ۴](https://github.com/mohammadrezamie/DarsChin/issues/4) برای طبقه‌بندی و پاک‌سازی ایمن دادهٔ تاریخچه |
+| چند PR توسعه باز بودند | PRهای قدیمی ۱، ۳ و ۵ | وضعیت آن PRها **تاریخی** است؛ پیش از تصمیم جدید باید وضعیت کنونی را جست‌وجو کرد |
+| گیت GitHub Actions یک PR بزرگ سبز نشده بود | دو خطای Verify در آن تاریخ | موفقیت نمایش Vercel جای TypeScript، تست و آزمون API نبود |
+| برخی خروجی‌های مدیر دارای اطلاعات حساس بودند | خروجی کاربر/بکاپ قدیمی | PR شمارهٔ ۵ و اصلاحات بعدی برای حذف اطلاعات بازیابی و چالش‌های موقت بررسی شدند |
+| حفاظت شاخهٔ اصلی کافی نبود | تنظیمات همان تاریخ | نیاز به Ruleset و آزمون اجرای واقعی؛ وضعیت تنظیمات امروز در چک‌لیست مالک باید بررسی شود |
+| مسیرهای سورس و خروجی قدیمی نیاز به بررسی داشتند | نسخه‌های افزونه، اسکریپت‌های یک‌بارمصرف و صفحه‌های تکراری | هیچ فایل را صرفاً به‌دلیل شباهت، بدون ردیابی مسیر ساخت و انتشار حذف نکنید |
 
-## Priority order
+## ترتیب اولویتِ مطرح‌شده در آن ممیزی
 
-1. Confirm whether the existing tracked database contains real or synthetic account data before changing or untracking it; follow [Issue #4](https://github.com/mohammadrezamie/DarsChin/issues/4).
-2. Run the verification commands for PR #1 in a separate, disposable development environment with no production secrets or student data. Its GitHub Actions jobs currently do not provide passing evidence.
-3. Review the sync adapter against explicitly approved source fixtures, and verify API authorization, persistence and rollback behavior before merge. Never claim fixture correctness proves current portal compatibility.
-4. Agree on safe branch protection after verified CI is available; avoid breaking the contributor workflow with required checks that cannot run.
-5. Trace build/release references before removing historical ZIP files, code copies or temporary helper scripts. Release artifacts and runtime data should not be conflated.
+1. تعیین ماهیت دادهٔ دیتابیس قدیمی و رسیدگی به حادثهٔ مخزن.
+2. اجرای آزمون‌های PR بزرگ در محیط جدا و بدون کلید تولید.
+3. بررسی صحت درگاه همگام‌سازی روی دادهٔ مجاز، مجوز API و بازگشت در شکست ذخیره.
+4. فعال‌سازی حفاظت شاخهٔ اصلی پس از اطمینان از داشتن گیت اجرایی قابل اعتماد.
+5. ردیابی مسیرهای Build و انتشار پیش از پاک‌سازی فایل‌های ZIP و کپی‌های قدیمی.
 
-## Operational boundaries
+## مرزهای این گزارش
 
-- No production deployment, merge to `main`, source history rewrite, secret rotation, or user-data deletion was made during this audit.
-- No academic-policy, eligibility, or collector behavior was changed.
-- Tests, typechecking and build were **not executed** as part of the repository-hygiene updates.
-- Do not post credential values, real phone numbers, or student-level details in issues, PR bodies, or logs.
+در زمان نگارش این ممیزی هیچ تغییر عملیاتی روی سرور واقعی، حذف دادهٔ کاربران، بازنویسی تاریخچه، تعویض کلید، تغییر مقررات آموزشی یا انتشار نسخهٔ اصلی از طریق **خود همین ممیزی** انجام نشده بود. همان زمان تست TypeScript و Build نیز بخشی از بازبینی صرف سورس نبودند.
+
+**وضعیت فعلی:** با بازشدن مخزن، برخی PRهای قدیمی ادغام یا بسته و آزمون‌های جدید روی SHA مشخص اجرا شده‌اند. متن بالا را به‌عنوان وضعیت زنده تلقی نکنید؛ [فهرست مستندات](INDEX.md)، [دفتر تصمیمات](OWNER_DECISIONS_FA.md)، [اقدامات مالک](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) و آخرین اجرای CI مرجع جدیدترند.
