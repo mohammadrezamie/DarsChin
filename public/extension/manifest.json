@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "آموزشیار | درس‌چین",
+  "version": "1.0.0",
+  "description": "استخراج‌گر هوشمند دروس ارائه‌شده برای سامانه درس‌چین",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://stdn.iau.ir/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://stdn.iau.ir/*"],
+      "js": ["content.js"]
+    }
+  ]
+}

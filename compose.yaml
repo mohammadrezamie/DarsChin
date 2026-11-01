@@ -1,0 +1,64 @@
+# Pilot: one backend process only. JSON DB is NOT multi-instance safe.
+# Provide variables using: docker compose --env-file deploy/.env.vps up -d --build
+services:
+  darschin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DARSCHYN_DATA_DIR: /app/data
+      DARSCHYN_RELEASE_SHA: ${DARSCHYN_RELEASE_SHA:-unidentified}
+      SMS_PROVIDER: ${SMS_PROVIDER:-log}
+      NIAZPARDAZ_API_KEY: ${NIAZPARDAZ_API_KEY:-}
+      NIAZPARDAZ_SENDER_NUMBER: ${NIAZPARDAZ_SENDER_NUMBER:-}
+      NIAZPARDAZ_SMS_OTP_APPROVED: ${NIAZPARDAZ_SMS_OTP_APPROVED:-false}
+      TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-false}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_ALLOWED_HOSTNAMES: ${TURNSTILE_ALLOWED_HOSTNAMES:-}
+      JWT_SECRET: ${JWT_SECRET:?Set a unique random JWT_SECRET}
+      ROOT_OWNER_MOBILE: ${ROOT_OWNER_MOBILE:?Set private root mobile}
+      ROOT_OWNER_PASSWORD: ${ROOT_OWNER_PASSWORD:?Set strong root password}
+      ROOT_OWNER_RECOVERY_KEY: ${ROOT_OWNER_RECOVERY_KEY:?Set root recovery key}
+    volumes:
+      - darschin-data:/app/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      darschin:
+        condition: service_healthy
+    environment:
+      DARSCHYN_DOMAIN: ${DARSCHYN_DOMAIN:?Point your domain DNS at this VPS first}
+      ACME_CONTACT_EMAIL: ${ACME_CONTACT_EMAIL:?Set certificate contact email}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  darschin-data:
+  caddy-data:
+  caddy-config:
