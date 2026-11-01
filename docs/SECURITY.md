@@ -81,3 +81,8 @@ The per-mobile brute-force lockout now has a bounded, time-expiring in-memory tr
 The login and password-recovery OTP send endpoints no longer respond with distinct `404` / `403` errors to identify missing or deactivated phone numbers. Once CAPTCHA and per-mobile throttling pass, a missing/deactivated account receives a short-lived **non-delivered decoy challenge** with the same generic response shape as a legitimate send. No SMS is dispatched and no token can be issued for a non-account. OTP rows remain subject to one-minute resend throttling, two-minute expiration and a global persisted queue cap (4096).
 
 Limitations: this does not eliminate every possible timing/network side channel, and the regular registration duplicate-number response remains a distinct user-flow decision. A production deployment and rate limiting at the trusted reverse proxy remain important; source fixes are not yet applied to the VPS.
+
+
+## Historical legacy authentication scripts in public Git (2026-11-01)
+
+The 22 retired, one-off scripts in `scripts/legacy/` have been deleted from current HEAD after discovering embedded authentication values and a password-printing utility. They were not supported production or test commands. Automated public-source checks now reject recommitting executable files under this deprecated directory. Source deletion **does not remove historical Git objects, old PR refs, third-party clones, or invalidate leaked secrets**. Create new independent deployment credentials, revoke anything exposed in history and coordinate full historical cleanup and GitHub Support separately. No active VPS or private environment was touched.
