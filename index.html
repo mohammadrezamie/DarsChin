@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>درس‌چین | برنامه‌ریزی انتخاب واحد و بررسی تداخل</title>
+    <meta name="description" content="درس‌چین دستیار برنامه‌ریزی انتخاب واحد است: بررسی پیش‌نیازها، چیدمان هفتگی، مدیریت اولویت درس‌ها و تجربهٔ رایگان دمو با داده‌های آزمایشی." />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fa_IR" />
+    <meta property="og:site_name" content="درس‌چین" />
+    <meta property="og:title" content="درس‌چین | برنامه‌ریزی انتخاب واحد و بررسی تداخل" />
+    <meta property="og:description" content="بررسی پیش‌نیازها، تداخل کلاس و آماده‌سازی صف انتخاب واحد؛ دموی رایگان با اطلاعات آزمایشی." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#f3f6fb" />
+    <script>
+      // Apply the saved display preference before rendering React to avoid
+      // the wrong light/dark background flashing on small screens.
+      try {
+        const mode = localStorage.getItem('darschyn_theme_mode') || 'system';
+        const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        const dark = mode === 'dark' || (mode === 'system' && prefersDark);
+        document.documentElement.classList.toggle('dark', dark);
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute('content', dark ? '#09111e' : '#f3f6fb');
+      } catch {
+        // Storage may be inaccessible in private browser contexts.
+        const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        document.documentElement.classList.toggle('dark', dark);
+      }
+    </script>
+    
+    
+    
+  </head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

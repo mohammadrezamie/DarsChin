@@ -1,0 +1,20 @@
+import { describe, expect, it } from 'vitest';
+import { updatePlanSchema } from '../server/schemas/student';
+
+describe('persisted student registration priority formats',()=>{
+  it('accepts the ordered course ID list sent by current student planner',()=>{
+    const value={selectedOfferingIds:['off-math2','off-diff'],
+      coursePriorities:['diff','math2'],offeringPriorities:{diff:['off-diff']}};
+    const parsed=updatePlanSchema.safeParse(value);
+    expect(parsed.success).toBe(true);
+    if(parsed.success)expect(parsed.data.coursePriorities).toEqual(['diff','math2']);
+  });
+  it('retains historical numeric course rank maps instead of silently losing them',()=>{
+    const parsed=updatePlanSchema.safeParse({coursePriorities:{diff:1,math2:2}});
+    expect(parsed.success).toBe(true);
+  });
+  it('rejects malformed priority maps and arrays',()=>{
+    expect(updatePlanSchema.safeParse({coursePriorities:{diff:['off-diff']}}).success).toBe(false);
+    expect(updatePlanSchema.safeParse({coursePriorities:[42,null]}).success).toBe(false);
+  });
+});
