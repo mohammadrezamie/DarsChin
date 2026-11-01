@@ -20,10 +20,10 @@ const testStudentId = 'test-sync-staging-student';
 
 beforeAll(async () => {
   await db.init(true);
-  // Test authorization with a dedicated root fixture, independent of env bootstrap.
+  // Test authorization with a delegated editor possessing explicit admin access.
   const admin = {
     id: testAdminId, name: 'مدیر مصنوعی همگام‌سازی',
-    mobile: '09000000772', roles: ['super-admin'] as ['super-admin'],
+    mobile: '09000000772', roles: ['admin'] as ['admin'],
     permissions: ['admin.panel.access', 'offering.manage'],
     createdAt: new Date().toISOString(),
   };
