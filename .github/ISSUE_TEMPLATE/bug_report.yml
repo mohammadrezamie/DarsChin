@@ -1,0 +1,42 @@
+name: Bug report
+description: Describe a reproducible DarsChin problem without personal data
+title: "bug: "
+labels: []
+body:
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Problem and expected result
+      description: Do not paste JWTs, passwords, recovery keys, real mobile numbers or student records.
+      placeholder: Describe the expected and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic demo records and note the affected branch/commit.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Branch or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Local demo
+        - Vercel frontend preview
+        - Isolated API staging
+        - Production
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Actual checks performed
+      description: Include command and pass/fail output, redacted as needed; don't claim a test was run if it was not.
