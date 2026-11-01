@@ -19,6 +19,7 @@ const environment = {
 };
 
 const steps = [
+  ['Check official documentation language', ['run', 'docs:check']],
   ['Check tracked public-source safety', ['run', 'repo:public-check']],
   ['Install dependencies using the committed Bun lock', ['install', '--frozen-lockfile']],
   ['TypeScript check', ['run', 'lint']],
