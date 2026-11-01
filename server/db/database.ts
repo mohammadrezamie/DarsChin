@@ -427,28 +427,27 @@ this.isInitialized = true;
       };
     }
 
-    // Find student curriculum
-    const curriculum =
-      this.curricula.find(
-        (c) =>
-          c.universityId === profile.universityId &&
-          c.majorId === profile.majorId &&
-          c.entryYearId === profile.entryYearId
-      ) || this.curricula[0];
-
-    const curriculumId = curriculum?.id || '';
-
-    // Find courses associated with this curriculum
-    const currCourses = this.curriculumCourses.filter(
-      (cc) =>
-        cc.curriculumId === curriculumId &&
-        (!cc.trackId || !profile.selectedTrackId || cc.trackId === profile.selectedTrackId)
+    // Limits and graduation progress must use the same *verified* academic
+    // cohort as eligibility and student planning. Never substitute the first
+    // chart or sum every possible track as though the student had chosen it.
+    const matches = this.curricula.filter(c =>
+      c.status === 'active' &&
+      c.universityId === profile.universityId &&
+      c.campusId === profile.campusId &&
+      c.degreeLevelId === profile.degreeLevelId &&
+      c.majorId === profile.majorId &&
+      c.entryYearId === profile.entryYearId
+    );
+    const curriculumId = matches.length === 1 ? matches[0].id : '';
+    const currCourses = this.curriculumCourses.filter(cc =>
+      cc.curriculumId === curriculumId && cc.active !== false &&
+      (!cc.trackId || cc.trackId === profile.selectedTrackId)
     );
 
 
     const currCourseIds = new Set(currCourses.map((cc) => cc.courseId));
     const relevantCourses = this.courses.filter((c) => currCourseIds.has(c.id));
-    const totalCurriculumUnits = relevantCourses.reduce((sum, c) => sum + (c.units || 0), 0) || 140;
+    const totalCurriculumUnits = relevantCourses.reduce((sum, c) => sum + (c.units || 0), 0);
 
     // Passed courses for this user (excluding failed or absent attempts)
     const passed = this.studentPassedCourses.filter(
@@ -459,8 +458,8 @@ this.isInitialized = true;
         (sp.status === 'PASSED' || sp.grade === undefined || sp.grade >= 10)
     );
     const passedCourseIds = new Set(passed.map((p) => p.courseId));
-    const passedUnits = this.courses
-      .filter((c) => passedCourseIds.has(c.id))
+    const passedUnits = relevantCourses
+      .filter(c => passedCourseIds.has(c.id))
       .reduce((sum, c) => sum + (c.units || 0), 0);
 
     // Advanced Curriculum Progress
@@ -523,6 +522,7 @@ this.isInitialized = true;
       isFinalSemester = false;
       finalSemesterReason = 'مجوز ترم آخری توسط اداره آموزش رد شده است.';
     } else if (
+      Boolean(curriculumId) &&
       settings.finalSemesterRuleEnabled &&
       remainingUnits > 0 &&
       remainingUnits <= settings.finalSemesterThresholdUnits

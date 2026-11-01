@@ -7,6 +7,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **اصلاح یکپارچهٔ برنامه‌ریز: چارت/واحد/گرایش دقیق، گروه‌های جایگزین، سقف واحد و ذخیرهٔ اتمیک** | [STUDENT_PLAN_COHORT_AND_ATOMICITY_20261101_FA.md](STUDENT_PLAN_COHORT_AND_ATOMICITY_20261101_FA.md) |
 | **دستورکار دائمی و مرحله‌به‌مرحلهٔ شخصی مالک: تنظیمات GitHub، Support، چرخش کلیدها و نصب تازه** | [OWNER_SECURITY_ACTION_CHECKLIST_FA.md](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) |
 | **ثبت پایدار پروندهٔ دانشجو، سوابق قبولی/مردودی و بازگشت امن پس از خطای ذخیره** | [STUDENT_RECORD_DURABILITY_20261101_FA.md](STUDENT_RECORD_DURABILITY_20261101_FA.md) |
 | **حفاظت ZIP افزونه و audit دانلودهای شخصی، جلوگیری از نشتی error log** | [PERMANENT_SECURITY_POLICY_FA.md](PERMANENT_SECURITY_POLICY_FA.md) |
