@@ -141,6 +141,8 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
     expect(component).toContain('parseStoredRegistrationTokens(window.sessionStorage.getItem(progressKey))');
+    expect(component).toContain('const current=pruneRegistrationTokens(queue.steps,previous);');
+    expect(component).toContain('if(!rulesReady||!progressReady)return;');
     expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
     // Both student workspaces use the same clipboard fallback and cleanup.
     expect(component).toContain("import { copyTextWithFallback } from '../utils/clipboard'");
