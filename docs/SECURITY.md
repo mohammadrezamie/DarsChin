@@ -67,3 +67,7 @@ Root-only administrator creation and editing now validate accepted fields, norma
 ## API error redaction and evaluation input guard — 2026-11-01
 
 Internal 500 responses in administration and student eligibility must never reflect raw exception messages, stack traces, filesystem paths, secrets or mutable student records. Catch handlers return stable generic errors, including failed backup serialization. Student evaluation requires bounded arrays of valid course/offering identifiers before the engine runs. Regression tests intentionally throw synthetic path-bearing exceptions and ensure the response excludes their values. Neither these patches nor source-tree cleanup revokes credentials exposed in old Git history.
+
+## Failed-login memory exhaustion guard (2026-11-01)
+
+The per-mobile brute-force lockout now has a bounded, time-expiring in-memory tracker. Unknown-number login attempts can no longer add unlimited entries over months. Existing CAPTCHA and guest IP throttles still apply, failed attempts still lock a mobile for five minutes, and counters reset after completed lockouts or inactivity. This single-node pilot design is not a substitute for shared persistent rate limiting on a multi-instance production installation.
