@@ -105,3 +105,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [پیش‌نمایش جداگانهٔ ظاهر درس‌چین در GitHub Pages](GITHUB_PAGES_PREVIEW_FA.md) — راه‌اندازی، امنیت، انتشار دستی و بازگشت.
 
 - [گردش یکپارچهٔ انتخاب درس، استاد و صف ثبت و رنگ‌بندی جدید](COURSE_FIRST_UNIFIED_QUEUE_FA.md).
+
+- [دورهٔ موقت دمو، بازگشت لندینگ و بهبود UX انتخاب واحد](TEMPORARY_DEMO_LIFECYCLE_UX_FA.md).

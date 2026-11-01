@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { publicDemoEnabled } from '../config/demo-availability';
 import { ArrowLeft, GraduationCap, Menu, X } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { HeroSection } from './landing-sections/HeroSection';
@@ -77,7 +78,7 @@ const Landing: React.FC = () => {
 
           <div className="flex min-w-0 shrink-0 items-center gap-0.5 sm:gap-2">
             <ThemeToggle />
-            <Link to="/demo/student" className="hidden lg:inline-flex min-h-10 items-center rounded-xl border border-teal-200 bg-teal-50 px-3 text-sm font-extrabold text-teal-800 hover:bg-teal-100 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-200">تست رایگان دمو</Link>
+            {publicDemoEnabled && <Link to="/demo/student" className="hidden lg:inline-flex min-h-10 items-center rounded-xl border border-teal-200 bg-teal-50 px-3 text-sm font-extrabold text-teal-800 hover:bg-teal-100 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-200">تست رایگان دمو</Link>}
             <Link to="/login" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl px-2.5 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 sm:px-3 sm:text-sm dark:text-slate-200 dark:hover:bg-slate-800">ورود</Link>
             <Link to="/register" className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-teal-700 px-3.5 py-2.5 text-sm font-extrabold text-white shadow-md shadow-teal-700/20 transition hover:-translate-y-0.5 hover:bg-teal-800 sm:px-4">
               ثبت‌نام <ArrowLeft className="h-4 w-4" />
@@ -119,7 +120,7 @@ const Landing: React.FC = () => {
               ))}
               <div className="mt-4 space-y-2 rounded-xl bg-teal-50 p-3 dark:bg-teal-950/40">
                 <p className="text-xs font-bold text-teal-950 dark:text-teal-200">ورود آزمایشی بدون شماره، رمز یا ثبت‌نام</p>
-                <Link to="/demo/student" onClick={closeMenu} className="flex min-h-11 items-center justify-center rounded-xl bg-teal-800 text-white">دموی دانشجو</Link>
+                {publicDemoEnabled && <Link to="/demo/student" onClick={closeMenu} className="flex min-h-11 items-center justify-center rounded-xl bg-teal-800 text-white">دموی دانشجو</Link>}
               </div>
               <Link to="/help" onClick={closeMenu} className="mt-3 flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-slate-100 dark:hover:bg-slate-800">راهنمای استفاده و سؤالات متداول</Link>
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
@@ -133,7 +134,7 @@ const Landing: React.FC = () => {
 
       <main>
         <HeroSection />
-        <section aria-label="انتخاب دسترسی دمو" className="darschin-demo-entry relative mx-auto -mt-3 mb-10 max-w-7xl px-3 sm:px-6 lg:px-8">
+        {publicDemoEnabled && <section aria-label="انتخاب دسترسی دمو" className="darschin-demo-entry relative mx-auto -mt-3 mb-10 max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="darschin-demo-entry__body dc-demo-entry grid min-w-0 gap-4 rounded-[1.75rem] border border-teal-200/80 bg-gradient-to-br from-white via-teal-50/80 to-emerald-50/60 p-4 shadow-[0_22px_60px_-32px_rgba(37,99,235,0.35)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-teal-950/70 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/40">
             <div>
               <p className="text-xs font-black tracking-wide text-teal-800 dark:text-teal-300">پایلوت دانشگاه آزاد · مهندسی برق کارشناسی · علوم و تحقیقات</p>
@@ -145,7 +146,7 @@ const Landing: React.FC = () => {
               <Link to="/demo" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300 sm:flex-none">برنامه‌ریز ساده</Link>
             </div>
           </div>
-        </section>
+        </section>}
         <EligibilitySection />
         <RecommendationSection />
         <ScheduleSection />

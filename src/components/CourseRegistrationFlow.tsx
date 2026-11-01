@@ -77,7 +77,7 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
     </div>
     {stage === 'courses' ? <>
       <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
-        evaluations={evaluations} recommendations={recommendations} onSave={onSaveWishlist}/>
+        evaluations={evaluations} recommendations={recommendations} onSave={onSaveWishlist} courseFirst/>
       <div className="dc-flow-next sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 sm:static">
         <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
           {wishlistCourseIds.length.toLocaleString('fa-IR')} درس انتخاب شده

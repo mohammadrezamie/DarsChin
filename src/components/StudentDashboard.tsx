@@ -31,6 +31,7 @@ import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { CourseRegistrationFlow } from './CourseRegistrationFlow';
+import { initialRegistrationStage } from '../domain/student-flow-stage';
 import { StudentMobileDock } from './StudentMobileDock';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { StudentJourneyStepper } from './StudentJourneyStepper';
@@ -89,6 +90,7 @@ export const StudentDashboard: React.FC = () => {
   const [planError, setPlanError] = useState<string | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const planMutationRef = useRef(false);
+  const registrationStageOwnerRef = useRef<string | null>(null);
   const evaluationVersionRef = useRef(0);
   const tabButtonsRef = useRef<Partial<Record<StudentTab, HTMLButtonElement | null>>>({});
   const tabStripRef = useRef<HTMLDivElement>(null);
@@ -221,7 +223,7 @@ export const StudentDashboard: React.FC = () => {
     setJourneyBusy(false);
     if (!res.success) { setPlanError(res.error || 'گام جدید ذخیره نشد؛ دوباره تلاش کن.'); return; }
     setJourneyStep(next);
-    if (next >= 4) setRegistrationStage(next >= 5 ? 'preferences' : 'courses');
+    if (next >= 4) setRegistrationStage(initialRegistrationStage(next, wishlistCourseIds.length));
     navigateWorkspace(stageDestination[next]);
   };
 
@@ -260,6 +262,8 @@ export const StudentDashboard: React.FC = () => {
       setOfferingPriorities({});
       setWishlistCourseIds([]);
       setJourneyStep(0);
+      setRegistrationStage('courses');
+      registrationStageOwnerRef.current = null;
     }
     try {
       // Resolve saved selections before calculating eligibility on reload.
@@ -278,6 +282,8 @@ export const StudentDashboard: React.FC = () => {
         setOfferingPriorities({});
         setWishlistCourseIds([]);
         setJourneyStep(0);
+        setRegistrationStage('courses');
+        registrationStageOwnerRef.current = null;
         setJourneyReady(true);
         setEvaluations([]);
         setRecommendations([]);
@@ -309,11 +315,18 @@ export const StudentDashboard: React.FC = () => {
         return;
       }
       setProfile(profileRes.data.profile);
-      setWishlistCourseIds(Array.isArray(planRes.data.wishlistCourseIds) ? planRes.data.wishlistCourseIds : []);
-      // Existing users with a saved final plan keep their familiar workspace;
-      // only genuinely new planning sessions start at the first wizard step.
-      setJourneyStep(Number.isInteger(planRes.data.journeyStep) && planRes.data.journeyStep! >= 0 && planRes.data.journeyStep! <= 6
-        ? planRes.data.journeyStep! : planRes.data.selectedOfferingIds.length > 0 ? 6 : 0);
+      const chosenIds = Array.isArray(planRes.data.wishlistCourseIds) ? planRes.data.wishlistCourseIds : [];
+      setWishlistCourseIds(chosenIds);
+      const savedStep = Number.isInteger(planRes.data.journeyStep) && planRes.data.journeyStep! >= 0 && planRes.data.journeyStep! <= 6
+        ? planRes.data.journeyStep! : planRes.data.selectedOfferingIds.length > 0 ? 6 : 0;
+      setJourneyStep(savedStep);
+      // هنگام دریافت مجدد اطلاعات بعد از تغییر استاد، مرحلهٔ انتخاب کاربر را بازنشانی نکن.
+      const stageContext = [profileRes.data.profile.userId, profileRes.data.profile.currentTermId,
+        profileRes.data.curriculum?.id || 'none'].join('|');
+      if (registrationStageOwnerRef.current !== stageContext) {
+        setRegistrationStage(initialRegistrationStage(savedStep, chosenIds.length));
+        registrationStageOwnerRef.current = stageContext;
+      }
       setJourneyReady(true);
       setCurriculumId(profileRes.data.curriculum?.id || null);
       const planned = planRes.data.selectedOfferingIds;
