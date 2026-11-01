@@ -27,9 +27,9 @@ const previewCourses: PreviewCourse[] = [
 ];
 
 const courseTones = {
-  blue: 'bg-blue-50 text-blue-950 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-100 dark:ring-blue-900/60',
+  blue: 'bg-teal-50 text-teal-950 ring-teal-100 dark:bg-teal-950/40 dark:text-teal-100 dark:ring-teal-950/60',
   emerald: 'bg-emerald-50 text-emerald-950 ring-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-100 dark:ring-emerald-900/60',
-  violet: 'bg-violet-50 text-violet-950 ring-violet-100 dark:bg-violet-950/30 dark:text-violet-100 dark:ring-violet-900/60',
+  violet: 'bg-amber-50 text-amber-950 ring-amber-100 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-950/60',
 } as const;
 
 /** Normal-flow content that wraps within the card instead of overflowing a narrow grid cell. */
@@ -85,7 +85,7 @@ export const ScheduleSection: React.FC = () => {
       <div className="min-w-0 max-w-full rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-5 lg:p-7">
         <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white">
-            <Clock3 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <Clock3 aria-hidden="true" className="h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" />
             پیش‌نمایش برنامه هفتگی
           </div>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
