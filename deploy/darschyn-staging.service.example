@@ -1,0 +1,33 @@
+[Unit]
+Description=DarsChin staging (isolated, no real student data)
+After=network.target
+Wants=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=4
+
+[Service]
+Type=simple
+User=darschyn-staging
+Group=darschyn-staging
+WorkingDirectory=/opt/darschyn-staging/current
+EnvironmentFile=/etc/darschyn/staging.env
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3002
+Environment=DARSCHYN_DATA_DIR=/var/lib/darschyn-staging
+ExecStartPre=/usr/bin/test -r /opt/darschyn-staging/current/dist/server.cjs
+ExecStartPre=/usr/bin/test -d /var/lib/darschyn-staging
+ExecStart=/usr/bin/node /opt/darschyn-staging/current/dist/server.cjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/darschyn-staging
+
+[Install]
+WantedBy=multi-user.target

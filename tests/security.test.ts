@@ -1,0 +1,430 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { db } from '../server/db/database';
+import request from 'supertest';
+import express from 'express';
+import authRouter from '../server/routes/auth';
+import { adminRouter } from '../server/routes/admin';
+import { adminManagementRouter } from '../server/routes/admin-management';
+import { otpRouter } from '../server/routes/otp';
+import { generateToken } from '../server/middleware/auth';
+import { syncRouter } from '../server/routes/sync';
+
+const app = express();
+const generateTestMobile = () => `09${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
+app.use(express.json());
+app.use('/api/auth', authRouter);
+app.use('/api/auth/otp', otpRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/admin-management', adminManagementRouter);
+app.use('/api/sync', syncRouter);
+
+async function createLocalCaptchaToken(action: 'login' | 'register') {
+    const response = await request(app).get(`/api/auth/otp/captcha/generate?action=${action}`);
+    expect(response.status).toBe(200);
+    const id = response.body.data.id as string;
+    const answer = db.captchaChallenges.find(challenge => challenge.id === id)?.value;
+    expect(answer).toBeTruthy();
+    return `local:${id}:${answer}`;
+}
+
+describe("DARSCHYN Security Regression & Integrity Tests", () => {
+    
+    
+    beforeAll(async () => {
+        delete process.env.NIAZPARDAZ_API_KEY; // Prevent real network calls
+        process.env.TURNSTILE_ENABLED = 'false'; // Explicit first-party CAPTCHA test mode
+        await db.init(true);
+    });
+
+
+    let studentToken = '';
+    let adminToken = '';
+    let rootToken = '';
+    let rootUser: any;
+    const testStudentMobile = '09000000001'; // ensure this user exists in DB from seed
+
+    it("1. Root account initialization is idempotent and secure", () => {
+        rootUser = db.users.find(u => u.roles.includes('super-admin'));
+        expect(rootUser).toBeDefined();
+        expect(rootUser.permissions).toContain('admin.panel.access');
+        expect(rootUser.permissions).toContain('student.access');
+        
+        rootToken = generateToken({ id: rootUser.id, roles: rootUser.roles, permissions: rootUser.permissions });
+    });
+
+    it("2. Public registration does NOT create super-admin", async () => {
+        const randomMobile = generateTestMobile();
+        // Even if trying to use root mobile (if it wasn't already in DB, but let's test a generic one)
+        const withoutCaptcha = await request(app)
+            .post('/api/auth/register')
+            .send({ mobile: randomMobile, password: 'password123', name: 'Public User' });
+        expect(withoutCaptcha.status).toBe(403);
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({ mobile: randomMobile, password: 'password123', name: 'Public User',
+                captchaToken: await createLocalCaptchaToken('register') });
+            
+        if(res.status!==201) console.log(res.body);
+        expect(res.status).toBe(201);
+        expect(res.body.data.user.roles).not.toContain('super-admin');
+        expect(res.body.data.user.roles).toContain('student');
+        expect(res.body.data.user.recoveryKey).toBeUndefined(); // Recovery key must not leak
+    });
+
+    it("blocks missing CAPTCHA for login and rejects a reused local image challenge", async () => {
+        const payload = { mobile: generateTestMobile(), password: 'wrong-password' };
+        const missing = await request(app).post('/api/auth/login').send(payload);
+        expect(missing.status).toBe(403);
+        const captchaToken = await createLocalCaptchaToken('login');
+        const attempted = await request(app).post('/api/auth/login')
+            .send({ ...payload, captchaToken });
+        expect(attempted.status).toBe(401); // Valid CAPTCHA; invalid account credentials
+        const replayed = await request(app).post('/api/auth/login')
+            .send({ ...payload, captchaToken });
+        expect(replayed.status).toBe(403);
+    });
+
+    it("returns structured validation errors for malformed auth bodies", async () => {
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({ mobile: { value: '09123456789' }, password: 'password123', name: 'Test User',
+                captchaToken: await createLocalCaptchaToken('register') });
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.details).toEqual(expect.arrayContaining([
+            expect.objectContaining({ path: 'mobile', message: expect.any(String) }),
+        ]));
+    });
+
+    it("3. CAPTCHA endpoint DOES NOT expose answer", async () => {
+        const res = await request(app).get('/api/auth/otp/captcha/generate');
+        expect(res.status).toBe(200);
+        expect(res.body.data.id).toBeDefined();
+        expect(res.body.data.svg).toBeDefined();
+        expect(res.body.data.text).toBeUndefined();
+        expect(res.body.data.value).toBeUndefined();
+        expect(res.body.data.answer).toBeUndefined();
+    });
+
+    it("prunes expired CAPTCHA and OTP challenges", async () => {
+        const expiredAt = Date.now() - 1;
+        db.captchaChallenges.push({
+            id: 'expired-captcha-regression',
+            value: 'expired',
+            createdAt: expiredAt - 1000,
+            expiresAt: expiredAt,
+            attempts: 0,
+        });
+        db.otpChallenges.push({
+            id: 'expired-otp-regression',
+            mobile: '09123456789',
+            purpose: 'login',
+            hashedOtp: bcrypt.hashSync('123456', 4),
+            createdAt: expiredAt - 1000,
+            expiresAt: expiredAt,
+            attempts: 0,
+        });
+        db.captchaChallenges.push({
+            id: 'malformed-expiry-captcha-regression',
+            value: 'invalid',
+            createdAt: expiredAt - 1000,
+            expiresAt: Number.NaN,
+            attempts: 0,
+        });
+
+        const res = await request(app).get('/api/auth/otp/captcha/generate');
+        expect(res.status).toBe(200);
+        expect(db.captchaChallenges.some((item) => item.id === 'expired-captcha-regression')).toBe(false);
+        expect(db.captchaChallenges.some((item) => item.id === 'malformed-expiry-captcha-regression')).toBe(false);
+        expect(db.otpChallenges.some((item) => item.id === 'expired-otp-regression')).toBe(false);
+    });
+
+    it("preserves verified password-recovery challenges until reset completes, then prunes them", async () => {
+        db.otpChallenges.push({
+            id: 'verified-recovery-regression',
+            mobile: '09123456789',
+            purpose: 'password_recovery',
+            hashedOtp: bcrypt.hashSync('123456', 4),
+            createdAt: Date.now() - 1000,
+            expiresAt: Date.now() + 60_000,
+            attempts: 0,
+            consumedAt: Date.now() - 500,
+        });
+        db.otpChallenges.push({
+            id: 'completed-recovery-regression',
+            mobile: '09123456788',
+            purpose: 'password_recovery',
+            hashedOtp: bcrypt.hashSync('123456', 4),
+            createdAt: Date.now() - 1000,
+            expiresAt: Date.now() + 60_000,
+            attempts: 0,
+            consumedAt: Date.now() - 500,
+            recoveredAt: Date.now() - 100,
+        } as any);
+
+        const res = await request(app).get('/api/auth/otp/captcha/generate');
+        expect(res.status).toBe(200);
+        expect(db.otpChallenges.some((item) => item.id === 'verified-recovery-regression')).toBe(true);
+        expect(db.otpChallenges.some((item) => item.id === 'completed-recovery-regression')).toBe(false);
+    });
+
+    it("rejects malformed OTP requests and unsupported purposes", async () => {
+        const missingSendFields = await request(app).post('/api/auth/otp/send').send({});
+        expect(missingSendFields.status).toBe(400);
+
+        const unsupportedPurpose = await request(app).post('/api/auth/otp/send').send({
+            mobile: '09123456789',
+            purpose: 'account_takeover',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(unsupportedPurpose.status).toBe(400);
+
+        const malformedMobile = await request(app).post('/api/auth/otp/send').send({
+            mobile: { value: '09123456789' },
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(malformedMobile.status).toBe(400);
+
+        const malformedMobileFormat = await request(app).post('/api/auth/otp/send').send({
+            mobile: '0912345678x',
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(malformedMobileFormat.status).toBe(400);
+        expect(malformedMobileFormat.body.error).toContain('شماره موبایل نامعتبر');
+
+        const validMobileReachesCaptchaCheck = await request(app).post('/api/auth/otp/send').send({
+            mobile: '09123456789',
+            purpose: 'login',
+            captchaId: 'unused',
+            captchaValue: 'unused',
+        });
+        expect(validMobileReachesCaptchaCheck.status).toBe(400);
+        expect(validMobileReachesCaptchaCheck.body.error).toContain('کپچای نامعتبر');
+
+        const malformedVerify = await request(app).post('/api/auth/otp/verify').send({
+            mobile: '09123456789',
+            challengeId: 'unused',
+            code: { value: '123456' },
+            purpose: 'login',
+        });
+        expect(malformedVerify.status).toBe(400);
+
+        const validVerifyShapeReachesChallengeCheck = await request(app).post('/api/auth/otp/verify').send({
+            mobile: '09123456789',
+            challengeId: 'unused',
+            code: '123456',
+            purpose: 'login',
+        });
+        expect(validVerifyShapeReachesChallengeCheck.status).toBe(400);
+        expect(validVerifyShapeReachesChallengeCheck.body.error).toContain('کد تایید نامعتبر');
+    });
+
+    it("4. OTP Send endpoint DOES NOT expose OTP", async () => {
+        db.data.otpChallenges = [];
+        db.save();
+        // Generate CAPTCHA
+        const captchaRes = await request(app).get('/api/auth/otp/captcha/generate');
+        const captchaId = captchaRes.body.data.id;
+        
+        // Fetch answer using the TEST-ONLY debug endpoint
+        
+        
+        // Fetch answer directly from DB for testing
+        const captchaText = db.captchaChallenges.find(c => c.id === captchaId)?.value || '';
+
+        
+        process.env.MOCK_OTP_CODE = '123456'; // Ensure mock works
+        
+        // Ensure student exists
+        if (!db.users.find(u => u.mobile === testStudentMobile)) {
+             db.users.push({
+                 id: 'usr-student1', mobile: testStudentMobile, name: 'Student 1', roles: ['student'], permissions: [], password: 'asd'
+             } as any);
+        }
+
+        
+        const testMobile = generateTestMobile();
+        db.users.push({ id: `usr-${Date.now()}`, mobile: testMobile, name: 'T', roles: ['student'], permissions: [] } as any);
+
+        const sendRes = await request(app).post('/api/auth/otp/send').send({
+            mobile: testMobile,
+            purpose: 'login',
+            captchaId,
+            captchaValue: captchaText,
+        });
+        expect(sendRes.status).toBe(200);
+        expect(sendRes.body.data.challengeId).toBeDefined();
+        expect(JSON.stringify(sendRes.body)).not.toContain('123456');
+
+        const challengeId = crypto.randomUUID();
+        const code = '111222';
+        const hashedOtp = bcrypt.hashSync(code, 10);
+        db.otpChallenges.push({
+            id: challengeId,
+            mobile: testMobile,
+            purpose: 'login',
+            hashedOtp,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 120000,
+            attempts: 0
+        });
+        db.save();
+
+        // Wrong purpose
+
+        const wrongPurposeRes = await request(app).post('/api/auth/otp/verify').send({
+            mobile: testMobile,
+            challengeId,
+            code: '111222',
+            purpose: 'password_recovery'
+        });
+        expect(wrongPurposeRes.status).toBe(400);
+
+        // Correct verify
+        const correctRes = await request(app).post('/api/auth/otp/verify').send({
+            mobile: testMobile,
+            challengeId,
+            code: '111222',
+            purpose: 'login'
+        });
+        expect(correctRes.status).toBe(200);
+        
+        // Replay attempt
+        const replayRes = await request(app).post('/api/auth/otp/verify').send({
+            mobile: testMobile,
+            challengeId,
+            code: '111222',
+            purpose: 'login'
+        });
+        expect(replayRes.status).toBe(400); // Invalid or expired or consumed
+    });
+
+    it("6. Delegated Admin cannot grant permissions they don't possess", async () => {
+        const admin2 = { id: 'usr-adm2', mobile: generateTestMobile(), name: 'Admin 2', roles: ['admin'] as any, permissions: ['admin.manage', 'admin.create'] };
+        db.users.push(admin2 as any);
+        const admin2Token = generateToken(admin2);
+        
+        const targetAdminMobile = generateTestMobile();
+        
+        const res = await request(app)
+            .post('/api/admin-management')
+            .set('Authorization', `Bearer ${admin2Token}`)
+            .send({ name: 'New Admin', mobile: targetAdminMobile, password: '123', roles: ['admin'] as any, permissions: ['system.settings.manage'] });
+            
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('بیشتر از دسترسی‌های خودتان');
+    });
+
+    it("7. Delegated Admin cannot manufacture super-admin", async () => {
+        const admin3 = { id: 'usr-adm3', mobile: generateTestMobile(), name: 'Admin 3', roles: ['admin'] as any, permissions: ['admin.create'] };
+        db.users.push(admin3 as any);
+        const admin3Token = generateToken(admin3);
+        
+        const res = await request(app)
+            .post('/api/admin-management')
+            .set('Authorization', `Bearer ${admin3Token}`)
+            .send({ name: 'New Root', mobile: `0900${Math.floor(Math.random() * 10000000)}`, password: '123', roles: ['super-admin', 'admin'], permissions: [] });
+            
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('ایجاد مدیر ارشد');
+    });
+    it("8. Student sync cannot target a campus outside the student's profile", async () => {
+        const userId = 'sync-campus-scope-regression-student';
+        db.users.push({
+            id: userId,
+            mobile: '09999999001',
+            password: 'unused-test-password-hash',
+            name: 'Sync Scope Test',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        } as any);
+        db.data.studentProfiles = db.data.studentProfiles || [];
+        db.data.studentProfiles.push({
+            userId,
+            campusId: 'campus-profile-scope',
+            currentTermId: 'term-profile-scope',
+        } as any);
+
+        const token = generateToken({ id: userId, roles: ['student'], permissions: [] });
+        const response = await request(app)
+            .post('/api/sync/jobs')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ termId: 'term-profile-scope', campusId: 'campus-other-scope' });
+
+        expect(response.status).toBe(403);
+        expect(response.body.success).toBe(false);
+        expect(db.syncJobs.some((job: any) => job.userId === userId)).toBe(false);
+    });
+
+    it("9. Student sync requires a campus assigned to the student's profile", async () => {
+        const userId = 'sync-campus-missing-regression-student';
+        db.users.push({
+            id: userId,
+            mobile: '09999999002',
+            password: 'unused-test-password-hash',
+            name: 'Sync Missing Campus Test',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        } as any);
+        db.data.studentProfiles = db.data.studentProfiles || [];
+        db.data.studentProfiles.push({
+            userId,
+            currentTermId: 'term-profile-scope',
+        } as any);
+
+        const token = generateToken({ id: userId, roles: ['student'], permissions: [] });
+        const response = await request(app)
+            .post('/api/sync/jobs')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ termId: 'term-profile-scope', campusId: 'campus-other-scope' });
+
+        expect(response.status).toBe(403);
+        expect(db.syncJobs.some((job: any) => job.userId === userId)).toBe(false);
+    });
+
+
+    it("a matching root mobile alone cannot promote a non-bootstrap user", async () => {
+        const originalRootMobile = process.env.ROOT_OWNER_MOBILE;
+        const mobile = '09000000002';
+        const userId = 'usr-root-guard-regression';
+        const user = {
+            id: userId,
+            mobile,
+            password: bcrypt.hashSync('secure-test-password', 4),
+            name: 'Root Guard Regression',
+            roles: ['student'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
+        };
+        db.data.users = db.users.filter((candidate) => candidate.id !== userId && candidate.mobile !== mobile);
+        db.users.push(user as any);
+        process.env.ROOT_OWNER_MOBILE = mobile;
+
+        try {
+            const token = generateToken(user as any);
+            const response = await request(app)
+                .get('/api/auth/me')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data.roles).toContain('student');
+            expect(response.body.data.roles).not.toContain('super-admin');
+            expect(db.users.find((candidate) => candidate.id === userId)?.roles).not.toContain('super-admin');
+        } finally {
+            if (originalRootMobile === undefined) delete process.env.ROOT_OWNER_MOBILE;
+            else process.env.ROOT_OWNER_MOBILE = originalRootMobile;
+            db.data.users = db.users.filter((candidate) => candidate.id !== userId);
+        }
+    });
+
+});
