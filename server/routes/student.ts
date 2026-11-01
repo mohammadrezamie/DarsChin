@@ -419,14 +419,44 @@ studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: Authe
   if (!profile || !termId) {
     return res.status(409).json({ success: false, error: 'ابتدا پروندهٔ تحصیلی و نیمسال معتبر خود را مشخص کنید.' });
   }
+  // Priorities and fallback section IDs are just as private and scoped as
+  // primary selections. A request without selectedOfferingIds is no exception.
+  const scope = curriculumForStudent(userId);
+  if (!scope) {
+    return res.status(409).json({ success: false, error: 'چارت فعال و یکتای این ورودی پیدا نشد؛ تنظیم آن باید بررسی شود.' });
+  }
+  const chartCourseIds = new Set(db.curriculumCourses.filter(link =>
+    link.curriculumId === scope.chart.id && link.active !== false &&
+    (!link.trackId || !profile.isTrackSelected || link.trackId === profile.selectedTrackId) &&
+    db.courses.some(course => course.id === link.courseId && course.active)
+  ).map(link => link.courseId));
+  if (coursePriorities !== undefined) {
+    const ids: string[] = Array.isArray(coursePriorities)
+      ? coursePriorities : Object.keys(coursePriorities);
+    if (ids.some(id => !chartCourseIds.has(id))) {
+      return res.status(400).json({
+        success: false, error: 'اولویت دروس فقط برای دروس فعال چارت همین حساب معتبر است.',
+      });
+    }
+  }
+  if (offeringPriorities !== undefined) {
+    for (const [courseId, ids] of Object.entries(offeringPriorities) as [string, string[]][]) {
+      if (!chartCourseIds.has(courseId) || ids.some(offeringId => {
+        const offering = db.courseOfferings.find(row => row.id === offeringId);
+        return !offering || !offering.active || offering.courseId !== courseId ||
+          offering.termId !== termId || offering.campusId !== profile.campusId;
+      })) {
+        return res.status(400).json({
+          success: false,
+          error: 'اولویت گروه‌های جایگزین باید فقط به همان درس، واحد دانشگاهی و نیمسال معتبر تعلق داشته باشد.',
+        });
+      }
+    }
+  }
 
   if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
     // Reuse the exact cohort contract of the eligibility API, not the first
     // catalog chart from another campus, degree or entry year.
-    const scope = curriculumForStudent(userId);
-    if (!scope) {
-      return res.status(409).json({ success: false, error: 'چارت فعال و یکتای این ورودی پیدا نشد؛ تنظیم آن باید بررسی شود.' });
-    }
     const relevantOfferings = db.courseOfferings.filter(o =>
       o.termId === termId && o.campusId === profile.campusId && o.active
     );
