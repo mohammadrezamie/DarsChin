@@ -18,12 +18,13 @@ interface Props {
   evaluations: CourseEligibilityResult[];
   recommendations: CourseRecommendation[];
   onSave: (ids: string[]) => Promise<boolean>;
+  courseFirst?: boolean;
 }
 
 /** A wish list is NOT a registered plan. It can contain more units than a
  * student may ultimately take, allowing meaningful comparison before section choice. */
 export const StudentWishlistBuilder: React.FC<Props> = ({
-  curriculumId, wishlistCourseIds, evaluations, recommendations, onSave,
+  curriculumId, wishlistCourseIds, evaluations, recommendations, onSave, courseFirst = false,
 }) => {
   const [catalog, setCatalog] = useState<BasketCourse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,14 +74,16 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
     <section dir="rtl" aria-labelledby="wishlist-heading" className="space-y-4">
       <header className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-950 dark:bg-emerald-950/30">
         <h3 id="wishlist-heading" className="flex items-center gap-2 text-base font-extrabold text-emerald-950 dark:text-emerald-100">
-          <BookOpenCheck className="h-5 w-5" aria-hidden="true" /> سبد علاقه‌مندی به درس‌ها
+          <BookOpenCheck className="h-5 w-5" aria-hidden="true" /> {courseFirst ? 'اول درس‌هایت را انتخاب کن' : 'سبد علاقه‌مندی به درس‌ها'}
         </h3>
         <p className="mt-1 text-xs leading-7 text-emerald-950 dark:text-emerald-200">
-          این فقط فهرست درس‌هایی است که دوست داری بررسی کنی؛ حتی ۴۰ واحد یا بیشتر هم می‌توانی در آن نگه داری.
-          این‌ها <strong>انتخاب واحد نهایی نیستند</strong>؛ پیش‌نیاز، ظرفیت، استاد، تداخل و سقف واحد هنگام ساخت برنامهٔ نهایی جداگانه بررسی می‌شوند.
+          {courseFirst
+            ? 'فعلاً فقط اسم درس‌های موردنظرت را انتخاب کن. در مرحلهٔ بعد استاد، گروه و جایگزین‌ها را مشخص می‌کنی؛ این انتخاب ثبت رسمی دانشگاه نیست.'
+            : <>این فقط فهرست درس‌هایی است که دوست داری بررسی کنی؛ حتی ۴۰ واحد یا بیشتر هم می‌توانی در آن نگه داری.
+              این‌ها <strong>انتخاب واحد نهایی نیستند</strong>؛ پیش‌نیاز، ظرفیت، استاد، تداخل و سقف واحد هنگام ساخت برنامهٔ نهایی جداگانه بررسی می‌شوند.</>}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-emerald-950 dark:text-emerald-200">
-          <span>{selected.length.toLocaleString('fa-IR')} درس علاقه‌مندی</span>
+          <span>{selected.length.toLocaleString('fa-IR')} {courseFirst ? 'درس انتخاب‌شده' : 'درس علاقه‌مندی'}</span>
           <span aria-hidden="true">·</span>
           <span>{totalUnits.toLocaleString('fa-IR')} واحد پیشنهادی، غیرالزام‌آور</span>
         </div>
@@ -128,7 +131,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
           </div>
         </div>
         <div className="min-w-0 rounded-2xl border border-emerald-200 bg-white p-3 dark:border-emerald-950 dark:bg-slate-900">
-          <h4 className="mb-3 text-sm font-bold">ترتیب علاقه‌مندی‌ها</h4>
+          <h4 className="mb-3 text-sm font-bold">{courseFirst ? 'درس‌های انتخاب‌شده' : 'ترتیب علاقه‌مندی‌ها'}</h4>
           <div className="max-h-[28rem] space-y-2 overflow-y-auto">
             {selected.map((c, index) => (
               <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-emerald-50/70 p-2.5 dark:bg-emerald-950/30">

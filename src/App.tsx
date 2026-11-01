@@ -6,6 +6,7 @@ import { PasswordChangeModal } from './components/PasswordChangeModal';
 import { ExtensionModal } from './components/ExtensionModal';
 
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { publicDemoEnabled } from './config/demo-availability';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { SiteFooter } from './components/SiteFooter';
 import { adminWorkspaceAccess } from './utils/admin-navigation';
@@ -120,10 +121,12 @@ export default function App() {
           <AppRouteShell>
             <Routes>
               <Route path="/" element={<Landing />} />
-              {/* Full-featured synthetic workspaces: no account, token, or backend required. */}
-              <Route path="/demo" element={<PlannerDemo />} />
-              <Route path="/demo/student" element={<DemoWorkspace role="student" />} />
-              <Route path="/demo/admin" element={<AdminDemoGate />} />
+              {/* حالت بازبینی موقت؛ با خاموش‌شدن پرچم، این مسیرها نیز غیرفعال می‌شوند. */}
+              {publicDemoEnabled && <>
+                <Route path="/demo" element={<PlannerDemo />} />
+                <Route path="/demo/student" element={<DemoWorkspace role="student" />} />
+                <Route path="/demo/admin" element={<AdminDemoGate />} />
+              </>}
               <Route path="/help" element={<StudentGuide />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
