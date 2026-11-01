@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
-import { StudentAcademicProfile, StudentPassedCourse } from '../../src/types';
+import { StudentAcademicProfile, StudentPassedCourse, StudentPlan } from '../../src/types';
 import { evaluateStudentEligibility } from '../../src/domain/eligibility-engine';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, addPassedCourseSchema, batchPassedCoursesSchema, updatePlanSchema, planSelectSchema, updateWishlistSchema, updateJourneySchema } from '../schemas/student';
@@ -283,18 +283,52 @@ studentRouter.delete('/passed-courses/:id', authenticate, (req: AuthenticatedReq
 
 // The first-time wizard stores choices per account AND term. Wishlist courses are
 // never counted as registered offerings, and cannot bypass academic eligibility.
-function currentStudentTerm(userId: string) {
-  const p = db.studentProfiles.find(row => row.userId === userId);
-  return p?.currentTermId || db.academicTerms.find(term => term.isCurrent)?.id || 'term-1405-1';
+function currentStudentTerm(userId: string): string | null {
+  const profile = db.studentProfiles.find(row => row.userId === userId);
+  const termId = profile?.currentTermId || db.academicTerms.find(term => term.isCurrent)?.id;
+  return termId && db.academicTerms.some(term => term.id === termId) ? termId : null;
 }
 function curriculumForStudent(userId: string) {
   const profile = db.studentProfiles.find(row => row.userId === userId);
   if (!profile) return null;
-  const chart = db.curricula.find(c =>
+  const matches = db.curricula.filter(c =>
     c.status === 'active' && c.universityId === profile.universityId &&
     c.campusId === profile.campusId && c.degreeLevelId === profile.degreeLevelId &&
     c.majorId === profile.majorId && c.entryYearId === profile.entryYearId);
-  return chart ? { profile, chart } : null;
+  // Never choose the first arbitrary version when two active charts conflict.
+  return matches.length === 1 ? { profile, chart: matches[0] } : null;
+}
+function blankStudentPlan(userId: string, termId: string): StudentPlan {
+  return {
+    id: `plan-${userId}-${termId}`, userId, termId,
+    selectedOfferingIds: [], coursePriorities: {}, offeringPriorities: {},
+    updatedAt: new Date().toISOString(),
+  };
+}
+/**
+ * Each student's planning writes must either persist as a unit or restore the
+ * original in-memory object. Never leave uncommitted selections visible.
+ */
+function saveStudentPlan(userId: string, termId: string, change: (plan: StudentPlan) => void): StudentPlan | null {
+  const old = db.studentPlans.find(row => row.userId === userId && row.termId === termId);
+  const before = old ? structuredClone(old) : null;
+  const plan = old ?? blankStudentPlan(userId, termId);
+  if (!old) db.studentPlans.push(plan);
+  change(plan);
+  try {
+    db.save();
+    return plan;
+  } catch {
+    if (!old) db.data.studentPlans = db.studentPlans.filter(row => row !== plan);
+    else {
+      // Preserve the original object identity used in other in-process reads.
+      for (const key of Object.keys(plan) as Array<keyof StudentPlan>) {
+        if (!(key in before!)) delete (plan as unknown as Record<string, unknown>)[key];
+      }
+      Object.assign(plan, before!);
+    }
+    return null;
+  }
 }
 
 studentRouter.get('/wishlist/catalog', authenticate, (req: AuthenticatedRequest, res) => {
@@ -336,34 +370,26 @@ studentRouter.put('/wishlist', authenticate, validate(updateWishlistSchema), (re
     return res.status(400).json({ success: false, error: 'سبد فقط می‌تواند شامل درس‌های گذرانده‌نشدهٔ چارت همین حساب باشد.' });
   }
   const termId = currentStudentTerm(req.user!.id);
-  let plan = db.studentPlans.find(p => p.userId === req.user!.id && p.termId === termId);
-  if (!plan) {
-    plan = { id: 'plan-' + req.user!.id + '-' + termId, userId: req.user!.id, termId,
-      selectedOfferingIds: [], coursePriorities: {}, offeringPriorities: {},
-      updatedAt: new Date().toISOString() };
-    db.studentPlans.push(plan);
-  }
-  plan.wishlistCourseIds = courseIds;
-  plan.updatedAt = new Date().toISOString();
-  db.save();
+  if (!termId) return res.status(409).json({ success: false, error: 'نیمسال پروندهٔ تحصیلی معتبر نیست.' });
+  const saved = saveStudentPlan(req.user!.id, termId, plan => {
+    plan.wishlistCourseIds = [...courseIds];
+    plan.updatedAt = new Date().toISOString();
+  });
+  if (!saved) return res.status(503).json({ success: false, error: 'ذخیرهٔ سبد درس‌ها انجام نشد؛ دوباره تلاش کنید.' });
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ success: true, data: { wishlistCourseIds: [...courseIds] } });
 });
 
 studentRouter.put('/journey', authenticate, validate(updateJourneySchema), (req: AuthenticatedRequest, res) => {
   const termId = currentStudentTerm(req.user!.id);
-  let plan = db.studentPlans.find(p => p.userId === req.user!.id && p.termId === termId);
-  if (!plan) {
-    plan = { id: 'plan-' + req.user!.id + '-' + termId, userId: req.user!.id, termId,
-      selectedOfferingIds: [], coursePriorities: {}, offeringPriorities: {},
-      updatedAt: new Date().toISOString() };
-    db.studentPlans.push(plan);
-  }
-  plan.journeyStep = req.body.step;
-  plan.updatedAt = new Date().toISOString();
-  db.save();
+  if (!termId) return res.status(409).json({ success: false, error: 'نیمسال پروندهٔ تحصیلی معتبر نیست.' });
+  const saved = saveStudentPlan(req.user!.id, termId, plan => {
+    plan.journeyStep = req.body.step;
+    plan.updatedAt = new Date().toISOString();
+  });
+  if (!saved) return res.status(503).json({ success: false, error: 'ذخیرهٔ مرحلهٔ راهنما انجام نشد؛ دوباره تلاش کنید.' });
   res.setHeader('Cache-Control', 'private, no-store');
-  return res.json({ success: true, data: { step: plan.journeyStep } });
+  return res.json({ success: true, data: { step: saved.journeyStep } });
 });
 
 // --- Student Course Planning & Authoritative Selection ---
@@ -372,24 +398,15 @@ studentRouter.put('/journey', authenticate, validate(updateJourneySchema), (req:
 studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const profile = db.studentProfiles.find((p) => p.userId === userId);
-  const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
-
-  let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
-  if (!plan) {
-    plan = {
-      id: `plan-${userId}-${currentTermId}`,
-      userId,
-      termId: currentTermId,
-      selectedOfferingIds: [],
-      coursePriorities: {},
-      offeringPriorities: {},
-      updatedAt: new Date().toISOString(),
-    };
-    db.studentPlans.push(plan);
-    db.save();
+  const currentTermId = currentStudentTerm(userId);
+  if (!profile || !currentTermId) {
+    return res.status(409).json({ success: false, error: 'ابتدا پروندهٔ تحصیلی و نیمسال معتبر خود را تعیین کنید.' });
   }
-
-  res.json({ success: true, data: plan });
+  // GET is read-only; creating empty accounts/plans on a read is unnecessary.
+  const plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId) ??
+    blankStudentPlan(userId, currentTermId);
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({ success: true, data: plan });
 });
 
 // Update whole plan (e.g. sync priorities or offerings)
