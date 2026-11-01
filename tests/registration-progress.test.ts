@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completedRegistrationCourseIds, parseStoredRegistrationTokens, registrationProgressToken } from '../src/domain/registration-progress';
+import { completedRegistrationCourseIds, parseStoredRegistrationTokens, pruneRegistrationTokens, registrationProgressToken } from '../src/domain/registration-progress';
 import type { RegistrationStep } from '../src/domain/registration-queue';
 
 function step(courseId: string, offeringId: string, groupCode = '01', copyCode = '400100'): RegistrationStep {
@@ -34,6 +34,17 @@ describe('exact-offering manual registration progress', () => {
     const a = step('course-a', 'off-1');
     const b = step('course-b', 'off-1');
     expect(completedRegistrationCourseIds([b], [registrationProgressToken(a)]).size).toBe(0);
+  });
+
+  it('removes replaced group state so returning to that group cannot revive an old check', () => {
+    const original = step('math', 'off-math-01', '01');
+    const replacement = step('math', 'off-math-02', '02');
+    const first = [registrationProgressToken(original)];
+    const afterSwitch = pruneRegistrationTokens([replacement], first);
+    expect(afterSwitch).toEqual([]);
+    expect(completedRegistrationCourseIds([original], afterSwitch).size).toBe(0);
+    // A removed course is pruned too after loading the authoritative chart.
+    expect(pruneRegistrationTokens([], first)).toEqual([]);
   });
 
   it('preserves valid marks when only priority order changes, not group identity', () => {
