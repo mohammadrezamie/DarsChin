@@ -114,7 +114,7 @@ export const Register: React.FC = () => {
   return (
     <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
         <h2 className="mb-2 text-right text-2xl font-black leading-snug text-slate-900 dark:text-white sm:text-3xl">
@@ -122,7 +122,7 @@ export const Register: React.FC = () => {
         </h2>
         <p className="text-right text-sm leading-7 text-slate-600 dark:text-slate-400">
           قبلاً ثبت‌نام کرده‌اید؟{' '}
-          <Link to="/login" className="font-bold text-blue-600 hover:text-blue-500">
+          <Link to="/login" className="font-bold text-teal-700 hover:text-teal-600">
             وارد شوید
           </Link>
         </p>
@@ -151,7 +151,7 @@ export const Register: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                 placeholder="علی محمدی"
               />
             </div>
@@ -165,7 +165,7 @@ export const Register: React.FC = () => {
                 dir="ltr"
                 value={mobile}
                 onChange={(e) => handleMobileChange(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                 placeholder="09123456789"
               />
             </div>
@@ -179,13 +179,13 @@ export const Register: React.FC = () => {
                 dir="ltr"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                 placeholder="••••••••"
               />
             </div>
 
             {otpRequired && otpChallengeId && (
-              <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+              <div className="space-y-3 rounded-2xl border border-teal-200 bg-teal-50/70 p-4 dark:border-teal-900 dark:bg-teal-950/30">
                 <label htmlFor="registration-otp" className="block text-sm font-bold text-slate-800 dark:text-slate-100">
                   کد شش‌رقمی پیامک‌شده به شماره {verifiedMobile}
                 </label>
@@ -197,7 +197,7 @@ export const Register: React.FC = () => {
                 <p className="text-xs leading-6 text-slate-600 dark:text-slate-400">
                   این کد دو دقیقه اعتبار دارد. برای شمارهٔ دیگر یا دریافت مجدد، از مرحلهٔ تأیید شماره شروع کنید.
                 </p>
-                <button type="button" className="text-sm font-semibold text-blue-700 dark:text-blue-300"
+                <button type="button" className="text-sm font-semibold text-teal-800 dark:text-teal-300"
                   onClick={() => { setOtpChallengeId(''); setOtpCode(''); setCaptchaToken(''); }}>
                   دریافت کد جدید
                 </button>
@@ -210,7 +210,7 @@ export const Register: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading || otpRequired === null}
-              className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-70"
+              className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors disabled:opacity-70"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : otpRequired && !otpChallengeId ? 'دریافت کد تأیید شماره' : 'ثبت‌نام'}
             </button>

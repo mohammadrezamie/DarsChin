@@ -342,7 +342,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         {/* Banner Title & Actions */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs border border-blue-100 dark:border-blue-900/60">
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center shrink-0 shadow-xs border border-teal-100 dark:border-teal-950/60">
               <CalendarIcon className="w-6 h-6" />
             </div>
             <div>
@@ -350,7 +350,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                   برنامه‌ریز و چینش اولویت دروس
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
                   {plannedCourses.length} درس در برنامه
                 </span>
                 {isFinalSemester && (
@@ -433,7 +433,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
             <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-0.5">ظرفیت باقیمانده واحد</span>
             <div className="text-xs font-black">
               {capacityRemaining > 0 ? (
-                <span className="text-blue-600 dark:text-blue-400">{capacityRemaining} واحد امکان اخذ</span>
+                <span className="text-teal-700 dark:text-teal-400">{capacityRemaining} واحد امکان اخذ</span>
               ) : capacityRemaining === 0 ? (
                 <span className="text-emerald-600 dark:text-emerald-400">سقف مجاز تکمیل</span>
               ) : (
@@ -517,7 +517,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           onClick={() => setActivePlannerTab('priorities')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             activePlannerTab === 'priorities'
-              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+              ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -530,7 +530,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           onClick={() => setActivePlannerTab('timetable')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             activePlannerTab === 'timetable'
-              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+              ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -548,7 +548,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
           onClick={() => setActivePlannerTab('exams')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             activePlannerTab === 'exams'
-              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+              ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -567,7 +567,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
         <div className="space-y-4">
           {plannedCourses.length === 0 ? (
             <div className="space-y-3 rounded-3xl border border-dashed border-slate-300 bg-liquid-glass p-5 text-center sm:p-8 lg:p-12 dark:border-slate-700">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-400 flex items-center justify-center mx-auto">
                 <BookOpen className="w-7 h-7" />
               </div>
               <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -603,7 +603,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-800">
                       <div className="flex min-w-0 items-center gap-3">
                         {/* Priority Rank Badge */}
-                        <div className="flex flex-col items-center justify-center w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm shrink-0 shadow-xs">
+                        <div className="flex flex-col items-center justify-center w-8 h-8 rounded-xl bg-teal-700 text-white font-black text-sm shrink-0 shadow-xs">
                           {idx + 1}
                         </div>
 
@@ -637,7 +637,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                                 </>
                               )}
                             </button>
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
                               {pc.units} واحد
                             </span>
                           </div>
@@ -677,10 +677,10 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                     </div>
 
                     {/* Primary Selected Offering Block */}
-                    <div className="p-3.5 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200/80 dark:border-blue-900/60 space-y-2.5">
+                    <div className="p-3.5 bg-teal-50/60 dark:bg-teal-950/30 rounded-2xl border border-teal-200/80 dark:border-teal-950/60 space-y-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-600 text-white flex items-center gap-1 shadow-xs">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-700 text-white flex items-center gap-1 shadow-xs">
                             <CheckCircle2 className="w-3 h-3" />
                             انتخاب اصلی (فعال در برنامه هفتگی)
                           </span>
@@ -698,16 +698,16 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                       </div>
 
                       {/* Primary offering schedule & exam metadata */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 bg-white/70 dark:bg-slate-900/50 p-2.5 rounded-xl border border-blue-100 dark:border-blue-950">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 bg-white/70 dark:bg-slate-900/50 p-2.5 rounded-xl border border-teal-100 dark:border-teal-950">
                         <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0" />
                           <span>
                             زمان کلاس: <strong>{primary.dayOfWeek || '---'}</strong> ساعت{' '}
                             {primary.startTime ? `${primary.startTime} الی ${primary.endTime}` : 'نامشخص'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <CalendarIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <CalendarIcon className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0" />
                           <span>
                             تاریخ امتحان: <strong>{primary.examDate || 'اعلام نشده'}</strong>
                           </span>
@@ -738,7 +738,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                         {pc.availableOfferings.length > 0 && (
                           <button
                             onClick={() => setAddingFallbackForCourseId(isAddingFallback ? null : pc.courseId)}
-                            className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                            className="text-[11px] font-bold text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1"
                           >
                             <Plus className="w-3 h-3" />
                             <span>{isAddingFallback ? 'بستن لیست' : '+ افزودن گروه جایگزین'}</span>
@@ -776,7 +776,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                                 <button
                                   onClick={() => handlePromoteOffering(pc.courseId, fb.offeringId)}
-                                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold border border-blue-200 dark:border-blue-800 transition-all flex items-center gap-1.5"
+                                  className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-950 text-teal-800 dark:text-teal-300 rounded-xl text-xs font-bold border border-teal-200 dark:border-teal-900 transition-all flex items-center gap-1.5"
                                   title="تبدیل این گروه به انتخاب اول و اصلی"
                                 >
                                   <ArrowRightLeft className="w-3 h-3" />
@@ -831,7 +831,7 @@ export const SchedulePlanner: React.FC<SchedulePlannerProps> = ({
                                     }
                                     setAddingFallbackForCourseId(null);
                                   }}
-                                  className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 shrink-0"
+                                  className="px-2.5 py-1 bg-teal-700 text-white rounded-lg text-[11px] font-bold hover:bg-teal-800 shrink-0"
                                 >
                                   + افزودن جایگزین
                                 </button>

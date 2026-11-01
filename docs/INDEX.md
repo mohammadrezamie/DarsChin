@@ -8,6 +8,7 @@
 
 | موضوع | راهنما |
 | --- | --- |
+| **تحول سراسری UI و UX: پالت فیروزه‌ای، یشمی و زعفرانی برای روز/شب، صفحهٔ اول و پنل‌ها** | [VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md](VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md) |
 | **آغاز امن راهنمای دانشجو بدون ساخت پروندهٔ حدسی دانشگاه و رشته** | [STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md](STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md) |
 | **الزام دائمی فارسی‌بودن مستندات و حفظ هویت ایرانی محصول** | [PERSIAN_DOCUMENTATION_STANDARD_FA.md](PERSIAN_DOCUMENTATION_STANDARD_FA.md) |
 | **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |

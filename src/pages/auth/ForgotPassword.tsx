@@ -132,7 +132,7 @@ export const ForgotPassword: React.FC = () => {
   return (
     <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+        <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
         <h2 className="mb-2 text-right text-2xl font-black leading-snug text-slate-900 dark:text-white sm:text-3xl">
@@ -140,7 +140,7 @@ export const ForgotPassword: React.FC = () => {
         </h2>
         <p className="text-right text-sm leading-7 text-slate-600 dark:text-slate-400">
           به خاطر آوردید؟{' '}
-          <Link to="/login" className="font-bold text-blue-600 hover:text-blue-500">
+          <Link to="/login" className="font-bold text-teal-700 hover:text-teal-600">
             وارد شوید
           </Link>
         </p>
@@ -159,7 +159,7 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleSendOtp} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">شماره موبایل</label>
-                <input type="tel" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="09123456789" />
+                <input type="tel" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="09123456789" />
               </div>
               
               {turnstileEnabled && <GuestHumanCheck key={captchaAttempt} action="otp" token={captchaToken} onToken={setCaptchaToken} />}
@@ -172,13 +172,13 @@ export const ForgotPassword: React.FC = () => {
                         alt="تصویر کد امنیتی بازیابی حساب" draggable={false}
                         className="h-[60px] max-w-full object-contain" />
                     </div>
-                    <button type="button" onClick={loadCaptcha} className="text-sm text-blue-600 font-medium whitespace-nowrap">تغییر کد</button>
+                    <button type="button" onClick={loadCaptcha} className="text-sm text-teal-700 font-medium whitespace-nowrap">تغییر کد</button>
                   </div>
-                  <input type="text" dir="ltr" value={captchaValue} onChange={(e) => setCaptchaValue(e.target.value)} className="mt-3 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="کد بالا را وارد کنید" />
+                  <input type="text" dir="ltr" value={captchaValue} onChange={(e) => setCaptchaValue(e.target.value)} className="mt-3 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="کد بالا را وارد کنید" />
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-blue-600 hover:bg-blue-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70">
+              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'دریافت کد تایید'}
               </button>
             </motion.form>
@@ -188,9 +188,9 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleVerifyOtp} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد پیامک شده به {mobile}</label>
-                <input type="text" dir="ltr" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} className="w-full px-4 py-3 text-center tracking-widest text-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="------" maxLength={6} autoFocus />
+                <input type="text" dir="ltr" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} className="w-full px-4 py-3 text-center tracking-widest text-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="------" maxLength={6} autoFocus />
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-blue-600 hover:bg-blue-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70">
+              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'تایید کد'}
               </button>
             </motion.form>
@@ -200,9 +200,9 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleResetPassword} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">رمز عبور جدید</label>
-                <input type="password" dir="ltr" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white" placeholder="••••••••" autoFocus />
+                <input type="password" dir="ltr" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="••••••••" autoFocus />
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-blue-600 hover:bg-blue-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70">
+              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'بروزرسانی رمز عبور'}
               </button>
             </motion.form>

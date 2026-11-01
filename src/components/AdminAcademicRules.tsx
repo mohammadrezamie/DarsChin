@@ -97,7 +97,7 @@ export const AdminAcademicRules: React.FC = () => {
           
           {node.type === 'GROUP' && (
             <select 
-              className="p-2 border rounded-lg bg-blue-50 text-blue-800 text-sm font-bold"
+              className="p-2 border rounded-lg bg-teal-50 text-teal-900 text-sm font-bold"
               value={node.operator}
               onChange={(e) => onChange({ ...node, operator: e.target.value as 'AND'|'OR' })}
             >
@@ -119,7 +119,7 @@ export const AdminAcademicRules: React.FC = () => {
             </select>
           </div>
         ) : (
-          <div className="pr-6 border-r-2 border-blue-200 space-y-2">
+          <div className="pr-6 border-r-2 border-teal-200 space-y-2">
             {node.operands?.map((child, idx) => (
               <div key={idx} className="relative">
                 <NodeEditor 
@@ -147,7 +147,7 @@ export const AdminAcademicRules: React.FC = () => {
               onClick={() => {
                 onChange({ ...node, operands: [...(node.operands || []), { type: 'COURSE', courseId: '' }] });
               }}
-              className="flex items-center gap-2 text-sm text-blue-600 font-medium p-2 hover:bg-blue-50 rounded"
+              className="flex items-center gap-2 text-sm text-teal-700 font-medium p-2 hover:bg-teal-50 rounded"
             >
               <Plus size={16} /> افزودن شرط جدید به این گروه
             </button>
@@ -168,12 +168,12 @@ export const AdminAcademicRules: React.FC = () => {
       </>}
       <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Network className="text-blue-600" />
+          <Network className="text-teal-700" />
           مدیریت قوانین آکادمیک (پیش‌نیازها)
         </h2>
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition"
+          className="bg-teal-700 text-white px-4 py-2 rounded-lg hover:bg-teal-800 flex items-center gap-2 transition"
         >
           {isAdding ? 'انصراف' : 'ثبت قانون جدید'}
         </button>
@@ -185,7 +185,7 @@ export const AdminAcademicRules: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">چارت تحصیلی</label>
               <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-teal-200 focus:border-teal-600"
                 value={formData.curriculumId}
                 onChange={(e) => setFormData({ ...formData, curriculumId: e.target.value })}
               >
@@ -196,7 +196,7 @@ export const AdminAcademicRules: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">درس هدف</label>
               <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-teal-200 focus:border-teal-600"
                 value={formData.targetCourseId}
                 onChange={(e) => setFormData({ ...formData, targetCourseId: e.target.value })}
               >
@@ -207,7 +207,7 @@ export const AdminAcademicRules: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">نوع رابطه</label>
               <select 
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-teal-200 focus:border-teal-600"
                 value={formData.relationshipType}
                 onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value as any })}
               >
@@ -236,7 +236,7 @@ export const AdminAcademicRules: React.FC = () => {
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
+              className="px-6 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 shadow-sm"
             >
               ذخیره و اعتبارسنجی
             </button>
@@ -253,7 +253,7 @@ export const AdminAcademicRules: React.FC = () => {
               <div>
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-lg text-gray-800">{rule.targetCourseName}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full ${rule.relationshipType === 'PREREQUISITE' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                  <span className={`text-xs px-2 py-1 rounded-full ${rule.relationshipType === 'PREREQUISITE' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-700'}`}>
                     {rule.relationshipType === 'PREREQUISITE' ? 'پیش‌نیاز' : rule.relationshipType === 'COREQUISITE' ? 'هم‌نیاز' : 'افتاده'}
                   </span>
                 </div>

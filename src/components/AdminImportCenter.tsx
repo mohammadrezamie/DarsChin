@@ -160,7 +160,7 @@ export const AdminImportCenter: React.FC = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-black text-slate-900 dark:text-white">
-              <ClipboardList aria-hidden="true" className="h-5 w-5 text-blue-600" />
+              <ClipboardList aria-hidden="true" className="h-5 w-5 text-teal-700" />
               مرکز تطبیق فایل‌های آموزشیار
             </h2>
             <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">
@@ -198,7 +198,7 @@ export const AdminImportCenter: React.FC = () => {
               <article key={batch.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <button type="button" onClick={() => void handleExpand(batch.id)}
                   aria-expanded={open} aria-controls={detailsId}
-                  className="w-full p-4 text-right transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-5 dark:hover:bg-slate-800/60">
+                  className="w-full p-4 text-right transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600 sm:p-5 dark:hover:bg-slate-800/60">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="break-words text-sm font-bold text-slate-900 dark:text-white">بسته تطبیق <span dir="ltr" className="inline-block font-mono text-xs">{batch.id}</span></h3>
@@ -243,14 +243,14 @@ export const AdminImportCenter: React.FC = () => {
                               <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">{record.reviewReason || 'توضیحی ثبت نشده است.'}</p>
                               {record.matchedCourseId && <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">شناسه پیشنهادی: {record.matchedCourseId}</p>}
                               {record.reviewDecision && (
-                                <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs leading-6 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                                <p className="mt-3 rounded-lg border border-teal-200 bg-teal-50 p-2 text-xs leading-6 text-teal-950 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-200">
                                   {record.reviewDecision === 'COURSE_MATCH_CONFIRMED' ? 'نگاشت درس توسط مدیر بررسی و تأیید شده' : 'نگاشت این ردیف توسط مدیر رد شده'}
                                   {record.reviewNotes && <span className="block">دلیل: {record.reviewNotes}</span>}
                                   <span className="block">این تصمیم هنوز هیچ گروهی را منتشر نمی‌کند.</span>
                                 </p>
                               )}
                               <details className="mt-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                                <summary className="cursor-pointer text-xs font-bold text-blue-800 dark:text-blue-200">
+                                <summary className="cursor-pointer text-xs font-bold text-teal-900 dark:text-teal-200">
                                   ثبت / اصلاح تصمیم نگاشت
                                 </summary>
                                 <p className="mt-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
@@ -281,7 +281,7 @@ export const AdminImportCenter: React.FC = () => {
                                   <button type="button"
                                     disabled={reviewBusyId !== null || courses.length === 0}
                                     onClick={() => void reviewRecord(record, 'CONFIRM_MATCH')}
-                                    className="min-h-11 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-50">
+                                    className="min-h-11 rounded-lg bg-teal-800 px-3 text-xs font-bold text-white disabled:opacity-50">
                                     {reviewBusyId === record.id ? 'در حال ثبت…' : 'تأیید نگاشت (بدون انتشار)'}
                                   </button>
                                   <button type="button" disabled={reviewBusyId !== null}

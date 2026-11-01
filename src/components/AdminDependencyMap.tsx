@@ -75,18 +75,18 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
   const visibleEdges = analysis.edges.filter(edge => positions.has(edge.from) && positions.has(edge.to));
 
   return (
-    <section dir="rtl" aria-labelledby="dependency-map-heading" className="darschin-surface min-w-0 space-y-5 rounded-3xl border border-blue-200/70 bg-white p-3 shadow-sm sm:p-6 dark:border-blue-900/60 dark:bg-slate-900">
+    <section dir="rtl" aria-labelledby="dependency-map-heading" className="darschin-surface min-w-0 space-y-5 rounded-3xl border border-teal-200/70 bg-white p-3 shadow-sm sm:p-6 dark:border-teal-950/60 dark:bg-slate-900">
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 id="dependency-map-heading" className="flex items-center gap-2 text-lg font-black text-slate-950 sm:text-xl dark:text-white">
-            <GitBranch aria-hidden="true" className="h-5 w-5 shrink-0 text-blue-600" />
+            <GitBranch aria-hidden="true" className="h-5 w-5 shrink-0 text-teal-700" />
             نقشهٔ وابستگی درس‌ها
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             مسیرهای پیش‌نیاز تا پایان چارت را ببین؛ فلش پیوسته یعنی پیش‌نیاز و خط‌چین یعنی هم‌نیاز. این نسخه نمای تحلیلی است و ویرایش مستقیم اتصال‌ها هنوز فعال نشده.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">
+        <span className="inline-flex items-center gap-1.5 rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-900 dark:bg-teal-950/60 dark:text-teal-200">
           <Layers3 aria-hidden="true" className="h-4 w-4" /> تحلیل کل دوره
         </span>
       </div>
@@ -94,7 +94,7 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-200">
           چارت موردنظر
-          <select className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          <select className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
             value={curriculumId} onChange={event => setCurriculumId(event.target.value)} aria-label="انتخاب چارت نقشهٔ وابستگی">
             {curricula.length === 0 && <option value="">هیچ چارتی تعریف نشده</option>}
             {curricula.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -102,7 +102,7 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
         </label>
         <label className="block min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-200">
           بررسی مسیر یک درس
-          <select className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          <select className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
             value={selectedId} onChange={event => setSelectedId(event.target.value)}
             disabled={!analysis.valid || !ranking.length} aria-label="انتخاب درس برای نمایش وابستگی‌های آینده">
             <option value="">همهٔ درس‌ها</option>
@@ -125,7 +125,7 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60"><strong className="block text-xl font-black tabular-nums text-slate-950 dark:text-white">{ranking.length.toLocaleString('fa-IR')}</strong><span className="text-xs text-slate-600 dark:text-slate-300">درس در چارت</span></div>
                 <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60"><strong className="block text-xl font-black tabular-nums text-slate-950 dark:text-white">{analysis.edges.length.toLocaleString('fa-IR')}</strong><span className="text-xs text-slate-600 dark:text-slate-300">رابطهٔ ثبت‌شده</span></div>
-                <div className="col-span-2 rounded-2xl bg-blue-50 p-3 sm:col-span-1 dark:bg-blue-950/50"><strong className="block text-xl font-black tabular-nums text-blue-800 dark:text-blue-300">{Math.max(0, ...ranking.map(item => item.longestChain)).toLocaleString('fa-IR')}</strong><span className="text-xs text-blue-700 dark:text-blue-200">طولانی‌ترین مسیر آینده</span></div>
+                <div className="col-span-2 rounded-2xl bg-teal-50 p-3 sm:col-span-1 dark:bg-teal-950/50"><strong className="block text-xl font-black tabular-nums text-teal-900 dark:text-teal-300">{Math.max(0, ...ranking.map(item => item.longestChain)).toLocaleString('fa-IR')}</strong><span className="text-xs text-teal-800 dark:text-teal-200">طولانی‌ترین مسیر آینده</span></div>
               </div>
 
               {analysis.hasChoices && <p className="flex gap-2 text-xs leading-6 text-amber-700 dark:text-amber-300">
@@ -133,18 +133,18 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
                 بعضی قوانین «یا» (OR) دارند؛ اتصال آن‌ها مسیر احتمالی است، نه پیش‌نیاز قطعی. این تحلیل مجوز اخذ درس صادر نمی‌کند.
               </p>}
 
-              {selected && <p role="status" className="rounded-xl bg-blue-50 px-4 py-3 text-sm leading-7 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+              {selected && <p role="status" className="rounded-xl bg-teal-50 px-4 py-3 text-sm leading-7 text-teal-950 dark:bg-teal-950/40 dark:text-teal-200">
                 <strong>{label(selected.courseId)}</strong> روی مسیر {selected.downstreamCount.toLocaleString('fa-IR')} درس آینده است؛ طولانی‌ترین زنجیرهٔ بعدی {selected.longestChain.toLocaleString('fa-IR')} اتصال دارد. اگر درسی در چند مسیر تکرار شود فقط یک‌بار شمرده می‌شود.
               </p>}
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-0.5 w-8 bg-blue-600" /> فلش: پیش‌نیاز</span>
+                  <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-0.5 w-8 bg-teal-700" /> فلش: پیش‌نیاز</span>
                   <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="w-8 border-t-2 border-dashed border-amber-500" /> خط‌چین: هم‌نیاز</span>
                   <span className="text-slate-500 dark:text-slate-400">نقشه فقط برای مشاهده و بررسی است</span>
                 </div>
                 <div role="region" aria-label="نقشهٔ قابل پیمایش افقی درس‌ها" tabIndex={0}
-                  className="max-h-[480px] overflow-auto bg-slate-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 dark:bg-slate-950/40">
+                  className="max-h-[480px] overflow-auto bg-slate-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600 dark:bg-slate-950/40">
                   {visibleIds.length === 0 ? (
                     <p className="p-6 text-sm leading-7 text-slate-600 dark:text-slate-300">برای این چارت هنوز پیش‌نیاز یا هم‌نیازی ثبت نشده است.</p>
                   ) : (
@@ -193,11 +193,11 @@ export const AdminDependencyMap: React.FC<Props> = ({ rules, courses, curricula 
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {ranking.slice(0, 6).map((item, idx) => (
                       <button type="button" key={item.courseId} onClick={() => setSelectedId(item.courseId)}
-                        className="flex min-h-14 min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800">
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blue-100 font-black text-blue-800 dark:bg-blue-950 dark:text-blue-200">{(idx + 1).toLocaleString('fa-IR')}</span>
+                        className="flex min-h-14 min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-800">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-100 font-black text-teal-900 dark:bg-teal-950 dark:text-teal-200">{(idx + 1).toLocaleString('fa-IR')}</span>
                         <span className="min-w-0 flex-1"><strong className="block break-words text-slate-950 dark:text-white">{label(item.courseId)}</strong>
                           <small className="block text-slate-600 dark:text-slate-300">{item.downstreamCount.toLocaleString('fa-IR')} درس وابسته · عمق {item.longestChain.toLocaleString('fa-IR')}</small></span>
-                        <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-600" />
+                        <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0 text-teal-700" />
                       </button>
                     ))}
                   </div>

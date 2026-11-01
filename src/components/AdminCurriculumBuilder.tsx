@@ -120,14 +120,14 @@ export const AdminCurriculumBuilder: React.FC = () => {
       }} />
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Layers className="w-5 h-5 text-indigo-500" />
+          <Layers className="w-5 h-5 text-emerald-600" />
           مدیریت ساختار چارت تحصیلی
         </h2>
         
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
           <select 
-            className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
             value={selectedCurriculumId || ''}
             onChange={(e) => setSelectedCurriculumId(e.target.value)}
           >
@@ -172,7 +172,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   </select>
                   <button 
                     onClick={handleAddCourse}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> افزودن
                   </button>
@@ -194,7 +194,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     {curriculumFull.courses.map((cc: any) => (
                       <tr 
                         key={cc.id} 
-                        className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
+                        className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
                         onClick={() => setActiveCourseId(cc.courseId)}
                       >
                         <td className="p-2 font-mono text-xs">{cc.course?.code}</td>

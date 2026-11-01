@@ -78,7 +78,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
 
   return (
     <>
-      <nav aria-label="دسترسی سریع میز کار دانشجو" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
+      <nav aria-label="دسترسی سریع میز کار دانشجو" className="dc-student-dock fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-1.5" dir="rtl">
           {PRIMARY.map(item => {
@@ -87,7 +87,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
             return (
               <button key={item.id} type="button" aria-current={selected ? 'page' : undefined}
                 onClick={() => navigate(item.id)}
-                className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-bold leading-5 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${selected ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/65 dark:text-blue-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
+                className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-bold leading-5 transition-colors focus-visible:ring-2 focus-visible:ring-teal-600 ${selected ? 'bg-teal-50 text-teal-800 dark:bg-teal-950/65 dark:text-teal-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
                 <Icon aria-hidden="true" className="h-[19px] w-[19px]" />
                 <span>{item.label}</span>
               </button>
@@ -97,7 +97,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
             aria-label="بخش‌های بیشتر میز کار"
             aria-haspopup="dialog" aria-expanded={expanded}
             onClick={() => setExpanded(true)}
-            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-bold leading-5 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${activeSecondary ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/65 dark:text-blue-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
+            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-bold leading-5 transition-colors focus-visible:ring-2 focus-visible:ring-teal-600 ${activeSecondary ? 'bg-teal-50 text-teal-800 dark:bg-teal-950/65 dark:text-teal-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
             <MoreHorizontal aria-hidden="true" className="h-[19px] w-[19px]" />
             <span>بیشتر</span>
           </button>
@@ -120,7 +120,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
               </div>
               <button ref={closeRef} type="button" aria-label="بستن فهرست بخش‌ها"
                 onClick={() => setExpanded(false)}
-                className="min-h-11 min-w-11 rounded-xl bg-slate-100 text-sm font-bold text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800 dark:text-slate-100">
+                className="min-h-11 min-w-11 rounded-xl bg-slate-100 text-sm font-bold text-slate-700 focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-slate-800 dark:text-slate-100">
                 بستن
               </button>
             </div>
@@ -133,18 +133,18 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
                     disabled={disabled}
                     aria-current={active === item.id ? 'page' : undefined}
                     onClick={() => navigate(item.id)}
-                    className={`flex min-h-[64px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-right transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-55 ${active === item.id ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/45' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800'}`}>
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 dark:bg-slate-900 dark:text-blue-300"><Icon aria-hidden="true" className="h-5 w-5" /></span>
+                    className={`flex min-h-[64px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-right transition-colors focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-55 ${active === item.id ? 'border-teal-300 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/45' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/70 dark:hover:bg-slate-800'}`}>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-teal-700 dark:bg-slate-900 dark:text-teal-300"><Icon aria-hidden="true" className="h-5 w-5" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">{item.label}</span>
                       <span className="block text-xs leading-6 text-slate-600 dark:text-slate-400">{disabled ? 'بسته؛ منتظر اعلام مدیر گروه' : item.detail}</span>
                     </span>
-                    {active === item.id && <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-300">فعلی</span>}
+                    {active === item.id && <span className="shrink-0 text-xs font-bold text-teal-800 dark:text-teal-300">فعلی</span>}
                   </button>
                 );
               })}
               <Link to="/help" onClick={() => setExpanded(false)}
-                className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-right text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-2 text-right text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-200">
                 <BookOpen aria-hidden="true" className="h-5 w-5 shrink-0" />
                 <span className="min-w-0"><span className="block text-sm font-extrabold">راهنمای استفاده</span><span className="block text-xs leading-6">آموزش همهٔ بخش‌ها و پاسخ سؤال‌های متداول</span></span>
               </Link>

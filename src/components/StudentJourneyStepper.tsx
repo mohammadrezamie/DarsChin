@@ -33,18 +33,18 @@ export const StudentJourneyStepper: React.FC<Props> = ({
   const limit = academicLimits?.effectiveMaxUnits;
   return (
     <section aria-label="مسیر گام‌به‌گام آماده‌سازی انتخاب واحد" dir="rtl"
-      className="overflow-hidden rounded-[1.35rem] border border-indigo-200 bg-white p-3.5 shadow-sm dark:border-indigo-900 dark:bg-slate-900 sm:p-5">
+      className="dc-stepper overflow-hidden rounded-[1.35rem] border border-emerald-200 bg-white p-3.5 shadow-sm dark:border-emerald-950 dark:bg-slate-900 sm:p-5">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
+          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
             راهنمای انتخاب واحد · مرحلهٔ {(step + 1).toLocaleString('fa-IR')} از ۷
           </p>
           <h2 className="mt-1 flex items-center gap-1.5 text-base font-extrabold text-slate-950 dark:text-white sm:text-lg">
-            <GraduationCap aria-hidden="true" className="h-5 w-5 shrink-0 text-indigo-600" /> {current.title}
+            <GraduationCap aria-hidden="true" className="h-5 w-5 shrink-0 text-emerald-700" /> {current.title}
           </h2>
           <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">{current.description}</p>
         </div>
-        <span className="shrink-0 rounded-xl bg-indigo-50 px-2.5 py-2 text-xs font-extrabold text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200">
+        <span className="shrink-0 rounded-xl bg-emerald-50 px-2.5 py-2 text-xs font-extrabold text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
           {Math.round((step / 6) * 100).toLocaleString('fa-IR')}٪
         </span>
       </div>
@@ -54,8 +54,8 @@ export const StudentJourneyStepper: React.FC<Props> = ({
             onClick={() => onStep(index)} title={item.title}
             aria-label={'مرحلهٔ ' + (index + 1).toLocaleString('fa-IR') + ': ' + item.title}
             aria-current={index === step ? 'step' : undefined}
-            className={'min-h-4 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
-              (index <= step ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-200 dark:bg-slate-700') +
+            className={'min-h-4 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-emerald-600 ' +
+              (index <= step ? 'bg-emerald-700 dark:bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700') +
               (index > step ? ' opacity-70' : '')}>
             <span className="sr-only">{item.title}</span>
           </button>
@@ -67,7 +67,7 @@ export const StudentJourneyStepper: React.FC<Props> = ({
       {step === 1 && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-7 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
         فقط درس واقعاً قبول‌شده را پاس‌شده ثبت کن. اگر ریاضی مهندسی را افتاده‌ای ولی سیگنال‌وسیستم را بعداً پاس کرده‌ای، سیگنال‌وسیستم پاس است و ریاضی مهندسی هنوز باید بررسی شود.
       </p>}
-      {step === 2 && <div className="mt-3 rounded-xl bg-indigo-50 p-3 text-xs leading-7 text-indigo-950 dark:bg-indigo-950/40 dark:text-indigo-100">
+      {step === 2 && <div className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
         <div className="flex flex-wrap gap-x-4 gap-y-1 font-bold">
           <span>نیمسال: {academicLimits?.isSummer ? 'تابستان' : 'عادی'}</span>
           <span>معدل قبلی: {typeof profile?.previousTermGpa === 'number' ? profile.previousTermGpa.toLocaleString('fa-IR') : 'هنوز ثبت نشده'}</span>
@@ -75,22 +75,22 @@ export const StudentJourneyStepper: React.FC<Props> = ({
         </div>
         <p className="mt-1">این عدد از تنظیمات و تحلیل سمت سرور به دست می‌آید؛ مجوز قطعی انتخاب واحد دانشگاه نیست. اگر معدل یا نیمسال اشتباه است، پرونده را اصلاح کن.</p>
       </div>}
-      {step === 4 && <p className="mt-3 rounded-xl bg-indigo-50 p-3 text-xs leading-7 text-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+      {step === 4 && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200">
         الان {wishlistCount.toLocaleString('fa-IR')} درس در سبد علاقه‌مندی داری. این سبد سقف واحد انتخاب نهایی را مصرف نمی‌کند.
       </p>}
-      {step === 5 && <p className="mt-3 rounded-xl bg-indigo-50 p-3 text-xs leading-7 text-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+      {step === 5 && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200">
         گروه‌های درس‌های سبدت را به ترتیب اولویت می‌بینی؛ استاد، زمان و تداخل را بررسی کن. فقط گروه‌های واقعاً مجاز را می‌توانی وارد برنامهٔ نهایی کنی. اکنون {selectedGroupCount.toLocaleString('fa-IR')} گروه انتخاب کرده‌ای.
       </p>}
       {step === 4 && wishlistCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">حداقل یک درس را به سبد علاقه‌مندی اضافه کن تا سراغ گروه‌ها بروی.</p>}
       {step === 5 && selectedGroupCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">برای آماده‌سازی صف ثبت، اول حداقل یک گروه مجاز را انتخاب کن.</p>}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {(step === 0 || step === 2) && <button type="button" onClick={onOpenProfile}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-xs font-bold text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
           <BookOpen className="h-4 w-4" aria-hidden="true" /> {hasProfile ? 'اصلاح پرونده' : 'تکمیل پروندهٔ تحصیلی'}
         </button>}
         {step < 6 ? <button type="button" disabled={busy || (step === 0 && (!hasProfile || !hasCurriculum)) || (step === 2 && !academicLimits) || (step === 4 && wishlistCount === 0) || (step === 5 && selectedGroupCount === 0)}
           onClick={() => onStep(step + 1)}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50">
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-50">
           {busy ? 'در حال ذخیره…' : step === 0 ? 'پرونده‌ام را بررسی و تأیید کردم' :
             step === 1 ? 'سوابق ثبت‌شده را بررسی کردم' : step === 2 ? 'شرایط را دیدم؛ پیشنهادها' :
             step === 3 ? 'ساخت سبد علاقه‌مندی' : step === 4 ? 'مقایسهٔ استاد و گروه' : 'رفتن به صف ثبت'}

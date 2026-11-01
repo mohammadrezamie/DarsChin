@@ -29,7 +29,8 @@ describe('real student mobile workspace dock', () => {
     const html = renderToStaticMarkup(<StudentMobileDock active="support"
       demandAvailable onSelect={() => {}} />);
     expect(html).toContain('بیشتر');
-    expect(html).toContain('bg-blue-50');
+    expect(html).toContain('bg-teal-50');
+    expect(html).toContain('dc-student-dock');
     expect(html).not.toContain('aria-expanded="true"');
   });
 

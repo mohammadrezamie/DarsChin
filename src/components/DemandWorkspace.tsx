@@ -335,10 +335,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
   return (
     <div className="darschin-page space-y-5" dir="rtl">
-      <div className="rounded-2xl border border-blue-200 bg-gradient-to-l from-blue-50 to-white p-5 dark:border-blue-900 dark:from-blue-950/50 dark:to-slate-900">
+      <div className="rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 to-white p-5 dark:border-teal-950 dark:from-teal-950/50 dark:to-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-black text-slate-950 dark:text-white"><ClipboardList className="h-6 w-6 text-blue-700 dark:text-blue-300"/> نیازسنجی دروس ترم آینده</h2>
+            <h2 className="flex items-center gap-2 text-xl font-black text-slate-950 dark:text-white"><ClipboardList className="h-6 w-6 text-teal-800 dark:text-teal-300"/> نیازسنجی دروس ترم آینده</h2>
             <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
               {role==='student'?'درس‌های موردنیازت را درخواست کن؛ مشخصات پرونده‌ات دوباره پرسیده نمی‌شود.':'نیازسنجی مستقل برای مدیر گروه؛ آمار تقاضا و ریزگزارش امن دانشجویان.'}
             </p>
@@ -352,27 +352,27 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error}</div>}
       {success && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{success}</div>}
-      {survey && !detailReady && !currentDetailError && <p role="status" aria-live="polite" className="rounded-xl bg-blue-50 p-3 text-xs font-bold text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">در حال دریافت پاسخ و گزارش همین نیازسنجی…</p>}
+      {survey && !detailReady && !currentDetailError && <p role="status" aria-live="polite" className="rounded-xl bg-teal-50 p-3 text-xs font-bold text-teal-950 dark:bg-teal-950/40 dark:text-teal-200">در حال دریافت پاسخ و گزارش همین نیازسنجی…</p>}
       {survey && currentDetailError && <button type="button" onClick={()=>setDetailRevision(value=>value+1)} className="min-h-11 rounded-xl border border-amber-300 px-4 text-xs font-bold text-amber-900 dark:text-amber-200">تلاش دوباره برای دریافت اطلاعات همین فرم</button>}
 
       {isDemoStudent && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-950 dark:bg-emerald-950/40">
           <div>
-            <p className="text-sm font-black text-indigo-900 dark:text-indigo-100">آزمایش تفکیک ورودی‌ها</p>
-            <p className="mt-1 text-xs leading-6 text-indigo-700 dark:text-indigo-200">
+            <p className="text-sm font-black text-emerald-950 dark:text-emerald-100">آزمایش تفکیک ورودی‌ها</p>
+            <p className="mt-1 text-xs leading-6 text-emerald-800 dark:text-emerald-200">
               فقط در محیط دمو؛ دو ورودی دارای چارت‌های متفاوت هستند و برای ۱۴۰۳ نیازسنجی مشترک و گرایش‌های جداگانه هم وجود دارد.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select aria-label="انتخاب ورودی آزمایشی" value={profile?.entryYearId || ''}
               disabled={busy} onChange={e=>void switchDemoEntryYear(e.target.value)}
-              className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
+              className="min-h-11 rounded-xl border border-emerald-300 bg-white px-3 text-sm font-black text-emerald-950 dark:border-emerald-800 dark:bg-slate-900 dark:text-white">
               {entryYears.map(y=><option key={y.id} value={y.id}>ورودی {y.year}</option>)}
             </select>
             {entryYears.find(y=>y.id===profile?.entryYearId)?.year===1403 && (
               <select aria-label="انتخاب گرایش آزمایشی" value={profile?.selectedTrackId || ''}
                 disabled={busy} onChange={e=>void switchDemoEntryYear(profile!.entryYearId,e.target.value)}
-                className="min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-black text-indigo-950 dark:border-indigo-700 dark:bg-slate-900 dark:text-white">
+                className="min-h-11 rounded-xl border border-emerald-300 bg-white px-3 text-sm font-black text-emerald-950 dark:border-emerald-800 dark:bg-slate-900 dark:text-white">
                 <option value="">بدون انتخاب رسمی گرایش</option>
                 {tracks.filter(t=>t.majorId===profile?.majorId).map(t=>
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -411,14 +411,14 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
             </div>
           </div>
-          <button type="button" disabled={busy||!chartReady||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
+          <button type="button" disabled={busy||!chartReady||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
         </section>
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 className="text-base font-black">{role==='admin'?'پایش نیازسنجی‌ها':'نیازسنجی‌های قابل پاسخ'}</h3>
         {!surveys.length && <p className="mt-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800">فعلاً نیازسنجی قابل دسترسی وجود ندارد.</p>}
-        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" disabled={busy} onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-blue-600 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{surveys.map(s=><button key={s.id} type="button" disabled={busy} onClick={()=>setSelectedId(s.id)} className={`min-h-11 rounded-xl border px-4 text-xs font-bold ${selectedId===s.id?'border-teal-700 bg-teal-50 text-teal-950 dark:bg-teal-950 dark:text-teal-100':'border-slate-200 dark:border-slate-700'}`}>{s.title} · ورودی {yearLabel(s.entryYearIds[0] || curricula.find(c=>c.id===s.curriculumId)?.entryYearId || '')}{s.trackIds.length?' · گرایش '+(tracks.find(t=>t.id===s.trackIds[0])?.name || s.trackIds[0]):' · مشترک'} · {s.status==='OPEN'?'باز':s.status==='DRAFT'?'پیش‌نویس':s.status==='CLOSED'?'بسته':'آرشیو'}</button>)}</div>
       </section>
 
       {survey && role==='student' && (
@@ -441,14 +441,14 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <div className="grid gap-2 sm:grid-cols-2">
             {survey.courseIds.map(courseId=>{
               const impacted = downstreamCourseIds(courseId,survey.curriculumId||'',rules).length;
-              return <label key={courseId} className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-blue-400 dark:border-slate-700">
+              return <label key={courseId} className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-teal-400 dark:border-slate-700">
                 <input type="checkbox" checked={visibleSelectedCourses.includes(courseId)} disabled={busy||!detailReady||survey.status!=='OPEN'} onChange={()=>setSelectedCourses(toggle(courseId))} className="h-4 w-4"/>
                 <span className="min-w-0"><span className="block text-sm font-bold">{courseMap.get(courseId)?.name||courseId}</span><span className="text-xs text-slate-500 dark:text-slate-400">{!chartReady?'روابط درسی هنوز بارگذاری نشده‌اند':impacted>0?`بر اساس گراف موجود، به ${impacted} درس بعدی وابستگی دارد (پیشنهاد، نه مجوز)`:'بدون وابستگی مستقیم یا غیرمستقیمِ ثبت‌شده'}</span></span>
               </label>;
             })}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
-            <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-blue-700 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
+            <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-teal-800 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
         </section>
       )}
@@ -458,19 +458,19 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><h3 className="text-lg font-black">{survey.title}</h3><p className="text-xs text-slate-500 dark:text-slate-400">وضعیت: {survey.status} · نیمسال: {terms.find(t=>t.id===survey.targetTermId)?.name || survey.targetTermId}</p></div>
             <div className="flex flex-wrap gap-2">
-              {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-blue-700 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
+              {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
-              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-blue-400 px-3 text-xs font-bold text-blue-800 dark:text-blue-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
+              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-teal-400 px-3 text-xs font-bold text-teal-900 dark:text-teal-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
             </div>
           </div>
-          <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-blue-800 dark:text-blue-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
+          <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleReport?.byCourse.map(item=>(
               <div key={item.courseId} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <h4 className="text-sm font-black">{courseMap.get(item.courseId)?.name || item.courseId}</h4>
-                <div className="mt-3 flex items-end justify-between gap-2"><strong className="text-2xl font-black text-blue-700 dark:text-blue-300">{item.count}</strong><span className="text-xs text-slate-500">حدنصاب پیشنهادی: {item.threshold||'تعریف نشده'}</span></div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full bg-blue-600" style={{width:`${item.threshold>0?Math.min(100,item.count/item.threshold*100):0}%`}}/></div>
+                <div className="mt-3 flex items-end justify-between gap-2"><strong className="text-2xl font-black text-teal-800 dark:text-teal-300">{item.count}</strong><span className="text-xs text-slate-500">حدنصاب پیشنهادی: {item.threshold||'تعریف نشده'}</span></div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full bg-teal-700" style={{width:`${item.threshold>0?Math.min(100,item.count/item.threshold*100):0}%`}}/></div>
                 <p className="mt-2 text-xs">{item.meetsSuggestedThreshold?'تقاضا به حدنصاب پیشنهادی رسیده؛ نیازمند تأیید تشکیل کلاس':'در حال جمع‌آوری تقاضا'}</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">خوداظهاری ترم آخر: {item.selfReportedFinalSemester}</p>
               </div>
