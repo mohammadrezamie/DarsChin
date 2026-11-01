@@ -100,8 +100,13 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
         message: 'فایل تنها در صف تطبیق ثبت شد. هیچ گروهی بدون تأیید مدیر به بانک ارائه‌های اصلی اضافه نشده است.',
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+  } catch {
+    // Import parsing / storage failures can include raw uploaded fields,
+    // persisted file paths, or stack fragments; do not echo exceptions.
+    return res.status(500).json({
+      success: false,
+      error: 'پردازش فایل واردشده ناموفق بود؛ لطفاً دوباره تلاش کنید.',
+    });
   }
 });
 
