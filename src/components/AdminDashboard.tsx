@@ -266,7 +266,7 @@ export const AdminDashboard: React.FC = () => {
           placeholder="جست‌وجوی بخش‌ها…"
           value={navigationSearch}
           onChange={event => setNavigationSearch(event.target.value)}
-          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-14 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-14 pr-10 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
         />
         <kbd aria-hidden="true" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">⌘ K</kbd>
       </div>
@@ -286,8 +286,8 @@ export const AdminDashboard: React.FC = () => {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
-                    ? 'bg-blue-700 text-white shadow-sm shadow-blue-900/20'
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 ${active
+                    ? 'bg-teal-800 text-white shadow-sm shadow-teal-950/20'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`}
                 >
                   <ItemIcon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
@@ -304,11 +304,11 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="darschin-page darschin-admin space-y-5">
-      <header className="relative overflow-hidden rounded-[1.25rem] border border-blue-300/10 bg-[#101c33] px-3.5 py-3.5 text-white shadow-lg shadow-slate-950/10 sm:px-6 sm:py-5">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+      <header className="relative overflow-hidden rounded-[1.25rem] border border-teal-300/10 bg-[#101c33] px-3.5 py-3.5 text-white shadow-lg shadow-slate-950/10 sm:px-6 sm:py-5">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-teal-600/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-5">
           <div className="max-w-2xl">
-            <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold text-blue-200 sm:mb-3">
+            <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold text-teal-200 sm:mb-3">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
                 <Shield aria-hidden="true" className="h-4 w-4" />
               </span>
@@ -320,7 +320,7 @@ export const AdminDashboard: React.FC = () => {
                 ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
                 : 'داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.'}
             </p>
-            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-blue-100 sm:mt-3 sm:px-3 sm:text-xs">
+            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-100 sm:mt-3 sm:px-3 sm:text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
               {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : demandOnly ? 'محدودهٔ مدیر گروه' : 'پنل مدیریتی'}
               {isSuperAdmin ? ' · مدیر ارشد' : ''}
@@ -331,7 +331,7 @@ export const AdminDashboard: React.FC = () => {
               type="button"
               onClick={fetchStats}
               disabled={loadingStats}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 disabled:opacity-50"
             >
               <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
               <span>به‌روزرسانی</span>
@@ -351,7 +351,7 @@ export const AdminDashboard: React.FC = () => {
           aria-expanded={mobileMenuOpen}
           aria-controls="admin-mobile-navigation"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:bg-blue-500">
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 dark:bg-teal-600">
           <Menu aria-hidden="true" className="h-5 w-5" />
           بخش‌ها
         </button>
@@ -363,7 +363,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-6">
-        <aside ref={desktopNavRef} className="darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
+        <aside ref={desktopNavRef} className="dc-admin-workspace darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
           <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
             بخش‌های مدیریت
             <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">انتخاب سریع بخش مورد نظر</p>
@@ -383,13 +383,13 @@ export const AdminDashboard: React.FC = () => {
               className="darschin-drawer absolute inset-y-0 right-0 flex w-[min(90vw,360px)] flex-col bg-white shadow-2xl dark:bg-slate-900"
             >
               <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
-                <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-blue-600" aria-hidden="true" /> بخش‌های مدیریت</span>
+                <span className="inline-flex items-center gap-2 text-base font-black"><Shield className="h-5 w-5 text-teal-700" aria-hidden="true" /> بخش‌های مدیریت</span>
                 <button
                   ref={mobileCloseRef}
                   type="button"
                   aria-label="بستن فهرست مدیریت"
                   onClick={() => { setMobileMenuOpen(false); menuTriggerRef.current?.focus(); }}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-slate-800"
                 ><X aria-hidden="true" className="h-5 w-5" /></button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto p-4">{navigation}</div>
@@ -405,7 +405,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
-              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black leading-relaxed text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white">{activeNavigation?.label}</h2>
+              <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black leading-relaxed text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-white">{activeNavigation?.label}</h2>
             </div>
             <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
           </div>
@@ -427,11 +427,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                     کل کاربران ثبت‌نامی
                   </span>
-                  <span className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                  <span className="text-2xl font-black text-teal-700 dark:text-teal-400 font-mono">
                     {stats?.totalUsers ?? '...'}
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center">
                   <Users className="w-5 h-5" />
                 </div>
               </div>
@@ -455,11 +455,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                     عناوین دروس در بانک
                   </span>
-                  <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                  <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono">
                     {stats?.totalCourses ?? '...'}
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
                   <BookOpen className="w-5 h-5" />
                 </div>
               </div>
@@ -539,7 +539,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-liquid-glass rounded-3xl p-6 shadow-xs">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <Sparkles className="w-4 h-4 text-teal-700" />
                   دسترسی سریع به بخش‌های پرکاربرد
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -547,7 +547,7 @@ export const AdminDashboard: React.FC = () => {
                     onClick={() => selectTab('courses')}
                     className="p-3 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 text-right transition-all text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"
                   >
-                    <BookOpen className="w-4 h-4 text-indigo-500" />
+                    <BookOpen className="w-4 h-4 text-emerald-600" />
                     بانک دروس
                   </button>
                   <button
