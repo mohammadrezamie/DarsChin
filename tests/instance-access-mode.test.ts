@@ -8,7 +8,7 @@ import type { User } from '../src/types';
 
 const app = express();
 app.use(express.json());
-app.use(instanceAccessGate);
+app.use('/api', instanceAccessGate);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/auth/otp/captcha/generate', (_req, res) => res.json({ captcha: true }));
 app.post('/api/auth/register', (_req, res) => res.status(201).json({ registered: true }));
@@ -55,6 +55,10 @@ describe('public source, self-hosted private instance', () => {
     expect((await request(app).post('/api/auth/login').send({ mobile: student.mobile })).status).toBe(403);
     expect((await request(app).post('/api/auth/otp/send').send({ mobile: student.mobile })).status).toBe(403);
     expect((await request(app).get('/api/student/profile')).status).toBe(401);
+    // Express route matching is case-insensitive by default. Security must
+    // not be circumventable by changing the case of the /api prefix.
+    expect((await request(app).get('/API/student/profile')).status).toBe(401);
+    expect((await request(app).post('/API/auth/register').send({ mobile: ownerMobile })).status).toBe(403);
     expect((await request(app).post('/api/auth/login').send({ mobile: ownerMobile })).status).toBe(200);
   });
 

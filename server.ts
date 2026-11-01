@@ -53,7 +53,8 @@ async function startServer() {
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   // Enforce per-installation API access policy without changing normal multiuser defaults.
-  app.use(instanceAccessGate);
+  // Mount on /api so every case-insensitive API alias is gated before routers.
+  app.use('/api', instanceAccessGate);
 
   // Health check route with diagnostics
   app.get('/api/health', (req, res) => {
