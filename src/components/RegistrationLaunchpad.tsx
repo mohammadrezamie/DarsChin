@@ -39,6 +39,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
   const reorderLock=useRef(false);
+  // An empty queue during the initial API fetch must not erase previously
+  // marked groups before the actual saved plan arrives.
+  const hasObservedLoadedQueue=useRef(false);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   // Async clipboard/reorder responses from another account never show on this one.
@@ -49,7 +52,10 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Wait for hydration of this exact term/chart before persisting; otherwise the
   // initial [] state could overwrite a student's previously checked progress.
   const [progressLoadedKey,setProgressLoadedKey]=useState<string|null>(null);
-  useEffect(()=>{setSortMode(false);},[profile?.userId,profile?.currentTermId]);
+  useEffect(()=>{
+    setSortMode(false);
+    hasObservedLoadedQueue.current=false;
+  },[profile?.userId,profile?.currentTermId,curriculumId]);
   // Never render completion marks from the previous student's session during
   // the render immediately after switching profiles.
   const progressReady=progressLoadedKey===progressKey;
@@ -110,6 +116,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // offerings. Otherwise switching A → B → A could resurrect A's old mark.
   useEffect(()=>{
     if(!rulesReady||!progressReady)return;
+    if(queue.steps.length>0)hasObservedLoadedQueue.current=true;
+    if(!hasObservedLoadedQueue.current)return;
     setDoneTokens(previous=>{
       const current=pruneRegistrationTokens(queue.steps,previous);
       return current.length===previous.length?previous:current;
