@@ -27,23 +27,27 @@ const OWNER_GUEST_ENDPOINTS = new Set([
 ]);
 
 export const instanceAccessGate: RequestHandler = (req, res, next) => {
-  if (process.env.DARSCHYN_ACCESS_MODE !== 'owner_only' || !req.path.startsWith('/api/')) {
+  // This middleware must be mounted at '/api', not as a global prefix check.
+  // Express routes match /API case-insensitively by default; a raw
+  // case-sensitive req.path.startsWith('/api/') would let /API bypass it.
+  if (process.env.DARSCHYN_ACCESS_MODE !== 'owner_only') {
     next();
     return;
   }
+  const apiPath = (req.baseUrl + req.path).toLowerCase();
   res.setHeader('Cache-Control', 'no-store');
-  if (req.method === 'GET' && (req.path === '/api/health' ||
-      req.path === '/api/security/challenge' ||
-      req.path === '/api/auth/otp/captcha/generate')) {
+  if (req.method === 'GET' && (apiPath === '/api/health' ||
+      apiPath === '/api/security/challenge' ||
+      apiPath === '/api/auth/otp/captcha/generate')) {
     next();
     return;
   }
   // An owner-only server never accepts student/third-party registration.
-  if (req.path === '/api/auth/register') {
+  if (apiPath === '/api/auth/register') {
     res.status(403).json({ success: false, error: 'ثبت‌نام در این نصب خصوصی غیرفعال است.' });
     return;
   }
-  if (OWNER_GUEST_ENDPOINTS.has(req.method + ' ' + req.path)) {
+  if (OWNER_GUEST_ENDPOINTS.has(req.method + ' ' + apiPath)) {
     const mobile = req.body?.mobile;
     const configured = process.env.ROOT_OWNER_MOBILE;
     if (typeof mobile !== 'string' || !configured ||
