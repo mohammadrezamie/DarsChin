@@ -71,13 +71,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                   aria-expanded={mobileMenuOpen}
                   aria-controls="mobile-main-navigation"
                   onClick={() => setMobileMenuOpen(true)}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
                   <Menu aria-hidden="true" className="h-5 w-5" />
                 </button>
               )}
               <Link to={user ? '/dashboard' : '/'} className="group flex min-w-0 items-center gap-2 sm:gap-3">
-                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 sm:flex dark:bg-blue-500">
+                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-lg shadow-teal-600/20 sm:flex dark:bg-teal-600">
                   <GraduationCap aria-hidden="true" className="h-6 w-6" />
                 </span>
                 <span className="flex min-w-0 flex-col">
@@ -88,10 +88,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
               {user && (
                 <nav aria-label="ناوبری اصلی دسکتاپ" className="hidden items-center gap-1.5 rounded-xl border border-black/5 bg-black/5 p-1 md:flex dark:border-white/10 dark:bg-white/5">
                   <Link to="/dashboard" aria-current={activeTab === 'student' ? 'page' : undefined}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'student' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>میز کار دانشجو</Link>
+                    className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'student' ? 'bg-white text-teal-800 shadow-sm dark:bg-slate-800 dark:text-teal-300' : 'text-slate-700 dark:text-slate-200'}`}>میز کار دانشجو</Link>
                   {canManage && (
                     <Link to="/admin" aria-current={activeTab === 'admin' ? 'page' : undefined}
-                      className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'admin' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>پنل مدیریت</Link>
+                      className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'admin' ? 'bg-white text-teal-800 shadow-sm dark:bg-slate-800 dark:text-teal-300' : 'text-slate-700 dark:text-slate-200'}`}>پنل مدیریت</Link>
                   )}
                   <Link to="/help" className="flex min-h-10 items-center rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">راهنما</Link>
                   <button type="button" onClick={() => setExtModalOpen(true)} className="min-h-10 rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">افزونه کروم</button>
@@ -103,20 +103,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
               {user ? (
                 <div className="hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-2 py-1 sm:flex dark:border-slate-700 dark:bg-slate-800">
                   <Link to="/dashboard" className="flex min-h-9 items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
                       {canManage ? <Shield aria-hidden="true" className="h-4 w-4" /> : <UserCheck aria-hidden="true" className="h-4 w-4" />}
                     </span>
                     <span className="hidden max-w-[110px] truncate text-xs font-semibold text-slate-800 lg:inline dark:text-slate-100">{user.name}</span>
                   </Link>
                   {onOpenPasswordChange && (
-                    <button type="button" onClick={onOpenPasswordChange} aria-label="تغییر رمز عبور" className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-slate-500 hover:text-blue-700 dark:hover:text-blue-300"><KeyRound aria-hidden="true" className="h-4 w-4" /></button>
+                    <button type="button" onClick={onOpenPasswordChange} aria-label="تغییر رمز عبور" className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-slate-500 hover:text-teal-800 dark:hover:text-teal-300"><KeyRound aria-hidden="true" className="h-4 w-4" /></button>
                   )}
                   <button type="button" onClick={logout} aria-label="خروج از حساب" className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-slate-500 hover:text-rose-700 dark:hover:text-rose-300"><LogOut aria-hidden="true" className="h-4 w-4" /></button>
                 </div>
               ) : (
                 <div className="hidden gap-2 sm:flex">
                   <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-slate-800 dark:text-white">ورود</Link>
-                  <Link to="/register" className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">ثبت‌نام</Link>
+                  <Link to="/register" className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white">ثبت‌نام</Link>
                 </div>
               )}
             </div>
@@ -132,20 +132,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
               <strong className="text-lg font-black text-slate-900 dark:text-white">منوی درس‌چین</strong>
               <button ref={mobileCloseRef} type="button" aria-label="بستن منوی اصلی" onClick={() => { closeMenu(); triggerRef.current?.focus(); }}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800">
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-slate-800">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-2 text-sm font-bold">
               <Link to="/dashboard" onClick={closeMenu} aria-current={activeTab === 'student' ? 'page' : undefined}
-                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">میز کار دانشجو</Link>
+                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">میز کار دانشجو</Link>
               {canManage && <Link to="/admin" onClick={closeMenu} aria-current={activeTab === 'admin' ? 'page' : undefined}
-                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
-              <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
+                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
+              <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
               <button type="button" onClick={() => { closeMenu(); setExtModalOpen(true); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">افزونه کروم</button>
+                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">افزونه کروم</button>
               {onOpenPasswordChange && <button type="button" onClick={() => { closeMenu(); onOpenPasswordChange(); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
+                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
               <button type="button" onClick={() => { closeMenu(); logout(); }}
                 className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">خروج از حساب</button>
             </div>
