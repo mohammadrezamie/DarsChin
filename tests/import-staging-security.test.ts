@@ -26,12 +26,12 @@ beforeAll(async () => {
     id: testAdminId,
     name: 'مدیر مصنوعی بررسی واردات',
     mobile: '09000000771',
-    roles: ['super-admin'] as ['super-admin'],
+    roles: ['admin'] as ['admin'],
     permissions: ['admin.panel.access', 'offering.manage'],
     createdAt: new Date().toISOString(),
   };
   db.data.users = db.users.filter(user => user.id !== testAdminId);
-  db.users.push({ ...fixture, roles: ['super-admin'] });
+  db.users.push({ ...fixture, roles: ['admin'] });
   authHeader = 'Bearer ' + generateToken(fixture);
   const course = db.courses.find(item => item.active);
   if (!course || !db.campuses[0] || !db.academicTerms[0]) {

@@ -21,7 +21,7 @@ beforeAll(async () => {
     id: adminId,
     mobile: '09000000847',
     name: 'مدیر ساختگی تست ساعت',
-    roles: ['super-admin'] as ['super-admin'],
+    roles: ['admin'] as ['admin'],
     permissions: ['offering.manage'],
     createdAt: new Date().toISOString(),
   };

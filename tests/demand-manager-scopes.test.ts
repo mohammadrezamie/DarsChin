@@ -10,7 +10,7 @@ import type { User } from '../src/types';
 const app=express();
 app.use(express.json());
 app.use('/api/admin-management',adminManagementRouter);
-const ids=['demand-test-root','demand-test-manager','demand-test-outsider'];
+const ids=['usr-super','demand-test-manager','demand-test-outsider'];
 let auth:{root:string;manager:string;outsider:string};
 let campusId='',degreeLevelId='',majorId='';
 
@@ -21,7 +21,7 @@ beforeAll(async()=>{
   if(!campus||!major)throw Error('Synthetic academic unit and major fixtures are required');
   campusId=campus.id;degreeLevelId=major.degreeLevelId;majorId=major.id;
   const createdAt=new Date().toISOString();
-  const root:User={id:ids[0],name:'مالک تست',mobile:'09999900001',roles:['super-admin'],
+  const root:User={id:ids[0],name:'مالک تست',mobile:process.env.ROOT_OWNER_MOBILE || '09999999999',roles:['super-admin'],
     permissions:[],createdAt};
   const manager:User={id:ids[1],name:'مدیر گروه تست',mobile:'09999900002',roles:['admin'],
     permissions:['demand.manage','demand.export'],createdAt};

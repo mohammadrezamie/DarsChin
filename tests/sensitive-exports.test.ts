@@ -55,8 +55,8 @@ describe('sensitive administration exports', () => {
     app.use('/api/admin', adminRouter);
 
     const root: User = {
-      id: 'fixture-root',
-      mobile: '09000000001',
+      id: 'usr-super',
+      mobile: process.env.ROOT_OWNER_MOBILE || '09999999999',
       name: 'Synthetic Admin',
       roles: ['super-admin'],
       permissions: ['backup.manage'],

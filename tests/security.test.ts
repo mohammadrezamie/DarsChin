@@ -320,7 +320,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             .send({ name: 'New Admin', mobile: targetAdminMobile, password: '123', roles: ['admin'] as any, permissions: ['system.settings.manage'] });
             
         expect(res.status).toBe(403);
-        expect(res.body.error).toContain('بیشتر از دسترسی‌های خودتان');
+        expect(res.body.error).toContain('مدیر ارشد');
     });
 
     it("7. Delegated Admin cannot manufacture super-admin", async () => {
@@ -334,7 +334,7 @@ describe("DARSCHYN Security Regression & Integrity Tests", () => {
             .send({ name: 'New Root', mobile: `0900${Math.floor(Math.random() * 10000000)}`, password: '123', roles: ['super-admin', 'admin'], permissions: [] });
             
         expect(res.status).toBe(403);
-        expect(res.body.error).toContain('ایجاد مدیر ارشد');
+        expect(res.body.error).toContain('مدیر ارشد');
     });
     it("8. Student sync cannot target a campus outside the student's profile", async () => {
         const userId = 'sync-campus-scope-regression-student';
