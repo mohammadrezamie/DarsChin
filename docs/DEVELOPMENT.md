@@ -1,43 +1,45 @@
-# Development workflow (without GitHub Actions minutes)
+# راهنمای توسعه و کنترل کیفیت درس‌چین
 
-This is currently a demo. Preserve a clean `main` and use short-lived branches and PRs for changes. Development is not blocked by GitHub Actions quota, but **missing automated test evidence must be disclosed**.
+درس‌چین یک محصول فارسی‌محور با محیط نمایشی در حال تکمیل است. شاخهٔ `main` مرجع نسخهٔ پذیرفته‌شده و PR کوتاه‌عمر مسیر تغییرات است. پایان سهمیهٔ GitHub Actions به معنی مجوز ادغامِ بدون تست نیست.
 
-## Persistent owner directives and development decisions
+## قبل از شروع هر نوبت
 
-Before each coding session, read [AGENTS.md](../AGENTS.md) and [OWNER_DECISIONS_FA.md](OWNER_DECISIONS_FA.md). Every owner instruction/plan/change must be recorded there with a dated, non-sensitive note and its true status, whether or not code can be written immediately. Link corresponding technical docs and PRs. A feature PR should include its owner-decision IDs; it is not enough to summarize the requirement only in a chat.
+ابتدا [دستورالعمل عامل‌ها](../AGENTS.md)، [دفتر تصمیمات مالک](OWNER_DECISIONS_FA.md)، [استاندارد فارسی‌نویسی](PERSIAN_DOCUMENTATION_STANDARD_FA.md) و [منشور امنیت](PERMANENT_SECURITY_POLICY_FA.md) را بخوانید. هر دستور جدید مالک باید با تاریخ، شناسهٔ پایدار، وضعیت واقعی، اولویت، وابستگی و PR/Issue مرتبط ثبت شود؛ حتی اگر پیاده‌سازی به تعویق افتاده باشد. ثبت یک برنامه در چت یا شاخهٔ ادغام‌نشده به معنی ثبت در `main` نیست.
 
-## Local work
+## نصب و آزمون محلی
 
-Install Node.js 22+ and Bun. Run:
+Node.js نسخهٔ ۲۲ یا جدیدتر و Bun موردنیاز است. مدیر بستهٔ اصلی **Bun** و فایل قفل `bun.lock` است:
 
 ```bash
-bun run qa:full  # verify + API smoke; no GitHub Actions needed
+bun install --frozen-lockfile
+bun run verify
+bun run qa:full
 ```
 
-Read [QA_WITHOUT_ACTIONS_FA.md](QA_WITHOUT_ACTIONS_FA.md) for the repeatable Vercel Sandbox option, exact-SHA evidence, and the 2026-10-26 QA report. The combined command exits nonzero on either failed verification or failed API smoke.
+`bun run qa:full` آزمون‌های یکپارچه و دود API را اجرا می‌کند؛ اگر هر بخش ناموفق باشد، خروجی موفقیت نمی‌دهد. جزئیات محیط ایزوله، نمونهٔ سند SHA دقیق و گزینهٔ اجرای محلی در [راهنمای QA بدون Actions](QA_WITHOUT_ACTIONS_FA.md) قرار دارد.
 
-Run the suite against a **disposable** database, never a live or committed database. To isolate the application tests, set `DARSCHYN_DATA_DIR` to a writable temporary directory **before importing the database module**. Set a unique `JWT_SECRET` in a local `.env` file; use synthetic root account settings for test runs. Do not copy operational credentials into commands, logs or issues.
+**امنیت آزمون:** `DARSCHYN_DATA_DIR` را قبل از بارگذاری ماژول دیتابیس روی پوشهٔ موقت و قابل نوشتن بگذارید. رمز JWT و Root آزمایشی را تازه و فقط برای تست ایجاد کنید. دادهٔ واقعی دانشجو یا Secret سرور را داخل دستور، فایل CI، لاگ یا Issue وارد نکنید. اجرای `verify` برای تست از دیتابیس و کلیدهای مصنوعی استفاده می‌کند و نسخهٔ واقعی را هدف قرار نمی‌دهد.
 
-The standalone API smoke script requires the built `dist/server.cjs` and checks JSON health/404, synthetic root login and sync history after process restart. It must still be executed and observed before considering the check passing.
+فرمان `bun run build` افزونهٔ ZIP و بسته‌های وب/سرور را نیز می‌سازد؛ فایل ZIP تولیدشده نباید به‌صورت تصادفی وارد Git شود. روی ویندوز `bun run verify` را ترجیح دهید؛ `npm ci` به‌خاطر حذف فایل قفل قدیمی npm مسیر مرجع پروژه نیست.
 
-The verification runner generates disposable test credentials and configures `DARSCHYN_DATA_DIR` so test persistence does not affect the checked-in JSON database. It checks the committed `bun.lock` without modifying dependency versions. The `bun run build` command packages the extension ZIP in the repository root; check the working tree and do not accidentally commit its output.
+## چک‌لیست PR
 
-On Windows, use `bun run verify` rather than requiring Bash. `npm ci` is intentionally not supported because the npm lockfile was stale and Bun is the canonical package manager.
+- [ ] هدف، رفتار قابل مشاهده، محدودهٔ تغییر و شناسهٔ تصمیم مالک مستند شده‌اند.
+- [ ] اگر معنای مقررات آموزشی عوض شده، **تأیید صریح مالک** وجود دارد؛ از حدس معارف و قوانین رسمی خودداری شده است.
+- [ ] Diff برای دادهٔ خصوصی، رمز، ZIP یا فایل اتفاقی و تغییرات غیرمرتبط بررسی شده است.
+- [ ] نتیجهٔ **واقعی** TypeScript، Vitest، Build و API روی SHA دقیق ثبت شده است.
+- [ ] تغییرات امنیت/احراز هویت/دیتابیس با آزمون منفی و خطای دیسک پوشش دارند.
+- [ ] فرانت‌اند و API جداگانه آزمایش شده‌اند؛ موفقیت Vercel جای اجرای Express نیست.
+- [ ] سند فارسی مربوطه، `README.md` و دفتر تغییرات در صورت لزوم به‌روز هستند.
 
-## PR checklist
+## وقتی Actions در دسترس نیست
 
-- [ ] Scope and expected behavior documented; academic-rule changes separately approved
-- [ ] Diff reviewed for personal data, credentials, generated binaries, unrelated changes
-- [ ] Commands executed and **actual** pass/fail output captured for the exact commit
-- [ ] Risky database or authentication changes covered by targeted tests
-- [ ] Frontend and Express API verified separately
-- [ ] Unverified integrations and trade-offs clearly identified
-- [ ] README, docs and changelog updated if behavior or operations change
+از دستگاه محلی یا محیط آزمایشی یک‌بارمصرف استفاده کنید و SHA، دستور، محیط و نتیجه را در PR درج کنید. صرف بازبینی کد، Graphify یا پیش‌نمایش Vercel گواه عبور تست نیست. PR صرفاً مستنداتی را می‌توان پس از بررسی دقیق متن و لینک‌ها و با **اعلام شفاف تست‌های اجرا‌نشده** ادغام کرد؛ تغییر امنیتی/داده‌ای به آزمون واقعی نیاز دارد.
 
-## Merging without Actions
+## یادداشت تاریخی ابزار Graphify
 
-GitHub Actions may be unavailable due to account quota. Instead, execute checks in an isolated local machine or disposable sandbox, record the **commit SHA**, command, environment and outcome in the PR, and merge using `squash` only after the change is adequately verified. No passing status is inferred from Vercel's frontend build, comments checks, static review, or Graphify.
+در گزارش ۲۳ سپتامبر ۲۰۲۶، ایندکس Graphify مبتنی بر کامیت `61837f9` بوده است. این فقط **شاهد تاریخی** است؛ پیش از اتکا به تحلیل وابستگی، باید ایندکس و SHA اکنون بررسی شوند. Graphify جای آزمون اجراشده را نمی‌گیرد.
 
-A docs-only PR may be merged after a careful source and Markdown-link review without application build execution, provided the validation gap is stated. Security/authentication/data changes demand runtime tests first.
+## تعهد زبان
 
-**Graphify:** the indexed `mohammadrezamie/DarsChin` workspace is currently based on commit `61837f9` (indexed 2026-09-23). It supports dependency/impact analysis, but does not see later PR commits until refreshed and never replaces tests.
+همهٔ متن‌های راهنما و توضیح‌های PR به فارسی نوشته شوند؛ نام فایل، دستور قابل اجرا، متن حقوقی `LICENSE` و قرارداد فنی تغییر نکند.
