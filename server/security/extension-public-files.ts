@@ -20,8 +20,10 @@ export function publicExtensionAssets(directory: string): Array<{ absolutePath: 
     const absolutePath = path.resolve(base, archiveName);
     if (!absolutePath.startsWith(base + path.sep)) throw new Error('Invalid extension file path');
     const info = fs.lstatSync(absolutePath);
-    if (!info.isFile() || info.isSymbolicLink()) {
-      throw new Error('A public extension asset must be an ordinary regular file');
+    if (!info.isFile() || info.isSymbolicLink() ||
+        !fs.realpathSync(absolutePath).startsWith(fs.realpathSync(base) + path.sep)) {
+      // Also reject a symlink in an *intermediate* fonts/icons directory.
+      throw new Error('A public extension asset must be an ordinary regular file inside the extension root');
     }
     return { absolutePath, archiveName };
   });

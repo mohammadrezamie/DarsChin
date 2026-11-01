@@ -15,7 +15,10 @@ for (const name of publicFiles) {
     seen.add(name);
     const target = path.join('extension', name);
     const info = fs.lstatSync(target);
-    if (!info.isFile() || info.isSymbolicLink()) throw new Error('Invalid public extension asset');
+    if (!info.isFile() || info.isSymbolicLink() ||
+        !fs.realpathSync(target).startsWith(fs.realpathSync('extension') + path.sep)) {
+        throw new Error('Invalid public extension asset');
+    }
     zip.addFile(name, fs.readFileSync(target));
 }
 const outPath = `darschyn-chrome-extension-v${pkg.version}.zip`;
