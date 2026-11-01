@@ -15,7 +15,7 @@ export const RecommendationSection: React.FC = () => {
   const card3Y = useTransform(scrollYProgress, [0.4, 0.7], [100, 0]);
 
   return (
-    <section id="recommendations" ref={containerRef} className="scroll-mt-24 overflow-hidden bg-gradient-to-b from-blue-50/75 to-slate-50 px-4 py-16 dark:from-blue-950/15 dark:to-slate-950/25 sm:px-6 sm:py-24 lg:px-8">
+    <section id="recommendations" ref={containerRef} className="scroll-mt-24 overflow-hidden bg-gradient-to-b from-teal-50/75 to-slate-50 px-4 py-16 dark:from-teal-950/15 dark:to-slate-950/25 sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col-reverse items-stretch gap-9 lg:flex-row lg:items-center lg:gap-16">
         <div className="min-w-0 w-full flex-1 space-y-4 sm:space-y-6">
           <motion.div style={reduceMotion ? undefined : { y: card1Y }} className="relative min-w-0 overflow-hidden rounded-[1.5rem] border border-emerald-200 bg-white/95 p-4 shadow-[0_20px_45px_-27px_rgba(5,150,105,0.2)] dark:border-emerald-900/50 dark:bg-slate-900 sm:p-6">
@@ -68,9 +68,9 @@ export const RecommendationSection: React.FC = () => {
         </div>
 
         <div className="min-w-0 w-full flex-1 space-y-5 text-right lg:space-y-7">
-          <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-3 py-1.5 text-xs font-extrabold text-blue-700 dark:border-blue-400/20 dark:bg-slate-900/70 dark:text-blue-300"><Sparkles className="h-4 w-4" /> کمک برای اولویت‌بندی آگاهانه</span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1.5 text-xs font-extrabold text-teal-800 dark:border-teal-400/20 dark:bg-slate-900/70 dark:text-teal-300"><Sparkles className="h-4 w-4" /> کمک برای اولویت‌بندی آگاهانه</span>
           <h2 className="max-w-xl break-words text-[clamp(1.8rem,5vw,3rem)] font-black leading-[1.35] tracking-tight text-slate-950 dark:text-white">
-            فقط انتخاب نکن؛ <span className="block bg-gradient-to-l from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-blue-300 dark:to-indigo-300">بهتر مقایسه کن.</span>
+            فقط انتخاب نکن؛ <span className="block bg-gradient-to-l from-teal-700 to-emerald-600 bg-clip-text text-transparent dark:from-teal-300 dark:to-emerald-300">بهتر مقایسه کن.</span>
           </h2>
           <p className="text-base leading-8 text-slate-600 dark:text-slate-400 sm:text-xl">
             درس‌چین می‌تواند اولویت‌های پیشنهادی را با دلایل قابل‌فهم کنار درس‌ها نشان دهد. این کارت‌ها مثال هستند؛ پیشنهاد معتبر به چارت، دروس گذرانده‌شده و دادهٔ به‌روز همان نیمسال نیاز دارد.
