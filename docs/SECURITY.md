@@ -50,3 +50,7 @@ Every server-issued JWT is bound to the persisted per-account `sessionVersion`; 
 ## Public-source / private-instance deployment (2026-11-01)
 
 The source is published for independent self-hosting; no code contribution or clone is authorized to access the maintainer's live service. Optional `DARSCHYN_ACCESS_MODE=owner_only` requires a verified reserved root token on protected APIs and forbids new registrations, while `multiuser` remains available to other self-hosters. API-only gating is insufficient to hide static SPA/demo content; use a reverse-proxy access rule for complete site privacy. The Docker Compose service now explicitly forwards `DARSCHYN_REQUIRE_EXISTING_DB` and `DARSCHYN_REGISTRATION_OTP_REQUIRED`. Set them deliberately in the per-server private environment. See [self-hosting](SELF_HOSTING_OPEN_SOURCE_FA.md) and [public Git incident](PUBLIC_REPOSITORY_READINESS_20261101_FA.md).
+
+## Offline repair of an exposed root account
+
+If the root credentials of an existing installation may be exposed, update the private runtime ENV **and** the stored database password/recovery verifiers using the [offline repair steps](SELF_HOSTING_OPEN_SOURCE_FA.md#emergency-root-credential-rotation-without-a-second-codebase). The tool requires an existing persisted database, unique reserved root identity, stopped Node process and explicit operator confirmation; it backs up privately and increments sessionVersion. This is not proof that any live VPS has been rotated. Account/provider credentials beyond the root must be handled separately.

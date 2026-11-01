@@ -27,7 +27,7 @@ Links are provided on the homepage and `/login`. Browser-only demo state lives i
 
 Original project code is available under the [MIT License](LICENSE). Anyone may clone the public repository and run a **separate, privately configured** instance; that does not provide access to the maintainer's server or data. `package.json` sets `private: true` only to block accidental publication to the npm registry. To keep a personal deployment restricted to its operator, set `DARSCHYN_ACCESS_MODE=owner_only` in its **untracked** `deploy/.env.vps` and preserve its separate data volume. This controls backend APIs, not public static/demo pages; protect those at the reverse proxy if necessary. Existing deployments preserve the legacy `multiuser` mode until deliberately changed.
 
-**[Complete clone, configure, update and shared-Nginx self-hosting instructions](docs/SELF_HOSTING_OPEN_SOURCE_FA.md).**
+**[Complete clone, configure, update, offline root credential rotation and shared-Nginx self-hosting instructions](docs/SELF_HOSTING_OPEN_SOURCE_FA.md).**
 
 ## VPS quick start
 
