@@ -7,6 +7,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **یکپارچگی کاتالوگ دانشگاه و چارت: حذف امن، اعتبارسنجی و Rollback داده‌های پایه** | [ACADEMIC_CATALOG_INTEGRITY_20261101_FA.md](ACADEMIC_CATALOG_INTEGRITY_20261101_FA.md) |
 | **همگام‌سازی امن آموزشیار: ثبت اتمیک، بازیابی خطای دیسک، جلوگیری از انباشت و صف تأیید مدیر** | [SYNC_ATOMIC_STAGING_SECURITY_20261101_FA.md](SYNC_ATOMIC_STAGING_SECURITY_20261101_FA.md) |
 | **اصلاح یکپارچهٔ برنامه‌ریز: چارت/واحد/گرایش دقیق، گروه‌های جایگزین، سقف واحد و ذخیرهٔ اتمیک** | [STUDENT_PLAN_COHORT_AND_ATOMICITY_20261101_FA.md](STUDENT_PLAN_COHORT_AND_ATOMICITY_20261101_FA.md) |
 | **دستورکار دائمی و مرحله‌به‌مرحلهٔ شخصی مالک: تنظیمات GitHub، Support، چرخش کلیدها و نصب تازه** | [OWNER_SECURITY_ACTION_CHECKLIST_FA.md](OWNER_SECURITY_ACTION_CHECKLIST_FA.md) |
