@@ -96,7 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Browser-only demo pages must not refresh any existing real session.
     // DemoAuthProvider supplies an independent synthetic identity below.
-    if (window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/')) {
+    if (window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/') ||
+        (import.meta.env.VITE_STATIC_PREVIEW === 'true' && /^#\/demo(?:\/|$)/.test(window.location.hash))) {
       setIsLoading(false);
       return;
     }
@@ -227,7 +228,10 @@ export const DemoAuthProvider: React.FC<{ role: 'student' | 'admin'; children: R
       user,
       isLoading: false,
       refreshUser: async () => {},
-      logout: () => { window.location.assign('/demo'); },
+      logout: () => {
+        if (import.meta.env.VITE_STATIC_PREVIEW === 'true') window.location.hash = '/demo';
+        else window.location.assign('/demo');
+      },
       switchDemoRole: async () => {},
       login: async () => ({ success: false, error: 'این حساب ساختگی است.' }),
       register: async () => ({ success: false, error: 'ثبت‌نام واقعی در دمو وجود ندارد.' }),

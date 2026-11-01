@@ -47,10 +47,18 @@ export async function apiRequest<T = any>(
     return { success: false, error: 'آدرس درخواست نامعتبر است.' };
   }
 
-  // Browser demo never sends credentials or user records to the real API.
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/demo/')) {
+  // The Pages build is strictly offline/mock: it must never call live APIs.
+  const staticPreview = import.meta.env.VITE_STATIC_PREVIEW === 'true';
+  const inBrowserDemo = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/demo/') ||
+    (staticPreview && (window.location.hash === '#/demo' || window.location.hash.startsWith('#/demo/')))
+  );
+  if (inBrowserDemo) {
     const { browserDemoRequest } = await import('../demo/mock-api');
     return browserDemoRequest<T>(endpoint, options);
+  }
+  if (staticPreview) {
+    return { success: false, error: 'این صفحه فقط پیش‌نمایش است؛ سرویس واقعی در GitHub Pages فعال نیست.' };
   }
 
   const controller = new AbortController();
