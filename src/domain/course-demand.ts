@@ -16,7 +16,8 @@ export function surveyAppliesToProfile(s: DemandSurvey, profile: StudentAcademic
 }
 
 export function managerCanAccessDemand(user: User, survey: Pick<DemandSurvey, 'campusId'|'degreeLevelId'|'majorId'>, exportPersonal = false): boolean {
-  if (user.roles.includes('super-admin')) return true;
+  // An old role label alone is never proof of verified root identity.
+  if (user.roles.includes('super-admin')) return false;
   // Student-role tokens cannot become department managers from a stray permission.
   if (!user.roles.includes('admin')) return false;
   if (!user.permissions?.includes(exportPersonal ? 'demand.export' : 'demand.manage')) return false;
