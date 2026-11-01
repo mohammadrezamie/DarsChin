@@ -413,71 +413,73 @@ studentRouter.get('/plan', authenticate, (req: AuthenticatedRequest, res) => {
 studentRouter.put('/plan', authenticate, validate(updatePlanSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
   const { selectedOfferingIds, coursePriorities, offeringPriorities } = req.body;
-  const profile = db.studentProfiles.find((p) => p.userId === userId);
-  const currentTermId = profile?.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
+  const profile = db.studentProfiles.find(p => p.userId === userId);
+  const termId = currentStudentTerm(userId);
+  if (!profile || !termId) {
+    return res.status(409).json({ success: false, error: 'ابتدا پروندهٔ تحصیلی و نیمسال معتبر خود را مشخص کنید.' });
+  }
 
   if (Array.isArray(selectedOfferingIds) && selectedOfferingIds.length > 0) {
-    if (!profile) {
-      return res.status(400).json({ success: false, error: 'پروفایل تحصیلی یافت نشد.' });
+    // Reuse the exact cohort contract of the eligibility API, not the first
+    // catalog chart from another campus, degree or entry year.
+    const scope = curriculumForStudent(userId);
+    if (!scope) {
+      return res.status(409).json({ success: false, error: 'چارت فعال و یکتای این ورودی پیدا نشد؛ تنظیم آن باید بررسی شود.' });
     }
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
-    const relevantOfferings = db.courseOfferings.filter((o) => o.termId === currentTermId && o.active);
-    const passedCourses = db.studentPassedCourses.filter((spc) => spc.userId === userId);
-
+    const relevantOfferings = db.courseOfferings.filter(o =>
+      o.termId === termId && o.campusId === profile.campusId && o.active
+    );
     const report = evaluateStudentEligibility({
       studentProfile: profile,
-      curriculum,
+      curriculum: scope.chart,
       curriculumCourses: db.curriculumCourses,
       allCourses: db.courses,
       tracks: db.tracks,
       academicRules: db.academicRules,
-      passedCourses,
+      passedCourses: db.studentPassedCourses.filter(row => row.userId === userId),
       currentOfferings: relevantOfferings,
-      plannedOfferingIdsInSameTerm: [], // Evaluate independently
+      plannedOfferingIdsInSameTerm: selectedOfferingIds,
     });
-
-    const invalidOfferings = selectedOfferingIds.filter(id => {
-      const evalItem = report.results.find((r: any) => r.offeringId === id);
-      return !evalItem || !evalItem.canSelect || !evalItem.isEligible || evalItem.overallStatus !== 'AVAILABLE';
+    const byOffering = new Map(report.results.map(item => [item.offeringId, item]));
+    const uniqueCourses = new Set<string>();
+    const invalidIds = selectedOfferingIds.filter((id: string) => {
+      const item = byOffering.get(id);
+      if (!item || !item.canSelect || !item.isEligible || item.overallStatus !== 'AVAILABLE' ||
+          uniqueCourses.has(item.courseId)) return true;
+      uniqueCourses.add(item.courseId);
+      return false;
     });
-    
-    if (invalidOfferings.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'برخی از دروس انتخابی دارای منع آیین‌نامه‌ای هستند و قابل ثبت نیستند.',
-        invalidIds: invalidOfferings
+    if (invalidIds.length) {
+      return res.status(400).json({
+        success: false, error: 'برخی گروه‌ها متعلق به این واحد/چارت نیستند، منع آموزشی دارند یا برای یک درس تکراری‌اند.',
+        invalidIds,
+      });
+    }
+    // Bulk plan updates must not bypass the existing configured unit ceiling.
+    // Only explicitly flagged extra-unit courses are excluded, never guessed
+    // by Persian course names (Maaref policy awaits owner confirmation).
+    const currentUnits = [...uniqueCourses].reduce((sum, courseId) => {
+      const course = db.courses.find(row => row.id === courseId);
+      return sum + (course && !course.isExtraUnit ? course.units : 0);
+    }, 0);
+    const maxUnits = db.calculateStudentAcademicLimits(userId).effectiveMaxUnits;
+    if (currentUnits > maxUnits) {
+      return res.status(400).json({
+        success: false, error: `مجموع ${currentUnits} واحد از سقف تنظیم‌شدهٔ ${maxUnits} واحد بیشتر است.`,
       });
     }
   }
 
-  let plan = db.studentPlans.find((p) => p.userId === userId && p.termId === currentTermId);
-  if (!plan) {
-    plan = {
-      id: `plan-${userId}-${currentTermId}`,
-      userId,
-      termId: currentTermId,
-      selectedOfferingIds: Array.isArray(selectedOfferingIds) ? selectedOfferingIds : [],
-      coursePriorities: coursePriorities || {},
-      offeringPriorities: offeringPriorities || {},
-      updatedAt: new Date().toISOString(),
-    };
-    db.studentPlans.push(plan);
-  } else {
-    if (Array.isArray(selectedOfferingIds)) plan.selectedOfferingIds = selectedOfferingIds;
-    if (coursePriorities) plan.coursePriorities = coursePriorities;
-    if (offeringPriorities) plan.offeringPriorities = offeringPriorities;
+  const saved = saveStudentPlan(userId, termId, plan => {
+    if (Array.isArray(selectedOfferingIds)) plan.selectedOfferingIds = [...selectedOfferingIds];
+    if (coursePriorities !== undefined) plan.coursePriorities = structuredClone(coursePriorities);
+    if (offeringPriorities !== undefined) plan.offeringPriorities = structuredClone(offeringPriorities);
     plan.updatedAt = new Date().toISOString();
-  }
-
-  db.save();
-  res.json({ success: true, data: plan });
+  });
+  if (!saved) return res.status(503).json({ success: false, error: 'ذخیرهٔ برنامه انجام نشد؛ دوباره تلاش کنید.' });
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({ success: true, data: saved });
 });
-
 // Authoritative Add/Remove offering validation endpoint
 studentRouter.post('/plan/select', authenticate, validate(planSelectSchema), (req: AuthenticatedRequest, res) => {
   const userId = req.user!.id;
