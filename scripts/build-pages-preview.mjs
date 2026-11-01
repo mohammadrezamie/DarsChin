@@ -21,7 +21,7 @@ if (existsSync(path)) {
   manifest.start_url = base + '#/demo/student';
   manifest.icons = (manifest.icons ?? []).map(icon => ({
     ...icon,
-    src: base + String(icon.src).replace(/^\\/+/, ''),
+    src: base + (String(icon.src).startsWith('/') ? String(icon.src).slice(1) : String(icon.src)),
   }));
   manifest.shortcuts = [];
   writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
