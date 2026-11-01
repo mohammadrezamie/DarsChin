@@ -42,7 +42,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html.split('جزئیات کد و وابستگی‌ها')[0]).toContain('410100');
     expect(html).toContain('min-h-11');
     expect(html).toContain('کد ارائه');
-    expect(html).toContain('علامت ثبت مدارهای الکتریکی');
+    expect(html).toContain('علامت ثبت مدارهای الکتریکی گروه 02');
     expect(html).not.toContain('انتقال مدارهای الکتریکی به بالا');
     expect(html).not.toContain('انتقال مدارهای الکتریکی به پایین');
     expect(html).toContain('چیدمان');
@@ -110,7 +110,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(queue.steps[0].copyCode).toBe('410100');
     expect(queue.steps[0].ready).toBe(false);
     const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
-    expect(source).toContain('s.ready&&!activeDoneIds.includes(s.courseId)');
+    expect(source).toContain('s.ready&&!completedCourses.has(s.courseId)');
     expect(source).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
   });
 
@@ -134,11 +134,13 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:');
     expect(component).toContain('setCopyNotice({contextKey:academicContextKey,message})');
     expect(component).toContain('},[academicContextKey]);');
-    expect(component).toContain('const activeDoneIds=progressReady?doneIds:[];');
-    expect(component).toContain('const done=activeDoneIds.includes(step.courseId);');
-    expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));');
+    expect(component).toContain('const activeDoneTokens=progressReady?doneTokens:[];');
+    expect(component).toContain('const completedCourses=completedRegistrationCourseIds(queue.steps,activeDoneTokens);');
+    expect(component).toContain('const done=activeDoneTokens.includes(registrationProgressToken(step));');
+    expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!completedCourses.has(id));');
     expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
+    expect(component).toContain('parseStoredRegistrationTokens(window.sessionStorage.getItem(progressKey))');
     expect(component).toContain('!Array.isArray(chart.data.prerequisites)');
     // Both student workspaces use the same clipboard fallback and cleanup.
     expect(component).toContain("import { copyTextWithFallback } from '../utils/clipboard'");
