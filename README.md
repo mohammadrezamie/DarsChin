@@ -29,6 +29,8 @@ Original project code is available under the [MIT License](LICENSE). Anyone may 
 
 **[Complete clone, configure, update, offline root credential rotation and shared-Nginx self-hosting instructions](docs/SELF_HOSTING_OPEN_SOURCE_FA.md).**
 
+**[راهنمای فارسی ENV و فیلدهای خالی امنیتی](docs/ENV_CONFIGURATION_FA.md):** The three committed example ENV files contain no operator credentials or contact values. Copy a template to a **private** untracked file on each server and fill it with that installation's own values. Never overwrite an existing server's working `.env` with a blank example during `git pull`.
+
 ## VPS quick start
 
 An initial **single-process** Node.js + HTTPS Caddy Docker Compose stack lives in `Dockerfile`, `compose.yaml` and `deploy/`. This full stack is suitable for a **dedicated VPS only**. For a VPS **shared with Takin/Nginx**, do **not** start the bundled Caddy proxy: use the existing Nginx and run only the `darschin` container via the localhost-only compose overlay, as shown in [the shared server guide](docs/VPS_SHARED_DOMAIN_FA.md). Both configurations keep independent persistence and private secrets and avoid known-password demo users in production.

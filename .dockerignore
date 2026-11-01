@@ -15,3 +15,15 @@ coverage
 .DS_Store
 tmp
 cache
+
+# Never send operator backups or keys to a Docker build context.
+*.backup
+*.bak
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.pem
+*.p12
+*.pfx
+*.key

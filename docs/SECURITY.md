@@ -54,3 +54,7 @@ The source is published for independent self-hosting; no code contribution or cl
 ## Offline repair of an exposed root account
 
 If the root credentials of an existing installation may be exposed, update the private runtime ENV **and** the stored database password/recovery verifiers using the [offline repair steps](SELF_HOSTING_OPEN_SOURCE_FA.md#emergency-root-credential-rotation-without-a-second-codebase). The tool requires an existing persisted database, unique reserved root identity, stopped Node process and explicit operator confirmation; it backs up privately and increments sessionVersion. This is not proof that any live VPS has been rotated. Account/provider credentials beyond the root must be handled separately.
+
+## Repository ENV template scrub and archived extension check — 2026-11-01
+
+The three tracked *.env.example templates are placeholders only: no passwords, root mobiles, recovery materials, SMS/Turnstile credentials, real hostnames, deployment SHA or contact email. The operator's already populated runtime `.env` remains untracked and unchanged. CI now rejects accidentally filled private fields in examples and examines tracked ZIP extension contents using bounded archive scanning. This is a HEAD check, **not** assurance that historic Git objects or PR snapshots are clean. See [Persian field reference](ENV_CONFIGURATION_FA.md). No VPS config or credential has been modified.
