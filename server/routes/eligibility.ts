@@ -98,8 +98,6 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       curriculumCourses: db.curriculumCourses,
       allCourses: db.courses,
       academicRules: db.academicRules,
-      allowFinalSemesterPrerequisiteOverride: profile.isFinalSemesterOverride === true &&
-        db.academicSettings.finalSemesterRuleEnabled,
       eligibilityResults: report.results,
       passedCourseIds: passedCourses
         .filter((row) => row.status !== 'FAILED' && row.status !== 'ABSENT' &&
