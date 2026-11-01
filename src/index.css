@@ -1,0 +1,561 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    font-synthesis: none;
+    color-scheme: light;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  :root.dark { color-scheme: dark; }
+  html { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  body {
+    min-width: 320px;
+    margin: 0;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    line-height: 1.75;
+    background: radial-gradient(ellipse 900px 500px at 95% 0%, rgb(37 99 235 / 7%), transparent 70%), #f3f6fb;
+    color: #152339;
+  }
+  .dark body { background: radial-gradient(ellipse 800px 450px at 95% 0%, rgb(59 130 246 / 11%), transparent 70%), #09111e; color: #e5edf7; }
+  input, textarea, select, button { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  * { box-sizing: border-box; }
+  ::selection { background: #1d4ed8; color: white; }
+}
+@layer utilities {
+  .bg-glass-primary {
+    @apply border border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90;
+  }
+  .bg-glass-elevated {
+    @apply border border-slate-200/80 bg-white shadow-md shadow-slate-950/5 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-modal {
+    @apply border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-input {
+    @apply border border-slate-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-table {
+    @apply border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900;
+  }
+  .bg-liquid-glass {
+    @apply border border-slate-200/90 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900;
+  }
+}
+.darschin-admin-panel {
+  border: 1px solid #e1e8f1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 3px 20px rgb(15 23 42 / 3%);
+}
+.dark .darschin-admin-panel {
+  border-color: #27354b;
+  background: #101d30;
+  box-shadow: 0 5px 24px rgb(0 0 0 / 15%);
+}
+.darschin-admin { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* iOS Safari otherwise zooms the viewport when focusing 12–14px form fields. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+@media (max-width: 1023px) {
+  #admin-mobile-navigation {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+
+/*
+ * Persian-first visual system: stable in Iran and offline because Vazirmatn is
+ * bundled locally. All layout primitives inherit native RTL semantics.
+ * Codes, URLs and time may opt into LTR without moving Persian labels.
+ */
+@layer base {
+  html {
+    direction: rtl;
+    text-align: right;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { overflow-x: clip; }
+  #root { min-width: 0; min-height: 100vh; isolation: isolate; }
+  h1, h2, h3, h4, h5, h6, p, label, legend { text-wrap: pretty; }
+  p, li, td, th, dd, dt, label { overflow-wrap: anywhere; }
+  input, textarea, select, button { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  input, textarea, select { text-align: start; direction: rtl; }
+  input[dir="ltr"], textarea[dir="ltr"], select[dir="ltr"],
+  input[type="tel"], input[type="email"], input[inputmode="numeric"],
+  input[inputmode="decimal"] { direction: ltr; text-align: left; unicode-bidi: isolate; }
+  input::placeholder, textarea::placeholder { opacity: 1; color: #94a3b8; }
+  .dark input::placeholder, .dark textarea::placeholder { color: #8494ad; }
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+  }
+  :where(button, [role="button"], a) { -webkit-tap-highlight-color: transparent; }
+  :where(button, input, textarea, select):disabled { opacity: .65; }
+  select { max-width: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  table { direction: rtl; text-align: right; }
+  th, td { text-align: start; }
+}
+
+/* Tailwind colors stay available. These tokens govern component proportions. */
+:root {
+  --darschin-surface: #ffffff;
+  --darschin-subtle: #f5f8fd;
+  --darschin-stroke: #dce5f2;
+  --darschin-text: #152339;
+  --darschin-muted: #56677e;
+  --darschin-focus: #2563eb;
+  --darschin-radius: 1.125rem;
+  --darschin-shadow: 0 8px 28px -17px rgb(20 44 77 / 23%);
+}
+:root.dark {
+  --darschin-surface: #111e30;
+  --darschin-subtle: #16263a;
+  --darschin-stroke: #30415a;
+  --darschin-text: #e8eff9;
+  --darschin-muted: #b0bed1;
+  --darschin-focus: #93c5fd;
+  --darschin-shadow: 0 12px 36px -18px rgb(0 0 0 / 45%);
+}
+.darschin-surface {
+  background: var(--darschin-surface);
+  border: 1px solid var(--darschin-stroke);
+  border-radius: var(--darschin-radius);
+  box-shadow: var(--darschin-shadow);
+  min-width: 0;
+}
+.darschin-field {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  padding: .625rem .85rem;
+  border: 1px solid var(--darschin-stroke);
+  border-radius: .75rem;
+  background: var(--darschin-surface);
+  color: var(--darschin-text);
+  text-align: start;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.darschin-field:focus-visible {
+  border-color: var(--darschin-focus);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+.darschin-field[dir="ltr"] { text-align: left; }
+.darschin-touch { min-block-size: 2.75rem; }
+.darschin-scroll-x { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+.darschin-numbers { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.darschin-copy { max-inline-size: 72ch; line-height: 1.95; }
+.darschin-page { min-inline-size: 0; text-align: right; }
+.darschin-page > * { min-inline-size: 0; }
+.darschin-page :where(section, article, form) { min-inline-size: 0; }
+/* Headings and paragraphs inherit RTL alignment. Never override explicit
+   text-center / text-left utilities on marketing, dialogs or empty states. */
+.darschin-page :where(input, textarea, select) { max-inline-size: 100%; }
+.darschin-page :where(.rounded-3xl, .rounded-2xl) { background-clip: padding-box; }
+/* Text alignment follows the RTL document. Do not override deliberate centered
+   button, empty-state and data visualizations: those are alignment decisions. */
+.darschin-page :where(h1, h2, h3, h4, h5, h6, p, label, legend) { unicode-bidi: plaintext; }
+.darschin-dialog {
+  max-block-size: min(92dvh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.darschin-drawer {
+  animation: darschin-drawer-enter .22s cubic-bezier(.2,.72,.2,1) both;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+@keyframes darschin-drawer-enter {
+  from { opacity: .75; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 639px) {
+  html { scroll-padding-top: 4.75rem; }
+  .darschin-page { font-size: .9375rem; }
+  .darschin-page :where(h1) { line-height: 1.4; }
+  .darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+  .darschin-page :where(.p-8) { padding: 1.125rem; }
+  .darschin-page :where(.p-6) { padding: 1rem; }
+  .darschin-page :where(.px-8) { padding-inline: 1rem; }
+  .darschin-page :where(.text-3xl) { font-size: clamp(1.35rem, 6vw, 1.75rem); }
+  .darschin-drawer { width: min(90vw, 360px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .darschin-drawer { animation: none; }
+}
+
+/* Admin data CRUD: proper mobile cards rather than a squashed desktop table. */
+@media (max-width: 767px) {
+  .darschin-crud { overflow: visible; }
+  .darschin-crud .darschin-scroll-x { overflow: visible; }
+  .darschin-crud-table { display: block; min-width: 0; width: 100%; }
+  .darschin-crud-table thead { display: none; }
+  .darschin-crud-table tbody { display: grid; gap: .75rem; padding: .75rem; }
+  .darschin-crud-table tbody tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--darschin-stroke);
+    border-radius: .875rem;
+    background: var(--darschin-surface);
+    box-shadow: 0 3px 14px -10px rgb(15 23 42 / 25%);
+  }
+  .darschin-crud-table td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(5.75rem, .75fr) minmax(0, 1.25fr);
+    align-items: start;
+    gap: .5rem;
+    padding: .75rem;
+    border-bottom: 1px solid var(--darschin-stroke);
+    text-align: right;
+    min-width: 0;
+  }
+  .darschin-crud-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 800;
+    font-size: .75rem;
+    color: var(--darschin-muted);
+    padding-top: .125rem;
+    overflow-wrap: anywhere;
+  }
+  .darschin-crud-table td[data-label] > * { min-width: 0; max-width: 100%; }
+  .darschin-crud-table td[data-label]:last-child { border-bottom: 0; }
+  .darschin-crud-table td[colspan] { display: block; padding: 1.5rem 1rem; text-align: right; }
+  .darschin-crud-table td[colspan] > div { align-items: flex-start; }
+  .darschin-crud-table td[data-label] input:not([type="checkbox"]),
+  .darschin-crud-table td[data-label] select { min-width: 0; width: 100%; }
+}
+@media (min-width: 768px) {
+  .darschin-crud-table th, .darschin-crud-table td {
+    white-space: normal;
+    vertical-align: middle;
+  }
+}
+
+/* Administrator permissions remain operable on 320px screens. */
+@media (max-width: 767px) {
+  .darschin-people-table { display: block; width: 100%; min-width: 0; }
+  .darschin-people-table thead { display: none; }
+  .darschin-people-table tbody { display: grid; gap: .75rem; padding-block: .75rem; }
+  .darschin-people-table tbody tr {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+    border: 1px solid var(--darschin-stroke);
+    border-radius: .875rem;
+    background: var(--darschin-surface);
+    overflow: hidden;
+  }
+  .darschin-people-table td[data-label] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-bottom: 1px solid var(--darschin-stroke);
+    padding: .75rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .darschin-people-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: .4rem;
+    font-size: .75rem;
+    font-weight: 800;
+    color: var(--darschin-muted);
+  }
+  .darschin-people-table td[data-label]:last-child { border-bottom: 0; }
+  .darschin-people-table select { width: 100%; }
+}
+
+/* Deliberately calmer, compact academic typography instead of oversized rounded
+ * 900-weight headings. Preserves the offline-hosted Persian typeface. */
+:root {
+  --darschin-reading-size: .9375rem;
+  --darschin-reading-line-height: 1.75;
+}
+.darschin-page { font-size: var(--darschin-reading-size); line-height: var(--darschin-reading-line-height); }
+.darschin-page :where(.font-black) { font-weight: 750; }
+.darschin-page :where(.text-xs) { line-height: 1.85; }
+.darschin-page :where(h1, h2, h3, h4) { letter-spacing: 0; }
+.darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+@media (max-width: 639px) {
+  .darschin-page :where(.text-2xl) { font-size: 1.375rem; line-height: 1.65; }
+  .darschin-page :where(.text-xl) { font-size: 1.175rem; line-height: 1.65; }
+}
+
+
+/*
+ * Modern experience primitives — incremental design-system layer.
+ * Uses CSS container queries and semantic tokens; old views keep working.
+ * Inspired by TNA's token architecture but deliberately DarsChin-specific.
+ */
+:root {
+  --darschin-brand: #1d4ed8;
+  --darschin-brand-soft: rgb(59 130 246 / 10%);
+  --darschin-accent: #6d28d9;
+  --darschin-page-glow: rgb(59 130 246 / 9%);
+  --darschin-focus-ring: 0 0 0 4px rgb(59 130 246 / 20%);
+}
+:root.dark {
+  --darschin-brand: #93c5fd;
+  --darschin-brand-soft: rgb(96 165 250 / 14%);
+  --darschin-accent: #c4b5fd;
+  --darschin-page-glow: rgb(99 102 241 / 14%);
+  --darschin-focus-ring: 0 0 0 4px rgb(147 197 253 / 28%);
+}
+.darschin-app-shell {
+  min-inline-size: 0;
+  color: var(--darschin-text);
+  background:
+    radial-gradient(ellipse min(85vw, 760px) 400px at 12% -20%, var(--darschin-page-glow), transparent 78%);
+}
+.darschin-skip-link {
+  position: fixed;
+  inset-block-start: .75rem;
+  inset-inline-start: .75rem;
+  z-index: 150;
+  padding: .75rem 1rem;
+  border-radius: .8rem;
+  background: var(--darschin-surface);
+  color: var(--darschin-text);
+  border: 2px solid var(--darschin-focus);
+  box-shadow: var(--darschin-shadow);
+  transform: translateY(-180%);
+}
+.darschin-skip-link:focus-visible { transform: translateY(0); }
+#darschin-page-content:focus { outline: none; }
+
+.darschin-loading-pulse { animation: darschin-soft-pulse 1.4s ease-in-out infinite alternate; }
+@keyframes darschin-soft-pulse {
+  from { opacity: .52; }
+  to { opacity: .95; }
+}
+
+/* Entry card responds to *its own* column width, not only to viewport width. */
+.darschin-demo-entry { container-type: inline-size; }
+.darschin-demo-entry__body { min-inline-size: 0; }
+.darschin-demo-entry__actions {
+  min-inline-size: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem;
+}
+.darschin-demo-entry__actions > a {
+  min-block-size: 3rem;
+  min-inline-size: 0;
+  text-wrap: balance;
+}
+@container (max-width: 39rem) {
+  .darschin-demo-entry__actions > a {
+    flex: 1 1 calc(50% - .625rem);
+  }
+}
+@container (max-width: 23rem) {
+  .darschin-demo-entry__actions > a {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .darschin-loading-pulse { animation: none; opacity: .8; }
+  .darschin-skip-link { transition: none; }
+}
+@media (forced-colors: active) {
+  .darschin-skip-link,
+  .darschin-demo-entry { border: 1px solid CanvasText; }
+}
+
+/* ============================================================================
+ * DARSCHIN VISUAL LANGUAGE — 2026 / AURORA
+ * Brand accents stay purposeful: indigo for actions, cyan for navigation,
+ * emerald for success, amber for caution. Neutral surfaces remain readable.
+ * The same tokens are reused in marketing, student and admin workspaces.
+ * ========================================================================== */
+:root {
+  --darschin-brand: #314bca;
+  --darschin-brand-hover: #243aa6;
+  --darschin-accent: #6b46ca;
+  --darschin-cyan: #087d97;
+  --darschin-on-brand: #ffffff;
+  --darschin-surface: #ffffff;
+  --darschin-surface-raised: #ffffff;
+  --darschin-subtle: #f2f5fc;
+  --darschin-stroke: #dce3f2;
+  --darschin-text: #192440;
+  --darschin-muted: #52617b;
+  --darschin-focus: #314bca;
+  --darschin-brand-soft: rgb(49 75 202 / 9%);
+  --darschin-page-glow: rgb(90 109 226 / 13%);
+  --darschin-focus-ring: 0 0 0 4px rgb(49 75 202 / 21%);
+  --darschin-shadow: 0 18px 44px -28px rgb(24 42 100 / 35%);
+  --darschin-card-shadow: 0 18px 55px -35px rgb(24 42 100 / 36%);
+  --darschin-page-bg: #f5f7fc;
+  --darschin-hero-veil: rgb(244 247 255 / 94%);
+}
+:root.dark {
+  --darschin-brand: #a5b4fc;
+  --darschin-brand-hover: #c7d2fe;
+  --darschin-accent: #d4bfff;
+  --darschin-cyan: #67d7e9;
+  --darschin-on-brand: #101c42;
+  --darschin-surface: #101a2d;
+  --darschin-surface-raised: #17233b;
+  --darschin-subtle: #182640;
+  --darschin-stroke: #31415e;
+  --darschin-text: #f1f5ff;
+  --darschin-muted: #c0cbe0;
+  --darschin-focus: #a5b4fc;
+  --darschin-brand-soft: rgb(165 180 252 / 14%);
+  --darschin-page-glow: rgb(95 105 225 / 18%);
+  --darschin-focus-ring: 0 0 0 4px rgb(165 180 252 / 32%);
+  --darschin-shadow: 0 22px 52px -28px rgb(0 0 0 / 60%);
+  --darschin-card-shadow: 0 24px 65px -30px rgb(0 0 0 / 67%);
+  --darschin-page-bg: #090f1e;
+  --darschin-hero-veil: rgb(12 23 45 / 92%);
+}
+body {
+  background:
+    radial-gradient(ellipse 55rem 32rem at 92% -8%, var(--darschin-page-glow), transparent 75%),
+    var(--darschin-page-bg);
+  color: var(--darschin-text);
+}
+.dark body {
+  background:
+    radial-gradient(ellipse 55rem 32rem at 92% -8%, var(--darschin-page-glow), transparent 75%),
+    var(--darschin-page-bg);
+  color: var(--darschin-text);
+}
+.darschin-product-page {
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 52rem 36rem at 95% -12%, var(--darschin-page-glow), transparent 72%),
+    var(--darschin-page-bg);
+  color: var(--darschin-text);
+}
+.darschin-product-header {
+  background: var(--darschin-hero-veil);
+  border-color: var(--darschin-stroke);
+  box-shadow: 0 10px 34px -25px rgb(30 47 107 / 27%);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+}
+.darschin-hero-section {
+  background:
+    radial-gradient(ellipse 42rem 33rem at 98% 24%, rgb(101 127 239 / 12%), transparent 72%),
+    radial-gradient(ellipse 36rem 30rem at 0% 73%, rgb(120 86 219 / 10%), transparent 70%);
+}
+.dark .darschin-hero-section {
+  background:
+    radial-gradient(ellipse 42rem 33rem at 98% 24%, rgb(76 96 209 / 19%), transparent 72%),
+    radial-gradient(ellipse 36rem 30rem at 0% 73%, rgb(104 67 189 / 14%), transparent 70%);
+}
+.darschin-gradient-ink {
+  color: var(--darschin-brand);
+  background-image: linear-gradient(120deg, var(--darschin-brand), var(--darschin-accent) 76%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.darschin-hero-preview,
+.darschin-sheen-card {
+  position: relative;
+  border: 1px solid var(--darschin-stroke);
+  background: var(--darschin-surface-raised);
+  box-shadow: var(--darschin-card-shadow);
+}
+.darschin-hero-preview::before,
+.darschin-sheen-card::before {
+  position: absolute;
+  pointer-events: none;
+  content: "";
+  inset-inline: 8%;
+  inset-block-start: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(125 154 255 / 55%), transparent);
+}
+.darschin-primary-cta {
+  background: linear-gradient(115deg, #314bca 4%, #4938bf 95%);
+  color: #fff;
+  box-shadow: 0 16px 38px -21px rgb(49 75 202 / 60%);
+}
+.darschin-primary-cta:hover { background: linear-gradient(115deg, #263fad, #3f2ea4); }
+.darschin-primary-cta:focus-visible { box-shadow: var(--darschin-focus-ring); }
+.darschin-quiet-cta {
+  border: 1px solid var(--darschin-stroke);
+  color: var(--darschin-text);
+  background: var(--darschin-surface-raised);
+}
+.darschin-quiet-cta:hover { background: var(--darschin-subtle); }
+.darschin-quiet-cta:focus-visible { box-shadow: var(--darschin-focus-ring); }
+.darschin-admin-panel {
+  border-color: var(--darschin-stroke);
+  background: var(--darschin-surface-raised);
+  box-shadow: var(--darschin-shadow);
+}
+.dark .darschin-admin-panel {
+  border-color: var(--darschin-stroke);
+  background: var(--darschin-surface-raised);
+  box-shadow: var(--darschin-shadow);
+}
+.bg-glass-primary,
+.bg-glass-elevated,
+.bg-glass-modal,
+.bg-glass-table,
+.bg-liquid-glass {
+  border-color: var(--darschin-stroke);
+  background: var(--darschin-surface-raised);
+  color: var(--darschin-text);
+}
+.bg-glass-input {
+  border-color: var(--darschin-stroke);
+  background: var(--darschin-surface);
+  color: var(--darschin-text);
+}
+.darschin-mobile-dock {
+  background: var(--darschin-surface-raised);
+  border-color: var(--darschin-stroke);
+  box-shadow: 0 -12px 34px -26px rgb(25 40 93 / 52%);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+@supports (background: color-mix(in srgb, white 90%, transparent)) {
+  .darschin-product-header { background: color-mix(in srgb, var(--darschin-surface-raised) 90%, transparent); }
+  .darschin-mobile-dock { background: color-mix(in srgb, var(--darschin-surface-raised) 94%, transparent); }
+}
+.darschin-product-page :where(a, button, summary, input, select, textarea):focus-visible,
+.darschin-mobile-dock :where(button):focus-visible {
+  outline: 3px solid var(--darschin-focus);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .darschin-primary-cta,
+  .darschin-quiet-cta { transition: none; transform: none !important; }
+}
+@media (forced-colors: active) {
+  .darschin-primary-cta,
+  .darschin-quiet-cta,
+  .darschin-hero-preview,
+  .darschin-sheen-card { border: 1px solid ButtonText; }
+  .darschin-gradient-ink { background: none; -webkit-text-fill-color: currentColor; }
+}

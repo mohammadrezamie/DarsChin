@@ -1,0 +1,22 @@
+{
+  "staging": {
+    "name": "staging",
+    "port": 3002,
+    "host": "127.0.0.1",
+    "releaseRoot": "/opt/darschyn-staging/releases",
+    "currentLink": "/opt/darschyn-staging/current",
+    "dataDir": "/var/lib/darschyn-staging",
+    "envFile": "/etc/darschyn/staging.env",
+    "service": "darschyn-staging.service"
+  },
+  "production": {
+    "name": "production",
+    "port": 3001,
+    "host": "127.0.0.1",
+    "releaseRoot": "/opt/darschyn/releases",
+    "currentLink": "/opt/darschyn/current",
+    "dataDir": "/var/lib/darschyn",
+    "envFile": "/etc/darschyn/darschyn.env",
+    "service": "darschyn.service"
+  }
+}
