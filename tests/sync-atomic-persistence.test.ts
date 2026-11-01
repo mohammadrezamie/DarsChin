@@ -3,7 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import { db, type DatabaseSchema } from '../server/db/database';
 import { generateToken } from '../server/middleware/auth';
-import { syncRouter } from '../server/routes/sync';
+import { MAX_PENDING_SYNC_JOBS_PER_USER, MAX_SYNC_JOB_BYTES, MAX_SYNC_JOB_CHUNKS, syncRouter } from '../server/routes/sync';
 import type { User, StudentAcademicProfile, Course } from '../src/types';
 
 const app = express();
@@ -166,4 +166,36 @@ describe('durable, private and idempotent extension sync staging', () => {
     expect(db.syncJobs.find(j => j.id === jobId)?.status).toBe('FAILED');
     expect(db.courseOfferings.map(o => o.id)).toEqual(beforePublished);
   });
+  it('bounds chunk indices and total unreviewed private payloads', async () => {
+    const jobId = (await start()).body.data.id as string;
+    const tooManyChunks = await chunk(jobId, MAX_SYNC_JOB_CHUNKS, false);
+    expect(tooManyChunks.status).toBe(413);
+    expect(db.syncSnapshots).toHaveLength(0);
+
+    const each = Math.ceil(MAX_SYNC_JOB_BYTES / 9);
+    for (let i=0; i<9; i++) db.syncSnapshots.push({
+      id:'synthetic-existing-big-'+i,jobId,chunkIndex:i,
+      data:[{payload:'a'.repeat(each)}],createdAt:new Date().toISOString(),
+    });
+    const original = JSON.stringify(db.syncJobs);
+    const overflow = await chunk(jobId, 9, false);
+    expect(overflow.status).toBe(413);
+    expect(JSON.stringify(db.syncJobs)).toBe(original);
+    expect(db.syncSnapshots.filter(s => s.jobId === jobId)).toHaveLength(9);
+  });
+
+  it('does not allow an account to create unbounded abandoned sync jobs', async () => {
+    for (let i=0;i<MAX_PENDING_SYNC_JOBS_PER_USER;i++) {
+      db.syncJobs.push({
+        id:'synthetic-abandoned-job-'+i,userId,termId,campusId,
+        status:'RUNNING',startedAt:new Date().toISOString(),
+        totalSnapshots:0,processedSnapshots:0,
+      });
+    }
+    const before=db.syncJobs.length;
+    const response=await start();
+    expect(response.status).toBe(429);
+    expect(db.syncJobs).toHaveLength(before);
+  });
+
 });
