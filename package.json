@@ -15,7 +15,8 @@
     "verify": "node scripts/verify.cjs",
     "smoke:api": "node scripts/smoke-api.cjs",
     "qa:full": "bun run verify && bun run smoke:api",
-    "deploy:gate": "node scripts/deploy-target-gate.cjs"
+    "deploy:gate": "node scripts/deploy-target-gate.cjs",
+    "repo:public-check": "node scripts/check-public-source.cjs"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
