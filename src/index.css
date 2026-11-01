@@ -1,0 +1,305 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    font-synthesis: none;
+    color-scheme: light;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  :root.dark { color-scheme: dark; }
+  html { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  body {
+    min-width: 320px;
+    margin: 0;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    line-height: 1.75;
+    background: radial-gradient(ellipse 900px 500px at 95% 0%, rgb(37 99 235 / 7%), transparent 70%), #f3f6fb;
+    color: #152339;
+  }
+  .dark body { background: radial-gradient(ellipse 800px 450px at 95% 0%, rgb(59 130 246 / 11%), transparent 70%), #09111e; color: #e5edf7; }
+  input, textarea, select, button { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  * { box-sizing: border-box; }
+  ::selection { background: #1d4ed8; color: white; }
+}
+@layer utilities {
+  .bg-glass-primary {
+    @apply border border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90;
+  }
+  .bg-glass-elevated {
+    @apply border border-slate-200/80 bg-white shadow-md shadow-slate-950/5 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-modal {
+    @apply border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-input {
+    @apply border border-slate-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900;
+  }
+  .bg-glass-table {
+    @apply border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900;
+  }
+  .bg-liquid-glass {
+    @apply border border-slate-200/90 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900;
+  }
+}
+.darschin-admin-panel {
+  border: 1px solid #e1e8f1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 3px 20px rgb(15 23 42 / 3%);
+}
+.dark .darschin-admin-panel {
+  border-color: #27354b;
+  background: #101d30;
+  box-shadow: 0 5px 24px rgb(0 0 0 / 15%);
+}
+.darschin-admin { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* iOS Safari otherwise zooms the viewport when focusing 12–14px form fields. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+@media (max-width: 1023px) {
+  #admin-mobile-navigation {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+
+/*
+ * Persian-first visual system: stable in Iran and offline because Vazirmatn is
+ * bundled locally. All layout primitives inherit native RTL semantics.
+ * Codes, URLs and time may opt into LTR without moving Persian labels.
+ */
+@layer base {
+  html {
+    direction: rtl;
+    text-align: right;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { overflow-x: clip; }
+  #root { min-width: 0; min-height: 100vh; isolation: isolate; }
+  h1, h2, h3, h4, h5, h6, p, label, legend { text-wrap: pretty; }
+  p, li, td, th, dd, dt, label { overflow-wrap: anywhere; }
+  input, textarea, select, button { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  input, textarea, select { text-align: start; direction: rtl; }
+  input[dir="ltr"], textarea[dir="ltr"], select[dir="ltr"],
+  input[type="tel"], input[type="email"], input[inputmode="numeric"],
+  input[inputmode="decimal"] { direction: ltr; text-align: left; unicode-bidi: isolate; }
+  input::placeholder, textarea::placeholder { opacity: 1; color: #94a3b8; }
+  .dark input::placeholder, .dark textarea::placeholder { color: #8494ad; }
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+  }
+  :where(button, [role="button"], a) { -webkit-tap-highlight-color: transparent; }
+  :where(button, input, textarea, select):disabled { opacity: .65; }
+  select { max-width: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  table { direction: rtl; text-align: right; }
+  th, td { text-align: start; }
+}
+
+/* Tailwind colors stay available. These tokens govern component proportions. */
+:root {
+  --darschin-surface: #ffffff;
+  --darschin-subtle: #f5f8fd;
+  --darschin-stroke: #dce5f2;
+  --darschin-text: #152339;
+  --darschin-muted: #56677e;
+  --darschin-focus: #2563eb;
+  --darschin-radius: 1.125rem;
+  --darschin-shadow: 0 8px 28px -17px rgb(20 44 77 / 23%);
+}
+:root.dark {
+  --darschin-surface: #111e30;
+  --darschin-subtle: #16263a;
+  --darschin-stroke: #30415a;
+  --darschin-text: #e8eff9;
+  --darschin-muted: #b0bed1;
+  --darschin-focus: #93c5fd;
+  --darschin-shadow: 0 12px 36px -18px rgb(0 0 0 / 45%);
+}
+.darschin-surface {
+  background: var(--darschin-surface);
+  border: 1px solid var(--darschin-stroke);
+  border-radius: var(--darschin-radius);
+  box-shadow: var(--darschin-shadow);
+  min-width: 0;
+}
+.darschin-field {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  padding: .625rem .85rem;
+  border: 1px solid var(--darschin-stroke);
+  border-radius: .75rem;
+  background: var(--darschin-surface);
+  color: var(--darschin-text);
+  text-align: start;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.darschin-field:focus-visible {
+  border-color: var(--darschin-focus);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+.darschin-field[dir="ltr"] { text-align: left; }
+.darschin-touch { min-block-size: 2.75rem; }
+.darschin-scroll-x { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+.darschin-numbers { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.darschin-copy { max-inline-size: 72ch; line-height: 1.95; }
+.darschin-page { min-inline-size: 0; text-align: right; }
+.darschin-page > * { min-inline-size: 0; }
+.darschin-page :where(section, article, form) { min-inline-size: 0; }
+.darschin-page :where(h1, h2, h3, h4, p) { text-align: right; }
+.darschin-page :where(input, textarea, select) { max-inline-size: 100%; }
+.darschin-page :where(.rounded-3xl, .rounded-2xl) { background-clip: padding-box; }
+/* Text alignment follows the RTL document. Do not override deliberate centered
+   button, empty-state and data visualizations: those are alignment decisions. */
+.darschin-page :where(h1, h2, h3, h4, h5, h6, p, label, legend) { unicode-bidi: plaintext; }
+.darschin-dialog {
+  max-block-size: min(92dvh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.darschin-drawer {
+  animation: darschin-drawer-enter .22s cubic-bezier(.2,.72,.2,1) both;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+@keyframes darschin-drawer-enter {
+  from { opacity: .75; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 639px) {
+  html { scroll-padding-top: 4.75rem; }
+  .darschin-page { font-size: .9375rem; }
+  .darschin-page :where(h1) { line-height: 1.4; }
+  .darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+  .darschin-page :where(.p-8) { padding: 1.125rem; }
+  .darschin-page :where(.p-6) { padding: 1rem; }
+  .darschin-page :where(.px-8) { padding-inline: 1rem; }
+  .darschin-page :where(.text-3xl) { font-size: clamp(1.35rem, 6vw, 1.75rem); }
+  .darschin-drawer { width: min(90vw, 360px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .darschin-drawer { animation: none; }
+}
+
+/* Admin data CRUD: proper mobile cards rather than a squashed desktop table. */
+@media (max-width: 767px) {
+  .darschin-crud { overflow: visible; }
+  .darschin-crud .darschin-scroll-x { overflow: visible; }
+  .darschin-crud-table { display: block; min-width: 0; width: 100%; }
+  .darschin-crud-table thead { display: none; }
+  .darschin-crud-table tbody { display: grid; gap: .75rem; padding: .75rem; }
+  .darschin-crud-table tbody tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--darschin-stroke);
+    border-radius: .875rem;
+    background: var(--darschin-surface);
+    box-shadow: 0 3px 14px -10px rgb(15 23 42 / 25%);
+  }
+  .darschin-crud-table td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(5.75rem, .75fr) minmax(0, 1.25fr);
+    align-items: start;
+    gap: .5rem;
+    padding: .75rem;
+    border-bottom: 1px solid var(--darschin-stroke);
+    text-align: right;
+    min-width: 0;
+  }
+  .darschin-crud-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 800;
+    font-size: .75rem;
+    color: var(--darschin-muted);
+    padding-top: .125rem;
+    overflow-wrap: anywhere;
+  }
+  .darschin-crud-table td[data-label] > * { min-width: 0; max-width: 100%; }
+  .darschin-crud-table td[data-label]:last-child { border-bottom: 0; }
+  .darschin-crud-table td[colspan] { display: block; padding: 1.5rem 1rem; text-align: right; }
+  .darschin-crud-table td[colspan] > div { align-items: flex-start; }
+  .darschin-crud-table td[data-label] input:not([type="checkbox"]),
+  .darschin-crud-table td[data-label] select { min-width: 0; width: 100%; }
+}
+@media (min-width: 768px) {
+  .darschin-crud-table th, .darschin-crud-table td {
+    white-space: normal;
+    vertical-align: middle;
+  }
+}
+
+/* Administrator permissions remain operable on 320px screens. */
+@media (max-width: 767px) {
+  .darschin-people-table { display: block; width: 100%; min-width: 0; }
+  .darschin-people-table thead { display: none; }
+  .darschin-people-table tbody { display: grid; gap: .75rem; padding-block: .75rem; }
+  .darschin-people-table tbody tr {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+    border: 1px solid var(--darschin-stroke);
+    border-radius: .875rem;
+    background: var(--darschin-surface);
+    overflow: hidden;
+  }
+  .darschin-people-table td[data-label] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-bottom: 1px solid var(--darschin-stroke);
+    padding: .75rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .darschin-people-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: .4rem;
+    font-size: .75rem;
+    font-weight: 800;
+    color: var(--darschin-muted);
+  }
+  .darschin-people-table td[data-label]:last-child { border-bottom: 0; }
+  .darschin-people-table select { width: 100%; }
+}
+
+/* Deliberately calmer, compact academic typography instead of oversized rounded
+ * 900-weight headings. Preserves the offline-hosted Persian typeface. */
+:root {
+  --darschin-reading-size: .9375rem;
+  --darschin-reading-line-height: 1.75;
+}
+.darschin-page { font-size: var(--darschin-reading-size); line-height: var(--darschin-reading-line-height); }
+.darschin-page :where(.font-black) { font-weight: 750; }
+.darschin-page :where(.text-xs) { line-height: 1.85; }
+.darschin-page :where(h1, h2, h3, h4) { letter-spacing: 0; }
+.darschin-page :where(.rounded-3xl) { border-radius: 1.125rem; }
+@media (max-width: 639px) {
+  .darschin-page :where(.text-2xl) { font-size: 1.375rem; line-height: 1.65; }
+  .darschin-page :where(.text-xl) { font-size: 1.175rem; line-height: 1.65; }
+}
