@@ -5,7 +5,7 @@ import { Navbar } from './components/Navbar';
 import { PasswordChangeModal } from './components/PasswordChangeModal';
 import { ExtensionModal } from './components/ExtensionModal';
 
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { SiteFooter } from './components/SiteFooter';
 import { adminWorkspaceAccess } from './utils/admin-navigation';
@@ -18,6 +18,9 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword').then((mo
 const StudentGuide = lazy(() => import('./pages/StudentGuide').then((module) => ({ default: module.StudentGuide })));
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((module) => ({ default: module.StudentDashboard })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+
+// GitHub Pages is a standalone, hash-routed synthetic preview, never the real app.
+const PreviewRouter = import.meta.env.VITE_STATIC_PREVIEW === 'true' ? HashRouter : BrowserRouter;
 
 const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   const { user, isLoading } = useAuth();
@@ -41,6 +44,8 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
 /** A linkless route is not private by itself. Guard the synthetic admin demo too. */
 const AdminDemoGate: React.FC = () => {
   const { user, isLoading } = useAuth();
+  // Only the synthetic admin workspace is accessible on the static Pages preview.
+  if (import.meta.env.VITE_STATIC_PREVIEW === 'true') return <DemoWorkspace role="admin" />;
   if (isLoading) return <div role="status" className="flex min-h-[65dvh] items-center justify-center p-6">در حال بررسی دسترسی…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!adminWorkspaceAccess(user).isAdmin) return <Navigate to="/dashboard" replace />;
@@ -111,7 +116,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <PreviewRouter>
           <AppRouteShell>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -136,7 +141,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppRouteShell>
-        </BrowserRouter>
+        </PreviewRouter>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -1,0 +1,44 @@
+name: انتشار دستی پیش‌نمایش درس‌چین در Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: darschin-static-pages
+  cancel-in-progress: true
+
+jobs:
+  publish-preview:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: دریافت نسخه تأییدشده پروژه
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: نصب Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: نصب وابستگی‌ها با قفل ثابت
+        run: bun install --frozen-lockfile
+      - name: ساخت بیلد جداگانه و امن پیش‌نمایش
+        run: node scripts/build-pages-preview.mjs
+      - name: آماده‌سازی GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: بارگذاری فقط خروجی استاتیک
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - name: انتشار پیش‌نمایش
+        id: deploy
+        uses: actions/deploy-pages@v4
