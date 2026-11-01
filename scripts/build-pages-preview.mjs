@@ -7,7 +7,11 @@ execFileSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--bas
   stdio: 'inherit',
   env: { ...process.env, VITE_STATIC_PREVIEW: 'true' },
 });
-const index = readFileSync('dist/index.html', 'utf8');
+// مسیرهای ریشه در نسخهٔ اصلی دست‌نخورده می‌مانند؛ فقط خروجی Pages اصلاح می‌شود.
+const index = readFileSync('dist/index.html', 'utf8')
+  .replace('href="/manifest.webmanifest"', 'href="' + base + 'manifest.webmanifest"')
+  .replace('href="/app-icon.svg"', 'href="' + base + 'app-icon.svg"');
+writeFileSync('dist/index.html', index);
 if (!index.includes('/DarsChin/assets/') ||
     !index.includes('/DarsChin/manifest.webmanifest')) {
   throw new Error('Static preview path validation failed.');
