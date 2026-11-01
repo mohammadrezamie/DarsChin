@@ -30,7 +30,7 @@ export class FailedLoginTracker {
     if (!found) return undefined;
     // A completed lockout must never immediately re-lock a user on the
     // first new mistake; likewise old failures expire after inactivity.
-    if ((found.lockedUntil > 0 && found.lockedUntil <= now) ||
+    if (found.lockedUntil > 0 ? found.lockedUntil <= now :
         now - found.lastAttemptAt >= this.inactivityMs) {
       this.entries.delete(mobile);
       return undefined;
@@ -46,7 +46,7 @@ export class FailedLoginTracker {
     // still reached. Never allow one request to grow memory without bound.
     if (this.entries.size > this.maxEntries) {
       for (const [key, value] of this.entries) {
-        if (key !== mobile && ((value.lockedUntil > 0 && value.lockedUntil <= now) ||
+        if (key !== mobile && (value.lockedUntil > 0 ? value.lockedUntil <= now :
             now - value.lastAttemptAt >= this.inactivityMs)) {
           this.entries.delete(key);
         }
