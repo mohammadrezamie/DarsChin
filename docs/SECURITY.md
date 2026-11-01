@@ -62,3 +62,8 @@ The three tracked *.env.example templates are placeholders only: no passwords, r
 ## Delegated administrator identity integrity (2026-11-01)
 
 Root-only administrator creation and editing now validate accepted fields, normalize Iranian phone numbers before enforcing global uniqueness, reject malformed or duplicate permission strings and weak new delegated passwords, and invalidate pre-update session tokens. Importantly, a failed update must not partially change a persisted record. This protects identity binding for SMS login and permission checks without changing existing accounts. Deployed servers are not auto-migrated or modified until operators update their own running instance; historic Git objects remain a separate incident.
+
+
+## API error redaction and evaluation input guard — 2026-11-01
+
+Internal 500 responses in administration and student eligibility must never reflect raw exception messages, stack traces, filesystem paths, secrets or mutable student records. Catch handlers return stable generic errors, including failed backup serialization. Student evaluation requires bounded arrays of valid course/offering identifiers before the engine runs. Regression tests intentionally throw synthetic path-bearing exceptions and ensure the response excludes their values. Neither these patches nor source-tree cleanup revokes credentials exposed in old Git history.
