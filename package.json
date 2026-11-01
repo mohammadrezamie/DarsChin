@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit",
     "demo:reset": "tsx scripts/demo-reset.ts",
     "repo:check": "node scripts/check-repo-layout.cjs",
+    "docs:check": "node scripts/check-persian-docs.cjs",
     "verify": "node scripts/verify.cjs",
     "smoke:api": "node scripts/smoke-api.cjs",
     "qa:full": "bun run verify && bun run smoke:api",
