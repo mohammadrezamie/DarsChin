@@ -58,3 +58,7 @@ If the root credentials of an existing installation may be exposed, update the p
 ## Repository ENV template scrub and archived extension check — 2026-11-01
 
 The three tracked *.env.example templates are placeholders only: no passwords, root mobiles, recovery materials, SMS/Turnstile credentials, real hostnames, deployment SHA or contact email. The operator's already populated runtime `.env` remains untracked and unchanged. CI now rejects accidentally filled private fields in examples and examines tracked ZIP extension contents using bounded archive scanning. This is a HEAD check, **not** assurance that historic Git objects or PR snapshots are clean. See [Persian field reference](ENV_CONFIGURATION_FA.md). No VPS config or credential has been modified.
+
+## Delegated administrator identity integrity (2026-11-01)
+
+Root-only administrator creation and editing now validate accepted fields, normalize Iranian phone numbers before enforcing global uniqueness, reject malformed or duplicate permission strings and weak new delegated passwords, and invalidate pre-update session tokens. Importantly, a failed update must not partially change a persisted record. This protects identity binding for SMS login and permission checks without changing existing accounts. Deployed servers are not auto-migrated or modified until operators update their own running instance; historic Git objects remain a separate incident.
