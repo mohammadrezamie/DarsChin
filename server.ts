@@ -29,6 +29,7 @@ import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
 import { assertRuntimeSecurityConfiguration } from './server/security/runtime-config';
 import { publicExtensionAssets } from './server/security/extension-public-files';
+import { approvedExtensionStaticGate, approvedMockPortalStaticGate } from './server/middleware/approved-static';
 import { apiErrorHandler } from './server/middleware/api-error';
 
 async function startServer() {
@@ -137,11 +138,14 @@ app.use('/api/admin-management', adminManagementRouter);
     }
   });
 
-  // Serve static extension files & mock portal if accessed directly
+  // Serve only reviewed public assets: a production machine may contain
+  // unrelated keys, backups or generated files inside these directories.
   const extensionPath = path.join(process.cwd(), 'extension');
   const mockPortalPath = path.join(process.cwd(), 'mock-educational-system');
-  app.use('/extension-files', express.static(extensionPath));
-  app.use('/mock-portal-static', express.static(mockPortalPath));
+  app.use('/extension-files', approvedExtensionStaticGate(extensionPath));
+  app.use('/extension-files', express.static(extensionPath, { dotfiles: 'deny', fallthrough: false }));
+  app.use('/mock-portal-static', approvedMockPortalStaticGate(mockPortalPath));
+  app.use('/mock-portal-static', express.static(mockPortalPath, { dotfiles: 'deny', fallthrough: false }));
 
   // Global API error handler
   app.use('/api', apiErrorHandler);
