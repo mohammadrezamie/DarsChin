@@ -1,89 +1,42 @@
-# DARSCHYN Development Levels
+# مراحل رشد و بلوغ درس‌چین
 
-Levels are capability milestones, not claims that the code is already complete. Preserve existing features unless a change is explicitly documented and tested.
+این سطوح **نقشهٔ قابلیت‌ها** هستند، نه ادعای انجام‌شدن همهٔ آن‌ها. قابلیت موجود را بدون تصمیم، آزمون و ثبت تغییر حذف نکنید. جزئیات وضعیت واقعی در اسناد مرتبط و تست‌های SHA مشخص است.
 
-## Level 0 — Repository integrity and reproducible checks
-**Goal:** establish a reliable baseline.
-- One canonical frontend and extension source.
-- Reproducible dependency installation.
-- CI runs typecheck, tests, and production build.
-- Test data is isolated; no real secrets or user data in fixtures.
-**Done when:** clean checkout passes all required checks, or every failure is documented with a reproducible issue.
+## سطح صفر: سلامت مخزن و آزمون تکرارپذیر
+**هدف:** سورس مرجع واحد برای وب و افزونه، نصب وابستگی قفل‌شده، دیتابیس تست جدا، CI قابل اعتماد و نبود رمز واقعی در دادهٔ آزمایشی.
 
-## Level 1 — Academic policy engine
-**Goal:** make eligibility and unit limits policy-driven.
-- Prerequisites normally require a passed course.
-- Co-requisites can be taken in the same term where rules permit.
-- Applicable IAU failed-prerequisite exception can allow the failed course and dependent course together in a later term.
-- Normal term: 12–20 units.
-- Previous-term GPA above 17 can raise the cap to 24; cumulative GPA must not be substituted.
-- Final term: 2–24 units and configured final-term exceptions.
-- Extra-unit courses are admin-configurable, not hardcoded by course name.
-**Done when:** every rule has positive and negative regression tests.
+**پذیرش:** نسخهٔ تمیز مخزن از آزمون‌های لازم عبور کند یا هر شکست در Issue قابل بازتولید ثبت شود.
 
-## Level 2 — Authentication and authorization
-**Goal:** reliable sessions and least privilege.
-- Correct login result handling and role-aware navigation.
-- Server-side authorization for every protected route.
-- No public privilege escalation or demo-role bypass in production.
-- Recovery/OTP flows use one consistent contract.
-**Done when:** negative and positive route-level security tests pass.
+## سطح یک: موتور سیاست آموزشی
+**هدف:** پیش‌نیاز، هم‌نیاز، استثنای مصوب مردودی، سقف واحد و ترم آخر با قوانین و چارت قابل تنظیم توسط مدیر پیاده شوند؛ از نام درس برای حدس استثنا استفاده نشود. مقادیر ۱۲ تا ۲۰ واحد عادی، افزایش احتمالی سقف پس از معدل **ترم قبل** بالاتر از ۱۷ و دامنهٔ ۲ تا ۲۴ واحد ترم آخر فقط در حدود مقررات **تأییدشدهٔ مالک** استفاده شوند.
 
-## Level 3 — Student workspace
-**Goal:** a coherent student workflow.
-- Profile and academic history.
-- Eligible offerings and blocked-course explanations.
-- Ranked course list; copying a prioritized item copies only that course code.
-- Selected offerings drive the weekly timetable and collision checks.
-**Done when:** key workflows have UI/API tests and preserve course-to-offering identity after reordering.
+**پذیرش:** هر قانون، آزمون مثبت و منفی و مرجع مصوب داشته باشد. قواعد معارف هنوز در انتظار توضیح و تأیید مالک هستند.
 
-## Level 4 — Administration
-**Goal:** safe, auditable configuration.
-- Manage courses, curricula, prerequisites/co-requisites, offerings, academic policy, users, and permissions.
-- Validate input on the server.
-- Audit sensitive administrative changes.
-**Done when:** permissions are enforced by the API and CRUD flows have regression tests.
+## سطح دو: احراز هویت و مجوز
+نشست امن، ورود نقش‌محور، کنترل مجوز سمت سرور، بازیابی/OTP سازگار و ممنوعیت ارتقای دسترسی از راه فرم عمومی. پذیرش با تست منفی و مثبت مسیرها.
 
-## Level 5 — Product and landing experience
-**Goal:** communicate real product capabilities without misleading mock data.
-- Responsive landing page and clear login/registration actions.
-- Animated sections remain accessible with reduced-motion preferences.
-- Download CTA points to a built, versioned extension package.
-**Done when:** responsive and accessibility checks pass and all claims match shipped features.
+## سطح سه: محیط دانشجو
+پروندهٔ تحصیلی، سوابق، دلایل مجاز/ممنوع بودن درس، صف اولویت با کپی فقط کد درس، گروه‌های جایگزین، برنامهٔ هفتگی و تداخل‌سنج. پذیرش با آزمون API و رابط، حفظ شناسهٔ درس/گروه و ترتیب پس از جابه‌جایی.
 
-## Level 6 — Educationalyar extension
-**Goal:** collect offerings robustly from the supported portal.
-- Search Classes detection, pagination, batching, normalization, deduplication, and diagnostics.
-- Minimal host permissions.
-- No hardcoded localhost API endpoint in the release build.
-**Done when:** fixture tests pass and a separate live verification is recorded for the current portal.
+## سطح چهار: مدیریت
+ویرایش چارت، پیش‌نیازها، ارائه‌ها، پیکربندی علمی، کاربران و مجوزها از پنل با اعتبارسنجی و گزارش ممیزی؛ فقط مدیر مجاز به اطلاعات مدیریتی دسترسی داشته باشد.
 
-## Level 7 — Sync and reconciliation
-**Goal:** turn collected snapshots into trustworthy canonical offerings.
-- Validate ownership, chunk order, schema, and payload size.
-- Idempotent processing and retry-safe finalization.
-- Normalize stable offering identity.
-- Reconcile missing records without deactivating offerings when a sync is incomplete.
-- Preserve history across server restarts.
-**Done when:** repeated uploads produce no duplicates and incomplete/failed jobs cannot corrupt active offerings.
+## سطح پنج: تجربهٔ عمومی محصول
+صفحهٔ اصلی واکنش‌گرا، ورود/ثبت‌نام روشن، انیمیشن سازگار با کاهش حرکت، دکمهٔ دانلود افزونهٔ نسخه‌دار و توضیح توانایی‌های **واقعی** بدون آمار ساختگی. پذیرش با آزمون دسترس‌پذیری و نمایشگرهای مختلف.
 
-## Level 8 — Automated data ingestion
-**Goal:** support multiple authorized ingestion sources.
-- Source adapters feed a shared normalized ingestion pipeline.
-- Record provenance, timestamps, and reconciliation results.
-- Avoid requiring repeated manual uploads when a reliable authorized source is available.
-**Done when:** each source adapter has contract tests and observable failure handling.
+## سطح شش: افزونهٔ آموزشیار
+خواندن دروس ارائه‌شده با تشخیص جست‌وجو، صفحه‌بندی، دریافت دسته‌ای، عادی‌سازی، تشخیص تکرار و حداقل مجوز دامنه. نبود نشانی `localhost` ثابت در نسخهٔ انتشار؛ آزمون دادهٔ نمونه و جداگانه آزمون منبع زندهٔ مجاز.
 
-## Level 9 — Production hardening
-**Goal:** safe operation.
-- Strict environment validation; production never uses development secrets.
-- Rate limiting, structured redacted logs, backups, restore drills, and migration strategy.
-- Health/readiness checks and documented deployment/rollback.
-**Done when:** security and recovery procedures are exercised, not merely documented.
+## سطح هفت: همگام‌سازی و تطبیق
+بررسی مالکیت، ترتیب بخش‌ها، حجم، ساختار، هویت پایدار گروه، ارسال مجدد بدون تکرار و حفظ دادهٔ فعلی هنگام شکست. **دادهٔ افزونه نخست به صف بررسی مدیر می‌رود، نه انتشار خودکار.** سابقه باید پس از راه‌اندازی مجدد حفظ شود.
 
-## Level 10 — External APIs and scale
-**Goal:** add official APIs and larger deployments without changing core academic rules.
-- Keep source-specific parsing out of the domain engine.
-- Add database-backed persistence when operational requirements justify it.
-- Monitor performance, sync freshness, and source failures.
-**Done when:** external integrations have versioned contracts, observability, and migration-safe rollout plans.
+## سطح هشت: ورود خودکار دادهٔ مجاز
+چند درگاه ورودی مجاز با مسیر مشترک بررسی و عادی‌سازی، ثبت منبع و زمان، گزارش خطا و امکان جایگزینی بارگذاری دستی فقط در صورت دسترسی قانونی و قابل اعتماد.
+
+## سطح نه: امنیت و آمادگی استقرار
+اعتبارسنجی محیط، محدودسازی درخواست، لاگ امن، بکاپ و آزمون بازگردانی، راهبرد مهاجرت، HTTPS، سلامت و برنامهٔ بازگشت. پذیرش فقط پس از تمرین واقعی روی محیط ایزوله، نه صرف مستندات.
+
+## سطح ده: API رسمی و مقیاس‌پذیری
+افزودن درگاه رسمی مستقل از موتور علمی، ذخیره‌سازی تراکنشی چندکاربره و پایش کارایی/تازگی داده‌ها. پذیرش با قرارداد نسخه‌دار، مشاهده‌پذیری و مهاجرت آزمایش‌شده.
+
+**اصل همیشگی:** ایرانی‌بودن تجربه و فارسی‌بودن مستندات، امنیت داده و تأیید مقررات آموزشی باید در همهٔ سطوح رعایت شود.
