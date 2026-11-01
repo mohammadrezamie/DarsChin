@@ -482,6 +482,7 @@ export const StudentDashboard: React.FC = () => {
 
   // Calculate schedule conflicts
   const selectedItems = evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
+  const prerequisiteConflicts = selectedItems.filter(item => item.missingPrerequisites && item.missingPrerequisites.length > 0);
   const selectedLookup = new Map(selectedItems.map(item => [item.offeringId, item]));
   const timeConflicts = detectPlanConflicts(selectedItems.map(item => ({
     id: item.offeringId, courseId: item.courseId,
