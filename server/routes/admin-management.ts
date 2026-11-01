@@ -5,8 +5,38 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { User, UserRole } from '../../src/types';
+import { normalizeIranianMobile } from '../auth/normalize-mobile';
 
 export const adminManagementRouter = Router();
+
+const mobileSchema = z.string().trim().min(1).max(32)
+  .transform(normalizeIranianMobile)
+  .pipe(z.string().regex(/^09\d{9}$/));
+const managerNameSchema = z.string().trim().min(2).max(120)
+  .refine(name => !/[\u0000-\u001F\u007F]/.test(name));
+const managerPasswordSchema = z.string().min(10).max(128);
+const managerPermissionsSchema = z.array(
+  z.string().regex(/^[a-z][a-z0-9.-]{0,79}$/)
+).max(100).refine(items => new Set(items).size === items.length);
+const managerRolesSchema = z.array(z.enum(['student', 'admin']))
+  .min(1).max(2).refine(items => new Set(items).size === items.length);
+const newManagerSchema = z.object({
+  name: managerNameSchema,
+  mobile: mobileSchema,
+  password: managerPasswordSchema,
+  permissions: managerPermissionsSchema.optional(),
+  roles: managerRolesSchema.optional(),
+}).strict();
+const updateManagerSchema = z.object({
+  name: managerNameSchema.optional(),
+  mobile: mobileSchema.optional(),
+  password: z.union([z.literal(''), managerPasswordSchema]).optional(),
+  permissions: managerPermissionsSchema.optional(),
+  roles: managerRolesSchema.optional(),
+}).strict().refine(data => Object.keys(data).length > 0);
+const mobileInUse = (mobile: string, exceptUserId?: string) =>
+  db.users.some(user => user.id !== exceptUserId && normalizeIranianMobile(user.mobile) === mobile);
+
 
 // Only the root may inspect administrator identities and grants.
 adminManagementRouter.get('/', authenticate, requireSuperAdmin, (req: any, res) => {
@@ -69,21 +99,18 @@ adminManagementRouter.put('/:id/demand-scopes', authenticate, requireSuperAdmin,
 
 // Create new admin
 adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res) => {
-  const { name, mobile, password, permissions, roles } = req.body;
-  if (roles !== undefined && (!Array.isArray(roles) || roles.length === 0 ||
-    roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
-    return res.status(403).json({ success: false, error: 'ایجاد مدیر ارشد یا تخصیص نقش نامعتبر مجاز نیست.' });
+  const parsed = newManagerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, error: 'نام، شماره، رمز یا مجوزهای مدیر معتبر نیست.' });
   }
-  if (!name || !mobile || !password) {
-    return res.status(400).json({ success: false, error: 'نام، موبایل و رمز عبور الزامی است.' });
+  const { name, mobile, password, permissions, roles } = parsed.data;
+  if (roles && !roles.includes('admin')) {
+    return res.status(400).json({ success: false, error: 'این مسیر فقط برای ایجاد مدیر است.' });
   }
-
-  const existing = db.users.find(u => u.mobile === mobile);
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'کاربری با این شماره موبایل وجود دارد.' });
+  if (mobileInUse(mobile)) {
+    return res.status(409).json({ success: false, error: 'کاربری با این شماره موبایل وجود دارد.' });
   }
 
-  
   // Admin creation always preserves the user's student workspace.
   if (roles && !roles.includes('admin')) {
     return res.status(400).json({ success: false, error: 'این مسیر فقط برای ایجاد مدیر است.' });
@@ -96,7 +123,7 @@ adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res)
     mobile,
     password: bcrypt.hashSync(password, 10),
     roles: userRoles,
-    permissions: permissions || [],
+    permissions: permissions ?? [],
     createdBy: req.user.id,
     createdAt: new Date().toISOString()
   };
@@ -120,36 +147,32 @@ adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res)
 adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, res) => {
   const target = db.users.find(u => u.id === req.params.id);
   if (!target) return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
-  // Even the root session must not produce another privileged identity or
-  // modify the reserved root from a delegated-user editing workflow.
+  // The verified reserved root cannot be rewritten through delegated management.
   if (target.id === 'usr-super' || target.roles.includes('super-admin')) {
     return res.status(403).json({ success: false, error: 'هویت مدیر ارشد در این مسیر قابل ویرایش نیست.' });
   }
-  if (req.body.roles !== undefined && (!Array.isArray(req.body.roles) ||
-    req.body.roles.length === 0 ||
-    req.body.roles.some((role: unknown) => !['admin', 'student'].includes(String(role))))) {
-    return res.status(403).json({ success: false, error: 'ایجاد مدیر ارشد یا تخصیص نقش نامعتبر مجاز نیست.' });
+
+  const parsed = updateManagerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, error: 'داده‌های ویرایش مدیر معتبر نیست.' });
+  }
+  const { name, mobile, permissions, roles, password } = parsed.data;
+  // Refuse a mobile collision *before* mutating any user attribute.
+  if (mobile !== undefined && mobileInUse(mobile, target.id)) {
+    return res.status(409).json({ success: false, error: 'این شماره موبایل متعلق به حساب دیگری است.' });
   }
 
-  const { name, mobile, permissions, roles, password } = req.body;
-  if (name) target.name = name;
-  if (mobile) target.mobile = mobile;
-  
-  if (permissions) target.permissions = permissions;
-  
-  if (roles) {
+  if (name !== undefined) target.name = name;
+  if (mobile !== undefined) target.mobile = mobile;
+  if (permissions !== undefined) target.permissions = permissions;
+  if (roles !== undefined) {
     target.roles = roles.includes('admin') ? ['student', 'admin'] : ['student'];
   }
   if (!target.roles.includes('admin')) {
-    // Prevent stale privileged grants on demoted student accounts, even when
-    // roles and permissions were changed in the same request.
     target.permissions = [];
     target.demandScopes = [];
   }
-
-  if (password && password.trim() !== '') {
-      target.password = bcrypt.hashSync(password, 10);
-  }
+  if (password) target.password = bcrypt.hashSync(password, 10);
 
   // A profile or permission update can change login/authority; force a
   // fresh token rather than leaving old browser sessions apparently valid.
