@@ -3,6 +3,8 @@ import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, Lo
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
+import type { RegistrationStep } from '../domain/registration-queue';
+import { completedRegistrationCourseIds, parseStoredRegistrationTokens, pruneRegistrationTokens, registrationProgressToken } from '../domain/registration-progress';
 import { copyTextWithFallback } from '../utils/clipboard';
 
 interface ChartRules {
@@ -37,33 +39,38 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // Reordering is an explicit compact mode, not four permanent row buttons.
   const [sortMode,setSortMode]=useState(false);
   const reorderLock=useRef(false);
+  // An empty queue during the initial API fetch must not erase previously
+  // marked groups before the actual saved plan arrives.
+  const hasObservedLoadedQueue=useRef(false);
   const [revision,setRevision]=useState(0);
   const academicContextKey=`${profile?.userId||'unknown'}|${profile?.currentTermId||'none'}|${curriculumId||'none'}|${revision}`;
   // Async clipboard/reorder responses from another account never show on this one.
   const copyState=copyNotice?.contextKey===academicContextKey?copyNotice.message:'';
   const setCopyState=(message:string)=>setCopyNotice({contextKey:academicContextKey,message});
   const progressKey=`darschin-reg-progress-${profile?.userId||'unknown'}-${profile?.currentTermId||'term'}-${curriculumId||'none'}`;
-  const [doneIds,setDoneIds]=useState<string[]>([]);
+  const [doneTokens,setDoneTokens]=useState<string[]>([]);
   // Wait for hydration of this exact term/chart before persisting; otherwise the
   // initial [] state could overwrite a student's previously checked progress.
   const [progressLoadedKey,setProgressLoadedKey]=useState<string|null>(null);
-  useEffect(()=>{setSortMode(false);},[profile?.userId,profile?.currentTermId]);
+  useEffect(()=>{
+    setSortMode(false);
+    hasObservedLoadedQueue.current=false;
+  },[profile?.userId,profile?.currentTermId,curriculumId]);
   // Never render completion marks from the previous student's session during
   // the render immediately after switching profiles.
   const progressReady=progressLoadedKey===progressKey;
-  const activeDoneIds=progressReady?doneIds:[];
+  const activeDoneTokens=progressReady?doneTokens:[];
 
   useEffect(()=>{
     try {
-      const parsed=JSON.parse(window.sessionStorage.getItem(progressKey)||'[]');
-      setDoneIds(Array.isArray(parsed)?parsed.filter((id:unknown):id is string=>typeof id==='string'):[]);
-    }catch{setDoneIds([]);}
+      setDoneTokens(parseStoredRegistrationTokens(window.sessionStorage.getItem(progressKey)));
+    }catch{setDoneTokens([]);}
     setProgressLoadedKey(progressKey);
   },[progressKey]);
   useEffect(()=>{
     if(progressLoadedKey!==progressKey)return;
-    try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneIds));}catch{/* private browsing */}
-  },[doneIds,progressKey,progressLoadedKey]);
+    try{window.sessionStorage.setItem(progressKey,JSON.stringify(doneTokens));}catch{/* private browsing */}
+  },[doneTokens,progressKey,progressLoadedKey]);
 
   useEffect(()=>{
     let alive=true;
@@ -105,16 +112,31 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // are pending or failed. Raw codes remain visible for manual verification.
   const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&
     verifiedContextKey===academicContextKey&&!loading&&!error;
+  // Once the actual academic context is loaded, discard progress for replaced
+  // offerings. Otherwise switching A → B → A could resurrect A's old mark.
+  useEffect(()=>{
+    if(!rulesReady||!progressReady)return;
+    if(queue.steps.length>0)hasObservedLoadedQueue.current=true;
+    if(!hasObservedLoadedQueue.current)return;
+    setDoneTokens(previous=>{
+      const current=pruneRegistrationTokens(queue.steps,previous);
+      return current.length===previous.length?previous:current;
+    });
+  },[rulesReady,progressReady,queue.steps]);
   const stepIds=queue.steps.map(s=>s.courseId);
-  const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!activeDoneIds.includes(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!activeDoneIds.includes(id))):undefined;
+  // A checked item is valid only for its exact currently selected group and
+  // course code. Changing a group's offering invalidates its old check mark.
+  const completedCourses=completedRegistrationCourseIds(queue.steps,activeDoneTokens);
+  const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!completedCourses.has(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!completedCourses.has(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyTextWithFallback(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
   },[academicContextKey]);
-  const toggleDone=(id:string)=>{
+  const toggleDone=(step:RegistrationStep)=>{
     if(!progressReady)return;
-    setDoneIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+    const token=registrationProgressToken(step);
+    setDoneTokens(prev=>prev.includes(token)?prev.filter(x=>x!==token):[...prev,token]);
   };
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
@@ -144,7 +166,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           <Zap className="h-4 w-4"/> صف سریع ثبت دروس
         </h2>
         <p className="mt-0.5 text-xs leading-6 text-blue-800 dark:text-blue-300">
-          {queue.steps.length} درس · {activeDoneIds.filter(id=>stepIds.includes(id)).length} ثبت‌شده به علامت خودت · یک لمس برای کپی
+          {queue.steps.length} درس · {completedCourses.size} گروه علامت‌خورده در همین مرورگر · یک لمس برای کپی
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -162,7 +184,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-      این فهرست ثبت خودکار در آموزشیار نیست؛ پس از ثبت واقعی هر درس، تیک همان ردیف را بزن. کدهای ساختگی دمو در آموزشیار معتبر نیستند.
+      این فهرست ثبت خودکار در آموزشیار نیست؛ فقط بعد از ثبت واقعی همان گروه، تیکش را بزن. با تغییر گروه یا کد ارائه، تیک قبلی معتبر نیست. کدهای ساختگی دمو هم معتبر نیستند.
     </p>
     {loading&&<p role="status" className="text-xs text-slate-600 dark:text-slate-300"><RefreshCw aria-hidden="true" className="ml-1 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>در حال تطبیق قوانین… کپی سریع پس از بررسی فعال می‌شود.</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -173,9 +195,9 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
     <ol id="registration-queue-list" className="space-y-1.5" aria-label="ترتیب ثبت دروس">
       {queue.steps.map((step,index)=>{
-        const done=activeDoneIds.includes(step.courseId);
+        const done=activeDoneTokens.includes(registrationProgressToken(step));
         const offering=evaluations.find(o=>o.offeringId===step.offeringId);
-        const locked=step.dependencyCourseIds.some(id=>!activeDoneIds.includes(id));
+        const locked=step.dependencyCourseIds.some(id=>!completedCourses.has(id));
         const time=[offering?.dayOfWeek,offering?.startTime&&offering?.endTime?`${offering.startTime}–${offering.endTime}`:''].filter(Boolean).join(' · ');
         return <li key={step.courseId} className={`min-w-0 rounded-xl border ${done
           ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
@@ -197,8 +219,8 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-lg bg-blue-700 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-4 w-4"/><span className="hidden sm:inline">کپی</span>
             </button>
-            <button type="button" onClick={()=>toggleDone(step.courseId)} disabled={!progressReady||(!done&&locked)} aria-pressed={done}
-              aria-label={done?`لغو علامت ثبت ${step.courseName}`:`علامت ثبت ${step.courseName}`}
+            <button type="button" onClick={()=>toggleDone(step)} disabled={!progressReady||(!done&&locked)} aria-pressed={done}
+              aria-label={done?`لغو علامت ثبت ${step.courseName} گروه ${step.groupCode}`:`علامت ثبت ${step.courseName} گروه ${step.groupCode}`}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
             </button>
