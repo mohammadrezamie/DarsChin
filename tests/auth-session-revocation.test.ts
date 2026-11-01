@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { beforeEach, afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '../src/types';
 import { db, type DatabaseSchema } from '../server/db/database';
 import { authenticate, generateToken } from '../server/middleware/auth';
@@ -100,4 +100,74 @@ describe('P0 JWT invalidation after sensitive credential changes', () => {
     db.users[0].sessionVersion = 1;
     expect((await request(app).get('/api/private').set(bearer(old))).status).toBe(401);
   });
+  it('keeps the original credential, JWT and audit on failed password-change persistence', async () => {
+    const user = db.users[0];
+    const originalHash = user.password;
+    const token = generateToken(user);
+    const fail = vi.spyOn(db, 'save').mockImplementationOnce(() => {
+      throw new Error('SYNTHETIC_PRIVATE_PATH:/private/credential.env');
+    });
+    let response;
+    try {
+      response = await request(app).post('/api/auth/change-password')
+        .set(bearer(token)).send({ currentPassword: originalPassword, newPassword: 'unsaved-password-04' });
+    } finally {
+      fail.mockRestore();
+    }
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(response.body)).not.toContain('SYNTHETIC_PRIVATE_PATH');
+    expect(user.password).toBe(originalHash);
+    expect(user.sessionVersion).toBeUndefined();
+    expect(db.auditLogs).toHaveLength(0);
+    expect((await request(app).get('/api/private').set(bearer(token))).status).toBe(200);
+
+    const retry = await request(app).post('/api/auth/change-password')
+      .set(bearer(token)).send({ currentPassword: originalPassword, newPassword: 'saved-password-04' });
+    expect(retry.status).toBe(200);
+    expect(user.sessionVersion).toBe(1);
+    expect((await request(app).get('/api/private').set(bearer(token))).status).toBe(401);
+  });
+
+  it('retains a verified recovery OTP for retry when the credential write fails', async () => {
+    const user = db.users[0];
+    const originalHash = user.password;
+    const token = generateToken(user);
+    const challenge = {
+      id: 'synthetic-recovery-durable-otp',
+      mobile: testMobile,
+      purpose: 'password_recovery' as const,
+      hashedOtp: bcrypt.hashSync('333333', 4),
+      createdAt: Date.now() - 1000,
+      expiresAt: Date.now() + 120000,
+      attempts: 0,
+      consumedAt: Date.now() - 300,
+      recoveredAt: undefined as number | undefined,
+    };
+    db.otpChallenges.push(challenge);
+    const fail = vi.spyOn(db, 'save').mockImplementationOnce(() => {
+      throw new Error('SYNTHETIC_PRIVATE_PATH:/private/otp.env');
+    });
+    let response;
+    try {
+      response = await request(app).post('/api/auth/recover-password')
+        .send({ mobile: testMobile, newPassword: 'unsaved-password-05', otpChallengeId: challenge.id });
+    } finally {
+      fail.mockRestore();
+    }
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(response.body)).not.toContain('SYNTHETIC_PRIVATE_PATH');
+    expect(user.password).toBe(originalHash);
+    expect(user.sessionVersion).toBeUndefined();
+    expect(challenge.recoveredAt).toBeUndefined();
+    expect(db.auditLogs).toHaveLength(0);
+    expect((await request(app).get('/api/private').set(bearer(token))).status).toBe(200);
+
+    const retry = await request(app).post('/api/auth/recover-password')
+      .send({ mobile: testMobile, newPassword: 'saved-password-05', otpChallengeId: challenge.id });
+    expect(retry.status).toBe(200);
+    expect(challenge.recoveredAt).toEqual(expect.any(Number));
+    expect(user.sessionVersion).toBe(1);
+    expect((await request(app).get('/api/private').set(bearer(token))).status).toBe(401);
+  });
+
 });
