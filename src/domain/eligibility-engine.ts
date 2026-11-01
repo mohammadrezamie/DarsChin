@@ -291,7 +291,7 @@ export function evaluateStudentEligibility(
             reasons: [`برای اخذ درس ${course.name}، درس «${reqCourse.name}» باید قبلاً پاس شده باشد.`],
           };
         } else if (node.type === 'GROUP') {
-          if (!node.operands || node.operands.length === 0) return { passed: true, missing: [], reasons: [] };
+          if (!Array.isArray(node.operands) || node.operands.length === 0) return { passed: false, missing: [], reasons: ['ساختار شرط گروهی ناقص است و باید توسط مدیر بررسی شود.'] };
           
           if (node.operator === 'OR') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
@@ -304,8 +304,7 @@ export function evaluateStudentEligibility(
               missing: allMissing,
               reasons: [`حداقل یکی از شروط زیر باید برآورده شود: (${results.map((r: any) => r.reasons.join(' و ')).join(' یا ')})`],
             };
-          } else {
-            // AND
+          } else if (node.operator === 'AND') {
             const results = node.operands.map((op: any) => evaluateRuleNode(op, isCorequisite, isContextualRetake));
             const failedResults = results.filter((r: any) => !r.passed);
             if (failedResults.length === 0) return { passed: true, missing: [], reasons: [] };
@@ -317,7 +316,7 @@ export function evaluateStudentEligibility(
             };
           }
         }
-        return { passed: true, missing: [], reasons: [] };
+        return { passed: false, missing: [], reasons: ['عملگر یا نوع شرط آموزشی نامعتبر است و نیاز به بررسی مدیر دارد.'] };
       };
 
       for (const rule of applicableRules) {
