@@ -44,14 +44,17 @@ services:
       - no-new-privileges:true
 
   proxy:
+    # Optional on a shared VPS: do not require domain/email when only
+    # the darschin service is started behind an existing Nginx.
+    # Dedicated Caddy usage still requires real values in private ENV.
     image: caddy:2
     restart: unless-stopped
     depends_on:
       darschin:
         condition: service_healthy
     environment:
-      DARSCHYN_DOMAIN: ${DARSCHYN_DOMAIN:?Point your domain DNS at this VPS first}
-      ACME_CONTACT_EMAIL: ${ACME_CONTACT_EMAIL:?Set certificate contact email}
+      DARSCHYN_DOMAIN: ${DARSCHYN_DOMAIN:-}
+      ACME_CONTACT_EMAIL: ${ACME_CONTACT_EMAIL:-}
     ports:
       - "80:80"
       - "443:443"

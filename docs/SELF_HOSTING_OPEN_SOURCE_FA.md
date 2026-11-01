@@ -35,7 +35,7 @@ This starts a Caddy HTTPS proxy and Node container with a **named persistent vol
 
 ## Existing shared VPS using Nginx (do not touch other sites)
 
-Never run the bundled `proxy` service on a shared 80/443 host. Keep the existing Nginx untouched and run the same application image in the optional loopback port overlay:
+Never run the bundled `proxy` service on a shared 80/443 host. The blank `DARSCHYN_DOMAIN` and `ACME_CONTACT_EMAIL` placeholders must **not** prevent running only the `darschin` service: Compose now treats those Caddy-only settings as optional at YAML interpolation time. A dedicated Caddy installation still needs both populated in its private ENV before launch. Keep the existing Nginx untouched and run the same application image in the optional loopback port overlay:
 
 ```bash
 # Choose a free localhost port in your private deploy/.env.vps (for example 3001).
