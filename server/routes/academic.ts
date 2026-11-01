@@ -3,11 +3,47 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+import { extractSourceCourseIds } from '../../src/utils/academic';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
 
 export const academicRouter = Router();
+
+// Every catalogue mutation is a single-process durable write. A failed fsync
+// must not leave partly edited academic definitions visible in memory.
+type CatalogCollection = 'provinces' | 'universities' | 'campuses' | 'degreeLevels' |
+  'majors' | 'tracks' | 'entryYears' | 'academicTerms' | 'courses';
+function writeCatalog<T>(names: CatalogCollection[], change: () => T):
+  { ok: true; value: T } | { ok: false } {
+  const store = db.data as unknown as Record<string, unknown>;
+  const before = names.map(name => [name, structuredClone(store[name])] as const);
+  try {
+    const value = change();
+    db.save();
+    return { ok: true, value };
+  } catch {
+    for (const [name, snapshot] of before) store[name] = snapshot;
+    return { ok: false };
+  }
+}
+const saveFailure = (res: import('express').Response) =>
+  res.status(503).json({ success: false, error: 'تغییرات کاتالوگ آموزشی ذخیره نشد؛ دوباره تلاش کنید.' });
+const validText = (value: unknown, max = 180): value is string =>
+  typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
+const validAcademicYear = (value: unknown): value is number | string => {
+  if (typeof value !== 'number' && typeof value !== 'string') return false;
+  if (!/^\\d{4}$/.test(String(value))) return false;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1200 && number <= 2200;
+};
+const validUnits = (value: unknown): boolean =>
+  (typeof value === 'number' || (typeof value === 'string' && value.trim().length > 0)) &&
+  Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 30;
+const validCourseCategories = new Set<Course['category']>([
+  'عمومی', 'پایه', 'اصلی', 'تخصصی', 'اختیاری', 'آزمایشگاه', 'پروژه', 'کارآموزی', 'سایر',
+]);
 
 // Public / Authenticated read-all
 academicRouter.get('/all-meta', (req, res) => {
