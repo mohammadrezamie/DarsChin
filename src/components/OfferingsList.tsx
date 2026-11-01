@@ -179,20 +179,20 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
   return (
     <div className="space-y-4">
       {wishlistCourseIds.length > 0 && (
-        <section aria-label="انتقال سبد علاقه‌مندی به انتخاب گروه" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/30">
-          <p className="font-bold text-indigo-950 dark:text-indigo-100">از سبد علاقه‌مندی تا انتخاب گروه واقعی</p>
-          <p className="mt-1 text-xs leading-7 text-indigo-900 dark:text-indigo-200">
+        <section aria-label="انتقال سبد علاقه‌مندی به انتخاب گروه" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-950 dark:bg-emerald-950/30">
+          <p className="font-bold text-emerald-950 dark:text-emerald-100">از سبد علاقه‌مندی تا انتخاب گروه واقعی</p>
+          <p className="mt-1 text-xs leading-7 text-emerald-950 dark:text-emerald-200">
             {basketCoverage.offered.toLocaleString('fa-IR')} درس از {wishlistCourseIds.length.toLocaleString('fa-IR')} علاقه‌مندی، گروه ارائه‌شده دارد.
             {basketCoverage.missing.length > 0 && ' ' + basketCoverage.missing.length.toLocaleString('fa-IR') + ' درس هنوز گروهی در داده‌های فعلی ندارد.'}
             {' '}وجود گروه به‌معنی مجازبودن ثبت نیست؛ پیش‌نیاز، سقف و تداخل جدا بررسی می‌شوند.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" aria-pressed={basketOnly} onClick={() => setBasketOnly(!basketOnly)}
-              className="min-h-11 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-indigo-300">
+              className="min-h-11 rounded-xl bg-emerald-700 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-emerald-300">
               {basketOnly ? 'نمایش همهٔ درس‌ها' : 'فقط درس‌های سبد من'}
             </button>
             {onOpenWishlist && <button type="button" onClick={onOpenWishlist}
-              className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-100">ویرایش سبد علاقه‌مندی</button>}
+              className="min-h-11 rounded-xl border border-emerald-300 px-3 text-xs font-bold text-emerald-950 dark:text-emerald-100">ویرایش سبد علاقه‌مندی</button>}
           </div>
         </section>
       )}
@@ -208,7 +208,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="جستجو بر اساس عنوان درس، کد درس، یا نام استاد..."
-              className="darschin-field w-full min-h-11 pr-9 pl-3 py-2 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="darschin-field w-full min-h-11 pr-9 pl-3 py-2 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-teal-600 text-slate-900 dark:text-white"
             />
           </div>
 
@@ -237,7 +237,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
       alert('کد دروس کپی شد.');
     });
   }}
-                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all shrink-0"
+                className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white rounded-xl shadow-xs transition-all shrink-0"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>کپی برای آموزشیار ({selectedOfferingIds.length})</span>
@@ -255,7 +255,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
             onClick={() => setStatusFilter('ALL')}
             className={`min-h-9 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
               statusFilter === 'ALL'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-teal-700 text-white shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
@@ -311,14 +311,14 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                 key={grp.courseId}
                 className={`bg-liquid-glass rounded-3xl transition-all overflow-hidden border ${
                   isAnySelected
-                    ? 'border-blue-500/80 shadow-md ring-1 ring-blue-500/20'
+                    ? 'border-teal-600/80 shadow-md ring-1 ring-teal-600/20'
                     : 'border-white/50 dark:border-slate-800/80 shadow-xs'
                 }`}
               >
                 {/* Course Header */}
                 <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/30 dark:bg-slate-800/30 border-b border-slate-200/50 dark:border-slate-700/50">
                   <div className="flex items-start sm:items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 flex items-center justify-center font-mono font-bold text-xs shrink-0">
                       {cIdx + 1}
                     </div>
 
@@ -330,11 +330,11 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                         <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                           کد: {grp.courseCode}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold">
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 font-semibold">
                           {grp.units} واحد ({grp.category})
                         </span>
                         {grp.classification && (
-                          <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-medium">
                             {grp.classification === 'MAJOR_REQUIRED' && 'رشته‌ای اجباری'}
                             {grp.classification === 'MAJOR_ELECTIVE' && 'رشته‌ای اختیاری'}
                             {grp.classification === 'TRACK_REQUIRED' && 'گرایشی اجباری'}
@@ -393,7 +393,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                             key={section.offeringId}
                             className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                               isSelected
-                                ? 'bg-blue-50/90 dark:bg-blue-950/60 border-blue-500 shadow-xs'
+                                ? 'bg-teal-50/90 dark:bg-teal-950/60 border-teal-600 shadow-xs'
                                 : !isSelectable
                                 ? 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 opacity-80'
                                 : 'bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
@@ -403,7 +403,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                               <div
                                 className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                                   isSelected
-                                    ? 'bg-blue-600 text-white shadow-xs'
+                                    ? 'bg-teal-700 text-white shadow-xs'
                                     : !isSelectable
                                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400'
                                     : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
@@ -420,7 +420,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                                       navigator.clipboard.writeText(section.rawCourseCode + '_' + section.groupCode);
                                       alert('کد درس کپی شد.');
                                     }}
-                                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-teal-700 transition-colors"
                                     title="کپی کد درس"
                                   >
                                     <Copy className="w-3.5 h-3.5" />
@@ -429,7 +429,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                                     گروه {section.groupCode} — استاد {section.instructor || 'نامشخص'}
                                   </span>
                                   {isSelected && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
                                       انتخاب اول (فعال در برنامه)
                                     </span>
                                   )}
@@ -484,7 +484,7 @@ export const OfferingsList: React.FC<OfferingsListProps> = ({
                               ) : (
                                 <button
                                   onClick={() => onToggleScheduleOffering(section.offeringId)}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-xl transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95"
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-xl transition-all bg-teal-700 hover:bg-teal-800 text-white shadow-xs active:scale-95"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                   <span>اخذ این گروه</span>
