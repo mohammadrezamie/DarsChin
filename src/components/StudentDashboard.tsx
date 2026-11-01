@@ -5,6 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { studentWorkspaceFromSearch, type StudentWorkspaceId } from '../utils/student-workspace-navigation';
+import { detectPlanConflicts, normalizedExamDay } from '../domain/plan-conflicts';
 import {
   UploadCloud,
   Layers,
@@ -481,29 +482,23 @@ export const StudentDashboard: React.FC = () => {
 
   // Calculate schedule conflicts
   const selectedItems = evaluations.filter((e) => selectedOfferingIds.includes(e.offeringId));
-  const timeConflicts: { offering1: string; offering2: string; day: string }[] = [];
-  const prerequisiteConflicts = selectedItems.filter((e) => e.missingPrerequisites && e.missingPrerequisites.length > 0);
-
-  for (let i = 0; i < selectedItems.length; i++) {
-    for (let j = i + 1; j < selectedItems.length; j++) {
-      const o1 = selectedItems[i];
-      const o2 = selectedItems[j];
-      
-      // Basic time overlap check
-      if (
-        o1.dayOfWeek && o2.dayOfWeek && o1.dayOfWeek === o2.dayOfWeek &&
-        o1.startTime && o1.endTime && o2.startTime && o2.endTime
-      ) {
-        if (o1.startTime < o2.endTime && o1.endTime > o2.startTime) {
-          timeConflicts.push({
-            offering1: o1.courseName,
-            offering2: o2.courseName,
-            day: o1.dayOfWeek,
-          });
-        }
-      }
-    }
-  }
+  const selectedLookup = new Map(selectedItems.map(item => [item.offeringId, item]));
+  const timeConflicts = detectPlanConflicts(selectedItems.map(item => ({
+    id: item.offeringId, courseId: item.courseId,
+    dayOfWeek: item.dayOfWeek, startTime: item.startTime,
+    endTime: item.endTime, examDate: item.examDate,
+  }))).flatMap(conflict => {
+    const first = selectedLookup.get(conflict.offeringIds[0]);
+    const second = selectedLookup.get(conflict.offeringIds[1]);
+    if (!first || !second) return [];
+    return [{
+      offering1: first.courseName, offering2: second.courseName,
+      kind: conflict.kind,
+      day: conflict.kind === 'EXAM'
+        ? normalizedExamDay(first.examDate) || 'نامشخص'
+        : first.dayOfWeek,
+    }];
+  });
 
   const confirmToggleScheduleOffering = async (offeringId: string) => {
     const isAdding = !selectedOfferingIds.includes(offeringId);
@@ -763,7 +758,9 @@ export const StudentDashboard: React.FC = () => {
               {timeConflicts.map((conflict, idx) => (
                 <li key={idx} className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400 dark:bg-rose-600"></span>
-                  درس‌های <strong>{conflict.offering1}</strong> و <strong>{conflict.offering2}</strong> در روز <strong>{conflict.day}</strong> دارای تداخل زمانی هستند.
+                  درس‌های <strong>{conflict.offering1}</strong> و <strong>{conflict.offering2}</strong>
+                  {conflict.kind === 'EXAM' ? ' امتحان هم‌زمان در تاریخ ' : ' کلاس هم‌زمان در روز '}
+                  <strong>{conflict.day}</strong> دارند.
                 </li>
               ))}
             </ul>
