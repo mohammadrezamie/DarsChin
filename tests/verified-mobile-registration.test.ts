@@ -109,8 +109,12 @@ describe('opt-in proof of phone ownership during registration', () => {
     expect(premature.status).toBe(400);
     expect(db.otpChallenges.find(c => c.id === registrationId)?.consumedAt).toBeUndefined();
 
+    // Unknown login numbers receive a non-delivered decoy, not a revealing 404.
     const another = await sendRegistrationCode(mobile(), 'login');
-    expect(another.status).toBe(404);
+    expect(another.status).toBe(200);
+    const decoy = db.otpChallenges.find(c => c.id === another.body.data.challengeId);
+    expect(decoy?.purpose).toBe('login');
+    expect(decoy?.consumedAt).toBeUndefined();
   });
 
   it('refuses to pretend an unconfigured log-mode SMS is deliverable in production', async () => {
