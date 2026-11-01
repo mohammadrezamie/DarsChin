@@ -51,7 +51,7 @@ export async function apiRequest<T = any>(
   const staticPreview = import.meta.env.VITE_STATIC_PREVIEW === 'true';
   const inBrowserDemo = typeof window !== 'undefined' && (
     window.location.pathname.startsWith('/demo/') ||
-    (staticPreview && /^#\\/demo(?:\\/|$)/.test(window.location.hash))
+    (staticPreview && (window.location.hash === '#/demo' || window.location.hash.startsWith('#/demo/')))
   );
   if (inBrowserDemo) {
     const { browserDemoRequest } = await import('../demo/mock-api');
