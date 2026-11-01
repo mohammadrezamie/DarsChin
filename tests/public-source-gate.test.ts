@@ -44,3 +44,12 @@ describe('public source safety gate', () => {
     }
   });
 });
+
+
+describe('removed unsafe legacy scripts', () => {
+  it('rejects executable files in the legacy folder but permits a safety notice', () => {
+    expect(gate.isSensitivePath('scripts/legacy/test_root_login.cjs')).toBe(true);
+    expect(gate.isSensitivePath('scripts/legacy/print-secrets.py')).toBe(true);
+    expect(gate.isSensitivePath('scripts/legacy/README.md')).toBe(false);
+  });
+});
