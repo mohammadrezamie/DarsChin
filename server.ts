@@ -28,6 +28,8 @@ import { blockPrivateBuildArtifacts } from './server/middleware/public-static';
 import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
 import { assertRuntimeSecurityConfiguration } from './server/security/runtime-config';
+import { publicExtensionAssets } from './server/security/extension-public-files';
+import { apiErrorHandler } from './server/middleware/api-error';
 
 async function startServer() {
   // Reject invalid private-instance settings before touching the database.
@@ -115,18 +117,22 @@ app.use('/api/admin-management', adminManagementRouter);
       const { ZipArchive } = await import('archiver');
       const archive = new ZipArchive({ zlib: { level: 9 } });
       const extDir = path.join(process.cwd(), 'extension');
+      // Verify every asset BEFORE streaming. Never archive arbitrary files on disk.
+      const files = publicExtensionAssets(extDir);
 
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', 'attachment; filename=darschyn-chrome-extension-v3.3.6.zip');
 
       archive.pipe(res);
-      archive.directory(extDir, false);
-      
+      for (const file of files) archive.file(file.absolutePath, { name: file.archiveName });
+
       await archive.finalize();
-    } catch (err: any) {
-      console.error('Error generating extension zip:', err);
+    } catch {
+      logger.warn('Extension archive request failed', { code: 'EXTENSION_ARCHIVE_ERROR' });
       if (!res.headersSent) {
-        res.status(500).json({ success: false, error: 'خطا در ایجاد فایل فشرده افزونه' });
+        res.status(503).json({ success: false, error: 'دانلود افزونه در دسترس نیست.' });
+      } else {
+        res.destroy();
       }
     }
   });
@@ -138,15 +144,7 @@ app.use('/api/admin-management', adminManagementRouter);
   app.use('/mock-portal-static', express.static(mockPortalPath));
 
   // Global API error handler
-  app.use('/api', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    logger.error('API Error', { 
-      error: err.message, 
-      stack: err.stack,
-      path: req.path,
-      method: req.method
-    });
-    res.status(500).json({ success: false, error: 'خطای داخلی سرور' });
-  });
+  app.use('/api', apiErrorHandler);
 
   // Handle 404 for API routes explicitly to avoid Vite serving index.html
   app.use('/api', (req, res) => {

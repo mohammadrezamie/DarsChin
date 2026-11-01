@@ -43,6 +43,19 @@ adminRouter.get('/backup', authenticate, requireSuperAdmin, (req, res) => {
   try {
     // Never start a downloadable response until serialization succeeds.
     const backup = db.exportBackup();
+    // A private catalogue/student export must be auditable before release.
+    const auditCount = db.auditLogs.length;
+    db.auditLogs.push({
+      id: 'audit-backup-' + randomUUID(), adminId: (req as any).user.id,
+      action: 'ADMIN_BACKUP_EXPORTED', entityType: 'BACKUP', entityId: 'academic-data',
+      details: 'Root downloaded a redacted academic backup.', createdAt: new Date().toISOString(),
+    });
+    try {
+      db.save();
+    } catch {
+      db.auditLogs.splice(auditCount);
+      return res.status(503).json({ success: false, error: 'ثبت رویداد پشتیبان‌گیری ناموفق بود.' });
+    }
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename=darschyn-backup-${Date.now()}.json`);
     return res.json(backup);
@@ -112,6 +125,7 @@ adminRouter.get('/users/export.xlsx', authenticate, requireSuperAdmin, (req: any
       verified: u.mobileVerifiedAt ? 'تأییدشده' : 'تأییدنشده',
       permissions: (u.permissions ?? []).join('، '),
     })));
+    const auditCount = db.auditLogs.length;
     db.auditLogs.push({
       id: 'audit-user-export-' + randomUUID(),
       adminId: req.user.id, action: 'USER_DIRECTORY_EXPORTED',
@@ -119,7 +133,12 @@ adminRouter.get('/users/export.xlsx', authenticate, requireSuperAdmin, (req: any
       details: JSON.stringify({ role, count: chosen.length, format: 'xlsx' }),
       createdAt: new Date().toISOString(),
     });
-    db.save();
+    try {
+      db.save();
+    } catch {
+      db.auditLogs.splice(auditCount);
+      return res.status(503).json({ success: false, error: 'ثبت رویداد خروجی کاربران ناموفق بود.' });
+    }
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

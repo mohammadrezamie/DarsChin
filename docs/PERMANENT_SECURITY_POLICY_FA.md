@@ -72,3 +72,8 @@
 - در Production اجرای سرور با `JWT_SECRET` کوتاه و رمزهای Root/Recovery ضعیف یا یکسان، شمارهٔ روت غیرمعتبر یا `MOCK_OTP_CODE` ممنوع است؛ با خطای شروع سرویس متوقف می‌شود.
 - روی OTP Verify، Password Recovery و دانلود تولید ZIP محدودکنندهٔ مستقل نصب شود؛ rate limit حافظه‌ای جایگزین WAF/Shared Store در چند Worker نیست.
 - گزارش کامل و دستورکار قابل انجام توسط مالک: [ممیزی جامع امنیت](SECURITY_COMPREHENSIVE_AUDIT_AND_OWNER_ACTIONS_20261101_FA.md).
+
+
+### الحاقیهٔ فایل‌های قابل دانلود و گزارش خطای سرور
+
+هیچ endpoint عمومی یا ابزار build حق ZIPکردن کل دایرکتوری افزونه را ندارد. فقط فهرست بررسی‌شدهٔ `extension/public-files.json` مجاز است؛ فایل اضافه، symlink، backup، credential و فایل ساختگیِ محیط نباید به دانلود عمومی برسد. هر export دارای دادهٔ خصوصی Root (از جمله بکاپ و Excel) نیازمند audit ذخیره‌شده **قبل از ارسال** است؛ شکست audit باید دانلود را fail-closed کند. پیام خطای Express و لاگ‌ها حق ثبت متن exception، stack، URL و body یا Secret ندارند. با تست‌های مصنوعیِ مسیر محرمانه این قرارداد را پیوسته بررسی کنید.
