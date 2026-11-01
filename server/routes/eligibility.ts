@@ -11,6 +11,12 @@ import { generateCourseRecommendations } from '../../src/domain/recommendation-e
 
 export const eligibilityRouter = Router();
 
+// Academic profiles and student evaluations are private, never cache them.
+eligibilityRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 const evaluateInputSchema = z.object({
   // Keep the current optional payload shape for existing mobile/web clients.
   plannedCourseIds: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
@@ -36,24 +42,34 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
     }
 
     // Find student's curriculum
-    const curriculum = db.curricula.find(
-      (c) =>
-        c.universityId === profile.universityId &&
-        c.majorId === profile.majorId &&
-        c.entryYearId === profile.entryYearId
-    ) || db.curricula[0];
+    // Never silently substitute another student's curriculum. A published
+    // academic chart belongs to one complete campus/degree/major/entry cohort.
+    const curricula = db.curricula.filter((c) =>
+      c.status === 'active' &&
+      c.universityId === profile.universityId &&
+      c.campusId === profile.campusId &&
+      c.degreeLevelId === profile.degreeLevelId &&
+      c.majorId === profile.majorId &&
+      c.entryYearId === profile.entryYearId
+    );
 
-    if (!curriculum) {
-      return res.status(400).json({
+    if (curricula.length !== 1) {
+      return res.status(curricula.length > 1 ? 409 : 400).json({
         success: false,
-        error: 'هیچ چارت درسی مصوبی برای رشته و سال ورود شما یافت نشد.',
+        error: curricula.length > 1
+          ? 'برای پروندهٔ شما چند چارت فعال تعریف شده است؛ ابتدا مدیر باید نسخهٔ معتبر را مشخص کند.'
+          : 'برای ترکیب واحد، مقطع، رشته و سال ورود شما چارت فعال و تأییدشده‌ای وجود ندارد.',
       });
     }
+    const curriculum = curricula[0];
 
     // Filter relevant offerings for the term and campus
-    const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id || 'term-1405-1';
+    const currentTermId = profile.currentTermId || db.academicTerms.find((t) => t.isCurrent)?.id;
+    if (!currentTermId || !db.academicTerms.some((term) => term.id === currentTermId)) {
+      return res.status(400).json({ success: false, error: 'نیمسال معتبر برای پروندهٔ شما ثبت نشده است.' });
+    }
     const relevantOfferings = db.courseOfferings.filter(
-      (o) => o.termId === currentTermId && o.active
+      (o) => o.termId === currentTermId && o.campusId === profile.campusId && o.active
     );
 
 
@@ -81,7 +97,10 @@ eligibilityRouter.post('/evaluate', authenticate, (req: AuthenticatedRequest, re
       allCourses: db.courses,
       academicRules: db.academicRules,
       eligibilityResults: report.results,
-      approximateStudentSemester: 3,
+      passedCourseIds: passedCourses
+        .filter((row) => row.status !== 'FAILED' && row.status !== 'ABSENT' &&
+          (row.grade === undefined || row.grade >= 10))
+        .map((row) => row.courseId),
     });
 
     // Calculate real-time academic limits & final semester eligibility
