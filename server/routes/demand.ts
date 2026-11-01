@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db } from '../db/database';
-import { authenticate, type AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, isRootOwner, type AuthenticatedRequest } from '../middleware/auth';
 import { exportDemandCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
 import type { DemandResponse, DemandSurvey } from '../../src/types';
 
@@ -42,6 +42,13 @@ function scopeStudent(req: AuthenticatedRequest, survey: DemandSurvey) {
     (!survey.curriculumId || db.curricula.some(c => c.id === survey.curriculumId &&
       c.entryYearId === profile.entryYearId));
 }
+function mayManageDemand(
+  req: AuthenticatedRequest,
+  survey: Pick<DemandSurvey, 'campusId'|'degreeLevelId'|'majorId'>,
+  exportPersonal = false,
+): boolean {
+  return isRootOwner(req.user) || managerCanAccessDemand(req.user!, survey, exportPersonal);
+}
 const getSurvey = (id: string) => db.demandSurveys.find(s => s.id === id);
 function isOpen(survey: DemandSurvey) {
   const now = Date.now();
@@ -57,7 +64,7 @@ function audit(adminId: string, action: string, entityId: string) {
 }
 
 demandRouter.get('/surveys', (req: AuthenticatedRequest, res) => {
-  const list = db.demandSurveys.filter(s => managerCanAccessDemand(req.user!, s) ||
+  const list = db.demandSurveys.filter(s => mayManageDemand(req, s) ||
     (!!scopeStudent(req, s) && (
       isOpen(s) ||
       // Keep a student's own previously submitted demand visible as history
@@ -71,7 +78,7 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
   const input = surveySchema.safeParse(req.body);
   if (!input.success) return failure(res, 400, 'داده‌های فرم نیازسنجی معتبر نیستند.');
   const x = input.data;
-  if (!managerCanAccessDemand(req.user!, x)) return failure(res, 403, 'مدیریت نیازسنجی این رشته در دسترسی شما نیست.');
+  if (!mayManageDemand(req, x)) return failure(res, 403, 'مدیریت نیازسنجی این رشته در دسترسی شما نیست.');
   const validScope = db.universities.some(u => u.id === x.universityId && u.active) &&
     db.campuses.some(c => c.id === x.campusId && c.universityId === x.universityId && c.active) &&
     db.degreeLevels.some(d => d.id === x.degreeLevelId && d.active) &&
@@ -106,7 +113,7 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
 demandRouter.put('/surveys/:id/status', (req: AuthenticatedRequest, res) => {
   const survey = getSurvey(req.params.id);
   if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
-  if (!managerCanAccessDemand(req.user!, survey)) return failure(res, 403, 'دسترسی مدیر گروه برای این حوزه ندارید.');
+  if (!mayManageDemand(req, survey)) return failure(res, 403, 'دسترسی مدیر گروه برای این حوزه ندارید.');
   const input = statusSchema.safeParse(req.body);
   if (!input.success) return failure(res, 400, 'وضعیت جدید معتبر نیست.');
   const changes: Record<string,string[]> = {
@@ -122,7 +129,7 @@ demandRouter.put('/surveys/:id/status', (req: AuthenticatedRequest, res) => {
 
 demandRouter.get('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
   const survey = getSurvey(req.params.id);
-  if (!survey || (!managerCanAccessDemand(req.user!, survey) && !scopeStudent(req, survey))) {
+  if (!survey || (!mayManageDemand(req, survey) && !scopeStudent(req, survey))) {
     return failure(res, 404, 'نیازسنجی قابل دسترسی نیست.');
   }
   return res.json({ success: true, data: db.demandResponses.find(r =>
@@ -165,14 +172,14 @@ demandRouter.put('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
 demandRouter.get('/surveys/:id/report', (req: AuthenticatedRequest, res) => {
   const survey = getSurvey(req.params.id);
   if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
-  if (!managerCanAccessDemand(req.user!, survey)) return failure(res, 403, 'گزارش این رشته در دسترسی شما نیست.');
+  if (!mayManageDemand(req, survey)) return failure(res, 403, 'گزارش این رشته در دسترسی شما نیست.');
   return res.json({ success: true, data: summarizeDemand(survey, db.demandResponses) });
 });
 
 demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => {
   const survey = getSurvey(req.params.id);
   if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
-  if (!managerCanAccessDemand(req.user!, survey, true)) return failure(res, 403, 'دسترسی به اطلاعات شناسایی‌کنندهٔ دانشجویان ندارید.');
+  if (!mayManageDemand(req, survey, true)) return failure(res, 403, 'دسترسی به اطلاعات شناسایی‌کنندهٔ دانشجویان ندارید.');
   const contents = exportDemandCsv(
     survey, db.demandResponses,
     new Map(db.courses.map(c=>[c.id, c.name])),
