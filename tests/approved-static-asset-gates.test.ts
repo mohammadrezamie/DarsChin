@@ -22,7 +22,7 @@ function makeAssets(root:string) {
   for(const file of allowed) {
     const absolute=path.join(root,file);
     fs.mkdirSync(path.dirname(absolute),{recursive:true});
-    fs.writeFileSync(absolute,'SAFE_PUBLIC_ASSET');
+    fs.writeFileSync(absolute,file.endsWith('.json') ? '{"value":"SAFE_PUBLIC_ASSET"}' : 'SAFE_PUBLIC_ASSET');
   }
 }
 function extensionApp(root:string) {
@@ -43,7 +43,7 @@ describe('strict extension / mock-portal HTTP static allowlists',()=>{
       '/extension-files/icons/icon16.png','/extension-files/fonts/vazirmatn.css']) {
       const response=await request(app).get(url);
       expect(response.status).toBe(200);
-      expect(response.text || response.body?.toString()).toContain('SAFE_PUBLIC_ASSET');
+      expect(JSON.stringify(response.body || '') + (response.text || '')).toContain('SAFE_PUBLIC_ASSET');
     }
     for (const url of ['/extension-files/private.key','/extension-files/backup.json',
       '/extension-files/.env','/extension-files/public-files.json',
