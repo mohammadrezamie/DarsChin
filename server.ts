@@ -27,10 +27,12 @@ import { securityHeaders } from './server/middleware/security-headers';
 import { blockPrivateBuildArtifacts } from './server/middleware/public-static';
 import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
+import { assertRuntimeSecurityConfiguration } from './server/security/runtime-config';
 
 async function startServer() {
   // Reject invalid private-instance settings before touching the database.
   assertInstanceAccessConfiguration();
+  assertRuntimeSecurityConfiguration();
   // Initialize and seed database
   await db.init(true);
 
@@ -87,6 +89,9 @@ async function startServer() {
   app.post('/api/auth/login', guestLimits.login);
   app.post('/api/auth/register', guestLimits.register);
   app.post('/api/auth/otp/send', guestLimits.otpSend);
+  app.post('/api/auth/otp/verify', guestLimits.otpVerify);
+  app.post('/api/auth/recover-password', guestLimits.passwordRecovery);
+  app.get('/api/extension/download', guestLimits.extensionDownload);
 
   // Register API routes
   app.use('/api/auth', authRouter);

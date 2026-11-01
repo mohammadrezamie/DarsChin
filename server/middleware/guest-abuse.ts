@@ -26,5 +26,8 @@ export function createGuestAbuseLimiters() {
     login: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 90, identifier: 'guest-login' }),
     register: rateLimit({ ...shared, windowMs: 60 * 60_000, limit: 80, identifier: 'guest-register' }),
     otpSend: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 60, identifier: 'guest-otp-send' }),
+    otpVerify: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 90, identifier: 'guest-otp-verify' }),
+    passwordRecovery: rateLimit({ ...shared, windowMs: 15 * 60_000, limit: 40, identifier: 'guest-password-recovery' }),
+    extensionDownload: rateLimit({ ...shared, windowMs: 60 * 60_000, limit: 20, identifier: 'public-extension-download' }),
   };
 }

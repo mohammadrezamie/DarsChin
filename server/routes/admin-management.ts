@@ -37,6 +37,15 @@ const updateManagerSchema = z.object({
 const mobileInUse = (mobile: string, exceptUserId?: string) =>
   db.users.some(user => user.id !== exceptUserId && normalizeIranianMobile(user.mobile) === mobile);
 
+// Restore every field including newly added optional credentials on disk failure.
+function restoreIdentity(target: User, previous: User) {
+  const mutable = target as unknown as Record<string, unknown>;
+  for (const key of Object.keys(mutable)) {
+    if (!(key in previous)) delete mutable[key];
+  }
+  Object.assign(target, previous);
+}
+
 
 // Only the root may inspect administrator identities and grants.
 adminManagementRouter.get('/', authenticate, requireSuperAdmin, (req: any, res) => {
@@ -86,14 +95,23 @@ adminManagementRouter.put('/:id/demand-scopes', authenticate, requireSuperAdmin,
     !db.majors.some(m => m.id === scope.majorId && m.degreeLevelId === scope.degreeLevelId && m.active)
   )) return res.status(400).json({ success: false, error: 'محدوده‌ها باید یکتا و بر اساس واحد، مقطع و رشتهٔ معتبر باشند.' });
 
+  const previousScopes = target.demandScopes;
+  const auditCount = db.auditLogs.length;
   target.demandScopes = scopes;
   db.auditLogs.push({
     id: 'audit-demand-scope-' + randomUUID(), adminId: req.user.id,
     action: 'DEMAND_MANAGER_SCOPES_CHANGED', entityType: 'USER', entityId: target.id,
-    details: JSON.stringify({ scopes }),
+    // Scope IDs may be sensitive in the operational audit; no full payload.
+    details: JSON.stringify({ scopeCount: scopes.length }),
     createdAt: new Date().toISOString(),
   });
-  db.save();
+  try {
+    db.save();
+  } catch {
+    target.demandScopes = previousScopes;
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'محدودهٔ دسترسی ذخیره نشد.' });
+  }
   return res.json({ success: true, data: { id: target.id, demandScopes: target.demandScopes } });
 });
 
@@ -128,18 +146,24 @@ adminManagementRouter.post('/', authenticate, requireSuperAdmin, (req: any, res)
     createdAt: new Date().toISOString()
   };
 
+  const auditCount = db.auditLogs.length;
   db.users.push(newUser);
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: req.user.id,
     action: 'ADMIN_CREATED',
     entityType: 'USER',
     entityId: newUser.id,
-    details: `مدیر جدید ${name} توسط ${req.user.name} ایجاد شد.`,
+    details: 'هویت مدیر واگذارشده ایجاد شد.',
     createdAt: new Date().toISOString(),
   });
-  db.save();
-
+  try {
+    db.save();
+  } catch {
+    db.data.users = db.users.filter(row => row.id !== newUser.id);
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'ایجاد مدیر ذخیره نشد.' });
+  }
   res.json({ success: true, message: 'مدیر با موفقیت ایجاد شد.' });
 });
 
@@ -165,6 +189,8 @@ adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, re
     return res.status(409).json({ success: false, error: 'این شماره موبایل متعلق به حساب دیگری است.' });
   }
 
+  const previousIdentity: User = { ...target };
+  const auditCount = db.auditLogs.length;
   if (name !== undefined) target.name = name;
   if (mobile !== undefined) target.mobile = mobile;
   if (permissions !== undefined) target.permissions = permissions;
@@ -181,16 +207,21 @@ adminManagementRouter.put('/:id', authenticate, requireSuperAdmin, (req: any, re
   // fresh token rather than leaving old browser sessions apparently valid.
   target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: req.user.id,
     action: 'ADMIN_UPDATED',
     entityType: 'USER',
     entityId: target.id,
-    details: `اطلاعات مدیر ${target.name} ویرایش شد.`,
+    details: 'هویت یا مجوز مدیر واگذارشده ویرایش شد.',
     createdAt: new Date().toISOString(),
   });
-  db.save();
-
+  try {
+    db.save();
+  } catch {
+    restoreIdentity(target, previousIdentity);
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'ویرایش مدیر ذخیره نشد.' });
+  }
   res.json({ success: true, message: 'اطلاعات با موفقیت بروزرسانی شد.' });
 });
 
@@ -203,6 +234,8 @@ adminManagementRouter.delete('/:id', authenticate, requireSuperAdmin, (req: any,
       return res.status(403).json({ success: false, error: 'غیرفعال‌سازی مدیر ارشد امکان‌پذیر نیست.' });
   }
   
+  const previousIdentity: User = { ...target };
+  const auditCount = db.auditLogs.length;
   if (target.deactivatedAt) {
       // Reactivate
       target.deactivatedAt = undefined;
@@ -215,15 +248,20 @@ adminManagementRouter.delete('/:id', authenticate, requireSuperAdmin, (req: any,
   // Reactivation must not revive a JWT issued before deactivation.
   target.sessionVersion = (target.sessionVersion ?? 0) + 1;
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: req.user.id,
     action: target.deactivatedAt ? 'ADMIN_DEACTIVATED' : 'ADMIN_REACTIVATED',
     entityType: 'USER',
     entityId: target.id,
-    details: `مدیر ${target.name} ${target.deactivatedAt ? 'غیرفعال' : 'فعال'} شد.`,
+    details: target.deactivatedAt ? 'حساب مدیر واگذارشده غیرفعال شد.' : 'حساب مدیر واگذارشده فعال شد.',
     createdAt: new Date().toISOString(),
   });
-  db.save();
-
+  try {
+    db.save();
+  } catch {
+    restoreIdentity(target, previousIdentity);
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'وضعیت مدیر ذخیره نشد.' });
+  }
   res.json({ success: true, message: target.deactivatedAt ? 'کاربر غیرفعال شد.' : 'کاربر مجدداً فعال شد.' });
 });

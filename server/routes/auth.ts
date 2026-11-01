@@ -253,21 +253,11 @@ authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema),
     return res.status(401).json(BAD_LOGIN_RESPONSE);
   }
 
-  // Successful login: Reset failed attempts
-  failedLogins.delete(mobile);
-
-  // Ensure root super-admin has all roles
-  if (user.id === 'usr-super' && user.mobile === process.env.ROOT_OWNER_MOBILE) {
-    if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
-    if (!user.roles.includes('super-admin')) user.roles.push('super-admin');
-    if (!user.roles.includes('admin')) user.roles.push('admin');
-    if (!user.roles.includes('student')) user.roles.push('student');
-    db.save();
-  }
-
-  // Log audit event
+  // A login must never promote an account's roles. Root initialization and
+  // privilege repair belong to the verified bootstrap/owner workflow.
+  const auditCount = db.auditLogs.length;
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: user.id,
     action: 'USER_LOGIN',
     entityType: 'USER',
@@ -275,7 +265,13 @@ authRouter.post('/login', requireGuestChallenge('login'), validate(loginSchema),
     details: 'ورود موفق حساب کاربری.',
     createdAt: new Date().toISOString(),
   });
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'ثبت ایمن ورود ممکن نیست؛ لطفاً بعداً تلاش کنید.' });
+  }
+  failedLogins.delete(mobile);
 
   // Generate JWT Token
   const token = generateToken({ id: user.id, roles: user.roles, permissions: user.permissions });
@@ -433,14 +429,7 @@ authRouter.get('/me', authenticate, (req: AuthenticatedRequest, res) => {
     return res.status(404).json({ success: false, error: 'کاربر یافت نشد.' });
   }
 
-  // Auto-upgrade permissions if super-admin hardcoded matches
-  if (user.id === 'usr-super' && user.mobile === process.env.ROOT_OWNER_MOBILE && !user.roles.includes('super-admin')) {
-    if (!Array.isArray(user.roles)) user.roles = user.roles ? [(user.roles as any)] : [];
-    user.roles.push('super-admin');
-    if (!user.roles.includes('admin')) user.roles.push('admin');
-    db.save();
-  }
-
+  // Reading a user profile must not silently grant any privileged role.
   const refreshedToken = generateToken({ id: user.id, roles: user.roles, permissions: user.permissions, mobile: user.mobile, name: user.name });
   res.json({
     success: true,
@@ -459,7 +448,26 @@ authRouter.get('/me', authenticate, (req: AuthenticatedRequest, res) => {
 // 7. LOGOUT (/api/auth/logout)
 // ----------------------------------------------------------------------------
 authRouter.post('/logout', authenticate, (req: AuthenticatedRequest, res) => {
-  res.json({ success: true, message: 'با موفقیت از حساب کاربری خارج شدید.' });
+  const user = db.users.find(row => row.id === req.user?.id);
+  if (!user) return res.status(401).json({ success: false, error: 'نشست معتبر نیست.' });
+  // Stateless JWTs have no individual server-side revocation list. Until a
+  // per-device session store exists, logout revokes *all* prior user tokens.
+  const previousVersion = user.sessionVersion;
+  const auditCount = db.auditLogs.length;
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
+  db.auditLogs.push({
+    id: `log-${randomUUID()}`, adminId: user.id, action: 'USER_LOGOUT_ALL_SESSIONS',
+    entityType: 'USER', entityId: user.id,
+    details: 'خروج ایمن و ابطال همهٔ نشست‌های قبلی.', createdAt: new Date().toISOString(),
+  });
+  try {
+    db.save();
+  } catch {
+    user.sessionVersion = previousVersion;
+    db.auditLogs.splice(auditCount);
+    return res.status(503).json({ success: false, error: 'ابطال نشست ذخیره نشد؛ دوباره تلاش کنید.' });
+  }
+  return res.json({ success: true, message: 'از حساب خارج شدید؛ نشست‌های قبلی نیز باطل شدند.' });
 });
 
 export default authRouter;
