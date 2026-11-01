@@ -1,5 +1,7 @@
 import type { CourseOffering } from '../types';
 
+export type ScheduleOffering = Pick<CourseOffering, 'id' | 'courseId' | 'dayOfWeek' | 'startTime' | 'endTime' | 'examDate'>;
+
 export interface PlanConflict {
   kind: 'CLASS' | 'EXAM';
   offeringIds: [string, string];
@@ -27,7 +29,7 @@ export function clockMinutes(value: string): number | null {
 }
 
 /** Missing or unverified timetables are NOT silently treated as confirmed overlaps. */
-function scheduledSession(offering: CourseOffering) {
+function scheduledSession(offering: ScheduleOffering) {
   const day = normalizeDay(offering.dayOfWeek || '');
   const start = clockMinutes(offering.startTime || '');
   const end = clockMinutes(offering.endTime || '');
@@ -35,10 +37,18 @@ function scheduledSession(offering: CourseOffering) {
     ? { day, start, end } : null;
 }
 
+/** Consistent public date-key normalization for UI warnings and server blocking. */
+export function normalizedExamDay(raw?: string | null): string | null {
+  const text = toLatin((raw || '').trim());
+  const match = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(text);
+  if (!match) return null;
+  return match[1] + '/' + match[2].padStart(2, '0') + '/' + match[3].padStart(2, '0');
+}
+
 /** Only reject a known identical exam start; same-day different times remain warnings in the UI. */
-function scheduledExam(offering: CourseOffering) {
+function scheduledExam(offering: ScheduleOffering) {
   const text = toLatin((offering.examDate || '').trim()).replace(/\s+/g, ' ');
-  const date = /^(\d{4}[/-]\d{1,2}[/-]\d{1,2})/.exec(text)?.[1];
+  const date = normalizedExamDay(text);
   const time = /(?:^|[\s\-–،])(\d{1,2}:\d{2})(?=$|[\s\-–،])/.exec(text)?.[1];
   const minute = time ? clockMinutes(time) : null;
   return date && minute !== null ? { date, minute } : null;
@@ -48,7 +58,7 @@ function scheduledExam(offering: CourseOffering) {
  * All selected offerings are checked together, not merely the newly added one.
  * A whole-plan PUT and an individual group swap must obey the same invariant.
  */
-export function detectPlanConflicts(offerings: CourseOffering[]): PlanConflict[] {
+export function detectPlanConflicts(offerings: ScheduleOffering[]): PlanConflict[] {
   const conflicts: PlanConflict[] = [];
   for (let first = 0; first < offerings.length; first++) {
     for (let second = first + 1; second < offerings.length; second++) {
