@@ -3,6 +3,16 @@ name: DarsChin main quality gate
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/main-quality-gate.yml"
   workflow_dispatch:
 
 permissions:
