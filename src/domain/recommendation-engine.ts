@@ -19,7 +19,10 @@ export interface RecommendationContext {
   allCourses: Course[];
   academicRules: AcademicRule[];
   eligibilityResults: CourseEligibilityResult[];
-  approximateStudentSemester?: number; // e.g. 3
+  /** Truly passed courses in this student's record; failed/absent attempts excluded. */
+  passedCourseIds?: string[];
+  /** Optional, independently verified academic term index. Never assume semester 3. */
+  approximateStudentSemester?: number;
 }
 
 /**
@@ -34,9 +37,11 @@ export function generateCourseRecommendations(
     allCourses,
     academicRules,
     eligibilityResults,
-    approximateStudentSemester = 3,
+    passedCourseIds = [],
+    approximateStudentSemester,
   } = context;
 
+  const passed = new Set(passedCourseIds);
   const coursesMap = new Map<string, Course>(allCourses.map((c) => [c.id, c]));
   const currCourseMap = new Map<string, CurriculumCourse>();
   for (const cc of curriculumCourses) {
@@ -85,9 +90,11 @@ export function generateCourseRecommendations(
     const isRequired = classification === 'MAJOR_REQUIRED' || classification === 'TRACK_REQUIRED';
 
     // Calculate future unlocked courses
-    const directDependents = dependencyGraph.get(courseId) || [];
+    const directDependents = (dependencyGraph.get(courseId) || []).filter(id => currCourseMap.has(id) && !passed.has(id));
+    // Walk the entire remaining degree path, not just the coming semester;
+    // completed courses no longer inflate the urgency of a prerequisite.
     const unlockedCourseIds = downstreamCourseIds(courseId, curriculum.id, academicRules)
-      .filter(id => currCourseMap.has(id) && id !== courseId);
+      .filter(id => currCourseMap.has(id) && id !== courseId && !passed.has(id));
     const unlockedCourseNames = unlockedCourseIds
       .map((id) => coursesMap.get(id)?.name)
       .filter((name): name is string => !!name);
@@ -113,16 +120,18 @@ export function generateCourseRecommendations(
       reasons.push('درس اختیاری / عمومی');
     }
 
-    // 3. Semester Alignment
-    const semDifference = Math.abs(suggestedSem - approximateStudentSemester);
-    if (semDifference === 0) {
-      score += 15;
-      reasons.push(`دقیقاً متناسب با ترم ${suggestedSem} تحصیلی شما`);
-    } else if (suggestedSem < approximateStudentSemester) {
-      score += 10;
-      reasons.push(`درس عقب‌افتاده از ترم‌های گذشته (پیشنهاد شده برای ترم ${suggestedSem})`);
-    } else {
-      score += 2;
+    // 3. Semester alignment is an optional hint, never an invented student fact.
+    if (Number.isInteger(approximateStudentSemester) && approximateStudentSemester! > 0) {
+      const semDifference = Math.abs(suggestedSem - approximateStudentSemester!);
+      if (semDifference === 0) {
+        score += 15;
+        reasons.push(`طبق تخمین نیمسال تحصیلی، زمان پیشنهادی این درس ترم ${suggestedSem} است`);
+      } else if (suggestedSem < approximateStudentSemester!) {
+        score += 10;
+        reasons.push(`در چارت برای ترم ${suggestedSem} پیشنهاد شده است`);
+      } else {
+        score += 2;
+      }
     }
 
     // Determine Priority Tag
