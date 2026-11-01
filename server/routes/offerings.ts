@@ -93,7 +93,12 @@ offeringsRouter.post('/', authenticate, requirePermission('offering.manage'), (r
   const result = prepareOffering(req.body || {});
   if (!result.offering) return res.status(400).json({ success: false, error: result.error });
   db.courseOfferings.push(result.offering);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.data.courseOfferings = db.courseOfferings.filter(row => row.id !== result.offering!.id);
+    return res.status(503).json({ success: false, error: 'گروه درسی ذخیره نشد.' });
+  }
   return res.json({ success: true, data: { ...result.offering, course: db.courses.find(c => c.id === result.offering!.courseId) } });
 });
 
@@ -102,15 +107,26 @@ offeringsRouter.put('/:id', authenticate, requirePermission('offering.manage'), 
   if (index < 0) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
   const result = prepareOffering(req.body || {}, db.courseOfferings[index]);
   if (!result.offering) return res.status(400).json({ success: false, error: result.error });
+  const previous = db.courseOfferings[index];
   db.courseOfferings[index] = result.offering;
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.courseOfferings[index] = previous;
+    return res.status(503).json({ success: false, error: 'ویرایش گروه درسی ذخیره نشد.' });
+  }
   return res.json({ success: true, data: result.offering });
 });
 
 offeringsRouter.delete('/:id', authenticate, requirePermission('offering.manage'), (req, res) => {
   const idx = db.courseOfferings.findIndex(row => row.id === req.params.id);
   if (idx < 0) return res.status(404).json({ success: false, error: 'ارائه درس یافت نشد.' });
-  db.courseOfferings.splice(idx, 1);
-  db.save();
+  const [removed] = db.courseOfferings.splice(idx, 1);
+  try {
+    db.save();
+  } catch {
+    db.courseOfferings.splice(idx, 0, removed);
+    return res.status(503).json({ success: false, error: 'حذف گروه درسی ذخیره نشد.' });
+  }
   return res.json({ success: true, message: 'ارائه درس با موفقیت حذف شد.' });
 });
