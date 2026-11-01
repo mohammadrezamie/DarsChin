@@ -459,7 +459,9 @@ export const StudentDashboard: React.FC = () => {
 
     const updatedOfferingList = [
       offeringId,
-      ...currentCourseOfferings.filter((id) => id !== offeringId),
+      // هنگام تغییر استاد اول، استاد قبلی به جای حذف، جایگزین دوم می‌شود.
+      ...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : []),
+      ...currentCourseOfferings.filter((id) => id !== offeringId && id !== currentPrimary),
     ];
     const newOfferingPriorities = {
       ...offeringPriorities,
