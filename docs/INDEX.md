@@ -7,6 +7,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **ثبت پایدار پروندهٔ دانشجو، سوابق قبولی/مردودی و بازگشت امن پس از خطای ذخیره** | [STUDENT_RECORD_DURABILITY_20261101_FA.md](STUDENT_RECORD_DURABILITY_20261101_FA.md) |
 | **سیاست امنیت دائمی و الزام‌آور برای توسعه‌دهندگان و استفاده‌کنندگان/نصب‌کنندگان** | [PERMANENT_SECURITY_POLICY_FA.md](PERMANENT_SECURITY_POLICY_FA.md) |
 | **پروندهٔ افشای تاریخی GitHub، اقدامات مالک و GitHub Support (هنوز باز)** | [SECURITY_INCIDENT_RUNBOOK_20261101_FA.md](SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) |
 | **قرارداد دائمی دستیارها و توسعه‌دهنده‌ها: ثبت همهٔ دستورهای مالک در GitHub** | [AGENTS.md](../AGENTS.md) |
