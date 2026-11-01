@@ -1,3 +1,4 @@
+| **هماهنگی تداخل‌سنج دانشجو با سرور** | [PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md](PLANNER_UI_SERVER_COLLISION_PARITY_20261101_FA.md) |
 # DarsChin documentation index
 
 **Latest owner decision (2026-11-01): source is MIT open source, but hosted runtime access and data remain independently private.** [Self-hosting, VPS safety, optional owner-only API mode and upstream updates](SELF_HOSTING_OPEN_SOURCE_FA.md).
