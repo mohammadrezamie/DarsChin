@@ -58,7 +58,7 @@ function scanZipArchive(blob, findSecretKinds, findPopulatedEnvTemplateFields) {
       const dataStart = local + 30 + blob.readUInt16LE(local + 26) + blob.readUInt16LE(local + 28);
       if (dataStart + compressedSize > blob.length) throw Error('entry-data');
       // A release ZIP must not smuggle persisted local account data.
-      if (/(^|\\/)data\\/.*\\.(?:json|jsonl|csv|log|sqlite|db)$/i.test(name)) {
+      if (name.split('/').includes('data') && /\.(?:json|jsonl|csv|log|sqlite|db)$/i.test(name)) {
         findings.push({ type: 'embedded-runtime-data' });
         continue;
       }
