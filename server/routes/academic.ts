@@ -362,44 +362,67 @@ academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.
 
 academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
   const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body ?? {};
-  if (!code || !name || units === undefined || !category) {
-    return res.status(400).json({ success: false, error: 'کد، نام، تعداد واحد و دسته‌بندی درس الزامی است.' });
+  if (!validText(code, 64) || !validText(name) ||
+      !validUnits(units) || !validUnits(practicalUnits) ||
+      !validCourseCategories.has(category) ||
+      (description !== undefined && (typeof description !== 'string' || description.length > 2000)) ||
+      typeof active !== 'boolean' ||
+      (isExtraUnit !== undefined && typeof isExtraUnit !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'کد، نام، واحد، دسته‌بندی یا تنظیمات درس نامعتبر است.' });
   }
-
-  const existing = db.courses.find((c) => c.code.trim() === code.trim());
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'درسی با این کد قبلاً ثبت شده است.' });
+  if (Number(practicalUnits) > Number(units)) {
+    return res.status(400).json({ success: false, error: 'واحد عملی نمی‌تواند از کل واحدهای درس بیشتر باشد.' });
   }
-
+  const normalizedCode = code.trim().toUpperCase();
+  if (db.courses.some(course => course.code.trim().toUpperCase() === normalizedCode)) {
+    return res.status(409).json({ success: false, error: 'کد درس قبلاً ثبت شده است.' });
+  }
   const newCourse: Course = {
-    id: `crs-${Date.now()}`,
-    code: code.trim(),
-    name: name.trim(),
-    units: Number(units),
-    practicalUnits: Number(practicalUnits),
-    category,
-    description: description?.trim() || undefined,
-    active: !!active,
+    id: `crs-${randomUUID()}`, code: code.trim(), name: name.trim(),
+    units: Number(units), practicalUnits: Number(practicalUnits),
+    category, description: description?.trim() || undefined, active,
+    ...(isExtraUnit !== undefined ? { isExtraUnit } : {}),
   };
-  db.courses.push(newCourse);
-  db.save();
-  res.json({ success: true, data: newCourse });
+  const saved = writeCatalog(['courses'], () => { db.courses.push(newCourse); return newCourse; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/courses/:id', authenticate, requirePermission('course.update'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
   const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body ?? {};
-  if (code) db.courses[idx].code = code.trim();
-  if (name) db.courses[idx].name = name.trim();
-  if (units !== undefined) db.courses[idx].units = Number(units);
-  if (practicalUnits !== undefined) db.courses[idx].practicalUnits = Number(practicalUnits);
-  if (category) db.courses[idx].category = category;
-  if (description !== undefined) db.courses[idx].description = description;
-  if (typeof active === 'boolean') db.courses[idx].active = active;
-  if (typeof isExtraUnit === 'boolean') db.courses[idx].isExtraUnit = isExtraUnit;
-  db.save();
-  res.json({ success: true, data: db.courses[idx] });
+  if ((code !== undefined && !validText(code, 64)) ||
+      (name !== undefined && !validText(name)) ||
+      (units !== undefined && !validUnits(units)) ||
+      (practicalUnits !== undefined && !validUnits(practicalUnits)) ||
+      (category !== undefined && !validCourseCategories.has(category)) ||
+      (description !== undefined && (typeof description !== 'string' || description.length > 2000)) ||
+      (active !== undefined && typeof active !== 'boolean') ||
+      (isExtraUnit !== undefined && typeof isExtraUnit !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'مقادیر ویرایش درس معتبر نیست.' });
+  }
+  const existing = db.courses[idx];
+  if (Number(practicalUnits ?? existing.practicalUnits ?? 0) > Number(units ?? existing.units)) {
+    return res.status(400).json({ success: false, error: 'واحد عملی نمی‌تواند از کل واحدهای درس بیشتر باشد.' });
+  }
+  if (code !== undefined && db.courses.some(course => course.id !== existing.id &&
+      course.code.trim().toUpperCase() === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد درس تکراری است.' });
+  }
+  const saved = writeCatalog(['courses'], () => {
+    if (code !== undefined) existing.code = code.trim();
+    if (name !== undefined) existing.name = name.trim();
+    if (units !== undefined) existing.units = Number(units);
+    if (practicalUnits !== undefined) existing.practicalUnits = Number(practicalUnits);
+    if (category !== undefined) existing.category = category;
+    if (description !== undefined) existing.description = description.trim();
+    if (active !== undefined) existing.active = active;
+    if (isExtraUnit !== undefined) existing.isExtraUnit = isExtraUnit;
+    return existing;
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
@@ -409,13 +432,15 @@ academicRouter.delete('/courses/:id', authenticate, requirePermission('course.de
       db.demandSurveys.some(s => s.courseIds.includes(req.params.id)) ||
       db.studentPassedCourses.some(p => p.courseId === req.params.id) ||
       db.courseOfferings.some(o => o.courseId === req.params.id) ||
-      db.academicRules.some(r => r.targetCourseId === req.params.id)) {
+      db.academicRules.some(r => r.targetCourseId === req.params.id ||
+        extractSourceCourseIds(r.expression).includes(req.params.id)) ||
+      db.importRecords.some(record => record.matchedCourseId === req.params.id)) {
     return res.status(409).json({
       success: false,
       error: 'این درس به چارت، سوابق دانشجو، ارائه یا نیازسنجی وابسته است؛ برای حفظ سوابق قابل حذف مستقیم نیست.',
     });
   }
-  db.courses.splice(idx, 1);
-  db.save();
+  const saved = writeCatalog(['courses'], () => db.courses.splice(idx, 1));
+  if (!saved.ok) return saveFailure(res);
   res.json({ success: true, message: 'درس با موفقیت حذف شد.' });
 });
