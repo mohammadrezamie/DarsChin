@@ -53,7 +53,7 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         );
       case 'MEDIUM':
         return (
-          <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+          <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-100 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-900">
             اولویت متوسط
           </span>
         );
@@ -69,9 +69,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   return (
     <div className="space-y-4">
       {/* Header Explanatory Box */}
-      <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs border border-blue-200/60 dark:border-blue-800/40">
+      <div className="p-5 bg-liquid-glass rounded-3xl shadow-xs border border-teal-200/60 dark:border-teal-900/40">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-teal-700 text-white flex items-center justify-center shadow-md shadow-teal-600/25 shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
@@ -86,9 +86,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
       </div>
 
       {demandSurveyAvailable && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-xs leading-6 text-teal-950 dark:border-teal-950 dark:bg-teal-950/40 dark:text-teal-200">
           <span>نشانگر نیازسنجی فقط یادآوری است؛ حتی درسی که درخواست ندادی را می‌توانی طبق قوانین انتخاب واحد بررسی و انتخاب کنی.</span>
-          {onOpenDemand && <button type="button" onClick={onOpenDemand} className="min-h-10 rounded-xl border border-blue-400 px-3 font-bold">رفتن به نیازسنجی</button>}
+          {onOpenDemand && <button type="button" onClick={onOpenDemand} className="min-h-10 rounded-xl border border-teal-400 px-3 font-bold">رفتن به نیازسنجی</button>}
         </div>
       )}
       {recommendations.length === 0 ? (
@@ -108,8 +108,8 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
                 key={rec.offeringId || rec.courseId}
                 className={`p-5 bg-liquid-glass rounded-3xl transition-all shadow-xs border ${
                   isSelected
-                    ? 'border-blue-500 ring-2 ring-blue-500/20'
-                    : 'border-white/40 dark:border-slate-800/60 hover:border-blue-300 dark:hover:border-blue-700'
+                    ? 'border-teal-600 ring-2 ring-teal-600/20'
+                    : 'border-white/40 dark:border-slate-800/60 hover:border-teal-300 dark:hover:border-teal-800'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -130,7 +130,7 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
                         کد: {rec.courseCode}
                       </span>
                       {evalResult && (
-                        <span className="text-xs px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium">
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 font-medium">
                           گروه {evalResult.groupCode}
                         </span>
                       )}
@@ -178,7 +178,7 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
                   <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 shrink-0">
                     <div className="text-left">
                       <span className="text-[11px] text-slate-500 block">امتیاز اولویت چارت</span>
-                      <span className="text-xl font-black text-blue-600 dark:text-blue-400">
+                      <span className="text-xl font-black text-teal-700 dark:text-teal-400">
                         {rec.score} <span className="text-xs font-normal">امتیاز</span>
                       </span>
                     </div>
@@ -189,7 +189,7 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
                         className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
                           isSelected
                             ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                            : 'bg-teal-700 hover:bg-teal-800 text-white shadow-xs'
                         }`}
                       >
                         {isSelected ? (
