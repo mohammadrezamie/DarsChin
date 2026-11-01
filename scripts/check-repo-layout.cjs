@@ -13,15 +13,15 @@ const required = [
   'server/security/turnstile.ts',
   'server/sms/service.ts',
   'docs/REPOSITORY_STRUCTURE_FA.md',
-  'scripts/legacy',
+  'scripts/legacy/README.md',
   'deploy/.env.vps.example',
 ];
 const missing=required.filter(name=>!fs.existsSync(path.join(root,name)));
 if (unsafe.length || missing.length) {
-  if (unsafe.length) console.error('One-off files must be archived under scripts/legacy/:',unsafe.join(', '));
+  if (unsafe.length) console.error('One-off scripts must not be committed:',unsafe.join(', '));
   if (missing.length) console.error('Required structure missing:',missing.join(', '));
   process.exitCode=1;
 } else {
-  console.log('PASS: repository layout conventions and legacy script archive.');
+  console.log('PASS: repository layout conventions and legacy deprecation notice.');
   console.log('Run bun run repo:public-check before source publication; review Git history separately.');
 }

@@ -1,5 +1,5 @@
 // Fast, offline, HEAD-only guard for tracked files in a public repository.
-// Never prints secret values; does not scan Git history, PR refs or binary ZIPs.
+// Never prints secret values; scans tracked text and bounded ZIPs, not Git history or PR refs.
 // This complements (does not replace) a professional secret scanner.
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -11,7 +11,8 @@ const TEXT_EXTENSIONS = /\.(?:cjs|mjs|js|jsx|ts|tsx|json|jsonl|md|txt|html|css|s
 
 function isSensitivePath(file) {
   const name = file.replace(/\\/g, '/');
-  return /^data\/.*\.(?:json|jsonl|sqlite3?|db|csv|xlsx?|log|bak)$/i.test(name) ||
+  return /^scripts\/legacy\/.*\.(?:cjs|mjs|js|ts|tsx|py|sh)$/i.test(name) ||
+    /^data\/.*\.(?:json|jsonl|sqlite3?|db|csv|xlsx?|log|bak)$/i.test(name) ||
     (/(^|\/)\.env(?:\.|$)/i.test(name) && !/\.example$/i.test(name)) ||
     /\.(?:pem|p12|pfx|jks|keystore)$/i.test(name) ||
     /(^|\/)(?:id_rsa|id_ed25519|credentials\.json|service-account(?:-.*)?\.json|secrets\.json)$/i.test(name);
@@ -118,7 +119,7 @@ function main() {
     return;
   }
   console.log('PASS: tracked text paths and known secret signatures checked at current HEAD.');
-  console.log('LIMITS: no Git history, PR refs, ZIP contents, generic entropy or production secret validation.');
+  console.log('LIMITS: no Git history/PR refs, unknown secrets, generic entropy or production secret validation.');
 }
 
 if (require.main === module) main();

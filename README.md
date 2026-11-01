@@ -97,3 +97,6 @@ Start with the [documentation index](docs/INDEX.md) for local development, secur
 ## Contribution workflow
 
 For the current owner-directed demo/pilot work, use `main` as the integration branch and avoid unnecessary feature branches. Run the quality gate for each commit. Preexisting open Draft PRs must be reconciled file-by-file before merging or closing; never overwrite newer main fixes. Remove completed branches only after verifying their unique work is retained.
+
+
+> **Public source security:** Obsolete one-off login scripts with historically hardcoded authentication values have been removed from current HEAD; never use their old credentials or restore old published data. This does **not** erase public Git history or old PR references. See [security incident](docs/PUBLIC_REPOSITORY_READINESS_20261101_FA.md) and [security policy](docs/SECURITY.md).
