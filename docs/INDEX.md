@@ -7,6 +7,7 @@
 
 | Topic | Reference |
 | --- | --- |
+| **مسدودسازی مسیر مستقیم نشت فایل‌های اضافی افزونه/دموی آموزشیار** | [PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md](PUBLIC_STATIC_ALLOWLIST_SECURITY_20261101_FA.md) |
 | **گیت واقعی تداخل ساعت کلاس/امتحان و پیش‌نیازهای تأییدشدهٔ هر ورودی** | [PLANNER_CONFLICTS_AND_VERIFIED_ELIGIBILITY_20261101_FA.md](PLANNER_CONFLICTS_AND_VERIFIED_ELIGIBILITY_20261101_FA.md) |
 | **یکپارچگی کاتالوگ دانشگاه و چارت: حذف امن، اعتبارسنجی و Rollback داده‌های پایه** | [ACADEMIC_CATALOG_INTEGRITY_20261101_FA.md](ACADEMIC_CATALOG_INTEGRITY_20261101_FA.md) |
 | **همگام‌سازی امن آموزشیار: ثبت اتمیک، بازیابی خطای دیسک، جلوگیری از انباشت و صف تأیید مدیر** | [SYNC_ATOMIC_STAGING_SECURITY_20261101_FA.md](SYNC_ATOMIC_STAGING_SECURITY_20261101_FA.md) |
