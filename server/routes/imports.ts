@@ -80,9 +80,20 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
       createdAt: new Date().toISOString(),
     };
 
-    db.importBatches.unshift(newBatch);
-    db.importRecords.push(...validationResult.importRecords);
-    db.save();
+    // Persist the complete import transaction or restore the previous
+    // in-memory collections. A disk failure must not leave review-only rows
+    // visible to API callers when they were never actually saved.
+    const previousBatches = db.importBatches;
+    const previousRecords = db.importRecords;
+    db.data.importBatches = [newBatch, ...previousBatches];
+    db.data.importRecords = [...previousRecords, ...validationResult.importRecords];
+    try {
+      db.save();
+    } catch {
+      db.data.importBatches = previousBatches;
+      db.data.importRecords = previousRecords;
+      throw new Error('Import persistence failed');
+    }
 
     return res.json({
       success: true,
@@ -101,11 +112,9 @@ importsRouter.post('/process', authenticate, validate(processImportSchema), (req
       },
     });
   } catch {
-    // Import parsing / storage failures can include raw uploaded fields,
-    // persisted file paths, or stack fragments; do not echo exceptions.
     return res.status(500).json({
       success: false,
-      error: 'پردازش فایل واردشده ناموفق بود؛ لطفاً دوباره تلاش کنید.',
+      error: 'ذخیرهٔ فایل واردشده ناموفق بود؛ لطفاً بعداً دوباره تلاش کنید.',
     });
   }
 });

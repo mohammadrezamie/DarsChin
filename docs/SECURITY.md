@@ -87,6 +87,9 @@ Limitations: this does not eliminate every possible timing/network side channel,
 
 The 22 retired, one-off scripts in `scripts/legacy/` have been deleted from current HEAD after discovering embedded authentication values and a password-printing utility. They were not supported production or test commands. Automated public-source checks now reject recommitting executable files under this deprecated directory. Source deletion **does not remove historical Git objects, old PR refs, third-party clones, or invalidate leaked secrets**. Create new independent deployment credentials, revoke anything exposed in history and coordinate full historical cleanup and GitHub Support separately. No active VPS or private environment was touched.
 
+## Import preview persistence and error privacy — 2026-11-01
+
+Student/administrator extension import previews now keep new review batches and rows **atomic in application memory** with respect to the durable JSON write: if `db.save()` fails, both in-memory collections revert to their prior values and the HTTP response is a generic 500 without file paths, provider details or raw imported content. This does not make the JSON database safe for multiple independent Node writers; a transactional database remains required for distributed deployments. The main service on the existing VPS has not been touched.
 
 ## Full backup scope and import diagnostics (2026-11-01)
 

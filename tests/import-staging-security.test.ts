@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { db } from '../server/db/database';
@@ -79,6 +79,36 @@ describe('authenticated import preview can never publish offerings', () => {
     madeBatchIds.push(response.body.data.batch.id);
     expect(db.courseOfferings.map(o => o.id)).toEqual(before);
     expect(db.importRecords.some(record => record.batchId === response.body.data.batch.id)).toBe(true);
+  });
+
+  it('rolls back unsaved import records and never exposes persistence paths', async () => {
+    const marker = 'SYNTHETIC_PRIVATE_PATH:/etc/darschyn/runtime.env';
+    const beforeBatches = [...db.importBatches];
+    const beforeRecords = [...db.importRecords];
+    const beforeOfferings = [...db.courseOfferings];
+    const spy = vi.spyOn(db, 'save').mockImplementationOnce(() => {
+      throw new Error(marker);
+    });
+    try {
+      const response = await request(app).post('/api/imports/process')
+        .set('Authorization', authHeader).send({
+          payload: { records: [{
+            courseCode: code, courseName, group: '91',
+            instructor: 'مدرس ساختگی', day: 'شنبه', startTime: '08:00',
+            endTime: '10:00', capacity: 20,
+          }] },
+          termId, campusId,
+        });
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
+      expect(JSON.stringify(response.body)).not.toContain(marker);
+      expect(response.body.error).toContain('ذخیره');
+      expect(db.importBatches).toEqual(beforeBatches);
+      expect(db.importRecords).toEqual(beforeRecords);
+      expect(db.courseOfferings).toEqual(beforeOfferings);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('reviews course matches with an audit trail, never publishing an offering', async () => {

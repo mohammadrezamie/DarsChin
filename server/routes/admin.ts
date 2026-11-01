@@ -37,8 +37,6 @@ adminRouter.get('/stats', authenticate, requirePermission('admin.panel.access'),
 });
 
 // Export Database Backup (without sensitive passwords)
-// Full backups include student academic information: never delegate based on a
-// legacy backup.manage permission. Only verified reserved root may export.
 adminRouter.get('/backup', authenticate, requireSuperAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   try {
@@ -53,7 +51,6 @@ adminRouter.get('/backup', authenticate, requireSuperAdmin, (req, res) => {
 });
 
 // Restore Database Backup
-// A full-catalog restore can affect all students; keep it root-only too.
 adminRouter.post('/restore', authenticate, requireSuperAdmin, (req, res) => {
   try {
     const backupData = req.body;

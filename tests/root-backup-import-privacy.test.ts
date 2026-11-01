@@ -85,7 +85,7 @@ describe('backups and import exceptions cannot leak private student data', () =>
         });
       expect(result.status).toBe(500);
       expect(JSON.stringify(result.body)).not.toContain(secret);
-      expect(result.body.error).toBe('پردازش فایل واردشده ناموفق بود؛ لطفاً دوباره تلاش کنید.');
+      expect(result.body.error).toBe('ذخیرهٔ فایل واردشده ناموفق بود؛ لطفاً بعداً دوباره تلاش کنید.');
     } finally {
       spy.mockRestore();
       db.data.importBatches = existingBatches;
