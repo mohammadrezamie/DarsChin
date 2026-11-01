@@ -3,11 +3,47 @@
 // ============================================================================
 
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+import { extractSourceCourseIds } from '../../src/utils/academic';
 import { db } from '../db/database';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
 
 export const academicRouter = Router();
+
+// Every catalogue mutation is a single-process durable write. A failed fsync
+// must not leave partly edited academic definitions visible in memory.
+type CatalogCollection = 'provinces' | 'universities' | 'campuses' | 'degreeLevels' |
+  'majors' | 'tracks' | 'entryYears' | 'academicTerms' | 'courses';
+function writeCatalog<T>(names: CatalogCollection[], change: () => T):
+  { ok: true; value: T } | { ok: false } {
+  const store = db.data as unknown as Record<string, unknown>;
+  const before = names.map(name => [name, structuredClone(store[name])] as const);
+  try {
+    const value = change();
+    db.save();
+    return { ok: true, value };
+  } catch {
+    for (const [name, snapshot] of before) store[name] = snapshot;
+    return { ok: false };
+  }
+}
+const saveFailure = (res: import('express').Response) =>
+  res.status(503).json({ success: false, error: 'تغییرات کاتالوگ آموزشی ذخیره نشد؛ دوباره تلاش کنید.' });
+const validText = (value: unknown, max = 180): value is string =>
+  typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
+const validAcademicYear = (value: unknown): value is number | string => {
+  if (typeof value !== 'number' && typeof value !== 'string') return false;
+  if (!/^\d{4}$/.test(String(value))) return false;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1200 && number <= 2200;
+};
+const validUnits = (value: unknown): boolean =>
+  (typeof value === 'number' || (typeof value === 'string' && value.trim().length > 0)) &&
+  Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 30;
+const validCourseCategories = new Set<Course['category']>([
+  'عمومی', 'پایه', 'اصلی', 'تخصصی', 'اختیاری', 'آزمایشگاه', 'پروژه', 'کارآموزی', 'سایر',
+]);
 
 // Public / Authenticated read-all
 academicRouter.get('/all-meta', (req, res) => {
@@ -33,12 +69,12 @@ academicRouter.get('/provinces', (req, res) => {
   res.json({ success: true, data: db.provinces });
 });
 academicRouter.post('/provinces', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, active = true } = req.body;
-  if (!name) return res.status(400).json({ success: false, error: 'نام استان الزامی است.' });
-  const newProv: Province = { id: `prov-${Date.now()}`, name: name.trim(), active };
-  db.provinces.push(newProv);
-  db.save();
-  res.json({ success: true, data: newProv });
+  const { name, active = true } = req.body ?? {};
+  if (!validText(name)) return res.status(400).json({ success: false, error: 'نام استان معتبر الزامی است.' });
+  const newProv: Province = { id: `prov-${randomUUID()}`, name: name.trim(), active: active === true };
+  const saved = writeCatalog(['provinces'], () => { db.provinces.push(newProv); return newProv; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 // --- Universities CRUD ---
@@ -47,44 +83,61 @@ academicRouter.get('/universities', (req, res) => {
 });
 
 academicRouter.post('/universities', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, code, active = true } = req.body;
-  if (!name || !code) return res.status(400).json({ success: false, error: 'نام و کد دانشگاه الزامی است.' });
-
+  const { name, code, active = true } = req.body ?? {};
+  if (!validText(name) || !validText(code, 50)) {
+    return res.status(400).json({ success: false, error: 'نام و کد معتبر دانشگاه الزامی است.' });
+  }
+  const normalizedCode = code.trim().toUpperCase();
+  if (db.universities.some(u => u.code === normalizedCode)) {
+    return res.status(409).json({ success: false, error: 'کد دانشگاه تکراری است.' });
+  }
   const newUniv: University = {
-    id: `univ-${Date.now()}`,
-    name: name.trim(),
-    code: code.trim().toUpperCase(),
-    active: !!active,
+    id: `univ-${randomUUID()}`, name: name.trim(), code: normalizedCode, active: active === true,
   };
-  db.universities.push(newUniv);
-  db.save();
-  res.json({ success: true, data: newUniv });
+  const saved = writeCatalog(['universities'], () => { db.universities.push(newUniv); return newUniv; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
-  const { name, code, active } = req.body;
-  if (name) db.universities[idx].name = name.trim();
-  if (code) db.universities[idx].code = code.trim().toUpperCase();
-  if (typeof active === 'boolean') db.universities[idx].active = active;
-  db.save();
-  res.json({ success: true, data: db.universities[idx] });
+  const { name, code, active } = req.body ?? {};
+  if ((name !== undefined && !validText(name)) ||
+      (code !== undefined && !validText(code, 50)) ||
+      (active !== undefined && typeof active !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'اطلاعات ویرایش دانشگاه نامعتبر است.' });
+  }
+  if (code !== undefined && db.universities.some(u =>
+      u.id !== req.params.id && u.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد دانشگاه تکراری است.' });
+  }
+  const saved = writeCatalog(['universities'], () => {
+    if (name !== undefined) db.universities[idx].name = name.trim();
+    if (code !== undefined) db.universities[idx].code = code.trim().toUpperCase();
+    if (active !== undefined) db.universities[idx].active = active;
+    return db.universities[idx];
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/universities/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.universities.findIndex((u) => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'دانشگاه یافت نشد.' });
-  // Check if any campus references it
-  const hasCampuses = db.campuses.some((c) => c.universityId === req.params.id);
-  if (hasCampuses) {
-    db.universities[idx].active = false;
-    db.save();
-    return res.json({ success: true, message: 'به دلیل وابستگی اطلاعات، این دانشگاه غیرفعال شد.' });
-  }
-  db.universities.splice(idx, 1);
-  db.save();
-  res.json({ success: true, message: 'دانشگاه با موفقیت حذف شد.' });
+  // Keep historical references from campuses, charts, student academic
+  // profiles and demand surveys. Deactivation is reversible, deletion is not.
+  const referenced = db.campuses.some(c => c.universityId === req.params.id) ||
+    db.curricula.some(c => c.universityId === req.params.id) ||
+    db.studentProfiles.some(p => p.universityId === req.params.id) ||
+    db.demandSurveys.some(d => d.universityId === req.params.id);
+  const saved = writeCatalog(['universities'], () => {
+    if (referenced) db.universities[idx].active = false;
+    else db.universities.splice(idx, 1);
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, message: referenced
+    ? 'دانشگاه به دلیل سوابق وابسته غیرفعال شد.' : 'دانشگاه حذف شد.' });
 });
 
 // --- Campuses CRUD ---
@@ -97,9 +150,11 @@ academicRouter.get('/campuses', (req, res) => {
 });
 
 academicRouter.post('/campuses', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body;
-  if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
-    return res.status(400).json({ success: false, error: 'نام و کد واحد دانشگاهی الزامی است.' });
+  const { universityId = 'univ-azad', provinceId, type = 'PROVINCE_UNIT', name, code, active = true } = req.body ?? {};
+  if (!validText(name) || !validText(code, 50) ||
+      !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT','COMPREHENSIVE_INDEPENDENT','INTERNATIONAL'].includes(type) ||
+      typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام، کد و نوع واحد دانشگاهی نامعتبر است.' });
   }
   if (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId && u.active)) {
     return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر و فعال نیست.' });
@@ -108,46 +163,78 @@ academicRouter.post('/campuses', authenticate, requirePermission('system.setting
       (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId && p.active))) {
     return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر و فعال نیست.' });
   }
+  if (db.campuses.some(c => c.universityId === universityId && c.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد واحد در این دانشگاه تکراری است.' });
+  }
   const newCampus: Campus = {
-    id: `camp-${Date.now()}`,
-    universityId,
+    id: `camp-${randomUUID()}`, universityId,
     provinceId: provinceId || null, type, name: name.trim(),
-    code: code.trim().toUpperCase(),
-    active: !!active,
+    code: code.trim().toUpperCase(), active,
   };
-  db.campuses.push(newCampus);
-  db.save();
-  res.json({ success: true, data: newCampus });
+  const saved = writeCatalog(['campuses'], () => { db.campuses.push(newCampus); return newCampus; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
-  const { universityId, provinceId, type, name, code, active } = req.body;
+  const { universityId, provinceId, type, name, code, active } = req.body ?? {};
   if (universityId !== undefined &&
-      (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId))) {
+      (typeof universityId !== 'string' || !db.universities.some(u => u.id === universityId && u.active))) {
     return res.status(400).json({ success: false, error: 'دانشگاه انتخاب‌شده معتبر نیست.' });
   }
   if (provinceId !== undefined && provinceId !== null && provinceId !== '' &&
       (typeof provinceId !== 'string' || !db.provinces.some(p => p.id === provinceId))) {
     return res.status(400).json({ success: false, error: 'استان انتخاب‌شده معتبر نیست.' });
   }
-  if (universityId) db.campuses[idx].universityId = universityId;
-  if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId || null;
-  if (type) db.campuses[idx].type = type;
-  if (name) db.campuses[idx].name = name.trim();
-  if (code) db.campuses[idx].code = code.trim().toUpperCase();
-  if (typeof active === 'boolean') db.campuses[idx].active = active;
-  db.save();
-  res.json({ success: true, data: db.campuses[idx] });
+  if ((name !== undefined && !validText(name)) ||
+      (code !== undefined && !validText(code, 50)) ||
+      (type !== undefined && !['PROVINCE_UNIT','INDEPENDENT_UNIT','SPECIAL_UNIT','COMPREHENSIVE_INDEPENDENT','INTERNATIONAL'].includes(type)) ||
+      (active !== undefined && typeof active !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'اطلاعات ویرایش واحد نامعتبر است.' });
+  }
+  if (universityId && universityId !== db.campuses[idx].universityId &&
+      (db.curricula.some(c => c.campusId === req.params.id) ||
+       db.studentProfiles.some(p => p.campusId === req.params.id) ||
+       db.demandSurveys.some(d => d.campusId === req.params.id))) {
+    return res.status(409).json({ success: false, error: 'انتقال واحد دارای چارت یا پروندهٔ دانشجو به دانشگاه دیگر مجاز نیست.' });
+  }
+  const targetUniversityId = universityId ?? db.campuses[idx].universityId;
+  const targetCode = code?.trim().toUpperCase() ?? db.campuses[idx].code;
+  if (db.campuses.some(c => c.id !== req.params.id &&
+      c.universityId === targetUniversityId && c.code === targetCode)) {
+    return res.status(409).json({ success: false, error: 'کد واحد دانشگاهی تکراری است.' });
+  }
+  const saved = writeCatalog(['campuses'], () => {
+    if (universityId !== undefined) db.campuses[idx].universityId = universityId;
+    if (provinceId !== undefined) db.campuses[idx].provinceId = provinceId || null;
+    if (type !== undefined) db.campuses[idx].type = type;
+    if (name !== undefined) db.campuses[idx].name = name.trim();
+    if (code !== undefined) db.campuses[idx].code = code.trim().toUpperCase();
+    if (active !== undefined) db.campuses[idx].active = active;
+    return db.campuses[idx];
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/campuses/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.campuses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'واحد دانشگاهی یافت نشد.' });
-  db.campuses.splice(idx, 1);
-  db.save();
-  res.json({ success: true, message: 'واحد دانشگاهی حذف شد.' });
+  const referenced = db.curricula.some(c => c.campusId === req.params.id) ||
+    db.studentProfiles.some(p => p.campusId === req.params.id) ||
+    db.courseOfferings.some(o => o.campusId === req.params.id) ||
+    db.demandSurveys.some(d => d.campusId === req.params.id) ||
+    db.syncJobs.some(job => job.campusId === req.params.id);
+  const saved = writeCatalog(['campuses'], () => {
+    if (referenced) db.campuses[idx].active = false;
+    else db.campuses.splice(idx, 1);
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, message: referenced
+    ? 'این واحد به دلیل وجود سوابق وابسته غیرفعال شد و حذف دائمی نشد.'
+    : 'واحد دانشگاهی حذف شد.' });
 });
 
 // --- Degrees & Majors & Tracks ---
@@ -156,39 +243,59 @@ academicRouter.get('/majors', (req, res) => res.json({ success: true, data: db.m
 academicRouter.get('/tracks', (req, res) => res.json({ success: true, data: db.tracks }));
 
 academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, code, active = true } = req.body;
-  const newDeg: DegreeLevel = { id: `deg-${Date.now()}`, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.degreeLevels.push(newDeg);
-  db.save();
-  res.json({ success: true, data: newDeg });
+  const { name, code, active = true } = req.body ?? {};
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'عنوان و کد مقطع تحصیلی معتبر نیست.' });
+  }
+  if (db.degreeLevels.some(degree => degree.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد مقطع تحصیلی تکراری است.' });
+  }
+  const newDeg: DegreeLevel = {
+    id: `deg-${randomUUID()}`, name: name.trim(), code: code.trim().toUpperCase(), active,
+  };
+  const saved = writeCatalog(['degreeLevels'], () => { db.degreeLevels.push(newDeg); return newDeg; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { degreeLevelId, name, code, active = true } = req.body;
+  const { degreeLevelId, name, code, active = true } = req.body ?? {};
   if (typeof degreeLevelId !== 'string' || !db.degreeLevels.some(degree => degree.id === degreeLevelId && degree.active)) {
     return res.status(400).json({ success: false, error: 'مقطع تحصیلی معتبر و فعال انتخاب کنید.' });
   }
   if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ success: false, error: 'عنوان و کد رشته الزامی است.' });
   }
-  const newMajor: Major = { id: `maj-${Date.now()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
-  db.majors.push(newMajor);
-  db.save();
-  res.json({ success: true, data: newMajor });
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام یا کد رشته نامعتبر است.' });
+  }
+  if (db.majors.some(major => major.degreeLevelId === degreeLevelId && major.code === code.trim())) {
+    return res.status(409).json({ success: false, error: 'کد رشته در این مقطع تکراری است.' });
+  }
+  const newMajor: Major = { id: `maj-${randomUUID()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
+  const saved = writeCatalog(['majors'], () => { db.majors.push(newMajor); return newMajor; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { majorId, name, code, active = true } = req.body;
+  const { majorId, name, code, active = true } = req.body ?? {};
   if (typeof majorId !== 'string' || !db.majors.some(major => major.id === majorId && major.active)) {
     return res.status(400).json({ success: false, error: 'رشتهٔ مرتبط معتبر و فعال انتخاب کنید.' });
   }
   if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ success: false, error: 'عنوان و کد گرایش الزامی است.' });
   }
-  const newTrack: Track = { id: `trk-${Date.now()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.tracks.push(newTrack);
-  db.save();
-  res.json({ success: true, data: newTrack });
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام یا کد گرایش نامعتبر است.' });
+  }
+  if (db.tracks.some(track => track.majorId === majorId && track.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد گرایش در این رشته تکراری است.' });
+  }
+  const newTrack: Track = { id: `trk-${randomUUID()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
+  const saved = writeCatalog(['tracks'], () => { db.tracks.push(newTrack); return newTrack; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -196,88 +303,126 @@ academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.set
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
   if (db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
       db.curriculumCourses.some(cc => cc.trackId === req.params.id) ||
-      db.studentProfiles.some(p => p.selectedTrackId === req.params.id)) {
+      db.studentProfiles.some(p => p.selectedTrackId === req.params.id ||
+        p.desiredTrackIds?.includes(req.params.id))) {
     return res.status(409).json({
       success: false, error: 'گرایش در چارت، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
     });
   }
-  db.tracks.splice(idx, 1);
-  db.save();
+  const saved = writeCatalog(['tracks'], () => db.tracks.splice(idx, 1));
+  if (!saved.ok) return saveFailure(res);
   res.json({ success: true, message: 'گرایش حذف شد.' });
 });
 
 // --- Entry Years & Academic Terms ---
 academicRouter.get('/entry-years', (req, res) => res.json({ success: true, data: db.entryYears }));
 academicRouter.post('/entry-years', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { year, active = true } = req.body;
-  const newYear: EntryYear = { id: `yr-${year}`, year: Number(year), active };
-  db.entryYears.push(newYear);
-  db.save();
-  res.json({ success: true, data: newYear });
+  const { year, active = true } = req.body ?? {};
+  if (!validAcademicYear(year) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'سال ورود معتبر چهاررقمی الزامی است.' });
+  }
+  if (db.entryYears.some(row => row.year === Number(year))) {
+    return res.status(409).json({ success: false, error: 'این سال ورود قبلاً تعریف شده است.' });
+  }
+  const newYear: EntryYear = { id: `yr-${Number(year)}`, year: Number(year), active };
+  const saved = writeCatalog(['entryYears'], () => { db.entryYears.push(newYear); return newYear; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.get('/terms', (req, res) => res.json({ success: true, data: db.academicTerms }));
 academicRouter.post('/terms', authenticate, requirePermission('system.settings.manage'), (req, res) => {
-  const { name, year, termNumber, isCurrent = false } = req.body;
-  if (isCurrent) {
-    db.academicTerms.forEach((t) => (t.isCurrent = false));
+  const { name, year, termNumber, isCurrent = false } = req.body ?? {};
+  if (!validText(name) || !validAcademicYear(year) ||
+      ![1, 2, 3].includes(Number(termNumber)) ||
+      ![1, 2, 3, '1', '2', '3'].includes(termNumber) ||
+      typeof isCurrent !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام، سال یا شمارهٔ نیمسال نامعتبر است.' });
+  }
+  const id = `term-${Number(year)}-${Number(termNumber)}`;
+  if (db.academicTerms.some(term => term.id === id)) {
+    return res.status(409).json({ success: false, error: 'این نیمسال قبلاً ایجاد شده است.' });
   }
   const newTerm: AcademicTerm = {
-    id: `term-${year}-${termNumber}`,
-    name,
-    year: Number(year),
-    termNumber: Number(termNumber) as any,
-    isCurrent: !!isCurrent,
-    active: true,
+    id, name: name.trim(), year: Number(year),
+    termNumber: Number(termNumber) as 1 | 2 | 3,
+    isCurrent, active: true,
   };
-  db.academicTerms.push(newTerm);
-  db.save();
-  res.json({ success: true, data: newTerm });
+  const saved = writeCatalog(['academicTerms'], () => {
+    if (isCurrent) db.academicTerms.forEach(term => { term.isCurrent = false; });
+    db.academicTerms.push(newTerm);
+    return newTerm;
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 // --- Courses CRUD ---
 academicRouter.get('/courses', (req, res) => res.json({ success: true, data: db.courses }));
 
 academicRouter.post('/courses', authenticate, requirePermission('course.create'), (req, res) => {
-  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body;
-  if (!code || !name || units === undefined || !category) {
-    return res.status(400).json({ success: false, error: 'کد، نام، تعداد واحد و دسته‌بندی درس الزامی است.' });
+  const { code, name, units, practicalUnits = 0, category, description, active = true, isExtraUnit } = req.body ?? {};
+  if (!validText(code, 64) || !validText(name) ||
+      !validUnits(units) || !validUnits(practicalUnits) ||
+      !validCourseCategories.has(category) ||
+      (description !== undefined && (typeof description !== 'string' || description.length > 2000)) ||
+      typeof active !== 'boolean' ||
+      (isExtraUnit !== undefined && typeof isExtraUnit !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'کد، نام، واحد، دسته‌بندی یا تنظیمات درس نامعتبر است.' });
   }
-
-  const existing = db.courses.find((c) => c.code.trim() === code.trim());
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'درسی با این کد قبلاً ثبت شده است.' });
+  if (Number(practicalUnits) > Number(units)) {
+    return res.status(400).json({ success: false, error: 'واحد عملی نمی‌تواند از کل واحدهای درس بیشتر باشد.' });
   }
-
+  const normalizedCode = code.trim().toUpperCase();
+  if (db.courses.some(course => course.code.trim().toUpperCase() === normalizedCode)) {
+    return res.status(409).json({ success: false, error: 'کد درس قبلاً ثبت شده است.' });
+  }
   const newCourse: Course = {
-    id: `crs-${Date.now()}`,
-    code: code.trim(),
-    name: name.trim(),
-    units: Number(units),
-    practicalUnits: Number(practicalUnits),
-    category,
-    description: description?.trim() || undefined,
-    active: !!active,
+    id: `crs-${randomUUID()}`, code: code.trim(), name: name.trim(),
+    units: Number(units), practicalUnits: Number(practicalUnits),
+    category, description: description?.trim() || undefined, active,
+    ...(isExtraUnit !== undefined ? { isExtraUnit } : {}),
   };
-  db.courses.push(newCourse);
-  db.save();
-  res.json({ success: true, data: newCourse });
+  const saved = writeCatalog(['courses'], () => { db.courses.push(newCourse); return newCourse; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.put('/courses/:id', authenticate, requirePermission('course.update'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
-  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body;
-  if (code) db.courses[idx].code = code.trim();
-  if (name) db.courses[idx].name = name.trim();
-  if (units !== undefined) db.courses[idx].units = Number(units);
-  if (practicalUnits !== undefined) db.courses[idx].practicalUnits = Number(practicalUnits);
-  if (category) db.courses[idx].category = category;
-  if (description !== undefined) db.courses[idx].description = description;
-  if (typeof active === 'boolean') db.courses[idx].active = active;
-  if (typeof isExtraUnit === 'boolean') db.courses[idx].isExtraUnit = isExtraUnit;
-  db.save();
-  res.json({ success: true, data: db.courses[idx] });
+  const { code, name, units, practicalUnits, category, description, active, isExtraUnit } = req.body ?? {};
+  if ((code !== undefined && !validText(code, 64)) ||
+      (name !== undefined && !validText(name)) ||
+      (units !== undefined && !validUnits(units)) ||
+      (practicalUnits !== undefined && !validUnits(practicalUnits)) ||
+      (category !== undefined && !validCourseCategories.has(category)) ||
+      (description !== undefined && (typeof description !== 'string' || description.length > 2000)) ||
+      (active !== undefined && typeof active !== 'boolean') ||
+      (isExtraUnit !== undefined && typeof isExtraUnit !== 'boolean')) {
+    return res.status(400).json({ success: false, error: 'مقادیر ویرایش درس معتبر نیست.' });
+  }
+  const existing = db.courses[idx];
+  if (Number(practicalUnits ?? existing.practicalUnits ?? 0) > Number(units ?? existing.units)) {
+    return res.status(400).json({ success: false, error: 'واحد عملی نمی‌تواند از کل واحدهای درس بیشتر باشد.' });
+  }
+  if (code !== undefined && db.courses.some(course => course.id !== existing.id &&
+      course.code.trim().toUpperCase() === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد درس تکراری است.' });
+  }
+  const saved = writeCatalog(['courses'], () => {
+    if (code !== undefined) existing.code = code.trim();
+    if (name !== undefined) existing.name = name.trim();
+    if (units !== undefined) existing.units = Number(units);
+    if (practicalUnits !== undefined) existing.practicalUnits = Number(practicalUnits);
+    if (category !== undefined) existing.category = category;
+    if (description !== undefined) existing.description = description.trim();
+    if (active !== undefined) existing.active = active;
+    if (isExtraUnit !== undefined) existing.isExtraUnit = isExtraUnit;
+    return existing;
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
@@ -287,13 +432,15 @@ academicRouter.delete('/courses/:id', authenticate, requirePermission('course.de
       db.demandSurveys.some(s => s.courseIds.includes(req.params.id)) ||
       db.studentPassedCourses.some(p => p.courseId === req.params.id) ||
       db.courseOfferings.some(o => o.courseId === req.params.id) ||
-      db.academicRules.some(r => r.targetCourseId === req.params.id)) {
+      db.academicRules.some(r => r.targetCourseId === req.params.id ||
+        extractSourceCourseIds(r.expression).includes(req.params.id)) ||
+      db.importRecords.some(record => record.matchedCourseId === req.params.id)) {
     return res.status(409).json({
       success: false,
       error: 'این درس به چارت، سوابق دانشجو، ارائه یا نیازسنجی وابسته است؛ برای حفظ سوابق قابل حذف مستقیم نیست.',
     });
   }
-  db.courses.splice(idx, 1);
-  db.save();
+  const saved = writeCatalog(['courses'], () => db.courses.splice(idx, 1));
+  if (!saved.ok) return saveFailure(res);
   res.json({ success: true, message: 'درس با موفقیت حذف شد.' });
 });

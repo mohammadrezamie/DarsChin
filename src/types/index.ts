@@ -63,7 +63,7 @@ export interface Province {
   active: boolean;
 }
 
-export type UnitType = 'PROVINCE_UNIT' | 'INDEPENDENT_UNIT' | 'SPECIAL_UNIT';
+export type UnitType = 'PROVINCE_UNIT' | 'INDEPENDENT_UNIT' | 'SPECIAL_UNIT' | 'COMPREHENSIVE_INDEPENDENT' | 'INTERNATIONAL';
 
 export interface Campus {
   id: string;
