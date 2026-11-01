@@ -41,7 +41,12 @@ studentRouter.get('/profile', authenticate, (req: AuthenticatedRequest, res) => 
       updatedAt: new Date().toISOString(),
     };
     db.studentProfiles.push(profile);
-    db.save();
+    try {
+      db.save();
+    } catch {
+      db.data.studentProfiles = db.studentProfiles.filter(row => row.userId !== userId);
+      return res.status(500).json({ success: false, error: 'ایجاد پروندهٔ تحصیلی ذخیره نشد.' });
+    }
   }
 
   // Never fall back to the first unrelated university/entry-year chart.
@@ -99,13 +104,20 @@ studentRouter.put('/profile', authenticate, validate(updateProfileSchema), (req:
     updatedAt: new Date().toISOString(),
   };
 
+  const previousProfile = idx !== -1 ? db.studentProfiles[idx] : undefined;
   if (idx !== -1) {
     db.studentProfiles[idx] = updatedProfile;
   } else {
     db.studentProfiles.push(updatedProfile);
   }
 
-  db.save();
+  try {
+    db.save();
+  } catch {
+    if (previousProfile) db.studentProfiles[idx] = previousProfile;
+    else db.data.studentProfiles = db.studentProfiles.filter(row => row.userId !== userId);
+    return res.status(500).json({ success: false, error: 'تغییرات پروندهٔ تحصیلی ذخیره نشد.' });
+  }
   res.json({ success: true, data: updatedProfile });
 });
 
@@ -175,7 +187,12 @@ studentRouter.post('/passed-courses', authenticate, validate(addPassedCourseSche
   };
 
   db.studentPassedCourses.push(newEntry);
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.data.studentPassedCourses = db.studentPassedCourses.filter(row => row.id !== newEntry.id);
+    return res.status(500).json({ success: false, error: 'سابقهٔ درس ذخیره نشد.' });
+  }
 
   const course = db.courses.find((c) => c.id === courseId);
   res.json({ success: true, data: { ...newEntry, course } });
@@ -197,6 +214,8 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
     return res.status(400).json({ success: false, error: 'فهرست دروس حاوی درس نامعتبر یا بیش از حد مجاز است.' });
   }
 
+  // Retain the full previous attempt history for rollback if persistence fails.
+  const beforeBatch = db.studentPassedCourses.slice();
   if (replaceAll) {
     const retainedPassed = new Set(courseIds);
     for (let i = db.studentPassedCourses.length - 1; i >= 0; i--) {
@@ -234,7 +253,12 @@ studentRouter.post('/passed-courses/batch', authenticate, validate(batchPassedCo
     }
   }
 
-  db.save();
+  try {
+    db.save();
+  } catch {
+    db.data.studentPassedCourses = beforeBatch;
+    return res.status(500).json({ success: false, error: 'فهرست دروس گذرانده ذخیره نشد.' });
+  }
   res.json({ success: true, addedCount, totalPassed: existingCourseIds.size });
 });
 
@@ -247,8 +271,13 @@ studentRouter.delete('/passed-courses/:id', authenticate, (req: AuthenticatedReq
     return res.status(404).json({ success: false, error: 'رکورد درس پاس‌شده یافت نشد.' });
   }
 
-  db.studentPassedCourses.splice(idx, 1);
-  db.save();
+  const [removed] = db.studentPassedCourses.splice(idx, 1);
+  try {
+    db.save();
+  } catch {
+    db.studentPassedCourses.splice(idx, 0, removed);
+    return res.status(500).json({ success: false, error: 'حذف سابقهٔ درس ذخیره نشد.' });
+  }
   res.json({ success: true, message: 'درس با موفقیت از لیست دروس پاس‌شده حذف شد.' });
 });
 
