@@ -56,7 +56,8 @@ async function withFailedSave<T>(action: () => PromiseLike<T>): Promise<T> {
 
 describe('support ticket privacy and durable writes', () => {
   it('creates distinct ticket IDs even for different users in the same millisecond', async () => {
-    const clock = vi.spyOn(Date, 'now').mockReturnValue(1800000000000);
+    const fixedNow = Date.now(); // Freeze near token issuance, not after JWT expiry.
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(fixedNow);
     try {
       const a = await request(app).post('/api/support/tickets')
         .set('Authorization', firstAuth).send({ subject: 'Private A' });
