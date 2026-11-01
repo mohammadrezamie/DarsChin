@@ -8,6 +8,7 @@
 | Topic | Reference |
 | --- | --- |
 | **ثبت پایدار پروندهٔ دانشجو، سوابق قبولی/مردودی و بازگشت امن پس از خطای ذخیره** | [STUDENT_RECORD_DURABILITY_20261101_FA.md](STUDENT_RECORD_DURABILITY_20261101_FA.md) |
+| **حفاظت ZIP افزونه و audit دانلودهای شخصی، جلوگیری از نشتی error log** | [PERMANENT_SECURITY_POLICY_FA.md](PERMANENT_SECURITY_POLICY_FA.md) |
 | **ممیزی گستردهٔ امنیت، کنترل‌های کد، اقدامات دقیق مالک GitHub و موارد باز** | [SECURITY_COMPREHENSIVE_AUDIT_AND_OWNER_ACTIONS_20261101_FA.md](SECURITY_COMPREHENSIVE_AUDIT_AND_OWNER_ACTIONS_20261101_FA.md) |
 | **سیاست امنیت دائمی و الزام‌آور برای توسعه‌دهندگان و استفاده‌کنندگان/نصب‌کنندگان** | [PERMANENT_SECURITY_POLICY_FA.md](PERMANENT_SECURITY_POLICY_FA.md) |
 | **پروندهٔ افشای تاریخی GitHub، اقدامات مالک و GitHub Support (هنوز باز)** | [SECURITY_INCIDENT_RUNBOOK_20261101_FA.md](SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) |
