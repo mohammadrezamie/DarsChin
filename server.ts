@@ -29,6 +29,7 @@ import { createGuestAbuseLimiters } from './server/middleware/guest-abuse';
 import { assertInstanceAccessConfiguration, instanceAccessGate } from './server/middleware/instance-access';
 import { assertRuntimeSecurityConfiguration } from './server/security/runtime-config';
 import { publicExtensionAssets } from './server/security/extension-public-files';
+import { apiErrorHandler } from './server/middleware/api-error';
 
 async function startServer() {
   // Reject invalid private-instance settings before touching the database.
@@ -143,19 +144,7 @@ app.use('/api/admin-management', adminManagementRouter);
   app.use('/mock-portal-static', express.static(mockPortalPath));
 
   // Global API error handler
-  app.use('/api', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (res.headersSent) return next(err);
-    // No raw error.message, stack, path, header or request body in operational
-    // logs: these can contain student data, paths, OTPs and other credentials.
-    const invalidJson = err?.status === 400 && err?.type === 'entity.parse.failed';
-    if (!invalidJson) {
-      logger.error('API request failed', { code: 'UNHANDLED_API_ERROR', method: req.method });
-    }
-    return res.status(invalidJson ? 400 : 500).json({
-      success: false,
-      error: invalidJson ? 'ساختار JSON درخواست نامعتبر است.' : 'خطای داخلی سرور',
-    });
-  });
+  app.use('/api', apiErrorHandler);
 
   // Handle 404 for API routes explicitly to avoid Vite serving index.html
   app.use('/api', (req, res) => {
