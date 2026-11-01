@@ -67,7 +67,7 @@ describe('opt-in proof of phone ownership during registration', () => {
     expect(student?.mobileVerifiedAt).toEqual(expect.any(String));
     expect(student?.roles).toEqual(['student']);
     // Even if the recovery key were leaked in a backup, the raw value is absent.
-    expect(student?.recoveryKey).toMatch(/^\$2[aby]\$/);
+    expect(student?.recoveryKey).toMatch(/^\$2[aby]\$\d{2}\$/);
     expect(student?.recoveryKey).not.toBe(password);
     expect(db.auditLogs.filter(log => log.entityId === student?.id)
       .every(log => !log.details.includes(phone))).toBe(true);
