@@ -244,10 +244,18 @@ academicRouter.get('/tracks', (req, res) => res.json({ success: true, data: db.t
 
 academicRouter.post('/degrees', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, code, active = true } = req.body ?? {};
-  const newDeg: DegreeLevel = { id: `deg-${Date.now()}`, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.degreeLevels.push(newDeg);
-  db.save();
-  res.json({ success: true, data: newDeg });
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'عنوان و کد مقطع تحصیلی معتبر نیست.' });
+  }
+  if (db.degreeLevels.some(degree => degree.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد مقطع تحصیلی تکراری است.' });
+  }
+  const newDeg: DegreeLevel = {
+    id: `deg-${randomUUID()}`, name: name.trim(), code: code.trim().toUpperCase(), active,
+  };
+  const saved = writeCatalog(['degreeLevels'], () => { db.degreeLevels.push(newDeg); return newDeg; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.post('/majors', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -258,10 +266,16 @@ academicRouter.post('/majors', authenticate, requirePermission('system.settings.
   if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ success: false, error: 'عنوان و کد رشته الزامی است.' });
   }
-  const newMajor: Major = { id: `maj-${Date.now()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
-  db.majors.push(newMajor);
-  db.save();
-  res.json({ success: true, data: newMajor });
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام یا کد رشته نامعتبر است.' });
+  }
+  if (db.majors.some(major => major.degreeLevelId === degreeLevelId && major.code === code.trim())) {
+    return res.status(409).json({ success: false, error: 'کد رشته در این مقطع تکراری است.' });
+  }
+  const newMajor: Major = { id: `maj-${randomUUID()}`, degreeLevelId, name: name.trim(), code: code.trim(), active };
+  const saved = writeCatalog(['majors'], () => { db.majors.push(newMajor); return newMajor; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.post('/tracks', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -272,10 +286,16 @@ academicRouter.post('/tracks', authenticate, requirePermission('system.settings.
   if (typeof name !== 'string' || !name.trim() || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ success: false, error: 'عنوان و کد گرایش الزامی است.' });
   }
-  const newTrack: Track = { id: `trk-${Date.now()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
-  db.tracks.push(newTrack);
-  db.save();
-  res.json({ success: true, data: newTrack });
+  if (!validText(name) || !validText(code, 50) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام یا کد گرایش نامعتبر است.' });
+  }
+  if (db.tracks.some(track => track.majorId === majorId && track.code === code.trim().toUpperCase())) {
+    return res.status(409).json({ success: false, error: 'کد گرایش در این رشته تکراری است.' });
+  }
+  const newTrack: Track = { id: `trk-${randomUUID()}`, majorId, name: name.trim(), code: code.trim().toUpperCase(), active };
+  const saved = writeCatalog(['tracks'], () => { db.tracks.push(newTrack); return newTrack; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
@@ -283,13 +303,14 @@ academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.set
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
   if (db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
       db.curriculumCourses.some(cc => cc.trackId === req.params.id) ||
-      db.studentProfiles.some(p => p.selectedTrackId === req.params.id)) {
+      db.studentProfiles.some(p => p.selectedTrackId === req.params.id ||
+        p.desiredTrackIds?.includes(req.params.id))) {
     return res.status(409).json({
       success: false, error: 'گرایش در چارت، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
     });
   }
-  db.tracks.splice(idx, 1);
-  db.save();
+  const saved = writeCatalog(['tracks'], () => db.tracks.splice(idx, 1));
+  if (!saved.ok) return saveFailure(res);
   res.json({ success: true, message: 'گرایش حذف شد.' });
 });
 
@@ -297,29 +318,43 @@ academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.set
 academicRouter.get('/entry-years', (req, res) => res.json({ success: true, data: db.entryYears }));
 academicRouter.post('/entry-years', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { year, active = true } = req.body ?? {};
-  const newYear: EntryYear = { id: `yr-${year}`, year: Number(year), active };
-  db.entryYears.push(newYear);
-  db.save();
-  res.json({ success: true, data: newYear });
+  if (!validAcademicYear(year) || typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'سال ورود معتبر چهاررقمی الزامی است.' });
+  }
+  if (db.entryYears.some(row => row.year === Number(year))) {
+    return res.status(409).json({ success: false, error: 'این سال ورود قبلاً تعریف شده است.' });
+  }
+  const newYear: EntryYear = { id: `yr-${Number(year)}`, year: Number(year), active };
+  const saved = writeCatalog(['entryYears'], () => { db.entryYears.push(newYear); return newYear; });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 academicRouter.get('/terms', (req, res) => res.json({ success: true, data: db.academicTerms }));
 academicRouter.post('/terms', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const { name, year, termNumber, isCurrent = false } = req.body ?? {};
-  if (isCurrent) {
-    db.academicTerms.forEach((t) => (t.isCurrent = false));
+  if (!validText(name) || !validAcademicYear(year) ||
+      ![1, 2, 3].includes(Number(termNumber)) ||
+      ![1, 2, 3, '1', '2', '3'].includes(termNumber) ||
+      typeof isCurrent !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'نام، سال یا شمارهٔ نیمسال نامعتبر است.' });
+  }
+  const id = `term-${Number(year)}-${Number(termNumber)}`;
+  if (db.academicTerms.some(term => term.id === id)) {
+    return res.status(409).json({ success: false, error: 'این نیمسال قبلاً ایجاد شده است.' });
   }
   const newTerm: AcademicTerm = {
-    id: `term-${year}-${termNumber}`,
-    name,
-    year: Number(year),
-    termNumber: Number(termNumber) as any,
-    isCurrent: !!isCurrent,
-    active: true,
+    id, name: name.trim(), year: Number(year),
+    termNumber: Number(termNumber) as 1 | 2 | 3,
+    isCurrent, active: true,
   };
-  db.academicTerms.push(newTerm);
-  db.save();
-  res.json({ success: true, data: newTerm });
+  const saved = writeCatalog(['academicTerms'], () => {
+    if (isCurrent) db.academicTerms.forEach(term => { term.isCurrent = false; });
+    db.academicTerms.push(newTerm);
+    return newTerm;
+  });
+  if (!saved.ok) return saveFailure(res);
+  res.json({ success: true, data: saved.value });
 });
 
 // --- Courses CRUD ---
