@@ -144,4 +144,46 @@ describe('opt-in proof of phone ownership during registration', () => {
     expect(response.status).toBe(201);
     expect(db.users.find(u => u.mobile === phone)?.mobileVerifiedAt).toBeUndefined();
   });
+  it('rolls back a failed signup and preserves its verified OTP for retry', async () => {
+    vi.stubEnv('TURNSTILE_ENABLED', 'false');
+    vi.stubEnv('DARSCHYN_REGISTRATION_OTP_REQUIRED', 'true');
+    vi.stubEnv('SMS_PROVIDER', 'log');
+    vi.stubEnv('MOCK_OTP_CODE', code);
+    const phone = mobile();
+    const issued = await sendRegistrationCode(phone);
+    expect(issued.status).toBe(200);
+    const id = issued.body.data.challengeId as string;
+    const otp = db.otpChallenges.find(c => c.id === id)!;
+    const usersBefore = db.users.length;
+    const profilesBefore = db.studentProfiles.length;
+    const auditsBefore = db.auditLogs.length;
+
+    // CAPTCHA verification also persists state. Fail only the signup transaction,
+    // after the CAPTCHA has been validated and the new user is staged.
+    const originalSave = db.save.bind(db);
+    const failed = vi.spyOn(db, 'save').mockImplementation(() => {
+      if (db.users.some(user => user.mobile === phone)) {
+        throw new Error('SYNTHETIC_PRIVATE_PATH:/secrets/registration.env');
+      }
+      return originalSave();
+    });
+    let response;
+    try {
+      response = await registerWithCaptcha(phone, { otpChallengeId: id, otpCode: code });
+    } finally {
+      failed.mockRestore();
+    }
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(response.body)).not.toContain('SYNTHETIC_PRIVATE_PATH');
+    expect(db.users).toHaveLength(usersBefore);
+    expect(db.studentProfiles).toHaveLength(profilesBefore);
+    expect(db.auditLogs).toHaveLength(auditsBefore);
+    expect(otp.consumedAt).toBeUndefined();
+
+    const retry = await registerWithCaptcha(phone, { otpChallengeId: id, otpCode: code });
+    expect(retry.status).toBe(201);
+    expect(db.users.filter(user => user.mobile === phone)).toHaveLength(1);
+    expect(otp.consumedAt).toEqual(expect.any(Number));
+  });
+
 });

@@ -132,6 +132,10 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
 
   // Never commit the verified OTP separately before saving the new account.
   // A retry cannot claim the same verified mobile with the same challenge.
+  const previousOtpConsumedAt = verifiedRegistrationOtp?.consumedAt;
+  const userCount = db.users.length;
+  const profileCount = db.studentProfiles.length;
+  const auditCount = db.auditLogs.length;
   if (verifiedRegistrationOtp) verifiedRegistrationOtp.consumedAt = Date.now();
   db.users.push(newUser);
 
@@ -164,7 +168,16 @@ authRouter.post('/register', requireGuestChallenge('register'), validate(registe
     createdAt: new Date().toISOString(),
   });
 
-  db.save();
+  try {
+    db.save();
+  } catch {
+    // Failed disk writes must not leave a phantom account or consume its OTP.
+    db.users.splice(userCount);
+    db.studentProfiles.splice(profileCount);
+    db.auditLogs.splice(auditCount);
+    if (verifiedRegistrationOtp) verifiedRegistrationOtp.consumedAt = previousOtpConsumedAt;
+    return res.status(500).json({ success: false, error: 'ثبت‌نام ذخیره نشد؛ لطفاً دوباره تلاش کنید.' });
+  }
 
   // Issue JWT Token
   const token = generateToken({ id: newUser.id, roles: newUser.roles });
@@ -328,11 +341,14 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
 
   // Invalidate every older JWT, including leaked tokens from other devices.
   // The current browser receives a newly signed JWT after persistence.
+  const previousPassword = user.password;
+  const previousSessionVersion = user.sessionVersion;
+  const auditCount = db.auditLogs.length;
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
   user.sessionVersion = (user.sessionVersion ?? 0) + 1;
 
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: user.id,
     action: 'PASSWORD_CHANGED',
     entityType: 'USER',
@@ -341,7 +357,14 @@ authRouter.post('/change-password', authenticate, validate(changePasswordSchema)
     createdAt: new Date().toISOString(),
   });
 
-  db.save();
+  try {
+    db.save();
+  } catch {
+    user.password = previousPassword;
+    user.sessionVersion = previousSessionVersion;
+    db.auditLogs.splice(auditCount);
+    return res.status(500).json({ success: false, error: 'تغییر رمز عبور ذخیره نشد؛ لطفاً دوباره تلاش کنید.' });
+  }
 
   res.json({
     success: true,
@@ -381,16 +404,18 @@ authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, 
     return res.status(403).json({ success: false, error: 'حساب کاربری شما غیرفعال شده است.' });
   }
 
+  const previousPassword = user.password;
+  const previousSessionVersion = user.sessionVersion;
+  const previousRecoveredAt = challenge.recoveredAt;
+  const auditCount = db.auditLogs.length;
   user.password = bcrypt.hashSync(newPassword.trim(), 10);
   // OTP recovery must revoke JWTs issued before the reset, not just passwords.
   user.sessionVersion = (user.sessionVersion ?? 0) + 1;
-  failedLogins.delete(mobile);
-
-  // A verified recovery challenge may reset a password only once.
+  // Consume OTP, credential and audit together in one durable JSON write.
   completePasswordRecovery(challenge);
 
   db.auditLogs.push({
-    id: `log-${Date.now()}`,
+    id: `log-${randomUUID()}`,
     adminId: user.id,
     action: 'PASSWORD_RECOVERED',
     entityType: 'USER',
@@ -398,7 +423,17 @@ authRouter.post('/recover-password', validate(otpPasswordRecoverySchema), (req, 
     details: 'رمز عبور حساب با OTP بازنشانی شد.',
     createdAt: new Date().toISOString(),
   });
-  db.save();
+  try {
+    db.save();
+  } catch {
+    user.password = previousPassword;
+    user.sessionVersion = previousSessionVersion;
+    challenge.recoveredAt = previousRecoveredAt;
+    db.auditLogs.splice(auditCount);
+    return res.status(500).json({ success: false, error: 'بازیابی رمز عبور ذخیره نشد؛ لطفاً دوباره تلاش کنید.' });
+  }
+  // A failed save must not unlock guessed passwords or consume the OTP in memory.
+  failedLogins.delete(mobile);
 
   res.json({ success: true, message: 'رمز عبور شما با موفقیت بازنشانی شد.' });
 });
