@@ -67,20 +67,21 @@ describe('student academic records must not mutate on failed durable persistence
     const snapshot = JSON.stringify(db.studentProfiles);
     const spy = failNextSave();
     const result = await request(app).put('/api/student/profile').set('Authorization', token)
-      .send({ universityId: 'changed-university', campusId: 'changed-campus', majorId: 'changed-major',
-        degreeLevelId: 'changed-level', entryYearId: 'changed-year', isTrackSelected: false });
+      .send({ previousTermGpa: 16.5 });
     spy.mockRestore();
     assertNoLeak(result);
     expect(JSON.stringify(db.studentProfiles)).toBe(snapshot);
   });
 
-  it('does not create an unsaved default profile on the first profile read', async () => {
+  it('reads an unconfigured profile without creating it or writing the database', async () => {
     db.data.studentProfiles = [];
-    const spy = failNextSave();
+    const spy = vi.spyOn(db, 'save');
     const result = await request(app).get('/api/student/profile').set('Authorization', token);
     spy.mockRestore();
-    assertNoLeak(result);
+    expect(result.status).toBe(200);
+    expect(result.body.data).toEqual({ profile: null, curriculum: null, needsSetup: true });
     expect(db.studentProfiles).toHaveLength(0);
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('rolls back a newly recorded course attempt without affecting earlier failures or other students', async () => {
