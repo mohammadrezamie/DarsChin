@@ -4,7 +4,7 @@ import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, Stu
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
 import type { RegistrationStep } from '../domain/registration-queue';
-import { completedRegistrationCourseIds, parseStoredRegistrationTokens, registrationProgressToken } from '../domain/registration-progress';
+import { completedRegistrationCourseIds, parseStoredRegistrationTokens, pruneRegistrationTokens, registrationProgressToken } from '../domain/registration-progress';
 import { copyTextWithFallback } from '../utils/clipboard';
 
 interface ChartRules {
@@ -106,6 +106,15 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   // are pending or failed. Raw codes remain visible for manual verification.
   const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&
     verifiedContextKey===academicContextKey&&!loading&&!error;
+  // Once the actual academic context is loaded, discard progress for replaced
+  // offerings. Otherwise switching A → B → A could resurrect A's old mark.
+  useEffect(()=>{
+    if(!rulesReady||!progressReady)return;
+    setDoneTokens(previous=>{
+      const current=pruneRegistrationTokens(queue.steps,previous);
+      return current.length===previous.length?previous:current;
+    });
+  },[rulesReady,progressReady,queue.steps]);
   const stepIds=queue.steps.map(s=>s.courseId);
   // A checked item is valid only for its exact currently selected group and
   // course code. Changing a group's offering invalidates its old check mark.
