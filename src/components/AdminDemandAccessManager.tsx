@@ -66,9 +66,9 @@ export const AdminDemandAccessManager: React.FC<{
   };
   if (!isRoot) return null;
   return (
-    <section dir="rtl" className="mt-7 rounded-2xl border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20" aria-label="محدودهٔ دسترسی مدیر گروه">
+    <section dir="rtl" className="mt-7 rounded-2xl border border-teal-200 bg-teal-50/40 p-4 dark:border-teal-950 dark:bg-teal-950/20" aria-label="محدودهٔ دسترسی مدیر گروه">
       <h4 className="flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
-        <ShieldCheck className="h-5 w-5 text-blue-700 dark:text-blue-300" /> دسترسی نیازسنجی مدیر گروه
+        <ShieldCheck className="h-5 w-5 text-teal-800 dark:text-teal-300" /> دسترسی نیازسنجی مدیر گروه
       </h4>
       <p className="mt-2 text-xs leading-7 text-slate-600 dark:text-slate-300">
         فقط مدیر ارشد مجاز است محدوده را تعیین کند. مجوز «مدیریت نیازسنجی» یا «دریافت گزارش شخصی» بدون محدودهٔ واحد، مقطع و رشته هیچ دسترسی عملی ایجاد نمی‌کند.
@@ -106,7 +106,7 @@ export const AdminDemandAccessManager: React.FC<{
           <button type="button" disabled={busy || !candidate.campusId || !candidate.majorId || !candidate.degreeLevelId ||
               scopes.some(scope=>keyFor(scope)===keyFor(candidate))}
             onClick={()=>void update([...scopes,candidate])}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-700 px-4 text-xs font-black text-white disabled:opacity-50">
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-teal-800 px-4 text-xs font-black text-white disabled:opacity-50">
             <Plus className="h-4 w-4" /> افزودن محدوده
           </button>
           <h5 className="mt-5 text-sm font-black">محدوده‌های ثبت‌شده برای این مدیر</h5>
@@ -128,7 +128,7 @@ export const AdminDemandAccessManager: React.FC<{
               </div>
             ))}
           </div>
-          {message && <p role="status" className="mt-3 text-xs font-bold text-blue-800 dark:text-blue-200">{message}</p>}
+          {message && <p role="status" className="mt-3 text-xs font-bold text-teal-900 dark:text-teal-200">{message}</p>}
         </>
       )}
     </section>
