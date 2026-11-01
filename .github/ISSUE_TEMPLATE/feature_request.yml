@@ -1,0 +1,28 @@
+name: Feature proposal
+description: Suggest an improvement while respecting the academic-policy approval boundary
+title: "feat: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What problem does this solve for students or administrators?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behavior and acceptance criteria
+    validations:
+      required: true
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Academic-policy boundary
+      options:
+        - label: This feature may change eligibility, prerequisites, co-requisites, GPA thresholds or semester unit limits; obtain explicit owner approval before implementation
+  - type: textarea
+    id: notes
+    attributes:
+      label: Risks, external dependencies and test plan
