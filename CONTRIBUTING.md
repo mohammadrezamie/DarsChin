@@ -2,6 +2,8 @@
 
 Thanks for contributing to the DarsChin demo platform. For full procedures, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
+> **Mandatory security policy:** Read and apply [the permanent Persian security contract](docs/PERMANENT_SECURITY_POLICY_FA.md), [SECURITY.md](SECURITY.md), and the [open historical incident runbook](docs/SECURITY_INCIDENT_RUNBOOK_20261101_FA.md) before contributions or self-hosting. Security changes must include negative authorization/failed-write tests and explicit release limitations. Never claim a clean Git history because the main tree or CI passed.
+
 ## Non-negotiable owner-request documentation
 
 Before editing, read [AGENTS.md](AGENTS.md) and [the owner decisions register](docs/OWNER_DECISIONS_FA.md). **Every new instruction, plan, reported bug or changed priority from the project owner must be persisted in GitHub** with a dated register entry and relevant linked document, even if implementation is deferred. Keep superseded decisions with cross-references; never confuse a PR branch with merged `main`. Do not store student personal data or secrets.
