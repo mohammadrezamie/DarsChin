@@ -166,4 +166,38 @@ describe('real student term/chart-scoped planning and durable writes',()=>{
     expect(after.wishlistCourseIds).toEqual([courseId]);
     expect(after.journeyStep).toBe(5);
   });
+  it('calculates graduation units using only the exact active cohort, never another campus',()=>{
+    const initial=db.calculateStudentAcademicLimits(studentId);
+    expect(initial.totalCurriculumUnits).toBeGreaterThan(0);
+    db.studentProfiles[0].campusId='synthetic-mismatched-campus';
+    const wrong=db.calculateStudentAcademicLimits(studentId);
+    expect(wrong.totalCurriculumUnits).toBe(0);
+    expect(wrong.remainingUnits).toBe(0);
+    expect(wrong.isFinalSemester).toBe(false);
+    db.studentProfiles[0].campusId=campusId;
+    db.curricula.push({...db.curricula[0],id:'synthetic-second-active-chart'});
+    const conflicted=db.calculateStudentAcademicLimits(studentId);
+    expect(conflicted.totalCurriculumUnits).toBe(0);
+    expect(conflicted.isFinalSemester).toBe(false);
+  });
+
+  it('does not treat unchosen track subjects as required for graduation',()=>{
+    const before=db.calculateStudentAcademicLimits(studentId);
+    const trackCourse:Course={
+      id:'synthetic-foreign-track-requirement',
+      name:'درس گرایش انتخاب‌نشده',code:'TRACK-EXTRA',units:4,active:true,category:'تخصصی',
+    };
+    db.courses.push(trackCourse);
+    db.curriculumCourses.push({
+      id:'synthetic-foreign-track-link',curriculumId:chartId,
+      courseId:trackCourse.id,trackId:'synthetic-track-not-selected',
+      classification:'TRACK_REQUIRED',suggestedSemester:6,active:true,
+    });
+    expect(db.calculateStudentAcademicLimits(studentId).remainingUnits).toBe(before.remainingUnits);
+    expect(db.calculateStudentAcademicLimits(studentId).totalCurriculumUnits).toBe(before.totalCurriculumUnits);
+    db.studentProfiles[0].selectedTrackId='synthetic-track-not-selected';
+    const chosen=db.calculateStudentAcademicLimits(studentId);
+    expect(chosen.totalCurriculumUnits).toBe(before.totalCurriculumUnits+4);
+  });
+
 });
