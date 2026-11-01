@@ -29,8 +29,8 @@ beforeEach(()=>{
   const other=user(secondId,'09900009072');
   db.data={...saved,
     users:[...saved.users,me,other],
-    studentProfiles:saved.studentProfiles.filter(p=>p.userId!==firstId&&p.userId!==secondId),
-    studentPlans:saved.studentPlans.filter(p=>p.userId!==firstId&&p.userId!==secondId),
+    studentProfiles:(saved.studentProfiles??[]).filter(p=>p.userId!==firstId&&p.userId!==secondId),
+    studentPlans:(saved.studentPlans??[]).filter(p=>p.userId!==firstId&&p.userId!==secondId),
   };
   auth='Bearer '+generateToken(me);
   otherAuth='Bearer '+generateToken(other);
