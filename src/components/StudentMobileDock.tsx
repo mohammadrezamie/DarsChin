@@ -78,7 +78,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
 
   return (
     <>
-      <nav aria-label="دسترسی سریع میز کار دانشجو" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
+      <nav aria-label="دسترسی سریع میز کار دانشجو" className="dc-student-dock fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-1.5" dir="rtl">
           {PRIMARY.map(item => {
