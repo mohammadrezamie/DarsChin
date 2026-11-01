@@ -112,7 +112,7 @@ export const AdminAcademicSettings: React.FC = () => {
   if (loading || !settings) {
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-3">
-        <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
+        <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
         <span className="text-xs text-slate-500">در حال دریافت تنظیمات آیین‌نامه و وضعیت دانشجویان...</span>
       </div>
     );
@@ -123,7 +123,7 @@ export const AdminAcademicSettings: React.FC = () => {
       {/* Top Banner */}
       <div className="p-6 bg-liquid-glass rounded-3xl shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Sliders className="w-6 h-6" />
           </div>
           <div>
@@ -162,13 +162,13 @@ export const AdminAcademicSettings: React.FC = () => {
       <form onSubmit={handleSaveSettings} className="p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-6">
         <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700/80 pb-4">
           <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <Sparkles className="w-4 h-4 text-emerald-600" />
             <span>قوانین سراسری آیین‌نامه آموزشی</span>
           </div>
           <button
             type="submit"
             disabled={savingSettings}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{savingSettings ? 'در حال ذخیره...' : 'ذخیره تغییرات آیین‌نامه'}</span>
@@ -291,7 +291,7 @@ export const AdminAcademicSettings: React.FC = () => {
       <div className="p-6 bg-liquid-glass rounded-3xl shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-700/80">
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Users className="w-5 h-5 text-teal-700 dark:text-teal-400" />
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
               وضعیت فارغ‌التحصیلی و مجوز ترم آخری دانشجویان ({students.length} دانشجو)
             </h4>
@@ -304,7 +304,7 @@ export const AdminAcademicSettings: React.FC = () => {
               placeholder="جستجوی دانشجو، شماره یا رشته..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl pr-9 pl-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-hidden"
+              className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl pr-9 pl-3 py-1.5 text-xs focus:ring-2 focus:ring-teal-600 outline-hidden"
             />
           </div>
         </div>
@@ -353,7 +353,7 @@ export const AdminAcademicSettings: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-center font-black text-blue-600 dark:text-blue-400">
+                    <td className="py-3 px-3 text-center font-black text-teal-700 dark:text-teal-400">
                       {limits?.effectiveMaxUnits ?? 20} واحد
                     </td>
                     <td className="py-3 px-3 text-center">
@@ -363,7 +363,7 @@ export const AdminAcademicSettings: React.FC = () => {
                           setOverrideStatus(s.profile?.isFinalSemesterOverride ?? null);
                           setOverrideNotes(s.profile?.finalSemesterNotes ?? '');
                         }}
-                        className="px-2.5 py-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors"
+                        className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 rounded-lg border border-emerald-200 dark:border-emerald-900 transition-colors"
                       >
                         مجوز کمیسیون / دستی
                       </button>
@@ -381,7 +381,7 @@ export const AdminAcademicSettings: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-liquid-glass rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200 dark:border-slate-800">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-indigo-600" />
+              <GraduationCap className="w-4 h-4 text-emerald-700" />
               <span>ثبت مجوز ترم آخری برای {selectedStudentForOverride.name}</span>
             </h3>
 
@@ -423,7 +423,7 @@ export const AdminAcademicSettings: React.FC = () => {
                   onClick={() => setOverrideStatus(null)}
                   className={`p-2 rounded-xl text-xs font-bold border transition-all ${
                     overrideStatus === null
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-teal-700 text-white border-teal-700'
                       : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                   }`}
                 >
@@ -453,7 +453,7 @@ export const AdminAcademicSettings: React.FC = () => {
               <button
                 onClick={handleSaveOverride}
                 disabled={savingOverride}
-                className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+                className="px-4 py-2 text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white rounded-xl shadow-xs"
               >
                 {savingOverride ? 'در حال ثبت...' : 'ثبت تصمیم'}
               </button>
