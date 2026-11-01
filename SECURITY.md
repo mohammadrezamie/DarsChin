@@ -2,6 +2,10 @@
 
 DarsChin is a public, self-hostable codebase. The maintainer's private deployment, passwords, access tokens, SMS service keys, students' data and other operators' deployments are **not** public development resources.
 
+## Permanent security requirements
+
+Every contributor and independent operator must follow the [permanent security contract (Persian)](docs/PERMANENT_SECURITY_POLICY_FA.md): source/data separation, server-side authorization, no unsafe production registration, durable writes, sensitive logging/cache protections, sanitized Git and reviewed dependencies, exact-SHA testing, backups, and incident response. The repository's historical exposure is **not closed** simply because these rules are documented.
+
 ## Private vulnerability reporting
 
 Please **do not** disclose real secrets, student identifiers, account records, reproducible credential data, exploit details, or private database samples in public Issues, Discussions or Pull Requests.
