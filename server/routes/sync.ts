@@ -7,6 +7,12 @@ import { reconcileSyncRecords } from '../sync/reconciliation';
 
 export const syncRouter = Router();
 
+// A malicious or broken browser client must not fill the JSON database with
+// 10,000 one-megabyte chunks or unlimited abandoned jobs.
+export const MAX_SYNC_JOB_CHUNKS = 64;
+export const MAX_SYNC_JOB_BYTES = 8_000_000;
+export const MAX_PENDING_SYNC_JOBS_PER_USER = 10;
+
 export interface SyncJob {
   id: string;
   userId: string;
@@ -34,6 +40,42 @@ export interface SyncSnapshot {
   chunkIndex: number;
   data: Record<string, unknown>[];
   createdAt: string;
+}
+
+/**
+ * A staged import, its raw snapshot, and the sync job status must either
+ * become durable together or not happen at all. Existing arrays are copied
+ * shallowly because their entries are immutable here; job status fields are
+ * copied separately because reconciliation mutates a job in place.
+ *
+ * This is deliberately single-process JSON persistence. It is not a
+ * cross-process transaction; shared SQL storage is required for multi-worker.
+ */
+function commitSyncMutation<T>(mutate: () => T): { ok: true; value: T } | { ok: false } {
+  const previousJobs = (db.syncJobs as SyncJob[]).map(job => ({
+    ...job, reconciliationErrors: job.reconciliationErrors ? [...job.reconciliationErrors] : undefined,
+  }));
+  const previousSnapshots = (db.syncSnapshots as SyncSnapshot[]).slice();
+  const previousBatches = db.importBatches.slice();
+  const previousRecords = db.importRecords.slice();
+  try {
+    const value = mutate();
+    db.save();
+    return { ok: true, value };
+  } catch {
+    db.syncJobs = previousJobs;
+    db.syncSnapshots = previousSnapshots;
+    db.data.importBatches = previousBatches;
+    db.data.importRecords = previousRecords;
+    return { ok: false };
+  }
+}
+
+function storageFailure(res: import('express').Response) {
+  return res.status(503).json({
+    success: false,
+    error: 'ذخیرهٔ ایمن همگام‌سازی ممکن نیست؛ دوباره تلاش کنید.',
+  });
 }
 
 // Reconciliation updates the mutable job status. Checking through this helper
@@ -65,7 +107,6 @@ function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
     job.reconciliationErrors = result.errors.slice(0, 50);
     db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
       .filter(snapshot => snapshot.jobId !== job.id);
-    db.save();
     return { ok: false, errors: result.errors };
   }
 
@@ -112,7 +153,6 @@ function reconcileJob(job: SyncJob): { ok: boolean; errors: string[] } {
   // Drop nested student-provided payloads once a normalized queue exists.
   db.syncSnapshots = (db.syncSnapshots as SyncSnapshot[])
     .filter(snapshot => snapshot.jobId !== job.id);
-  db.save();
 
   return { ok: true, errors: [] };
 }
@@ -182,6 +222,15 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ success: false, error: 'واحد دانشگاهی انتخاب‌شده در سامانه تعریف نشده است.' });
   }
 
+  const pending = (db.syncJobs as SyncJob[]).filter(job =>
+    job.userId === userId && (job.status === 'RUNNING' || job.status === 'PENDING' || job.status === 'RECEIVED')
+  );
+  if (pending.length >= MAX_PENDING_SYNC_JOBS_PER_USER) {
+    return res.status(429).json({
+      success: false, error: 'تعداد همگام‌سازی‌های نیمه‌تمام زیاد است؛ برای بررسی و پاک‌سازی ایمن به پشتیبانی مراجعه کنید.',
+    });
+  }
+
   const job: SyncJob = {
     id: `sync-job-${crypto.randomUUID()}`,
     userId,
@@ -193,9 +242,12 @@ syncRouter.post('/jobs', authenticate, (req: AuthenticatedRequest, res) => {
     processedSnapshots: 0,
   };
 
-  db.syncJobs.push(job);
-  db.save();
-  return res.status(201).json({ success: true, data: job });
+  const created = commitSyncMutation(() => {
+    db.syncJobs.push(job);
+    return job;
+  });
+  if (!created.ok) return storageFailure(res);
+  return res.status(201).json({ success: true, data: created.value });
 });
 
 // 2. Upload a snapshot. A final chunk means "all chunks received", not "reconciled";
@@ -241,10 +293,23 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
   if ('error' in validation) {
     return res.status(400).json({ success: false, error: validation.error });
   }
+  if (chunkIndex >= MAX_SYNC_JOB_CHUNKS) {
+    return res.status(413).json({ success: false, error: 'تعداد بخش‌های این همگام‌سازی بیش از حد مجاز است.' });
+  }
 
   const allSnapshots = db.syncSnapshots as SyncSnapshot[];
   const existingForJob = allSnapshots.filter((snapshot) => snapshot.jobId === jobId);
   const existingChunk = existingForJob.find((snapshot) => snapshot.chunkIndex === chunkIndex);
+  if (!existingChunk) {
+    const oldBytes = existingForJob.reduce(
+      (total, item) => total + Buffer.byteLength(JSON.stringify(item.data), 'utf8'), 0
+    );
+    if (oldBytes + Buffer.byteLength(validation.serialized, 'utf8') > MAX_SYNC_JOB_BYTES) {
+      return res.status(413).json({
+        success: false, error: 'حجم کل این همگام‌سازی بیش از حد مجاز است؛ آن را به دسته‌های مستقل تقسیم کنید.',
+      });
+    }
+  }
 
   if (existingChunk && JSON.stringify(existingChunk.data) !== validation.serialized) {
     return res.status(409).json({ success: false, error: 'این شماره بخش قبلاً با داده متفاوت ثبت شده است.' });
@@ -257,11 +322,15 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
 
     // A retry of the final request can recover a job left in RECEIVED after a process restart.
     if (isFinal && (job.status === 'RUNNING' || job.status === 'RECEIVED')) {
-      job.status = 'RECEIVED';
-      job.receivedAt = job.receivedAt || new Date().toISOString();
-      job.totalSnapshots = chunkIndex as number + 1;
-      job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
-      const result = reconcileJob(job);
+      const persisted = commitSyncMutation(() => {
+        job.status = 'RECEIVED';
+        job.receivedAt = job.receivedAt || new Date().toISOString();
+        job.totalSnapshots = chunkIndex as number + 1;
+        job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
+        return reconcileJob(job);
+      });
+      if (!persisted.ok) return storageFailure(res);
+      const result = persisted.value;
       return res.status(result.ok ? 200 : 422).json({
         success: result.ok,
         data: {
@@ -312,26 +381,28 @@ syncRouter.post('/jobs/:jobId/snapshots', authenticate, (req: AuthenticatedReque
     createdAt: new Date().toISOString(),
   };
 
-  allSnapshots.push(snapshot);
-  job.processedSnapshots = new Set([...existingForJob.map((item) => item.chunkIndex), chunkIndex as number]).size;
-  job.totalSnapshots = Math.max(job.totalSnapshots, (chunkIndex as number) + 1);
+  // One durable write for new snapshot + final reconciliation/staging.
+  // Never persist a half-completed RECEIVED job or private chunk by itself.
+  const committed = commitSyncMutation(() => {
+    allSnapshots.push(snapshot);
+    job.processedSnapshots = new Set([...existingForJob.map(item => item.chunkIndex), chunkIndex as number]).size;
+    job.totalSnapshots = Math.max(job.totalSnapshots, (chunkIndex as number) + 1);
+    if (!isFinal) return null;
 
+    job.status = 'RECEIVED';
+    job.receivedAt = new Date().toISOString();
+    job.totalSnapshots = (chunkIndex as number) + 1;
+    job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
+    return reconcileJob(job);
+  });
+  if (!committed.ok) return storageFailure(res);
   if (!isFinal) {
-    db.save();
     return res.json({
       success: true,
       data: { snapshotId: snapshot.id, jobStatus: job.status, duplicate: false },
     });
   }
-
-  job.status = 'RECEIVED';
-  job.receivedAt = new Date().toISOString();
-  job.totalSnapshots = (chunkIndex as number) + 1;
-  // Only the final-chunk fingerprint survives successful reconciliation.
-  job.finalChunkDigest = crypto.createHash('sha256').update(validation.serialized).digest('hex');
-  db.save();
-
-  const result = reconcileJob(job);
+  const result = committed.value!;
   return res.status(result.ok ? 200 : 422).json({
     success: result.ok,
     data: {
