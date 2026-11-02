@@ -38,9 +38,16 @@ describe('دقیق‌بودن راهنمای استاد اول و صف مشتر�
       selectedOfferingIds={['a']} coursePriorities={['math']} profile={profile}
       curriculumId="chart" planBusy={true} onEditPriorities={()=>{}}
       onReorderCourses={()=>{}}/>);
-    expect(html).toMatch(/aria-label="کپی کد درس بعدی"[^>]*disabled=""/);
-    expect(html).toMatch(/aria-label="کپی کد math"[^>]*disabled=""/);
-    expect(html).toMatch(/aria-label="علامت ثبت math گروه 01"[^>]*disabled=""/);
-    expect(html).toMatch(/aria-controls="registration-queue-list"[^>]*disabled=""/);
+    // Match independent of React's attribute serialization order.
+    for (const [key, value] of [
+      ['aria-label','کپی کد درس بعدی'],
+      ['aria-label','کپی کد math'],
+      ['aria-label','علامت ثبت math گروه 01'],
+      ['aria-controls','registration-queue-list'],
+    ]) {
+      const tag=html.split('<button').find(chunk => chunk.split('>')[0].includes(key+'="'+value+'"'));
+      expect(tag).toBeDefined();
+      expect(tag?.split('>')[0]).toContain('disabled=""');
+    }
   });
 });
