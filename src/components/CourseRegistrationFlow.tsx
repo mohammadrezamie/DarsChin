@@ -98,7 +98,7 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
     </> : <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-          {currentPrimaryCoverage(wishlistCourseIds, selectedOfferingIds, evaluations).ready.toLocaleString('fa-IR')} از {courseGroups.length.toLocaleString('fa-IR')} درس دارای استاد اول؛ ترتیب کارت‌ها با صف ثبت یکی است.
+          {currentPrimaryCoverage(wishlistCourseIds, selectedOfferingIds, evaluations).ready.toLocaleString('fa-IR')} از {courseGroups.length.toLocaleString('fa-IR')} درس دارای استاد اولِ مجاز؛ ترتیب کارت‌ها با صف ثبت یکی است.
         </p>
         <button type="button" disabled={busy} onClick={() => onStage('courses')}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-300 bg-white px-3 text-xs font-bold text-fuchsia-800 dark:border-fuchsia-800 dark:bg-slate-900 dark:text-fuchsia-200">
