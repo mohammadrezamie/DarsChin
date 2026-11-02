@@ -488,6 +488,36 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
+  // A complete schedule is committed as ONE atomic server-validated plan.
+  // Older selections outside the current basket are never silently deleted.
+  const handleApplySuggestedSchedule = async (ids: string[]): Promise<boolean> => {
+    const chosen=new Set(wishlistCourseIds);
+    const proposals=ids.map(id=>evaluations.find(item=>item.offeringId===id));
+    if(proposals.length!==chosen.size || proposals.some(item=>!item||
+      !chosen.has(item.courseId)||!item.canSelect||!item.isEligible||item.overallStatus!=='AVAILABLE')||
+      new Set(proposals.map(item=>item!.courseId)).size!==chosen.size) {
+      setPlanError('پیشنهاد کامل و مجاز نیست؛ گروه‌های دروس را دوباره بررسی کن.');
+      setPlanStatus('error');return false;
+    }
+    const retained=selectedOfferingIds.filter(id=>{
+      const current=evaluations.find(item=>item.offeringId===id);
+      return !current||!chosen.has(current.courseId);
+    });
+    const newSelected=[...new Set([...retained,...ids])];
+    const newPriorities={...offeringPriorities};
+    for(const item of proposals){
+      const courseId=item!.courseId;
+      const oldPrimary=selectedOfferingIds.find(id=>evaluations.some(row=>row.offeringId===id&&row.courseId===courseId));
+      newPriorities[courseId]=promotePrimaryWithFallbacks(item!.offeringId,oldPrimary,newPriorities[courseId]||[]);
+    }
+    if(!await syncPlanToServer({
+      selectedOfferingIds:newSelected,offeringPriorities:newPriorities,
+    }))return false;
+    setSelectedOfferingIds(newSelected);setOfferingPriorities(newPriorities);
+    void fetchDashboardData();
+    return true;
+  };
+
   // Add a fallback offering for a course
   const handleAddFallbackOffering = async (courseId: string, offeringId: string) => {
     const currentCourseOfferings = offeringPriorities[courseId] || [];
@@ -976,6 +1006,7 @@ export const StudentDashboard: React.FC = () => {
                 onRemoveFallback={handleRemoveFallbackOffering}
                 onReorderAlternatives={handleReorderAlternatives}
                 onReorderCourses={handleReorderCourses}
+                onApplySuggestedSchedule={handleApplySuggestedSchedule}
                 planBusy={planStatus === 'saving' || loading}
               />
             )}
