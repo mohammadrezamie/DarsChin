@@ -113,3 +113,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [ایمنی صف درس‌های فعلی، جایگزین‌ها و متن‌های واضح دانشجو](REGISTRATION_QUEUE_ACTIVE_SELECTION_UX_FA.md).
 
 - [شمارش درست استاد اول و قفل صف هنگام ذخیره](STUDENT_JOURNEY_COVERAGE_UX_FA.md).
+
+- [ذخیرهٔ بخش‌به‌بخش اولویت و حفظ دروس منتظر استاد](STUDENT_PRIORITY_PARTIAL_SAVE_FA.md).

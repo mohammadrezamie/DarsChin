@@ -31,7 +31,7 @@ import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { CourseRegistrationFlow } from './CourseRegistrationFlow';
-import { currentPrimaryCoverage, initialRegistrationStage } from '../domain/student-flow-stage';
+import { currentPrimaryCoverage, initialRegistrationStage, preserveCoursePrioritiesAfterQueueReorder, promotePrimaryWithFallbacks } from '../domain/student-flow-stage';
 import { StudentMobileDock } from './StudentMobileDock';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { StudentJourneyStepper } from './StudentJourneyStepper';
@@ -442,23 +442,20 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  const syncPlanToServer = (
-    newSelectedIds: string[],
-    newCoursePriorities: string[],
-    newOfferingPriorities: Record<string, string[]>,
-  ) => runPlanMutation(() => apiRequest('/api/student/plan', {
-    method: 'PUT',
-    body: JSON.stringify({
-      selectedOfferingIds: newSelectedIds,
-      coursePriorities: newCoursePriorities,
-      offeringPriorities: newOfferingPriorities,
-    }),
+  // Backend PUT supports partial updates; do not overwrite or revalidate unrelated state.
+  const syncPlanToServer = (changes: {
+    selectedOfferingIds?: string[];
+    coursePriorities?: string[];
+    offeringPriorities?: Record<string, string[]>;
+  }) => runPlanMutation(() => apiRequest('/api/student/plan', {
+    method: 'PUT', body: JSON.stringify(changes),
   }));
 
-  // Reorder courses
+  // The visible queue omits courses without a primary; keep their priorities.
   const handleReorderCourses = async (newCourseOrder: string[]): Promise<boolean> => {
-    const saved = await syncPlanToServer(selectedOfferingIds, newCourseOrder, offeringPriorities);
-    if (saved) setCoursePriorities(newCourseOrder);
+    const complete = preserveCoursePrioritiesAfterQueueReorder(wishlistCourseIds, coursePriorities, newCourseOrder);
+    const saved = await syncPlanToServer({ coursePriorities: complete });
+    if (saved) setCoursePriorities(complete);
     return saved;
   };
 
@@ -476,18 +473,13 @@ export const StudentDashboard: React.FC = () => {
       offeringId,
     ];
 
-    const updatedOfferingList = [
-      offeringId,
-      // هنگام تغییر استاد اول، استاد قبلی به جای حذف، جایگزین دوم می‌شود.
-      ...(currentPrimary && currentPrimary !== offeringId ? [currentPrimary] : []),
-      ...currentCourseOfferings.filter((id) => id !== offeringId && id !== currentPrimary),
-    ];
+    const updatedOfferingList = promotePrimaryWithFallbacks(offeringId,currentPrimary,currentCourseOfferings);
     const newOfferingPriorities = {
       ...offeringPriorities,
       [courseId]: updatedOfferingList,
     };
 
-    if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities)) {
+    if (await syncPlanToServer({ selectedOfferingIds:newSelected, offeringPriorities:newOfferingPriorities })) {
       setSelectedOfferingIds(newSelected);
       setOfferingPriorities(newOfferingPriorities);
       // The primary section changed; refresh server-derived prerequisites,
@@ -505,7 +497,7 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: [...currentCourseOfferings, offeringId],
     };
-    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+    if (await syncPlanToServer({ offeringPriorities:newOfferingPriorities })) {
       setOfferingPriorities(newOfferingPriorities);
     }
   };
@@ -517,7 +509,7 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: currentCourseOfferings.filter((id) => id !== offeringId),
     };
-    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, newOfferingPriorities)) {
+    if (await syncPlanToServer({ offeringPriorities:newOfferingPriorities })) {
       setOfferingPriorities(newOfferingPriorities);
     }
   };
@@ -531,7 +523,7 @@ export const StudentDashboard: React.FC = () => {
       ...offeringPriorities,
       [courseId]: [...(primary ? [primary] : []), ...reordered.filter(id => id !== primary)],
     };
-    if (await syncPlanToServer(selectedOfferingIds, coursePriorities, next)) setOfferingPriorities(next);
+    if (await syncPlanToServer({ offeringPriorities:next })) setOfferingPriorities(next);
   };
 
   // Calculate schedule conflicts
@@ -689,7 +681,7 @@ export const StudentDashboard: React.FC = () => {
   const handleClearSchedule = () => setClearConfirmOpen(true);
   const confirmClearSchedule = async () => {
     // A full reset must clear priority/fallback state as well as selected IDs.
-    if (await syncPlanToServer([], [], {})) {
+    if (await syncPlanToServer({ selectedOfferingIds:[], coursePriorities:[], offeringPriorities:{} })) {
       setSelectedOfferingIds([]);
       setCoursePriorities([]);
       setOfferingPriorities({});

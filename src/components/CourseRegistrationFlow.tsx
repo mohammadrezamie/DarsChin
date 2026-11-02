@@ -3,7 +3,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ChevronDown, S
 import type { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile } from '../types';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
-import { canPrioritizeOffering, orderedChosenCourses } from '../domain/student-flow-stage';
+import { canPrioritizeOffering, currentPrimaryCoverage, orderedChosenCourses } from '../domain/student-flow-stage';
 
 interface Props {
   stage: 'courses' | 'preferences';
@@ -98,7 +98,7 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
     </> : <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-          {courseGroups.filter(course => course.primary).length.toLocaleString('fa-IR')} از {courseGroups.length.toLocaleString('fa-IR')} درس دارای استاد اول؛ ترتیب کارت‌ها با صف ثبت یکی است.
+          {currentPrimaryCoverage(wishlistCourseIds, selectedOfferingIds, evaluations).ready.toLocaleString('fa-IR')} از {courseGroups.length.toLocaleString('fa-IR')} درس دارای استاد اول؛ ترتیب کارت‌ها با صف ثبت یکی است.
         </p>
         <button type="button" disabled={busy} onClick={() => onStage('courses')}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-300 bg-white px-3 text-xs font-bold text-fuchsia-800 dark:border-fuchsia-800 dark:bg-slate-900 dark:text-fuchsia-200">
@@ -132,8 +132,8 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
                 </div>
               </div>
               <span className="flex items-center gap-2">
-                {primary ? <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300"><CheckCircle2 size={15} className="ml-1 inline"/>{primary.instructor || 'استاد اول مشخص است'}</span>
-                  : <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">استاد اول مشخص نیست</span>}
+                {primary && canPrioritizeOffering(primary) ? <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300"><CheckCircle2 size={15} className="ml-1 inline"/>{primary.instructor || 'استاد اول مشخص است'}</span>
+                  : <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">{primary ? 'استاد اول قبلی فعلاً مجاز نیست؛ جایگزین انتخاب کن' : 'استاد اول مشخص نیست'}</span>}
                 <ChevronDown aria-hidden="true" className={'h-4 w-4 text-slate-500 transition-transform ' + (expanded ? 'rotate-180' : '')}/>
               </span>
             </button>

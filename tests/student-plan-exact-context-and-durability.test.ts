@@ -124,6 +124,24 @@ describe('real student term/chart-scoped planning and durable writes',()=>{
     expect((await get('/plan',otherToken)).body.data.selectedOfferingIds).toEqual([]);
   });
 
+  it('allows partial priority updates without revalidating or overwriting unrelated selected groups',async()=>{
+    expect((await post('/plan/select').send({offeringId,action:'add'})).status).toBe(200);
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[offeringId,alternateId]}})).status).toBe(200);
+    const first=db.courseOfferings.find(item=>item.id===offeringId)!;
+    first.enrolledCount=first.capacity;
+    // Sorting is not a selection and must still work if an old group is now full.
+    expect((await put('/plan').send({coursePriorities:[courseId]})).status).toBe(200);
+    const sorted=(await get('/plan')).body.data;
+    expect(sorted.selectedOfferingIds).toEqual([offeringId]);
+    expect(sorted.offeringPriorities[courseId]).toEqual([offeringId,alternateId]);
+    expect(sorted.coursePriorities).toEqual([courseId]);
+    expect((await put('/plan').send({offeringPriorities:{[courseId]:[offeringId]}})).status).toBe(200);
+    const updated=(await get('/plan')).body.data;
+    expect(updated.selectedOfferingIds).toEqual([offeringId]);
+    expect(updated.coursePriorities).toEqual([courseId]);
+    expect(updated.offeringPriorities[courseId]).toEqual([offeringId]);
+  });
+
   it('does not commit a phantom plan or altered priorities after write failure',async()=>{
     let fail=failedSave();
     const attempt=await post('/plan/select').send({offeringId,action:'add'});

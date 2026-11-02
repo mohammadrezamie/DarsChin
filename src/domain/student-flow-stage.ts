@@ -44,3 +44,19 @@ export function currentPrimaryCoverage(
   }
   return { total: chosen.size, ready: ready.size, pending: chosen.size - ready.size };
 }
+
+/** تغییر ترتیب صف نباید درسِ منتظر انتخاب استاد را از اولویت‌ها حذف کند. */
+export function preserveCoursePrioritiesAfterQueueReorder(chosen:readonly string[],previous:readonly string[],queue:readonly string[]):string[]{
+  const allowed=new Set([...previous,...chosen]);
+  const output:string[]=[];
+  for(const id of [...queue,...previous,...chosen]){
+    if(allowed.has(id)&&!output.includes(id))output.push(id);
+  }
+  return output;
+}
+
+/** ارتقای استاد جدید به اول، با نگهداری استاد قبلی و جایگزین‌ها بدون تکرار. */
+export function promotePrimaryWithFallbacks(primary:string,oldPrimary:string|undefined,previous:readonly string[]):string[]{
+  return [...new Set([primary,...(oldPrimary&&oldPrimary!==primary?[oldPrimary]:[]),
+    ...previous.filter(id=>id!==primary&&id!==oldPrimary)])];
+}
