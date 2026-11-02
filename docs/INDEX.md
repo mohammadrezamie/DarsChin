@@ -107,3 +107,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [گردش یکپارچهٔ انتخاب درس، استاد و صف ثبت و رنگ‌بندی جدید](COURSE_FIRST_UNIFIED_QUEUE_FA.md).
 
 - [دورهٔ موقت دمو، بازگشت لندینگ و بهبود UX انتخاب واحد](TEMPORARY_DEMO_LIFECYCLE_UX_FA.md).
+
+- [هماهنگی ترتیب صف و انتخاب استاد فشرده](STUDENT_REGISTRATION_COMPACT_UX_FA.md).

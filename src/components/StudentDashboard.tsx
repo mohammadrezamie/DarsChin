@@ -977,6 +977,7 @@ export const StudentDashboard: React.FC = () => {
                 onRemoveFallback={handleRemoveFallbackOffering}
                 onReorderAlternatives={handleReorderAlternatives}
                 onReorderCourses={handleReorderCourses}
+                planBusy={planStatus === 'saving' || loading}
               />
             )}
 

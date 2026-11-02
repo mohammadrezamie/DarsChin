@@ -1,8 +1,9 @@
-import React from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, GraduationCap, Sparkles, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ChevronDown, Sparkles, Zap } from 'lucide-react';
 import type { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile } from '../types';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
+import { orderedChosenCourses } from '../domain/student-flow-stage';
 
 interface Props {
   stage: 'courses' | 'preferences';
@@ -21,6 +22,7 @@ interface Props {
   onRemoveFallback: (courseId: string, offeringId: string) => void;
   onReorderAlternatives: (courseId: string, ids: string[]) => void;
   onReorderCourses: (ids: string[]) => void | boolean | Promise<void | boolean>;
+  planBusy?: boolean;
 }
 
 export function moveAlternative(list: readonly string[], id: string, direction: -1 | 1): string[] {
@@ -36,9 +38,12 @@ export function moveAlternative(list: readonly string[], id: string, direction: 
 export const CourseRegistrationFlow: React.FC<Props> = ({
   stage, onStage, curriculumId, profile, evaluations, recommendations, wishlistCourseIds,
   selectedOfferingIds, coursePriorities, offeringPriorities, onSaveWishlist, onPrimary,
-  onAddFallback, onRemoveFallback, onReorderAlternatives, onReorderCourses,
+  onAddFallback, onRemoveFallback, onReorderAlternatives, onReorderCourses, planBusy = false,
 }) => {
-  const courseGroups = [...new Set(wishlistCourseIds)].map(courseId => {
+  const [savingSelection, setSavingSelection] = useState(false);
+  const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
+  const busy = savingSelection || planBusy;
+  const courseGroups = orderedChosenCourses(wishlistCourseIds, coursePriorities).map(courseId => {
     const offerings = evaluations.filter(item => item.courseId === courseId);
     const primary = offerings.find(item => selectedOfferingIds.includes(item.offeringId)) || null;
     const availableIds = new Set(offerings.map(item => item.offeringId));
@@ -48,6 +53,8 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
   });
   const unlisted = evaluations.filter(item => selectedOfferingIds.includes(item.offeringId) &&
     !wishlistCourseIds.includes(item.courseId));
+  const firstPendingId = courseGroups.find(course => !course.primary)?.courseId || courseGroups[0]?.courseId;
+  const openCourseId = expandedCourseId === null ? firstPendingId : expandedCourseId;
 
   return <section dir="rtl" aria-label="انتخاب درس و صف ثبت یکپارچه" className="dc-registration-flow space-y-4">
     <header className="dc-flow-heading rounded-[1.6rem] p-4 sm:p-6">
@@ -63,13 +70,13 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
       </p>
     </header>
     <div className="grid grid-cols-2 gap-2" role="group" aria-label="مراحل انتخاب واحد">
-      <button type="button" aria-current={stage === 'courses' ? 'step' : undefined} onClick={() => onStage('courses')}
+      <button type="button" aria-current={stage === 'courses' ? 'step' : undefined} disabled={busy} onClick={() => onStage('courses')}
         className={'dc-flow-stage min-h-20 rounded-2xl p-3 text-right ' + (stage === 'courses' ? 'dc-flow-active' : '')}>
         <span className="block text-xs font-black">۱. انتخاب درس‌ها</span>
         <span className="mt-1 block text-[11px] leading-5">هنوز استاد انتخاب نکن</span>
       </button>
       <button type="button" aria-current={stage === 'preferences' ? 'step' : undefined}
-        disabled={!wishlistCourseIds.length} onClick={() => onStage('preferences')}
+        disabled={busy || !wishlistCourseIds.length} onClick={() => onStage('preferences')}
         className={'dc-flow-stage min-h-20 rounded-2xl p-3 text-right disabled:opacity-50 ' + (stage === 'preferences' ? 'dc-flow-active' : '')}>
         <span className="block text-xs font-black">۲. استاد و صف ثبت</span>
         <span className="mt-1 block text-[11px] leading-5">اولویت اول + جایگزین‌ها</span>
@@ -77,12 +84,13 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
     </div>
     {stage === 'courses' ? <>
       <StudentWishlistBuilder curriculumId={curriculumId} wishlistCourseIds={wishlistCourseIds}
-        evaluations={evaluations} recommendations={recommendations} onSave={onSaveWishlist} courseFirst/>
+        evaluations={evaluations} recommendations={recommendations} onSave={onSaveWishlist}
+        onSavingChange={setSavingSelection} courseFirst/>
       <div className="dc-flow-next sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 sm:static">
         <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
           {wishlistCourseIds.length.toLocaleString('fa-IR')} درس انتخاب شده
         </span>
-        <button type="button" disabled={!wishlistCourseIds.length} onClick={() => onStage('preferences')}
+        <button type="button" disabled={busy || !wishlistCourseIds.length} onClick={() => onStage('preferences')}
           className="dc-flow-next-button inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-xs font-black text-white disabled:opacity-50">
           مرحله بعد: اولویت استاد <ArrowLeft size={16} aria-hidden="true"/>
         </button>
@@ -90,13 +98,14 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
     </> : <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-          {courseGroups.length.toLocaleString('fa-IR')} درس منتخب؛ استاد اول را مشخص کن و جایگزین‌ها را مرتب کن.
+          {courseGroups.filter(course => course.primary).length.toLocaleString('fa-IR')} از {courseGroups.length.toLocaleString('fa-IR')} درس دارای استاد اول؛ ترتیب کارت‌ها با صف ثبت یکی است.
         </p>
-        <button type="button" onClick={() => onStage('courses')}
+        <button type="button" disabled={busy} onClick={() => onStage('courses')}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-300 bg-white px-3 text-xs font-bold text-fuchsia-800 dark:border-fuchsia-800 dark:bg-slate-900 dark:text-fuchsia-200">
           <ArrowRight size={16}/> ویرایش درس‌ها
         </button>
       </div>
+      {busy && <p role="status" aria-live="polite" className="rounded-xl bg-sky-50 p-3 text-xs text-sky-900 dark:bg-sky-950 dark:text-sky-200">در حال ذخیرهٔ تغییرات…</p>}
       {unlisted.length > 0 && <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
         گروه‌هایی از برنامهٔ قبلی خارج از درس‌های منتخب جدید وجود دارد. برای جلوگیری از حذف ناخواسته، باقی مانده‌اند؛ قبل از ثبت آن‌ها را بررسی کن.
       </p>}
@@ -108,8 +117,11 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
               .filter((item): item is CourseEligibilityResult => Boolean(item)),
             ...offerings.filter(item => item.offeringId !== primary?.offeringId && !alternativeIds.includes(item.offeringId)),
           ];
+          const expanded = openCourseId === courseId;
           return <article key={courseId} className="dc-flow-course overflow-hidden rounded-[1.3rem]">
-            <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-4">
+            <button type="button" aria-expanded={expanded} aria-controls={'course-teachers-' + courseId}
+              onClick={() => setExpandedCourseId(expanded ? '__all_closed__' : courseId)}
+              className="flex min-h-14 w-full flex-wrap items-center justify-between gap-2 px-3 py-3 text-right focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-600 sm:px-4">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="dc-flow-index grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black">
                   {(index + 1).toLocaleString('fa-IR')}
@@ -119,10 +131,13 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
                   <span className="text-[11px] text-slate-500 dark:text-slate-300">{offerings.length.toLocaleString('fa-IR')} گروه ارائه‌شده</span>
                 </div>
               </div>
-              {primary ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300"><CheckCircle2 size={15}/> انتخاب اول مشخص است</span>
-                : <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">هنوز استاد اول انتخاب نشده</span>}
-            </header>
-            <div className="space-y-2 border-t border-slate-100 p-3 dark:border-slate-700 sm:p-4">
+              <span className="flex items-center gap-2">
+                {primary ? <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300"><CheckCircle2 size={15} className="ml-1 inline"/>{primary.instructor || 'استاد اول مشخص است'}</span>
+                  : <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">استاد اول مشخص نیست</span>}
+                <ChevronDown aria-hidden="true" className={'h-4 w-4 text-slate-500 transition-transform ' + (expanded ? 'rotate-180' : '')}/>
+              </span>
+            </button>
+            {expanded && <div id={'course-teachers-' + courseId} className="space-y-2 border-t border-slate-100 p-3 dark:border-slate-700 sm:p-4">
               {ordered.map(item => {
                 const isPrimary = item.offeringId === primary?.offeringId;
                 const altRank = alternativeIds.indexOf(item.offeringId);
@@ -148,21 +163,21 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    {!isPrimary && item.canSelect && <button type="button" onClick={() => onPrimary(courseId, item.offeringId)}
+                    {!isPrimary && item.canSelect && <button type="button" disabled={busy} onClick={() => onPrimary(courseId, item.offeringId)}
                       className="min-h-10 rounded-lg bg-fuchsia-600 px-2.5 text-[11px] font-black text-white">استاد اول</button>}
                     {!isPrimary && !isAlt && primary && item.canSelect &&
-                      <button type="button" onClick={() => onAddFallback(courseId, item.offeringId)}
+                      <button type="button" disabled={busy} onClick={() => onAddFallback(courseId, item.offeringId)}
                         className="min-h-10 rounded-lg border border-amber-400 bg-amber-50 px-2 text-[11px] font-black text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">+ جایگزین</button>}
                     {isAlt && <>
-                      <button type="button" disabled={altRank === 0} aria-label={'اولویت بالاتر ' + item.instructor}
+                      <button type="button" disabled={busy || altRank === 0} aria-label={'اولویت بالاتر ' + item.instructor}
                         onClick={() => onReorderAlternatives(courseId, [
                           ...(primary ? [primary.offeringId] : []), ...moveAlternative(alternativeIds, item.offeringId, -1)
                         ])} className="grid min-h-10 min-w-9 place-items-center rounded-lg disabled:opacity-30"><ArrowUp size={16}/></button>
-                      <button type="button" disabled={altRank === alternativeIds.length - 1}
+                      <button type="button" disabled={busy || altRank === alternativeIds.length - 1}
                         aria-label={'اولویت پایین‌تر ' + item.instructor} onClick={() => onReorderAlternatives(courseId, [
                           ...(primary ? [primary.offeringId] : []), ...moveAlternative(alternativeIds, item.offeringId, 1)
                         ])} className="grid min-h-10 min-w-9 place-items-center rounded-lg disabled:opacity-30"><ArrowDown size={16}/></button>
-                      <button type="button" onClick={() => onRemoveFallback(courseId, item.offeringId)}
+                      <button type="button" disabled={busy} onClick={() => onRemoveFallback(courseId, item.offeringId)}
                         className="min-h-10 px-2 text-[11px] font-black text-rose-700 dark:text-rose-300">حذف</button>
                     </>}
                     {isPrimary && <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-200">اولویت ۱</span>}
@@ -172,7 +187,7 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
               {!offerings.length && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                 برای این درس گروه ارائه‌شده پیدا نشد. خود درس از فهرست حذف نشده است.
               </p>}
-            </div>
+            </div>}
           </article>;
         })}
       </div>

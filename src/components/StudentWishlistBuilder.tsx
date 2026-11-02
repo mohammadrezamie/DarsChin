@@ -19,12 +19,13 @@ interface Props {
   recommendations: CourseRecommendation[];
   onSave: (ids: string[]) => Promise<boolean>;
   courseFirst?: boolean;
+  onSavingChange?: (busy: boolean) => void;
 }
 
 /** A wish list is NOT a registered plan. It can contain more units than a
  * student may ultimately take, allowing meaningful comparison before section choice. */
 export const StudentWishlistBuilder: React.FC<Props> = ({
-  curriculumId, wishlistCourseIds, evaluations, recommendations, onSave, courseFirst = false,
+  curriculumId, wishlistCourseIds, evaluations, recommendations, onSave, courseFirst = false, onSavingChange,
 }) => {
   const [catalog, setCatalog] = useState<BasketCourse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,9 +66,16 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
     if (saving || loading || error) return;
     setSaveError('');
     setSaving(true);
-    const saved = await onSave(ids);
-    setSaving(false);
-    if (!saved) setSaveError('سبد ذخیره نشد؛ تغییر قبلی حفظ شده است. دوباره تلاش کن.');
+    onSavingChange?.(true);
+    try {
+      const saved = await onSave(ids);
+      if (!saved) setSaveError('درس‌ها ذخیره نشدند؛ فهرست قبلی حفظ شده است.');
+    } catch {
+      setSaveError('ارتباط هنگام ذخیرهٔ درس‌ها برقرار نشد؛ دوباره تلاش کن.');
+    } finally {
+      setSaving(false);
+      onSavingChange?.(false);
+    }
   };
 
   return (
@@ -132,6 +140,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
         </div>
         <div className="min-w-0 rounded-2xl border border-emerald-200 bg-white p-3 dark:border-emerald-950 dark:bg-slate-900">
           <h4 className="mb-3 text-sm font-bold">{courseFirst ? 'درس‌های انتخاب‌شده' : 'ترتیب علاقه‌مندی‌ها'}</h4>
+          {courseFirst && <p className="mb-3 text-[11px] leading-6 text-slate-600 dark:text-slate-300">ترتیب نهایی را در صف مرحلهٔ بعد می‌چینی؛ اینجا فقط درس‌ها را اضافه یا حذف کن.</p>}
           <div className="max-h-[28rem] space-y-2 overflow-y-auto">
             {selected.map((c, index) => (
               <div key={c.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-emerald-50/70 p-2.5 dark:bg-emerald-950/30">
@@ -140,12 +149,14 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                   <div className="truncate text-sm font-bold" title={c.name}>{c.name}</div>
                   <div className="text-xs text-slate-600 dark:text-slate-400">{c.units.toLocaleString('fa-IR')} واحد</div>
                 </div>
+                {!courseFirst && <>
                 <button type="button" disabled={saving || index === 0} aria-label={'بالابردن اولویت ' + c.name}
                   onClick={() => { const ids = [...wishlistCourseIds]; [ids[index-1], ids[index]] = [ids[index], ids[index-1]]; void mutate(ids); }}
                   className="grid min-h-11 min-w-9 place-items-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-slate-800"><ArrowUp size={17} /></button>
                 <button type="button" disabled={saving || index === selected.length - 1} aria-label={'پایین‌بردن اولویت ' + c.name}
                   onClick={() => { const ids = [...wishlistCourseIds]; [ids[index], ids[index+1]] = [ids[index+1], ids[index]]; void mutate(ids); }}
                   className="grid min-h-11 min-w-9 place-items-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-slate-800"><ArrowDown size={17} /></button>
+                </>}
                 <button type="button" disabled={saving} aria-label={'حذف ' + c.name + ' از سبد'}
                   onClick={() => void mutate(wishlistCourseIds.filter(id => id !== c.id))}
                   className="grid min-h-11 min-w-9 place-items-center rounded-lg text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:hover:bg-rose-950/40"><Trash2 size={17} /></button>
