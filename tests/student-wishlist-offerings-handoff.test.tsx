@@ -63,12 +63,12 @@ describe('wishlist-to-offerings student handoff', () => {
     const group=renderToStaticMarkup(<StudentJourneyStepper step={5} {...props} wishlistCount={3}/>);
     expect(basket).toContain('حداقل یک درس');
     expect(basket).toContain('disabled');
-    expect(group).toContain('حداقل یک گروه مجاز');
+    expect(group).toContain('دست‌کم یک استاد اول مجاز');
     expect(group).toContain('disabled');
     const allowed=renderToStaticMarkup(<StudentJourneyStepper step={5} {...props}
       wishlistCount={3} selectedGroupCount={1}/>);
-    expect(allowed).toContain('اکنون ۱ گروه');
-    expect(allowed).not.toContain('حداقل یک گروه مجاز');
+    expect(allowed).toContain('۱ درس استاد اولِ مجاز دارد');
+    expect(allowed).not.toContain('دست‌کم یک استاد اول مجاز');
     // انتخاب درس، استاد و صف ثبت دیگر دانشجو را بین سه فضای نامرتبط جابه‌جا نمی‌کند.
     expect(source('src/components/StudentDashboard.tsx')).toContain("'registration', 'registration', 'registration'");
     expect(source('src/components/StudentDashboard.tsx')).toContain('<CourseRegistrationFlow');
