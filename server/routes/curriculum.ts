@@ -132,6 +132,15 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
     return res.status(400).json({success:false,error:'عنوان، نسخه یا وضعیت چارت معتبر نیست.'});
   }
   const existing=db.curricula[idx];
+  // A survey owns historical cohort context; never mask its 409 integrity block
+  // with a generic 400 for a newly supplied invalid major or entry year.
+  if(db.demandSurveys.some(survey=>survey.curriculumId===existing.id)&&
+    ((majorId&&majorId!==existing.majorId)||
+     (entryYearId&&entryYearId!==existing.entryYearId)||
+     (status==='archived'&&db.demandSurveys.some(survey=>
+       survey.curriculumId===existing.id&&(survey.status==='OPEN'||survey.status==='DRAFT'))))) {
+    return res.status(409).json({success:false,error:'این چارت سابقهٔ نیازسنجی دارد؛ تغییر حوزه یا آرشیو تا بستن نیازسنجی‌ها مجاز نیست.'});
+  }
   const futureMajor=majorId||existing.majorId;
   const futureYear=entryYearId||existing.entryYearId;
   if ((majorId && !db.majors.some(m=>m.id===majorId&&m.degreeLevelId===existing.degreeLevelId&&m.active)) ||
