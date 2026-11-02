@@ -135,12 +135,13 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   const completedCourses=completedRegistrationCourseIds(queue.steps,activeDoneTokens);
   const next=rulesReady&&progressReady?queue.steps.find(s=>s.ready&&!completedCourses.has(s.courseId)&&s.copyCode&&!s.dependencyCourseIds.some(id=>!completedCourses.has(id))):undefined;
   const copy=useCallback(async(value:string|null,courseName:string)=>{
+    if(planBusy){setCopyState('برنامه در حال ذخیره است؛ پس از پایان، کد معتبر را کپی کن.');return;}
     if(!value){setCopyState('کد معتبر در دسترس نیست.');return;}
     const ok=await copyTextWithFallback(value);
     setCopyState(ok?`کد «${courseName}» کپی شد.`:`کپی خودکار ممکن نیست؛ کد ${value} را انتخاب و دستی کپی کن.`);
-  },[academicContextKey]);
+  },[academicContextKey,planBusy]);
   const toggleDone=(step:RegistrationStep)=>{
-    if(!progressReady)return;
+    if(!progressReady||planBusy)return;
     const token=registrationProgressToken(step);
     setDoneTokens(prev=>prev.includes(token)?prev.filter(x=>x!==token):[...prev,token]);
   };
@@ -177,15 +178,15 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" aria-label="کپی کد درس بعدی" onClick={()=>void copy(next?.copyCode||null,next?.courseName||'درس بعدی')}
-          disabled={!rulesReady||!next?.copyCode} className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-teal-800 px-3 text-xs font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50">
+          disabled={!rulesReady||!next?.copyCode||planBusy} className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-teal-800 px-3 text-xs font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50">
           <ClipboardCopy className="h-4 w-4"/> کپی بعدی
         </button>
         <button type="button" aria-pressed={sortMode} aria-controls="registration-queue-list"
-          onClick={()=>setSortMode(value=>!value)} disabled={reordering||queue.steps.length<2}
+          onClick={()=>setSortMode(value=>!value)} disabled={reordering||planBusy||queue.steps.length<2}
           className={`min-h-11 rounded-lg border px-3 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-45 ${sortMode?'border-teal-800 bg-teal-800 text-white':'border-teal-300 text-teal-950 dark:text-teal-100'}`}>
           {sortMode?'اتمام چیدمان':'چیدمان'}
         </button>
-        <button type="button" onClick={onEditPriorities} className="min-h-11 rounded-lg border border-teal-300 px-3 text-xs font-bold text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-teal-100">ویرایش درس‌ها</button>
+        <button type="button" disabled={planBusy} onClick={onEditPriorities} className="min-h-11 rounded-lg border border-teal-300 px-3 text-xs font-bold text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-teal-100">ویرایش درس‌ها</button>
       </div>
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
@@ -219,17 +220,17 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
           </div>
           <div className="flex shrink-0 items-center justify-end gap-1">
             {sortMode ? <>
-            <button type="button" disabled={reordering||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
+            <button type="button" disabled={reordering||planBusy||index===0} onClick={()=>void move(index,-1)} aria-label={`انتقال ${step.courseName} به بالا`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowUp className="h-4 w-4"/></button>
-            <button type="button" disabled={reordering||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
+            <button type="button" disabled={reordering||planBusy||index===queue.steps.length-1} onClick={()=>void move(index,1)} aria-label={`انتقال ${step.courseName} به پایین`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowDown className="h-4 w-4"/></button>
             </> : <>
-            <button type="button" disabled={!rulesReady||!step.ready||!step.copyCode||locked} onClick={()=>void copy(step.copyCode,step.courseName)}
+            <button type="button" disabled={!rulesReady||!step.ready||!step.copyCode||locked||planBusy} onClick={()=>void copy(step.copyCode,step.courseName)}
               aria-label={`کپی کد ${step.courseName}`}
               className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-lg bg-teal-800 px-2 text-xs font-bold text-white disabled:opacity-45">
               <ClipboardCopy className="h-4 w-4"/><span className="hidden sm:inline">کپی</span>
             </button>
-            <button type="button" onClick={()=>toggleDone(step)} disabled={!progressReady||(!done&&locked)} aria-pressed={done}
+            <button type="button" onClick={()=>toggleDone(step)} disabled={!progressReady||(!done&&locked)||planBusy} aria-pressed={done}
               aria-label={done?`لغو علامت ثبت ${step.courseName} گروه ${step.groupCode}`:`علامت ثبت ${step.courseName} گروه ${step.groupCode}`}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-40 ${done?'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-900':'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>
               {done?<CheckCheck className="h-4 w-4"/>:<Check className="h-4 w-4"/>}
@@ -283,7 +284,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
                 <p>کد: <code dir="ltr">{step.copyCode||'نامشخص'}</code> · گروه: <code dir="ltr">{step.groupCode||'نامشخص'}</code></p>
                 {step.groupCode && (
                   <button type="button"
-                    disabled={!rulesReady||!step.ready||locked}
+                    disabled={!rulesReady||!step.ready||locked||planBusy}
                     onClick={()=>void copy(step.groupCode,`شمارهٔ گروه ${step.courseName}`)}
                     aria-label={`کپی شماره گروه ${step.courseName}`}
                     className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 font-bold text-amber-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-200">

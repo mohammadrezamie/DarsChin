@@ -76,13 +76,13 @@ export const StudentJourneyStepper: React.FC<Props> = ({
         <p className="mt-1">این عدد از تنظیمات و تحلیل سمت سرور به دست می‌آید؛ مجوز قطعی انتخاب واحد دانشگاه نیست. اگر معدل یا نیمسال اشتباه است، پرونده را اصلاح کن.</p>
       </div>}
       {step === 4 && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200">
-        الان {wishlistCount.toLocaleString('fa-IR')} درس در سبد علاقه‌مندی داری. این سبد سقف واحد انتخاب نهایی را مصرف نمی‌کند.
+        {wishlistCount.toLocaleString('fa-IR')} درس انتخاب کرده‌ای. حالا استاد و گروه اول هر درس را تعیین کن؛ هنوز چیزی در آموزشیار ثبت نشده است.
       </p>}
       {step === 5 && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200">
-        گروه‌های درس‌های سبدت را به ترتیب اولویت می‌بینی؛ استاد، زمان و تداخل را بررسی کن. فقط گروه‌های واقعاً مجاز را می‌توانی وارد برنامهٔ نهایی کنی. اکنون {selectedGroupCount.toLocaleString('fa-IR')} گروه انتخاب کرده‌ای.
+        از {wishlistCount.toLocaleString('fa-IR')} درسِ انتخاب‌شده، {selectedGroupCount.toLocaleString('fa-IR')} درس استاد اولِ مجاز دارد. جایگزین‌ها را در همان صف مرتب کن؛ درس‌های بدون استاد اول آماده نیستند.
       </p>}
-      {step === 4 && wishlistCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">حداقل یک درس را به سبد علاقه‌مندی اضافه کن تا سراغ گروه‌ها بروی.</p>}
-      {step === 5 && selectedGroupCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">برای آماده‌سازی صف ثبت، اول حداقل یک گروه مجاز را انتخاب کن.</p>}
+      {step === 4 && wishlistCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">حداقل یک درس را انتخاب کن تا سراغ استاد و گروه بروی.</p>}
+      {step === 5 && selectedGroupCount === 0 && <p role="status" className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">برای ادامه، دست‌کم یک استاد اول مجاز برای درس‌های منتخب تعیین کن؛ گروه‌های قدیمی حساب نمی‌شوند.</p>}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {(step === 0 || step === 2) && <button type="button" onClick={onOpenProfile}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">

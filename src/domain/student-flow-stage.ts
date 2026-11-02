@@ -29,3 +29,18 @@ export function canPrioritizeOffering(
 ): boolean {
   return row.canSelect === true && row.isEligible === true && row.overallStatus === 'AVAILABLE';
 }
+
+/** شمارش واقعی فقط استاد اولِ مجاز برای دروس منتخب فعلی. */
+export function currentPrimaryCoverage(
+  chosenCourseIds: readonly string[],
+  selectedOfferingIds: readonly string[],
+  evaluations: readonly import('../types').CourseEligibilityResult[],
+): { total: number; ready: number; pending: number } {
+  const chosen = new Set(chosenCourseIds);
+  const selected = new Set(selectedOfferingIds);
+  const ready = new Set<string>();
+  for (const item of evaluations) {
+    if (chosen.has(item.courseId) && selected.has(item.offeringId) && canPrioritizeOffering(item)) ready.add(item.courseId);
+  }
+  return { total: chosen.size, ready: ready.size, pending: chosen.size - ready.size };
+}

@@ -111,3 +111,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [هماهنگی ترتیب صف و انتخاب استاد فشرده](STUDENT_REGISTRATION_COMPACT_UX_FA.md).
 
 - [ایمنی صف درس‌های فعلی، جایگزین‌ها و متن‌های واضح دانشجو](REGISTRATION_QUEUE_ACTIVE_SELECTION_UX_FA.md).
+
+- [شمارش درست استاد اول و قفل صف هنگام ذخیره](STUDENT_JOURNEY_COVERAGE_UX_FA.md).

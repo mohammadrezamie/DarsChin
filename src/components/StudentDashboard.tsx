@@ -31,7 +31,7 @@ import { RecommendationsPanel } from './RecommendationsPanel';
 import { SchedulePlanner } from './SchedulePlanner';
 import { DemandWorkspace } from './DemandWorkspace';
 import { CourseRegistrationFlow } from './CourseRegistrationFlow';
-import { initialRegistrationStage } from '../domain/student-flow-stage';
+import { currentPrimaryCoverage, initialRegistrationStage } from '../domain/student-flow-stage';
 import { StudentMobileDock } from './StudentMobileDock';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { StudentJourneyStepper } from './StudentJourneyStepper';
@@ -225,6 +225,12 @@ export const StudentDashboard: React.FC = () => {
     setJourneyStep(next);
     if (next >= 4) setRegistrationStage(initialRegistrationStage(next, wishlistCourseIds.length));
     navigateWorkspace(stageDestination[next]);
+    if (next === 6) {
+      // نمایش همان صف ثبت مشترک، نه یک صفحهٔ جدا.
+      requestAnimationFrame(() => {
+        document.getElementById('registration-queue-list')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      });
+    }
   };
 
   const saveWishlist = async (ids: string[]): Promise<boolean> => {
@@ -788,7 +794,8 @@ export const StudentDashboard: React.FC = () => {
       {journeyReady && (
         <StudentJourneyStepper step={journeyStep} busy={journeyBusy} hasProfile={!!profile}
           hasCurriculum={!!curriculumId} academicLimits={academicLimits} profile={profile}
-          wishlistCount={wishlistCourseIds.length} selectedGroupCount={selectedOfferingIds.length}
+          wishlistCount={wishlistCourseIds.length}
+          selectedGroupCount={currentPrimaryCoverage(wishlistCourseIds, selectedOfferingIds, evaluations).ready}
           onOpenProfile={() => setProfileModalOpen(true)}
           onStep={step => void updateJourney(step)} />
       )}
