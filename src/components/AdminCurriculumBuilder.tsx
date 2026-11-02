@@ -13,6 +13,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [publishNotice, setPublishNotice] = useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
@@ -61,6 +63,23 @@ export const AdminCurriculumBuilder: React.FC = () => {
       setActiveCourseId(null);
     }
   }, [selectedCurriculumId]);
+
+  const handlePublishChart = async () => {
+    const id=selectedCurriculumId;
+    if(!id||!curriculumFull?.courses?.length||publishing)return;
+    if(!window.confirm('پس از فعال‌سازی، این چارت برای دانشجویان همین رشته و ورودی در دسترس قرار می‌گیرد. ادامه می‌دهید؟'))return;
+    setPublishing(true);setPublishNotice('');
+    try {
+      const result=await apiRequest<Curriculum>('/api/curriculum/'+encodeURIComponent(id),{
+        method:'PUT',body:JSON.stringify({status:'active'}),
+      });
+      if(!result.success||!result.data){setPublishNotice(result.error||'فعال‌سازی چارت انجام نشد.');return;}
+      setCurricula(prev=>prev.map(c=>c.id===id?result.data!:c));
+      setCurriculumFull((prev:any)=>prev?.curriculum?.id===id?{...prev,curriculum:result.data}:prev);
+      setPublishNotice('چارت با موفقیت فعال شد.');
+    } catch {setPublishNotice('ارتباط هنگام انتشار چارت برقرار نشد؛ وضعیت قبلی حفظ شده است.');}
+    finally {setPublishing(false);}
+  };
 
   const handleAddCourse = async () => {
     if (!addCourseForm.courseId) return alert('شناسه درس الزامی است');
@@ -139,6 +158,29 @@ export const AdminCurriculumBuilder: React.FC = () => {
         </div>
 
         {curriculumFull && (
+          <>
+          <section aria-label="وضعیت انتشار چارت" className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-black text-emerald-950 dark:text-emerald-200">
+                  {curriculumFull.curriculum?.name} · {curriculumFull.curriculum?.status==='active'?'فعال':
+                    curriculumFull.curriculum?.status==='draft'?'پیش‌نویس':'آرشیو'}
+                </p>
+                <p className="mt-1 text-xs leading-6 text-emerald-900 dark:text-emerald-200">
+                  {(curriculumFull.courses?.length||0).toLocaleString('fa-IR')} درس ·
+                  {((curriculumFull.prerequisites?.length||0)+(curriculumFull.corequisites?.length||0)).toLocaleString('fa-IR')} رابطهٔ آموزشی
+                </p>
+              </div>
+              {curriculumFull.curriculum?.status==='draft'&&<button type="button"
+                disabled={publishing||!curriculumFull.courses?.length} onClick={()=>void handlePublishChart()}
+                className="min-h-11 rounded-xl bg-emerald-800 px-4 text-xs font-black text-white disabled:opacity-50">
+                {publishing?'در حال فعال‌سازی…':'فعال‌کردن چارت پس از بررسی'}
+              </button>}
+            </div>
+            {curriculumFull.curriculum?.status==='draft'&&!curriculumFull.courses?.length&&
+              <p className="mt-2 text-xs text-amber-900 dark:text-amber-200">پیش از فعال‌سازی، درس‌ها را به چارت اضافه کن.</p>}
+            {publishNotice&&<p role="status" className="mt-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">{publishNotice}</p>}
+          </section>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -286,6 +328,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

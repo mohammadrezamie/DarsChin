@@ -3,6 +3,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ChevronDown, S
 import type { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile } from '../types';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
+import { SmartScheduleBuilder } from './SmartScheduleBuilder';
 import { canPrioritizeOffering, currentPrimaryCoverage, orderedChosenCourses } from '../domain/student-flow-stage';
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
   onRemoveFallback: (courseId: string, offeringId: string) => void;
   onReorderAlternatives: (courseId: string, ids: string[]) => void;
   onReorderCourses: (ids: string[]) => void | boolean | Promise<void | boolean>;
+  onApplySuggestedSchedule?: (ids: string[]) => Promise<boolean>;
   planBusy?: boolean;
 }
 
@@ -38,7 +40,7 @@ export function moveAlternative(list: readonly string[], id: string, direction: 
 export const CourseRegistrationFlow: React.FC<Props> = ({
   stage, onStage, curriculumId, profile, evaluations, recommendations, wishlistCourseIds,
   selectedOfferingIds, coursePriorities, offeringPriorities, onSaveWishlist, onPrimary,
-  onAddFallback, onRemoveFallback, onReorderAlternatives, onReorderCourses, planBusy = false,
+  onAddFallback, onRemoveFallback, onReorderAlternatives, onReorderCourses, onApplySuggestedSchedule, planBusy = false,
 }) => {
   const [savingSelection, setSavingSelection] = useState(false);
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
@@ -191,6 +193,9 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
           </article>;
         })}
       </div>
+      {onApplySuggestedSchedule && <SmartScheduleBuilder chosenCourseIds={wishlistCourseIds} coursePriorities={coursePriorities}
+        evaluations={evaluations} offeringPriorities={offeringPriorities} busy={busy}
+        onApply={onApplySuggestedSchedule}/>}
       <div className="dc-flow-queue-heading flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-black text-indigo-950 dark:text-indigo-100">
         <Zap className="h-5 w-5 text-indigo-600 dark:text-indigo-300"/> همان اولویت‌ها در صف آمادهٔ ثبت
       </div>

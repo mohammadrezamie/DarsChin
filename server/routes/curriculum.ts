@@ -78,13 +78,17 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
     version,
     name,
     notes,
-    status = 'active',
+    status = 'draft',
   } = req.body;
 
   if (![universityId,campusId,degreeLevelId,majorId,entryYearId,name].every(
     v=>typeof v==='string' && v.trim().length>0 && v.length<=150
   )) return res.status(400).json({success:false,error:'اطلاعات اصلی چارت معتبر نیست.'});
-  if (!['draft','active'].includes(status) ||
+  // New charts are ALWAYS drafts; publication must run scoped validation via PUT.
+  if (status !== 'draft') return res.status(400).json({
+    success:false,error:'چارت تازه ابتدا باید پیش‌نویس باشد؛ پس از افزودن دروس آن را در پنل فعال کنید.',
+  });
+  if (!['draft'].includes(status) ||
       (version != null && (typeof version!=='string'||version.length>48)) ||
       (notes != null && (typeof notes!=='string'||notes.length>2000))) {
     return res.status(400).json({success:false,error:'وضعیت، نسخه یا یادداشت چارت معتبر نیست.'});
@@ -126,6 +130,44 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
   if (idx === -1) return res.status(404).json({ success: false, error: 'چارت درسی یافت نشد.' });
 
   const { name, version, status, majorId, entryYearId } = req.body;
+  if ((status !== undefined && !['draft','active','archived'].includes(status)) ||
+      (name !== undefined && (typeof name!=='string'||!name.trim()||name.length>150)) ||
+      (version !== undefined && (typeof version!=='string'||!version.trim()||version.length>48))) {
+    return res.status(400).json({success:false,error:'عنوان، نسخه یا وضعیت چارت معتبر نیست.'});
+  }
+  const existing=db.curricula[idx];
+  // A survey owns historical cohort context; never mask its 409 integrity block
+  // with a generic 400 for a newly supplied invalid major or entry year.
+  if(db.demandSurveys.some(survey=>survey.curriculumId===existing.id)&&
+    ((majorId&&majorId!==existing.majorId)||
+     (entryYearId&&entryYearId!==existing.entryYearId)||
+     (status==='archived'&&db.demandSurveys.some(survey=>
+       survey.curriculumId===existing.id&&(survey.status==='OPEN'||survey.status==='DRAFT'))))) {
+    return res.status(409).json({success:false,error:'این چارت سابقهٔ نیازسنجی دارد؛ تغییر حوزه یا آرشیو تا بستن نیازسنجی‌ها مجاز نیست.'});
+  }
+  const futureMajor=majorId||existing.majorId;
+  const futureYear=entryYearId||existing.entryYearId;
+  if ((majorId && !db.majors.some(m=>m.id===majorId&&m.degreeLevelId===existing.degreeLevelId&&m.active)) ||
+      (entryYearId && !db.entryYears.some(y=>y.id===entryYearId&&y.active))) {
+    return res.status(400).json({success:false,error:'رشته یا ورودی جدید با مقطع/چارت سازگار نیست.'});
+  }
+  if (db.curricula.some(other=>other.id!==existing.id&&other.universityId===existing.universityId&&
+      other.campusId===existing.campusId&&other.degreeLevelId===existing.degreeLevelId&&
+      other.majorId===futureMajor&&other.entryYearId===futureYear&&
+      other.version===(version||existing.version))) {
+    return res.status(409).json({success:false,error:'نسخهٔ چارت برای این رشته و ورودی تکراری است.'});
+  }
+  if (status==='active') {
+    const assigned=db.curriculumCourses.filter(link=>link.curriculumId===existing.id&&link.active!==false);
+    if(!assigned.length || assigned.some(link=>!db.courses.some(course=>course.id===link.courseId&&course.active))) {
+      return res.status(400).json({success:false,error:'چارت بدون درس فعال یا دارای درس نامعتبر قابل انتشار نیست.'});
+    }
+    if(db.curricula.some(other=>other.id!==existing.id&&other.status==='active'&&
+        other.universityId===existing.universityId&&other.campusId===existing.campusId&&
+        other.degreeLevelId===existing.degreeLevelId&&other.majorId===futureMajor&&other.entryYearId===futureYear)) {
+      return res.status(409).json({success:false,error:'برای همین رشته و ورودی چارت فعال دیگری وجود دارد.'});
+    }
+  }
   // Existing surveys are historical records tied to a specific chart and cohort.
   // Never silently reassign that chart to another cohort or major.
   if (db.demandSurveys.some(s => s.curriculumId === req.params.id) &&
@@ -135,13 +177,18 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
          s.curriculumId === req.params.id && (s.status === 'OPEN' || s.status === 'DRAFT'))))) {
     return res.status(409).json({ success: false, error: 'این چارت در نیازسنجی استفاده شده؛ تغییر حوزه یا آرشیو پیش از بستن نیازسنجی‌ها مجاز نیست.' });
   }
+  const before=structuredClone(db.curricula[idx]);
   if (name) db.curricula[idx].name = name.trim();
   if (version) db.curricula[idx].version = version.trim();
   if (status) db.curricula[idx].status = status;
   if (majorId) db.curricula[idx].majorId = majorId;
   if (entryYearId) db.curricula[idx].entryYearId = entryYearId;
 
-  db.save();
+  try { db.save(); }
+  catch {
+    Object.assign(db.curricula[idx],before);
+    return res.status(503).json({success:false,error:'ذخیرهٔ چارت انجام نشد؛ تغییرات قبلی حفظ شده است.'});
+  }
   res.json({ success: true, data: db.curricula[idx] });
 });
 
@@ -161,8 +208,7 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
   
   // Cascade delete curriculum courses and rules
   db.data.curriculumCourses = db.curriculumCourses.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
+  db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
   
   db.save();
   res.json({ success: true, message: 'چارت با موفقیت حذف شد.' });
