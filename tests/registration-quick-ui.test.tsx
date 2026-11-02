@@ -69,11 +69,11 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('const saved=await onReorderCourses(order)');
     expect(component).toContain('if(saved===false)throw');
     expect(component).toContain('if(reorderLock.current||');
-    expect(component).toContain('disabled={reordering||index===0}');
+    expect(component).toContain('disabled={reordering||planBusy||index===0}');
     expect(component).toContain('const [sortMode,setSortMode]=useState(false)');
     expect(component).toContain('{sortMode ? <>');
     expect(component).toContain("setSortMode(value=>!value)");
-    expect(component).toContain('disabled={reordering||queue.steps.length<2}');
+    expect(component).toContain('disabled={reordering||planBusy||queue.steps.length<2}');
     expect(component).toContain('ترتیب ذخیره نشد');
     expect(dashboard).toContain('Promise<boolean>');
     expect(dashboard).toContain('return saved;');
@@ -111,7 +111,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(queue.steps[0].ready).toBe(false);
     const source = readFileSync(resolve(process.cwd(), 'src/components/RegistrationLaunchpad.tsx'), 'utf8');
     expect(source).toContain('s.ready&&!completedCourses.has(s.courseId)');
-    expect(source).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
+    expect(source).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked||planBusy}');
   });
 
   it('keeps quick-copy fail-closed until chart and passed-course rules resolve', () => {
@@ -119,9 +119,9 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('const rulesReady=Boolean(curriculumId)&&Boolean(profile?.userId)&&');
     expect(component).toContain('verifiedContextKey===academicContextKey&&!loading&&!error');
     expect(component).toContain('const next=rulesReady&&progressReady?queue.steps.find');
-    expect(component).toContain('disabled={!rulesReady||!next?.copyCode}');
-    expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked}');
-    expect(component).toContain('disabled={!rulesReady||!step.ready||locked}');
+    expect(component).toContain('disabled={!rulesReady||!next?.copyCode||planBusy}');
+    expect(component).toContain('disabled={!rulesReady||!step.ready||!step.copyCode||locked||planBusy}');
+    expect(component).toContain('disabled={!rulesReady||!step.ready||locked||planBusy}');
     expect(component).toContain('aria-label={`کپی شماره گروه ${step.courseName}`}');
     expect(component).toContain('کپی سریع تا دریافت اطلاعات غیرفعال است');
     expect(component).toContain('کپی سریع پس از بررسی فعال می‌شود');
@@ -138,7 +138,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(component).toContain('const completedCourses=completedRegistrationCourseIds(queue.steps,activeDoneTokens);');
     expect(component).toContain('const done=activeDoneTokens.includes(registrationProgressToken(step));');
     expect(component).toContain('const locked=step.dependencyCourseIds.some(id=>!completedCourses.has(id));');
-    expect(component).toContain('disabled={!progressReady||(!done&&locked)}');
+    expect(component).toContain('disabled={!progressReady||(!done&&locked)||planBusy}');
     expect(component).toContain('!Array.isArray(history.data.passedCourses)');
     expect(component).toContain('parseStoredRegistrationTokens(window.sessionStorage.getItem(progressKey))');
     expect(component).toContain('const current=pruneRegistrationTokens(queue.steps,previous);');
