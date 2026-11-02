@@ -30,7 +30,9 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(dashboard).toContain('ref={element => { tabButtonsRef.current[tab.id] = element; }}');
     expect(dashboard).toContain('min-h-11 shrink-0 items-center justify-start');
     expect(dashboard).toContain("planStatus !== 'idle'");
-    expect(dashboard).toContain('setCoursePriorities(newCourseOrder)');
+    expect(dashboard).toContain('setCoursePriorities(complete)');
+    expect(dashboard).toContain('preserveCoursePrioritiesAfterQueueReorder(wishlistCourseIds, coursePriorities, newCourseOrder)');
+    expect(dashboard).toContain('syncPlanToServer({ coursePriorities: complete })');
     expect(dashboard).toContain('Promise<boolean>');
     expect(dashboard).toContain('return saved;');
   });
@@ -39,7 +41,7 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     const dashboard=source('src/components/StudentDashboard.tsx');
     expect(dashboard).not.toContain("confirm('آیا از پاکسازی کل برنامه");
     expect(dashboard).toContain('const handleClearSchedule = () => setClearConfirmOpen(true);');
-    expect(dashboard).toContain('if (await syncPlanToServer([], [], {}))');
+    expect(dashboard).toContain('syncPlanToServer({ selectedOfferingIds:[], coursePriorities:[], offeringPriorities:{} })');
     expect(dashboard).toContain('setSelectedOfferingIds([]);');
     expect(dashboard).toContain('setCoursePriorities([]);');
     expect(dashboard).toContain('setOfferingPriorities({});');
@@ -91,7 +93,7 @@ describe('student-facing responsive dashboard and conflict UX',()=>{
     expect(begin).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(begin);
     const update=dashboard.slice(begin,end);
-    expect(update).toContain('if (await syncPlanToServer(newSelected, coursePriorities, newOfferingPriorities))');
+    expect(update).toContain('syncPlanToServer({ selectedOfferingIds:newSelected, offeringPriorities:newOfferingPriorities })');
     expect(update).toContain('setSelectedOfferingIds(newSelected)');
     expect(update).toContain('void fetchDashboardData();');
   });

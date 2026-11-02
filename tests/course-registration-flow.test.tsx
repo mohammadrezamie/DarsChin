@@ -8,7 +8,7 @@ import type { CourseEligibilityResult } from '../src/types';
 
 const section = {
   offeringId: 'offer-m1', courseId: 'math', courseName: 'ریاضی دو', courseCode: 'M2',
-  instructor: 'استاد الف', groupCode: '۰۱', canSelect: true, dayOfWeek: 'شنبه',
+  instructor: 'استاد الف', groupCode: '۰۱', canSelect: true, isEligible: true, overallStatus: 'AVAILABLE', dayOfWeek: 'شنبه',
   startTime: '۱۰:۰۰', endTime: '۱۲:۰۰', units: 3,
 } as CourseEligibilityResult;
 
@@ -42,10 +42,19 @@ describe('انتخاب درس قبل از استاد و صف ثبت مشترک',
       coursePriorities={['physics','math']} wishlistCourseIds={['math','physics']}
       selectedOfferingIds={['offer-m1']}/>);
     expect(html.indexOf('course-teachers-physics')).toBeLessThan(html.indexOf('course-teachers-math'));
-    expect(html).toContain('۱ از ۲ درس دارای استاد اول');
+    expect(html).toContain('۱ از ۲ درس دارای استاد اولِ مجاز');
     expect(html).toContain('aria-expanded="true"');
     expect(readFileSync('src/components/StudentWishlistBuilder.tsx','utf8')).toContain('{!courseFirst && <>');
   });
+  it('انتخاب قبلیِ نامجاز را به عنوان استاد اولِ آماده اعلام نمی‌کند', () => {
+    const invalid = { ...section, isEligible: false, primaryReason: 'پیش‌نیاز تأیید نشده است' };
+    const html = renderToStaticMarkup(<CourseRegistrationFlow {...props}
+      evaluations={[invalid]} stage="preferences" selectedOfferingIds={['offer-m1']}/>);
+    expect(html).toContain('۰ از ۱ درس دارای استاد اولِ مجاز');
+    expect(html).toContain('استاد اول قبلی فعلاً مجاز نیست');
+    expect(html).not.toContain('استاد اول مشخص است');
+  });
+
   it('جابجایی جایگزین‌ها مرتب‌سازی پایدار و بدون تکرار است', () => {
     expect(moveAlternative(['p2', 'p3', 'p4'], 'p3', -1)).toEqual(['p3', 'p2', 'p4']);
     expect(moveAlternative(['p2', 'p3', 'p3'], 'p3', 1)).toEqual(['p2', 'p3']);
