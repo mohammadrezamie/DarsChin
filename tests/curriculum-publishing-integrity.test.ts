@@ -34,6 +34,17 @@ const attach=()=>{
   db.curriculumCourses.push({...link,id:linkId,curriculumId:draftId});
 };
 describe('انتشار معتبر چارت رشته / مقطع / ورودی',()=>{
+  it('ایجاد مستقیم چارت فعال بدون پیش‌نویس و بررسی درس‌ها را رد می‌کند',async()=>{
+    const draft=db.curricula.find(c=>c.id===draftId)!;
+    const response=await request(app).post('/api/curriculum').set('Authorization',auth).send({
+      universityId:draft.universityId,campusId:draft.campusId,degreeLevelId:draft.degreeLevelId,
+      majorId:draft.majorId,entryYearId:draft.entryYearId,version:'bypass-publication-1',
+      name:'چارت بدون مرحله انتشار',status:'active',
+    });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toContain('پیش‌نویس');
+    expect(db.curricula.some(c=>c.version==='bypass-publication-1')).toBe(false);
+  });
   it('چارت خالی را منتشر نمی‌کند',async()=>{
     const r=await put({status:'active'});
     expect(r.status).toBe(400);
