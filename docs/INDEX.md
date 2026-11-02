@@ -115,3 +115,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [شمارش درست استاد اول و قفل صف هنگام ذخیره](STUDENT_JOURNEY_COVERAGE_UX_FA.md).
 
 - [ذخیرهٔ بخش‌به‌بخش اولویت و حفظ دروس منتظر استاد](STUDENT_PRIORITY_PARTIAL_SAVE_FA.md).
+
+- [ممیزی واقعی امکانات اصلی و برنامه‌ساز ۲ تا ۵ روزه](CORE_ACADEMIC_DELIVERY_20261102_FA.md).

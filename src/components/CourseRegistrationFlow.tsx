@@ -23,7 +23,7 @@ interface Props {
   onRemoveFallback: (courseId: string, offeringId: string) => void;
   onReorderAlternatives: (courseId: string, ids: string[]) => void;
   onReorderCourses: (ids: string[]) => void | boolean | Promise<void | boolean>;
-  onApplySuggestedSchedule: (ids: string[]) => Promise<boolean>;
+  onApplySuggestedSchedule?: (ids: string[]) => Promise<boolean>;
   planBusy?: boolean;
 }
 
@@ -193,9 +193,9 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
           </article>;
         })}
       </div>
-      <SmartScheduleBuilder chosenCourseIds={wishlistCourseIds} coursePriorities={coursePriorities}
+      {onApplySuggestedSchedule && <SmartScheduleBuilder chosenCourseIds={wishlistCourseIds} coursePriorities={coursePriorities}
         evaluations={evaluations} offeringPriorities={offeringPriorities} busy={busy}
-        onApply={onApplySuggestedSchedule}/>
+        onApply={onApplySuggestedSchedule}/>}
       <div className="dc-flow-queue-heading flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-black text-indigo-950 dark:text-indigo-100">
         <Zap className="h-5 w-5 text-indigo-600 dark:text-indigo-300"/> همان اولویت‌ها در صف آمادهٔ ثبت
       </div>
