@@ -126,7 +126,7 @@ export const StudentWishlistBuilder: React.FC<Props> = ({
                   <div className="truncate text-sm font-bold" title={c.name}>{c.name}</div>
                   <div className="text-[11px] leading-6 text-slate-500 dark:text-slate-400">
                     {c.units.toLocaleString('fa-IR')} واحد · {c.code}
-                    {rec ? ' · پیشنهاد: ' + rec.priority : ''}
+                    {rec ? ' · اهمیت پیشنهادی: ' + ({ HIGH: 'زیاد', MEDIUM: 'متوسط', LOW: 'کم' }[rec.priority] || 'نامشخص') : ''}
                     {!offered.has(c.id) ? ' · گروه ارائه‌شده یافت نشد' : ''}
                   </div>
                 </div>

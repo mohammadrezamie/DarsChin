@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Check, CheckCheck, ClipboardCopy, Lo
 import type { AcademicRule, CourseEligibilityResult, StudentAcademicProfile, StudentPassedCourse } from '../types';
 import { apiRequest } from '../utils/api';
 import { buildRegistrationQueue } from '../domain/registration-queue';
+import { activeRegistrationOfferingIds, canPrioritizeOffering } from '../domain/student-flow-stage';
 import type { RegistrationStep } from '../domain/registration-queue';
 import { completedRegistrationCourseIds, parseStoredRegistrationTokens, pruneRegistrationTokens, registrationProgressToken } from '../domain/registration-progress';
 import { copyTextWithFallback } from '../utils/clipboard';
@@ -17,6 +18,9 @@ interface Props {
   selectedOfferingIds: string[];
   coursePriorities: string[];
   offeringPriorities?: Record<string, string[]>;
+  chosenCourseIds?: string[];
+  planBusy?: boolean;
+  onSelectPrimaryOffering?: (courseId: string, offeringId: string) => void;
   profile: StudentAcademicProfile | null;
   curriculumId: string | null;
   onEditPriorities: () => void;
@@ -24,7 +28,7 @@ interface Props {
 }
 
 export const RegistrationLaunchpad: React.FC<Props> = ({
-  evaluations,selectedOfferingIds,coursePriorities,offeringPriorities = {},profile,curriculumId,onEditPriorities,onReorderCourses,
+  evaluations,selectedOfferingIds,coursePriorities,offeringPriorities = {},chosenCourseIds,planBusy = false,onSelectPrimaryOffering,profile,curriculumId,onEditPriorities,onReorderCourses,
 }) => {
   const [rules,setRules]=useState<AcademicRule[]>([]);
   const [passed,setPassed]=useState<StudentPassedCourse[]>([]);
@@ -103,11 +107,12 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     return ()=>{alive=false};
   },[academicContextKey]);
 
+  const activeSelectedIds=activeRegistrationOfferingIds(selectedOfferingIds,evaluations,chosenCourseIds);
   const queue=useMemo(()=>buildRegistrationQueue({
-    evaluations,selectedOfferingIds,preferredCourseIds:coursePriorities,rules,passedCourses:passed,
+    evaluations,selectedOfferingIds:activeSelectedIds,preferredCourseIds:coursePriorities,rules,passedCourses:passed,
     profile:{majorId:profile?.majorId||'',entryYearId:profile?.entryYearId||'',
       selectedTrackId:profile?.selectedTrackId||null},
-  }),[evaluations,selectedOfferingIds,coursePriorities,rules,passed,profile?.majorId,profile?.entryYearId,profile?.selectedTrackId]);
+  }),[evaluations,selectedOfferingIds,chosenCourseIds,coursePriorities,rules,passed,profile?.majorId,profile?.entryYearId,profile?.selectedTrackId]);
 
   // Do not advertise a safe copy/order while its chart and passed-course data
   // are pending or failed. Raw codes remain visible for manual verification.
@@ -141,7 +146,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
   };
   const move=async(index:number,direction:-1|1)=>{
     const target=index+direction;
-    if(reorderLock.current||target<0||target>=stepIds.length)return;
+    if(reorderLock.current||planBusy||target<0||target>=stepIds.length)return;
     const order=[...stepIds];[order[index],order[target]]=[order[target],order[index]];
     reorderLock.current=true;
     setReordering(true);
@@ -193,7 +198,11 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
       <button type="button" onClick={()=>setRevision(x=>x+1)} className="mr-2 underline">بررسی مجدد</button>
     </p>}
     {copyState&&<p role="status" aria-live="polite" className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-950 dark:bg-teal-950 dark:text-teal-200">{copyState}</p>}
-    {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm dark:border-slate-700">هنوز درسی انتخاب نکرده‌ای؛ ابتدا درس و گروه را از بخش دروس ارائه‌شده اضافه کن.</p>}
+    {queue.steps.length===0&&<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm leading-7 dark:border-slate-700">
+      {chosenCourseIds?.length
+        ? 'درس‌ها را انتخاب کرده‌ای؛ حالا برای تشکیل صف ثبت، استاد و گروه اول هر درس را از کارت‌های بالای همین صفحه مشخص کن.'
+        : 'هنوز درسی انتخاب نکرده‌ای؛ ابتدا از مرحلهٔ انتخاب درس‌ها شروع کن.'}
+    </p>}
     <ol id="registration-queue-list" className="space-y-1.5" aria-label="ترتیب ثبت دروس">
       {queue.steps.map((step,index)=>{
         const done=activeDoneTokens.includes(registrationProgressToken(step));
@@ -236,16 +245,37 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
               کد {step.codeFromOffering ? 'ارائه' : 'تأییدنشده'}: <code dir="ltr" className="font-mono">{step.copyCode||'نامشخص'}</code>
             </span>
           </div>
-          {(offeringPriorities[step.courseId] || []).filter(id => id !== step.offeringId).length > 0 &&
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-amber-100 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-900 dark:text-amber-200">
-              <span className="font-black">جایگزین‌ها به ترتیب:</span>
-              {(offeringPriorities[step.courseId] || []).filter(id => id !== step.offeringId).map((id, order) => {
-                const alternative = evaluations.find(item => item.offeringId === id && item.courseId === step.courseId);
-                return alternative ? <span key={id} className="rounded-lg bg-amber-50 px-2 py-1 dark:bg-amber-950/40">
-                  {(order + 2).toLocaleString('fa-IR')}. {alternative.instructor || 'استاد نامشخص'} · گروه {alternative.groupCode}
-                </span> : null;
-              })}
-            </div>}
+          {(() => {
+            const alternatives = [...new Set(offeringPriorities[step.courseId] || [])]
+              .filter(id => id !== step.offeringId)
+              .map(id => evaluations.find(item => item.offeringId === id && item.courseId === step.courseId))
+              .filter((item): item is CourseEligibilityResult => Boolean(item));
+            if (!alternatives.length) return null;
+            return <details className="border-t border-amber-100 text-xs dark:border-amber-900/60">
+              <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 font-bold text-amber-900 dark:text-amber-200">
+                گروه‌های جایگزین به ترتیب ({alternatives.length.toLocaleString('fa-IR')})
+              </summary>
+              <ol className="space-y-1.5 px-3 pb-3">
+                {alternatives.map((alternative,rank) => {
+                  const eligible=canPrioritizeOffering(alternative);
+                  return <li key={alternative.offeringId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-2.5 py-2 dark:bg-amber-950/30">
+                    <span className="min-w-0 text-[11px] leading-6 text-amber-950 dark:text-amber-100">
+                      {(rank+2).toLocaleString('fa-IR')}. {alternative.instructor || 'استاد نامشخص'} · گروه {alternative.groupCode}
+                      {!eligible && <span className="block text-rose-700 dark:text-rose-300">
+                        {alternative.primaryReason || 'این گروه در ارزیابی فعلی مجاز نیست'}</span>}
+                    </span>
+                    {onSelectPrimaryOffering && <button type="button"
+                      disabled={planBusy || !eligible}
+                      aria-label={`انتخاب ${alternative.instructor || 'استاد نامشخص'} به‌عنوان استاد اول درس ${step.courseName}`}
+                      onClick={() => onSelectPrimaryOffering(step.courseId,alternative.offeringId)}
+                      className="min-h-10 rounded-lg border border-amber-400 bg-white px-2.5 font-extrabold text-teal-900 disabled:opacity-45 dark:bg-slate-900 dark:text-teal-200">
+                      تبدیل به استاد اول
+                    </button>}
+                  </li>;
+                })}
+              </ol>
+            </details>;
+          })()}
           {(step.warnings.length>0||step.dependencyNames.length>0||step.copyCode?.startsWith('DEMO-')||Boolean(step.groupCode && step.copyCode!==step.groupCode))&&
             <details className="w-full border-t border-amber-100 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300">
               <summary className="cursor-pointer px-8 py-1 font-semibold">جزئیات کد و وابستگی‌ها</summary>

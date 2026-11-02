@@ -10,3 +10,22 @@ export function orderedChosenCourses(chosen: readonly string[], priority: readon
   const active = new Set(chosen);
   return [...new Set([...priority.filter(id => active.has(id)), ...chosen])];
 }
+
+/** انتخاب‌های یک برنامهٔ قدیمی نباید بدون درخواست دوبارهٔ دانشجو وارد صف جدید شوند. */
+export function activeRegistrationOfferingIds(
+  selectedOfferingIds: readonly string[],
+  evaluations: readonly import('../types').CourseEligibilityResult[],
+  chosenCourseIds?: readonly string[],
+): string[] {
+  if (!chosenCourseIds) return [...selectedOfferingIds];
+  const included = new Set(chosenCourseIds);
+  const courseByOffering = new Map(evaluations.map(row => [row.offeringId, row.courseId]));
+  return selectedOfferingIds.filter(id => included.has(courseByOffering.get(id) || ''));
+}
+
+/** هماهنگ با تصمیم نهایی موتور صلاحیت؛ canSelect به‌تنهایی کافی نیست. */
+export function canPrioritizeOffering(
+  row: Pick<import('../types').CourseEligibilityResult,'canSelect'|'isEligible'|'overallStatus'>,
+): boolean {
+  return row.canSelect === true && row.isEligible === true && row.overallStatus === 'AVAILABLE';
+}

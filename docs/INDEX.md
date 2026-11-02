@@ -109,3 +109,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [دورهٔ موقت دمو، بازگشت لندینگ و بهبود UX انتخاب واحد](TEMPORARY_DEMO_LIFECYCLE_UX_FA.md).
 
 - [هماهنگی ترتیب صف و انتخاب استاد فشرده](STUDENT_REGISTRATION_COMPACT_UX_FA.md).
+
+- [ایمنی صف درس‌های فعلی، جایگزین‌ها و متن‌های واضح دانشجو](REGISTRATION_QUEUE_ACTIVE_SELECTION_UX_FA.md).

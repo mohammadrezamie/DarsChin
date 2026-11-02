@@ -3,7 +3,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, ChevronDown, S
 import type { CourseEligibilityResult, CourseRecommendation, StudentAcademicProfile } from '../types';
 import { StudentWishlistBuilder } from './StudentWishlistBuilder';
 import { RegistrationLaunchpad } from './RegistrationLaunchpad';
-import { orderedChosenCourses } from '../domain/student-flow-stage';
+import { canPrioritizeOffering, orderedChosenCourses } from '../domain/student-flow-stage';
 
 interface Props {
   stage: 'courses' | 'preferences';
@@ -157,15 +157,15 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
                       <p className="text-[11px] leading-6 text-slate-600 dark:text-slate-300">
                         {item.dayOfWeek || 'روز نامشخص'} · {item.startTime || '--'} تا {item.endTime || '--'}
                       </p>
-                      {!item.canSelect && <p className="text-[11px] text-rose-700 dark:text-rose-300">
+                      {!canPrioritizeOffering(item) && <p className="text-[11px] text-rose-700 dark:text-rose-300">
                         {item.primaryReason || 'شرایط اخذ این گروه تأیید نشده است'}
                       </p>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    {!isPrimary && item.canSelect && <button type="button" disabled={busy} onClick={() => onPrimary(courseId, item.offeringId)}
+                    {!isPrimary && canPrioritizeOffering(item) && <button type="button" disabled={busy} onClick={() => onPrimary(courseId, item.offeringId)}
                       className="min-h-10 rounded-lg bg-fuchsia-600 px-2.5 text-[11px] font-black text-white">استاد اول</button>}
-                    {!isPrimary && !isAlt && primary && item.canSelect &&
+                    {!isPrimary && !isAlt && primary && canPrioritizeOffering(item) &&
                       <button type="button" disabled={busy} onClick={() => onAddFallback(courseId, item.offeringId)}
                         className="min-h-10 rounded-lg border border-amber-400 bg-amber-50 px-2 text-[11px] font-black text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">+ جایگزین</button>}
                     {isAlt && <>
@@ -196,6 +196,8 @@ export const CourseRegistrationFlow: React.FC<Props> = ({
       </div>
       <RegistrationLaunchpad evaluations={evaluations} selectedOfferingIds={selectedOfferingIds}
         offeringPriorities={offeringPriorities} coursePriorities={coursePriorities} profile={profile}
+        chosenCourseIds={wishlistCourseIds} planBusy={busy}
+        onSelectPrimaryOffering={onPrimary}
         curriculumId={curriculumId} onEditPriorities={() => onStage('courses')}
         onReorderCourses={onReorderCourses} />
     </div>}
