@@ -1,7 +1,9 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CourseRegistrationFlow, moveAlternative } from '../src/components/CourseRegistrationFlow';
+import { orderedChosenCourses } from '../src/domain/student-flow-stage';
 import type { CourseEligibilityResult } from '../src/types';
 
 const section = {
@@ -32,6 +34,17 @@ describe('انتخاب درس قبل از استاد و صف ثبت مشترک',
     expect(html).toContain('استاد الف');
     expect(html).toContain('استاد اول');
     expect(html).toContain('همان اولویت‌ها در صف آمادهٔ ثبت');
+  });
+  it('اولویت استادها دقیقاً از صف ثبت گرفته می‌شود و کارت‌ها جمع می‌شوند', () => {
+    expect(orderedChosenCourses(['math','physics','lab'],['physics','math']))
+      .toEqual(['physics','math','lab']);
+    const html=renderToStaticMarkup(<CourseRegistrationFlow {...props} stage="preferences"
+      coursePriorities={['physics','math']} wishlistCourseIds={['math','physics']}
+      selectedOfferingIds={['offer-m1']}/>);
+    expect(html.indexOf('course-teachers-physics')).toBeLessThan(html.indexOf('course-teachers-math'));
+    expect(html).toContain('۱ از ۲ درس دارای استاد اول');
+    expect(html).toContain('aria-expanded="true"');
+    expect(readFileSync('src/components/StudentWishlistBuilder.tsx','utf8')).toContain('{!courseFirst && <>');
   });
   it('جابجایی جایگزین‌ها مرتب‌سازی پایدار و بدون تکرار است', () => {
     expect(moveAlternative(['p2', 'p3', 'p4'], 'p3', -1)).toEqual(['p3', 'p2', 'p4']);
