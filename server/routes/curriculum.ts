@@ -78,13 +78,17 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
     version,
     name,
     notes,
-    status = 'active',
+    status = 'draft',
   } = req.body;
 
   if (![universityId,campusId,degreeLevelId,majorId,entryYearId,name].every(
     v=>typeof v==='string' && v.trim().length>0 && v.length<=150
   )) return res.status(400).json({success:false,error:'اطلاعات اصلی چارت معتبر نیست.'});
-  if (!['draft','active'].includes(status) ||
+  // New charts are ALWAYS drafts; publication must run scoped validation via PUT.
+  if (status !== 'draft') return res.status(400).json({
+    success:false,error:'چارت تازه ابتدا باید پیش‌نویس باشد؛ پس از افزودن دروس آن را در پنل فعال کنید.',
+  });
+  if (!['draft'].includes(status) ||
       (version != null && (typeof version!=='string'||version.length>48)) ||
       (notes != null && (typeof notes!=='string'||notes.length>2000))) {
     return res.status(400).json({success:false,error:'وضعیت، نسخه یا یادداشت چارت معتبر نیست.'});
