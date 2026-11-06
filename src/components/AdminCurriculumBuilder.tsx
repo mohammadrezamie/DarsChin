@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { extractSourceCourseIds } from '../utils/academic';
@@ -17,6 +17,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [publishing, setPublishing] = useState(false);
   const [publishNotice, setPublishNotice] = useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
+  const detailsRequestRef = useRef(0);
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -55,15 +56,15 @@ export const AdminCurriculumBuilder: React.FC = () => {
   }, []);
 
   const loadCurriculumDetails = async (id: string) => {
-    const res = await apiRequest(`/api/curriculum/${id}/full`);
-    if (res.success) {
-      setCurriculumFull(res.data);
-    } else {
-      setCurriculumFull(null);
-    }
+    const requestId=++detailsRequestRef.current;
+    const res=await apiRequest(`/api/curriculum/${encodeURIComponent(id)}/full`);
+    if(requestId!==detailsRequestRef.current)return;
+    if(res.success)setCurriculumFull(res.data);
+    else {setCurriculumFull(null);setOperationError(res.error||'جزئیات چارت دریافت نشد.');}
   };
 
   useEffect(() => {
+    ++detailsRequestRef.current;
     setCurriculumFull(null);
     setOperationError('');
     setPublishNotice('');
