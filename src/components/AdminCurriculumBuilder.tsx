@@ -13,6 +13,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [operationError, setOperationError] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishNotice, setPublishNotice] = useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
@@ -26,6 +27,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [addRuleForm, setAddRuleForm] = useState({
     sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
   });
+
+  const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
+  const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
+  const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
+  const relevantRuleCourses=courses.filter(c=>c.active&&chartCourseIds.has(c.id)&&c.id!==activeCourseId);
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,10 +64,13 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   useEffect(() => {
-    if (selectedCurriculumId) {
-      loadCurriculumDetails(selectedCurriculumId);
-      setActiveCourseId(null);
-    }
+    setCurriculumFull(null);
+    setOperationError('');
+    setPublishNotice('');
+    setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
+    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:''});
+    setActiveCourseId(null);
+    if (selectedCurriculumId) void loadCurriculumDetails(selectedCurriculumId);
   }, [selectedCurriculumId]);
 
   const handlePublishChart = async () => {
@@ -82,7 +91,16 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   const handleAddCourse = async () => {
-    if (!addCourseForm.courseId) return alert('شناسه درس الزامی است');
+    setOperationError('');
+    if(!selectedCurriculumId)return;
+    if(!addCourseForm.courseId){setOperationError('ابتدا درس را انتخاب کن.');return;}
+    if(addCourseForm.trackId&&!relevantTracks.some(t=>t.id===addCourseForm.trackId)){
+      setOperationError('گرایش انتخاب‌شده متعلق به رشتهٔ همین چارت نیست.');return;
+    }
+    if(!Number.isInteger(addCourseForm.suggestedSemester)||addCourseForm.suggestedSemester<1||
+       addCourseForm.suggestedSemester>16){
+      setOperationError('نیمسال پیشنهادی باید بین ۱ تا ۱۶ باشد.');return;
+    }
     const res = await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses`, {
       method: 'POST',
       body: JSON.stringify(addCourseForm)
@@ -105,7 +123,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   const handleAddRule = async () => {
-    if (!addRuleForm.sourceCourseId) return alert('درس پیش‌نیاز/هم‌نیاز را انتخاب کنید');
+    setOperationError('');
+    if(!selectedCurriculumId||!activeCourseId)return;
+    if(!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)){
+      setOperationError('مبدأ پیش‌نیاز یا هم‌نیاز باید درس دیگری از همین چارت باشد.');return;
+    }
     const res = await apiRequest(`/api/curriculum/rules`, {
       method: 'POST',
       body: JSON.stringify({
@@ -152,11 +174,15 @@ export const AdminCurriculumBuilder: React.FC = () => {
           >
             <option value="">-- یک چارت انتخاب کنید --</option>
             {curricula.map(c => (
-              <option key={c.id} value={c.id}>{c.name} · {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
+              <option key={c.id} value={c.id}>{c.name} ·
+                {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} ·
+                ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
+                {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
             ))}
           </select>
         </div>
 
+        {operationError&&<p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{operationError}</p>}
         {curriculumFull && (
           <>
           <section aria-label="وضعیت انتشار چارت" className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -192,7 +218,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     onChange={(e) => setAddCourseForm({...addCourseForm, courseId: e.target.value})}
                   >
                     <option value="">-- انتخاب درس --</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
+                    {courses.filter(c=>c.active).map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
                   </select>
                   <select 
                     className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
@@ -209,8 +235,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     value={addCourseForm.trackId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
-                    <option value="">همه گرایش‌ها</option>
-                    {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    <option value="">مشترک بین گرایش‌ها</option>
+                    {relevantTracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                   <button 
                     onClick={handleAddCourse}
@@ -303,8 +329,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       value={addRuleForm.sourceCourseId}
                       onChange={(e) => setAddRuleForm({...addRuleForm, sourceCourseId: e.target.value})}
                     >
-                      <option value="">-- انتخاب درس مبدا --</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      <option value="">درس دیگری از همین چارت را انتخاب کن</option>
+                      {relevantRuleCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <select 
@@ -315,7 +341,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         <option value="PREREQUISITE">پیش‌نیاز</option>
                         <option value="COREQUISITE">هم‌نیاز</option>
                       </select>
-                      <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">یک درس مرتبط</span>
+                      <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">فقط درس‌های همین چارت</span>
                     </div>
                     <button 
                       onClick={handleAddRule}
