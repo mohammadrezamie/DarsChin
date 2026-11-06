@@ -124,6 +124,89 @@ curriculumRouter.post('/', authenticate, requirePermission('curriculum.manage'),
   res.json({ success: true, data: newCurriculum });
 });
 
+// Admin: Clone a complete academic chart for another entry year.
+// A clone is ALWAYS a draft: no demand surveys, student records, or course offerings
+// are carried across cohorts. A manager must review the copied regulations.
+curriculumRouter.post('/:id/clone', authenticate, requirePermission('curriculum.manage'), (req, res) => {
+  const source=db.curricula.find(item=>item.id===req.params.id);
+  if(!source)return res.status(404).json({success:false,error:'چارت مبدأ یافت نشد.'});
+  const {entryYearId,version,name,copyRules=true}=req.body||{};
+  if(typeof entryYearId!=='string'||!entryYearId.trim()||
+     typeof version!=='string'||!version.trim()||version.length>48||
+     typeof name!=='string'||!name.trim()||name.length>150||
+     typeof copyRules!=='boolean'||Object.keys(req.body||{}).some(key=>
+       !['entryYearId','version','name','copyRules'].includes(key))) {
+    return res.status(400).json({success:false,error:'ورودی، نام، نسخه یا تنظیمات کپی چارت معتبر نیست.'});
+  }
+  if(!db.entryYears.some(year=>year.id===entryYearId&&year.active)||
+     !db.universities.some(university=>university.id===source.universityId&&university.active)||
+     !db.campuses.some(campus=>campus.id===source.campusId&&campus.universityId===source.universityId&&campus.active)||
+     !db.degreeLevels.some(degree=>degree.id===source.degreeLevelId&&degree.active)||
+     !db.majors.some(major=>major.id===source.majorId&&major.degreeLevelId===source.degreeLevelId&&major.active)) {
+    return res.status(400).json({success:false,error:'مقطع، رشته، واحد یا ورودی مقصد فعال و معتبر نیست.'});
+  }
+  if(entryYearId===source.entryYearId)return res.status(400).json({
+    success:false,error:'برای کپی مستقل، ورودی مقصد باید با مبدأ متفاوت باشد.',
+  });
+  if(db.curricula.some(chart=>chart.universityId===source.universityId&&chart.campusId===source.campusId&&
+      chart.degreeLevelId===source.degreeLevelId&&chart.majorId===source.majorId&&
+      chart.entryYearId===entryYearId&&chart.version===version.trim())) {
+    return res.status(409).json({success:false,error:'این نسخه برای رشته، مقطع و ورودی مقصد قبلاً ثبت شده است.'});
+  }
+  const sourceCourses=db.curriculumCourses.filter(item=>item.curriculumId===source.id&&item.active!==false);
+  if(!sourceCourses.length)return res.status(409).json({
+    success:false,error:'چارت مبدأ درس فعال ندارد؛ ابتدا دروس آن را تعریف کنید.',
+  });
+  if(sourceCourses.some(item=>!db.courses.some(course=>course.id===item.courseId&&course.active)||
+       (item.trackId&&!db.tracks.some(track=>track.id===item.trackId&&track.majorId===source.majorId&&track.active)))) {
+    return res.status(409).json({success:false,error:'درس یا گرایش نامعتبر در چارت مبدأ وجود دارد؛ ابتدا اصلاح شود.'});
+  }
+  const ids=[...new Set(sourceCourses.map(item=>item.courseId))];
+  const rules=copyRules?db.academicRules.filter(rule=>rule.curriculumId===source.id):[];
+  if(rules.some(rule=>(rule.entryYearId&&rule.entryYearId!==source.entryYearId)||
+      (rule.majorId&&rule.majorId!==source.majorId)||
+      (rule.trackId&&!db.tracks.some(track=>track.id===rule.trackId&&track.majorId===source.majorId&&track.active))||
+      !ids.includes(rule.targetCourseId)||
+      extractSourceCourseIds(rule.expression).some(id=>!ids.includes(id)))) {
+    return res.status(409).json({success:false,error:'قوانین مبدأ با چارت سازگار نیستند؛ پیش از کپی اصلاح کنید یا کپی قوانین را خاموش کنید.'});
+  }
+  if(copyRules && !analyzeCurriculumDependencies(source.id,ids,rules).valid) {
+    return res.status(409).json({success:false,error:'چرخه یا خطای پیش‌نیاز در چارت مبدأ وجود دارد؛ کپی قوانین مجاز نیست.'});
+  }
+  const clone:Curriculum={
+    ...source,id:'curr-'+randomUUID(),entryYearId,version:version.trim(),name:name.trim(),
+    notes:'پیش‌نویس مستقل از چارت '+source.name+'؛ قوانین و دروس نیازمند بازبینی برای ورودی جدید.',
+    status:'draft',createdAt:new Date().toISOString(),
+  };
+  const courseCopies:CurriculumCourse[]=sourceCourses.map(row=>({
+    ...row,id:'cc-'+randomUUID(),curriculumId:clone.id,
+  }));
+  const ruleCopies:AcademicRule[]=rules.map(rule=>({
+    ...structuredClone(rule),id:'rule-'+randomUUID(),curriculumId:clone.id,
+    entryYearId:rule.entryYearId?entryYearId:rule.entryYearId,
+  }));
+  const auditLen=db.auditLogs.length;
+  db.curricula.push(clone);
+  db.curriculumCourses.push(...courseCopies);
+  db.academicRules.push(...ruleCopies);
+  db.auditLogs.push({
+    id:'audit-chart-clone-'+randomUUID(),adminId:(req as AuthenticatedRequest).user!.id,
+    action:'CURRICULUM_CLONED_DRAFT',entityType:'CURRICULUM',entityId:clone.id,
+    createdAt:new Date().toISOString(),
+  });
+  try {db.save();}
+  catch {
+    db.data.curricula=db.curricula.filter(row=>row.id!==clone.id);
+    db.data.curriculumCourses=db.curriculumCourses.filter(row=>row.curriculumId!==clone.id);
+    db.data.academicRules=db.academicRules.filter(row=>row.curriculumId!==clone.id);
+    db.auditLogs.splice(auditLen);
+    return res.status(503).json({success:false,error:'کپی چارت ذخیره نشد؛ اطلاعات مبدأ و سایر ورودی‌ها حفظ شده‌اند.'});
+  }
+  return res.status(201).json({
+    success:true,data:{curriculum:clone,copiedCourses:courseCopies.length,copiedRules:ruleCopies.length},
+  });
+});
+
 // Admin: Update Curriculum
 curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'), (req, res) => {
   const idx = db.curricula.findIndex((c) => c.id === req.params.id);
