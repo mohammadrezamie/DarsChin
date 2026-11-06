@@ -14,6 +14,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [operationError, setOperationError] = useState('');
+  const [chartSearch,setChartSearch]=useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishNotice, setPublishNotice] = useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
@@ -29,6 +30,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
     sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
   });
 
+  const matchingCharts=curricula.filter(c=>{
+    const major=majors.find(m=>m.id===c.majorId)?.name||'';
+    const year=entryYears.find(y=>y.id===c.entryYearId)?.year?.toString()||'';
+    const search=chartSearch.trim().toLowerCase();
+    return !search||[c.name,c.version,major,year].some(value=>value.toLowerCase().includes(search));
+  });
   const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
   const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
   const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
@@ -167,6 +174,9 @@ export const AdminCurriculumBuilder: React.FC = () => {
         </h2>
         
         <div className="mb-6">
+          <label htmlFor="chart-filter" className="mb-1 block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
+          <input id="chart-filter" type="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
+            className="darschin-field mb-3 min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
           <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
           <select 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
@@ -174,7 +184,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
             onChange={(e) => setSelectedCurriculumId(e.target.value)}
           >
             <option value="">-- یک چارت انتخاب کنید --</option>
-            {curricula.map(c => (
+            {matchingCharts.map(c => (
               <option key={c.id} value={c.id}>{c.name} ·
                 {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} ·
                 ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
