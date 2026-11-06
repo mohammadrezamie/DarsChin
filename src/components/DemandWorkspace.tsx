@@ -6,6 +6,11 @@ import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
 import { downstreamCourseIds } from '../domain/course-demand';
+import {
+  changeDemandChartScope,demandChartScopeOptions,demandChartsForScope,
+  demandCourseThresholds,demandEligibleCourseIds,emptyDemandChartScope,
+  manageableDemandCharts,type DemandChartScope,
+} from '../domain/demand-chart-workflow';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
@@ -36,6 +41,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
+  const [universities,setUniversities]=useState<Option[]>([]);
+  const [campuses,setCampuses]=useState<Option[]>([]);
+  const [degreeLevels,setDegreeLevels]=useState<Option[]>([]);
+  const [majors,setMajors]=useState<Option[]>([]);
   const [entryYears, setEntryYears] = useState<{id:string;year:number}[]>([]);
   const [tracks, setTracks] = useState<Option[]>([]);
   const [assigned, setAssigned] = useState<CourseAssigned[]>([]);
@@ -54,18 +63,36 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [newDescription, setNewDescription] = useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
+  const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
+  const [thresholdByCourse,setThresholdByCourse]=useState<Record<string,number>>({});
+  const [courseSearch,setCourseSearch]=useState('');
   const [newTrack, setNewTrack] = useState('');
   const [newCourseIds, setNewCourseIds] = useState<string[]>([]);
   const [threshold, setThreshold] = useState(15);
 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
-  const curriculum = curricula.find(c=>c.id===newCurriculum);
+  const managerCharts=manageableDemandCharts(curricula,user);
+  const scopeOptions=demandChartScopeOptions(managerCharts,newScope);
+  const scopedCharts=demandChartsForScope(managerCharts,newScope);
+  const curriculum = scopedCharts.find(c=>c.id===newCurriculum);
+  const changeScope=(field:keyof DemandChartScope,value:string)=>{
+    setNewScope(previous=>changeDemandChartScope(previous,field,value));
+    setNewCurriculum('');setNewTrack('');setNewCourseIds([]);
+    setThresholdByCourse({});setCourseSearch('');setSuccess('');setError('');
+  };
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
   // Rechecking the same chart after a refresh is not equivalent to reusing the
   // previous academic relationships: the revision must also match.
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId &&
     loadedChartRevision === detailRevision);
+  const availableDemandCourseIds=chartReady && curriculum
+    ? demandEligibleCourseIds(assigned,newTrack,courses):[];
+  const matchingDemandCourseIds=availableDemandCourseIds.filter(id=>{
+    const search=courseSearch.trim().toLocaleLowerCase('fa');
+    const course=courseMap.get(id);
+    return !search||[course?.name||'',course?.code||'',id].some(value=>value.toLocaleLowerCase('fa').includes(search));
+  });
   const currentDetailKey = demandDetailKey(role, survey?.id, detailRevision);
   // A save response may arrive after the selected form has changed. The ref
   // updates during render, before effects get a chance to clean up old data.
@@ -91,7 +118,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
       apiRequest<Course[]>('/api/academic/courses'),
-      apiRequest<{ academicTerms: Option[]; entryYears: {id:string;year:number}[]; tracks:Option[] }>('/api/academic/all-meta'),
+      apiRequest<{ academicTerms:Option[]; entryYears:{id:string;year:number;active?:boolean}[]; tracks:Option[];
+        universities:Option[];campuses:Option[];degreeLevels:Option[];majors:Option[] }>('/api/academic/all-meta'),
       apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
     // An older refresh must never replace a newer request, role, or survey.
@@ -109,6 +137,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       if (Array.isArray(meta.data.academicTerms)) setTerms(meta.data.academicTerms);
       if (Array.isArray(meta.data.entryYears)) setEntryYears(meta.data.entryYears);
       if (Array.isArray(meta.data.tracks)) setTracks(meta.data.tracks);
+      if (Array.isArray(meta.data.universities)) setUniversities(meta.data.universities);
+      if (Array.isArray(meta.data.campuses)) setCampuses(meta.data.campuses);
+      if (Array.isArray(meta.data.degreeLevels)) setDegreeLevels(meta.data.degreeLevels);
+      if (Array.isArray(meta.data.majors)) setMajors(meta.data.majors);
     }
     if (chart.success && Array.isArray(chart.data)) setCurricula(chart.data);
     if (role === 'student') {
@@ -122,7 +154,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if ((resetDefaults || !newTerm) && meta.success && meta.data?.academicTerms?.length) {
       setNewTerm(meta.data.academicTerms.find(t=>t.active)?.id || meta.data.academicTerms[0].id);
     }
-    if ((resetDefaults || !newCurriculum) && chart.success && chart.data?.length) setNewCurriculum(chart.data[0].id);
+    // A survey must never default to the first chart from an unrelated cohort.
+    // The manager explicitly selects all five academic dimensions and a chart version.
   };
 
   useEffect(()=>{
@@ -145,6 +178,9 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setLoadedChartRevision(null);
     setNewCourseIds([]);
     setNewCurriculum('');
+    setNewScope(emptyDemandChartScope());
+    setThresholdByCourse({});
+    setCourseSearch('');
     setNewTrack('');
     setError('');
     setSuccess('');
@@ -252,23 +288,35 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   const createSurvey=async()=>{
-    if(!curriculum){setError('ابتدا چارت را انتخاب کن.');return}
+    if(busy)return;
+    if(!curriculum||!chartReady||!newTerm) {
+      setError('اول حوزهٔ رشته/مقطع/ورودی، چارت و نیمسال هدف را کامل انتخاب کن.');return;
+    }
+    if(!newCourseIds.length||newCourseIds.some(id=>!availableDemandCourseIds.includes(id))) {
+      setError('دروس نیازسنجی باید متعلق به همین چارت و گرایش باشند.');return;
+    }
+    let minimums:Record<string,number>;
+    try {minimums=demandCourseThresholds(newCourseIds,thresholdByCourse,threshold);}
+    catch (e) {setError(e instanceof Error?e.message:'حدنصاب‌ها معتبر نیستند.');return;}
+    const chartId=curriculum.id;
     setBusy(true);setError('');setSuccess('');
-    const r=await apiRequest<DemandSurvey>('/api/demand/surveys',{
-      method:'POST',
-      body:JSON.stringify({
-        title:newTitle,description:newDescription,targetTermId:newTerm,
-        universityId:curriculum.universityId,campusId:curriculum.campusId,
-        degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
-        curriculumId:curriculum.id,entryYearIds:[curriculum.entryYearId],
-        trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
-        recommendedMinimumByCourse:Object.fromEntries(newCourseIds.map(id=>[id,threshold])),
-      }),
-    });
-    setBusy(false);
-    if(!r.success){setError(r.error || 'ایجاد نیازسنجی ناموفق بود.');return;}
-    setSuccess('پیش‌نویس نیازسنجی ساخته شد. برای مشاهدهٔ دانشجویان آن را باز کن.');
-    await refresh(); if(r.data) setSelectedId(r.data.id);
+    try {
+      const r=await apiRequest<DemandSurvey>('/api/demand/surveys',{
+        method:'POST',body:JSON.stringify({
+          title:newTitle,description:newDescription,targetTermId:newTerm,
+          universityId:curriculum.universityId,campusId:curriculum.campusId,
+          degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
+          curriculumId:chartId,entryYearIds:[curriculum.entryYearId],
+          trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
+          recommendedMinimumByCourse:minimums,
+        }),
+      });
+      if(!r.success||!r.data){setError(r.error||'ایجاد نیازسنجی ناموفق بود.');return;}
+      setSuccess('پیش‌نویس مستقل این رشته و ورودی ساخته شد؛ برای پاسخ دانشجویان آن را باز کن.');
+      await refresh();setSelectedId(r.data.id);
+      setNewCourseIds([]);setThresholdByCourse({});
+    } catch {setError('ساخت نیازسنجی به‌علت مشکل ارتباط ذخیره نشد.');}
+    finally {setBusy(false);}
   };
 
   const updateStatus=async(next:'OPEN'|'CLOSED'|'ARCHIVED')=>{
@@ -314,6 +362,32 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     } finally {
       if(stillCurrent())setBusy(false);
     }
+  };
+
+  const exportSummary=async()=>{
+    if(!survey||!detailReady||busy)return;
+    const expectedKey=currentDetailKey;
+    const epoch=exportRequestRef.current.begin();
+    const isCurrent=()=>activeDetailKeyRef.current===expectedKey&&
+      exportRequestRef.current.isCurrent(epoch);
+    setBusy(true);setError('');setSuccess('');
+    try {
+      const result=await apiRequest<{csv:string}>(
+        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/summary.csv?format=json');
+      if(!isCurrent())return;
+      if(!result.success||typeof result.data?.csv!=='string'){
+        setError(result.error||'گزارش تجمیعی دریافت نشد.');return;
+      }
+      const blob=new Blob([result.data.csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try {
+        const link=document.createElement('a');
+        link.href=url;link.download='darschin-demand-summary-'+survey.id+'.csv';
+        document.body.appendChild(link);link.click();link.remove();
+        setSuccess('خروجی تجمیعی بدون اطلاعات شناسایی دانشجویان دریافت شد.');
+      } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
+    } catch {if(isCurrent())setError('دریافت خروجی تجمیعی با مشکل ارتباط مواجه شد.');}
+    finally {if(isCurrent())setBusy(false);}
   };
 
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
@@ -384,34 +458,171 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       )}
 
       {role==='admin' && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="text-lg font-black">تعریف نیازسنجی جدید</h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">ابتدا پیش‌نویس بساز، بعد برای دانشجویان باز کن. محدودهٔ چارت تعیین‌کنندهٔ دانشجویان واجد دامنه است.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="text-xs font-bold">عنوان نیازسنجی<input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="نیازسنجی ترم آینده برق" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
-            <label className="text-xs font-bold">نیمسال هدف<select value={newTerm} onChange={e=>setNewTerm(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">{terms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-            <label className="text-xs font-bold">چارت اختصاصی ورودی (مثلاً ۱۴۰۲ یا ۱۴۰۳)
-              <select value={newCurriculum} onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
-                {curricula.map(c=><option key={c.id} value={c.id}>ورودی {yearLabel(c.entryYearId)} · {c.name}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-bold">محدودهٔ گرایش
-              <select value={newTrack} onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
-                <option value="">تمام دانشجویان این ورودی (دروس مشترک)</option>
-                {tracks.filter(t=>t.majorId===curriculum?.majorId).map(t=><option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-bold">حدنصاب پیشنهادی (نه مصوبه)<input type="number" min={1} max={500} value={threshold} onChange={e=>setThreshold(Number(e.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
-            <label className="text-xs font-bold md:col-span-2">توضیحات<textarea rows={2} value={newDescription} onChange={e=>setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/></label>
+        <section aria-label="تعریف نیازسنجی برای رشته و ورودی مستقل"
+          className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="text-lg font-black">تعریف نیازسنجی جدید برای چارت مشخص</h3>
+          <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+            ابتدا رشته، مقطع و ورودی را تعیین کن. هر نیازسنجی فقط به یک چارت و یک ورودی وصل می‌شود؛
+            هیچ چارت دیگری خودکار انتخاب نمی‌شود.
+          </p>
+          <div className="mt-4 space-y-4">
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۱. حوزهٔ تحصیلی
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {([
+                  ['universityId','دانشگاه',scopeOptions.universityIds,universities,'دانشگاه را انتخاب کن'],
+                  ['campusId','واحد دانشگاهی',scopeOptions.campusIds,campuses,'ابتدا دانشگاه را انتخاب کن'],
+                  ['degreeLevelId','مقطع',scopeOptions.degreeLevelIds,degreeLevels,'ابتدا واحد دانشگاهی را انتخاب کن'],
+                  ['majorId','رشته',scopeOptions.majorIds,majors,'ابتدا مقطع را انتخاب کن'],
+                  ['entryYearId','سال ورود',scopeOptions.entryYearIds,entryYears,'ابتدا رشته را انتخاب کن'],
+                ] as const).map(([field,label,ids,entities,placeholder])=>
+                  <label key={field} className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {label}
+                    <select value={newScope[field]} disabled={busy || (field!=='universityId'&&!ids.length)}
+                      onChange={e=>changeScope(field,e.target.value)}
+                      className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                      <option value="">{placeholder}</option>
+                      {ids.map(id=>{
+                        const row=entities.find(item=>item.id===id) as (Option & {year?:number})|undefined;
+                        return <option value={id} key={id}>
+                          {typeof row?.year==='number'
+                            ? 'ورودی '+row.year.toLocaleString('fa-IR')
+                            : row?.name||'بدون عنوان'}
+                        </option>;
+                      })}
+                    </select>
+                  </label>)}
+              </div>
+              {!managerCharts.length&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                چارت قابل دسترسی برای این مدیر وجود ندارد. مدیر کل باید چارت رشته، مقطع و ورودی را
+                تعریف/فعال کند و مجوز مدیریت نیازسنجی این رشته را بدهد.
+              </p>}
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۲. انتخاب نسخهٔ چارت و گرایش
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold">چارت همین رشته، مقطع و ورودی
+                  <select value={newCurriculum} disabled={busy||!scopedCharts.length}
+                    onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([]);setThresholdByCourse({});}}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                    <option value="">نسخهٔ چارت را صریحاً انتخاب کن</option>
+                    {scopedCharts.map(chart=><option key={chart.id} value={chart.id}>
+                      {chart.name} · نسخه {chart.version} · {chart.status==='active'?'فعال':'پیش‌نویس'}
+                    </option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-bold">محدودهٔ گرایش
+                  <select value={newTrack} disabled={busy||!curriculum}
+                    onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([]);setThresholdByCourse({});}}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                    <option value="">تمام ورودی (فقط دروس مشترک)</option>
+                    {tracks.filter(t=>t.active!==false&&t.majorId===curriculum?.majorId).map(t=>
+                      <option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              {scopedCharts.length===0 && newScope.entryYearId&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                برای این رشته و ورودی چارت قابل استفاده پیدا نشد؛ آن را در «چارت‌های تحصیلی» تعریف
+                و منتشر کن، سپس نیازسنجی را بساز.
+              </p>}
+              {curriculum&&<p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                چارت انتخابی: {curriculum.name} · ورودی {yearLabel(curriculum.entryYearId)} ·
+                {curriculum.status==='active'?'فعال':'پیش‌نویس'} ·
+                {chartReady?'دروس چارت بارگذاری شدند':'در حال بررسی دروس همین چارت'}
+              </p>}
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۳. مشخصات نیازسنجی و نیمسال هدف
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold">عنوان نیازسنجی
+                  <input maxLength={160} value={newTitle} disabled={busy}
+                    onChange={e=>setNewTitle(e.target.value)} placeholder="مثلاً نیازسنجی برق ورودی ۱۴۰۴"
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold">نیمسال هدف
+                  <select value={newTerm} disabled={busy} onChange={e=>setNewTerm(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+                    <option value="">نیمسال هدف را انتخاب کن</option>
+                    {terms.filter(t=>t.active!==false).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-bold">حدنصاب پیشنهادی پیش‌فرض برای هر درس
+                  <input type="number" min={0} max={500} step={1} value={threshold} disabled={busy}
+                    onChange={e=>setThreshold(Number(e.target.value))}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold sm:col-span-2">توضیحات و اطلاعیه
+                  <textarea maxLength={1000} rows={2} value={newDescription} disabled={busy}
+                    onChange={e=>setNewDescription(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/>
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۴. دروس مورد نیازسنجی و حدنصاب اختصاصی
+              </legend>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  {newCourseIds.length.toLocaleString('fa-IR')} از {availableDemandCourseIds.length.toLocaleString('fa-IR')} درس
+                  · فقط دروس همین چارت و گرایش
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" disabled={busy||!chartReady||!availableDemandCourseIds.length}
+                    onClick={()=>setNewCourseIds(availableDemandCourseIds.slice(0,100))}
+                    className="min-h-10 rounded-lg border border-teal-300 px-2.5 text-xs font-bold disabled:opacity-40">
+                    انتخاب همه (تا ۱۰۰ درس)
+                  </button>
+                  <button type="button" disabled={busy||!newCourseIds.length} onClick={()=>setNewCourseIds([])}
+                    className="min-h-10 rounded-lg border border-slate-300 px-2.5 text-xs font-bold disabled:opacity-40">
+                    پاک‌کردن انتخاب
+                  </button>
+                </div>
+              </div>
+              <input type="search" aria-label="جستجوی درس‌های چارت"
+                value={courseSearch} disabled={busy||!chartReady} onChange={e=>setCourseSearch(e.target.value)}
+                className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 text-xs dark:border-slate-700"
+                placeholder="جستجوی نام یا کد درس در همین چارت"/>
+              <div className="mt-2 grid max-h-96 gap-2 overflow-auto sm:grid-cols-2">
+                {matchingDemandCourseIds.map(courseId=><div key={courseId}
+                  className="rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+                  <label className="flex min-h-11 items-center gap-2 text-xs">
+                    <input type="checkbox" disabled={busy} checked={newCourseIds.includes(courseId)}
+                      onChange={()=>setNewCourseIds(toggle(courseId))}/>
+                    <span className="min-w-0 font-bold">
+                      {courseMap.get(courseId)?.name||courseId}
+                      <span className="block text-[11px] font-normal text-slate-500">{courseMap.get(courseId)?.code||''}</span>
+                    </span>
+                  </label>
+                  {newCourseIds.includes(courseId)&&<label className="mt-1 block text-[11px] font-bold">
+                    حدنصاب مخصوص همین درس (صفر یعنی بدون حدنصاب)
+                    <input type="number" min={0} max={500} step={1}
+                      value={thresholdByCourse[courseId]??threshold} disabled={busy}
+                      onChange={e=>setThresholdByCourse(previous=>({...previous,[courseId]:Number(e.target.value)}))}
+                      className="mt-1 min-h-10 w-full rounded-lg border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700"/>
+                  </label>}
+                </div>)}
+                {chartReady&&!availableDemandCourseIds.length&&
+                  <p className="rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    این چارت/گرایش درس فعال قابل نیازسنجی ندارد؛ ابتدا دروس چارت را تعریف کن.
+                  </p>}
+              </div>
+            </fieldset>
           </div>
-          <div className="mt-3">
-            <p className="mb-2 text-sm font-black">دروس چارت مورد نیازسنجی</p>
-            <div className="grid max-h-56 gap-1 overflow-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2 dark:border-slate-700">
-              {assigned.filter(c=>c.active!==false && (!c.trackId||c.trackId===newTrack)).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
-              {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
-            </div>
-          </div>
-          <button type="button" disabled={busy||!chartReady||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
+          <button type="button"
+            disabled={busy||!curriculum||!chartReady||!newTerm||newTitle.trim().length<5||
+              !newCourseIds.length||newCourseIds.length>100||
+              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))}
+            onClick={()=>void createSurvey()}
+            className="mt-4 min-h-12 w-full rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-40 sm:w-auto">
+            {busy?'در حال ثبت پیش‌نویس…':'ساخت نیازسنجی مستقل برای همین ورودی'}
+          </button>
         </section>
       )}
 
@@ -461,7 +672,15 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
-              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-teal-400 px-3 text-xs font-bold text-teal-900 dark:text-teal-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
+              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportSummary()}
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-teal-400 px-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+                <Download className="h-4 w-4"/> گزارش تجمیعی بدون نام دانشجو
+              </button>
+              {(user?.permissions?.includes('demand.export')||user?.roles?.includes('super-admin'))&&
+                <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()}
+                  className="flex min-h-11 items-center gap-2 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-200">
+                  <Download className="h-4 w-4"/> CSV با مشخصات دانشجویان (مجوز ویژه)
+                </button>}
             </div>
           </div>
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>

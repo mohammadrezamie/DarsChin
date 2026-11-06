@@ -119,3 +119,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [ممیزی واقعی امکانات اصلی و برنامه‌ساز ۲ تا ۵ روزه](CORE_ACADEMIC_DELIVERY_20261102_FA.md).
 
 - [ساخت آگاهانهٔ چارت دانشگاه/مقطع/رشته/ورودی و اصلاح مدیریت موبایل](ADMIN_CURRICULUM_WIZARD_20261106_FA.md).
+
+- [چارت مستقل رشته/مقطع/ورودی، تکثیر امن و نیازسنجی مرحله‌ای](CHART_COHORT_CLONE_AND_DEMAND_20261106_FA.md).

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, type AuthenticatedRequest } from '../middleware/auth';
-import { exportDemandCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
+import { exportDemandCsv, exportDemandSummaryCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
 import type { DemandResponse, DemandSurvey } from '../../src/types';
 
 export const demandRouter = Router();
@@ -202,6 +202,20 @@ demandRouter.get('/surveys/:id/report', (req: AuthenticatedRequest, res) => {
   if (!survey) return failure(res, 404, 'نیازسنجی یافت نشد.');
   if (!mayManageDemand(req, survey)) return failure(res, 403, 'گزارش این رشته در دسترسی شما نیست.');
   return res.json({ success: true, data: summarizeDemand(survey, db.demandResponses) });
+});
+
+// Aggregate export for scoped managers; no student names, numbers or row-level records.
+demandRouter.get('/surveys/:id/summary.csv', (req: AuthenticatedRequest, res) => {
+  const survey=getSurvey(req.params.id);
+  if(!survey)return failure(res,404,'نیازسنجی یافت نشد.');
+  if(!mayManageDemand(req,survey))return failure(res,403,'دسترسی به گزارش رشتهٔ دیگر مجاز نیست.');
+  const names=new Map(db.courses.map(course=>[course.id,course.name]));
+  const codes=new Map(db.courses.map(course=>[course.id,course.code]));
+  const csv=exportDemandSummaryCsv(survey,db.demandResponses,names,codes);
+  if(req.query.format==='json')return res.json({success:true,data:{csv}});
+  res.setHeader('Content-Type','text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="darschin-demand-summary-'+survey.id+'.csv"');
+  return res.send(csv);
 });
 
 demandRouter.get('/surveys/:id/export.csv', (req: AuthenticatedRequest, res) => {

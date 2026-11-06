@@ -70,6 +70,30 @@ export function exportDemandCsv(survey: DemandSurvey, responses: DemandResponse[
   return '\uFEFF' + rows.join('\r\n') + '\r\n';
 }
 
+/** Scoped aggregate CSV has NO student identity; safe for demand.manage without demand.export.
+ * All text (including course names) is escaped against spreadsheet formulas. */
+export function exportDemandSummaryCsv(
+  survey: DemandSurvey,
+  responses: DemandResponse[],
+  courseNames: ReadonlyMap<string,string>,
+  courseCodes: ReadonlyMap<string,string>,
+):string {
+  const summary=summarizeDemand(survey,responses);
+  const lines=[
+    ['نام درس','کد درس','تعداد تقاضا','حدنصاب پیشنهادی','باقی‌مانده تا حدنصاب',
+      'اظهار ترم آخر','وضعیت شاخص'].map(safeCell).join(','),
+  ];
+  for(const row of summary.byCourse){
+    const gap=row.threshold>0?Math.max(0,row.threshold-row.count):'تعریف نشده';
+    lines.push([
+      courseNames.get(row.courseId)||row.courseId,courseCodes.get(row.courseId)||row.courseId,
+      row.count,row.threshold,gap,row.selfReportedFinalSemester,
+      row.threshold===0?'حدنصاب تعریف نشده':row.meetsSuggestedThreshold?'حدنصاب پیشنهادی تأمین شده':'تقاضا کمتر از حدنصاب پیشنهادی',
+    ].map(safeCell).join(','));
+  }
+  return '\uFEFF'+lines.join('\r\n')+'\r\n';
+}
+
 /** Only graph-derived planning insights; never a statement of eligibility. */
 export function downstreamCourseIds(courseId: string, curriculumId: string, rules: readonly AcademicRule[]): string[] {
   const outgoing = new Map<string, Set<string>>();
