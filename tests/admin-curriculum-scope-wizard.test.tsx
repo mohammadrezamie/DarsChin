@@ -61,7 +61,7 @@ describe('ساخت آگاهانه چارت دانشگاه / واحد / مقطع 
   });
   it('ویرایشگر چارت، گرایش و پیش‌نیاز را به رشته و دروس همان چارت محدود می‌کند',()=>{
     const editor=readFileSync('src/components/AdminCurriculumBuilder.tsx','utf8');
-    expect(editor).toContain('track.majorId === selectedChart?.majorId');
+    expect(editor).toContain('t.majorId===selectedChart?.majorId');
     expect(editor).toContain('relevantRuleCourses.map');
     expect(editor).toContain('نیمسال پیشنهادی درس');
     expect(editor).toContain('ورودی');
