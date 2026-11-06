@@ -17,6 +17,13 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [chartSearch,setChartSearch]=useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishNotice, setPublishNotice] = useState('');
+  const [cloneOpen,setCloneOpen]=useState(false);
+  const [cloneYear,setCloneYear]=useState('');
+  const [cloneVersion,setCloneVersion]=useState('1.0');
+  const [cloneName,setCloneName]=useState('');
+  const [cloneRules,setCloneRules]=useState(true);
+  const [cloning,setCloning]=useState(false);
+  const [cloneFeedback,setCloneFeedback]=useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   const detailsRequestRef = useRef(0);
   
@@ -75,6 +82,10 @@ export const AdminCurriculumBuilder: React.FC = () => {
     setCurriculumFull(null);
     setOperationError('');
     setPublishNotice('');
+    setCloneOpen(false);
+    setCloneYear('');
+    setCloneName('');
+    setCloneFeedback('');
     setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
     setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:''});
     setActiveCourseId(null);
@@ -96,6 +107,31 @@ export const AdminCurriculumBuilder: React.FC = () => {
       setPublishNotice('چارت با موفقیت فعال شد.');
     } catch {setPublishNotice('ارتباط هنگام انتشار چارت برقرار نشد؛ وضعیت قبلی حفظ شده است.');}
     finally {setPublishing(false);}
+  };
+
+  const handleClone = async () => {
+    const source=selectedChart;
+    if(!source||!cloneYear||!cloneVersion.trim()||!cloneName.trim()||cloning)return;
+    if(!window.confirm('چارت تازه صرفاً پیش‌نویس مستقل است. دروس و روابط انتخاب‌شده از چارت مبدأ کپی شوند؟'))return;
+    setCloning(true);setCloneFeedback('');
+    try {
+      const result=await apiRequest<{curriculum:Curriculum;copiedCourses:number;copiedRules:number}>(
+        '/api/curriculum/'+encodeURIComponent(source.id)+'/clone',{
+          method:'POST',body:JSON.stringify({
+            entryYearId:cloneYear,version:cloneVersion.trim(),name:cloneName.trim(),copyRules:cloneRules,
+          }),
+        });
+      if(!result.success||!result.data?.curriculum) {
+        setCloneFeedback(result.error||'ساخت چارت جدید موفق نبود.');return;
+      }
+      const draft=result.data.curriculum;
+      setCurricula(old=>[...old,draft]);
+      setSelectedCurriculumId(draft.id);
+      setCloneOpen(false);
+      setCloneFeedback('');
+      await fetchData();
+    } catch {setCloneFeedback('ارتباط قطع شد؛ هیچ چارت جدیدی بدون تأیید سرور در فهرست ثبت نشد.');}
+    finally {setCloning(false);}
   };
 
   const handleAddCourse = async () => {
@@ -200,6 +236,55 @@ export const AdminCurriculumBuilder: React.FC = () => {
           </p>}
         </div>
 
+        {selectedChart&&<section aria-label="تکثیر چارت برای ورودی جدید"
+          className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/25">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-black text-indigo-950 dark:text-indigo-200">
+                ساخت سریع چارت مستقل برای ورودی دیگر
+              </h3>
+              <p className="mt-1 text-xs leading-6 text-slate-700 dark:text-slate-300">
+                رشته و مقطع ثابت می‌مانند؛ درس‌ها و پیش‌نیازهای چارت مبدأ را
+                در پیش‌نویس جدید کپی کن، بعد برای ورودی جدید بازبینی و منتشر کن.
+                پاسخ‌های نیازسنجی و اطلاعات دانشجو کپی نمی‌شوند.
+              </p>
+            </div>
+            <button type="button" aria-expanded={cloneOpen} onClick={()=>{
+              setCloneOpen(v=>!v);setCloneYear('');setCloneName('');setCloneFeedback('');
+            }} className="min-h-11 rounded-xl bg-indigo-800 px-3 text-xs font-bold text-white">
+              {cloneOpen?'بستن':'ساخت برای ورودی جدید'}
+            </button>
+          </div>
+          {cloneOpen&&<div className="mt-3 grid gap-3 border-t border-indigo-200 pt-3 sm:grid-cols-2 dark:border-indigo-900">
+            <label className="text-xs font-bold">سال ورود مقصد
+              <select value={cloneYear} disabled={cloning} onChange={e=>setCloneYear(e.target.value)}
+                className="darschin-field mt-1 min-h-11 w-full">
+                <option value="">ورودی مقصد را انتخاب کن</option>
+                {entryYears.filter(year=>year.active&&year.id!==selectedChart.entryYearId).map(year=>
+                  <option key={year.id} value={year.id}>ورودی {year.year.toLocaleString('fa-IR')}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-bold">نسخه چارت جدید
+              <input className="darschin-field mt-1 min-h-11" maxLength={48} value={cloneVersion}
+                disabled={cloning} onChange={e=>setCloneVersion(e.target.value)}/>
+            </label>
+            <label className="text-xs font-bold sm:col-span-2">عنوان مستقل چارت مقصد
+              <input className="darschin-field mt-1 min-h-11" maxLength={150} value={cloneName}
+                disabled={cloning} onChange={e=>setCloneName(e.target.value)}
+                placeholder="مثلاً چارت کارشناسی برق ورودی ۱۴۰۴"/>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-xs font-bold sm:col-span-2">
+              <input type="checkbox" checked={cloneRules} disabled={cloning}
+                onChange={e=>setCloneRules(e.target.checked)}/>
+              پیش‌نیازها و هم‌نیازهای موجود را هم کپی کن (نیازمند بازبینی مدیر)
+            </label>
+            <button type="button" disabled={cloning||!cloneYear||!cloneName.trim()||!cloneVersion.trim()}
+              onClick={()=>void handleClone()} className="min-h-11 rounded-xl bg-indigo-800 px-4 text-xs font-black text-white disabled:opacity-50 sm:col-span-2">
+              {cloning?'در حال ایجاد پیش‌نویس…':'کپی چارت و بازکردن پیش‌نویس جدید'}
+            </button>
+          </div>}
+          {cloneFeedback&&<p role="alert" className="mt-2 text-xs font-bold text-rose-700 dark:text-rose-300">{cloneFeedback}</p>}
+        </section>}
         {operationError&&<p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{operationError}</p>}
         {curriculumFull && (
           <>
