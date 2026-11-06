@@ -1,4 +1,4 @@
-import type { Course, Curriculum, CurriculumCourse, User } from '../types';
+import type { Course, Curriculum, User } from '../types';
 
 export interface DemandChartScope {
   universityId: string;
@@ -47,7 +47,7 @@ export function demandChartsForScope(charts:readonly Curriculum[],scope:DemandCh
   if(fields.some(field=>!scope[field]))return [];
   return charts.filter(c=>fields.every(field=>c[field]===scope[field]));
 }
-export type DemandCourseRow=Pick<CurriculumCourse,'courseId'|'trackId'|'active'> & {course?:Course};
+export type DemandCourseRow={courseId:string;trackId?:string|null;active?:boolean;course?:Course};
 /** Track filtering and deduplication must mirror server validations. */
 export function demandEligibleCourseIds(
   assignments:readonly DemandCourseRow[],trackId:string,

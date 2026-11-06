@@ -63,9 +63,13 @@ describe('نیازسنجی مستقل برای رشته، مقطع و ورودی
   });
 });
 describe('گزارش تجمیعی بدون اطلاعات شناسایی دانشجو',()=>{
-  const survey={
-    id:'survey-1404',courseIds:['a','b'],recommendedMinimumByCourse:{a:3,b:1},
-  } as DemandSurvey;
+  const survey:DemandSurvey={
+    id:'survey-1404',title:'نیازسنجی آزمایشی',description:'',targetTermId:'t1',
+    universityId:'uni',campusId:'campus-1',degreeLevelId:'bachelor',majorId:'ee',
+    curriculumId:'ee-1404',entryYearIds:['y04'],trackIds:[],
+    courseIds:['a','b'],recommendedMinimumByCourse:{a:3,b:1},
+    createdBy:'manager',createdAt:'2026-11-01',updatedAt:'2026-11-01',status:'OPEN',
+  };
   const response=(id:string,selected:string[]):DemandResponse=>({
     id,surveyId:survey.id,userId:id,studentNumber:'4010000000',
     anticipatedGraduation:'NO',courseIds:selected,
