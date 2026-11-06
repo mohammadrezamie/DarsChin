@@ -109,7 +109,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddCourseForm({ courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' });
     } else {
-      alert(res.error || 'خطا در افزودن درس');
+      setOperationError(res.error || 'افزودن درس انجام نشد.');
     }
   };
 
@@ -141,7 +141,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '' });
     } else {
-      alert(res.error || 'خطا در افزودن قانون');
+      setOperationError(res.error || 'ثبت قانون انجام نشد.');
     }
   };
   
@@ -238,8 +238,15 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     <option value="">مشترک بین گرایش‌ها</option>
                     {relevantTracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
-                  <button 
-                    onClick={handleAddCourse}
+                  <label className="flex flex-col gap-1 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    نیمسال پیشنهادی
+                    <input type="number" aria-label="نیمسال پیشنهادی درس" min={1} max={16} step={1}
+                      value={addCourseForm.suggestedSemester}
+                      onChange={e=>setAddCourseForm(prev=>({...prev,suggestedSemester:Number(e.target.value)}))}
+                      className="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
+                  </label>
+                  <button type="button" disabled={!addCourseForm.courseId}
+                    onClick={()=>void handleAddCourse()}
                     className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> افزودن
@@ -263,7 +270,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <tr 
                         key={cc.id} 
                         className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
-                        onClick={() => setActiveCourseId(cc.courseId)}
+                        onClick={()=>{
+                          setActiveCourseId(cc.courseId);
+                          setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                          setOperationError('');
+                        }}
                       >
                         <td className="p-2 font-mono text-xs">{cc.course?.code}</td>
                         <td className="p-2 font-bold">{cc.course?.name}</td>
@@ -273,7 +284,10 @@ export const AdminCurriculumBuilder: React.FC = () => {
                           {cc.classification === 'TRACK_REQUIRED' && 'گرایشی اجباری'}
                           {cc.classification === 'TRACK_ELECTIVE' && 'گرایشی اختیاری'}
                         </td>
-                        <td className="p-2 text-xs">{cc.trackId ? tracks.find(t => t.id === cc.trackId)?.name : '-'}</td>
+                        <td className="p-2 text-xs">
+                          {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
+                          <span className="mt-0.5 block text-[11px] text-slate-500">نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')}</span>
+                        </td>
                         <td className="p-2 flex items-center gap-2">
                            <button onClick={(e) => { e.stopPropagation(); void handleRemoveCourse(cc.courseId,cc.trackId); }} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button>
                         </td>
@@ -343,8 +357,9 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       </select>
                       <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">فقط درس‌های همین چارت</span>
                     </div>
-                    <button 
-                      onClick={handleAddRule}
+                    <button type="button"
+                      onClick={()=>void handleAddRule()}
+                      disabled={!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)}
                       className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> ثبت قانون
