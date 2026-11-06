@@ -6,6 +6,11 @@ import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
 import { downstreamCourseIds } from '../domain/course-demand';
+import {
+  changeDemandChartScope,demandChartScopeOptions,demandChartsForScope,
+  demandCourseThresholds,demandEligibleCourseIds,emptyDemandChartScope,
+  manageableDemandCharts,type DemandChartScope,
+} from '../domain/demand-chart-workflow';
 import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
@@ -36,6 +41,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
+  const [universities,setUniversities]=useState<Option[]>([]);
+  const [campuses,setCampuses]=useState<Option[]>([]);
+  const [degreeLevels,setDegreeLevels]=useState<Option[]>([]);
+  const [majors,setMajors]=useState<Option[]>([]);
   const [entryYears, setEntryYears] = useState<{id:string;year:number}[]>([]);
   const [tracks, setTracks] = useState<Option[]>([]);
   const [assigned, setAssigned] = useState<CourseAssigned[]>([]);
@@ -54,13 +63,31 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [newDescription, setNewDescription] = useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
+  const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
+  const [thresholdByCourse,setThresholdByCourse]=useState<Record<string,number>>({});
+  const [courseSearch,setCourseSearch]=useState('');
   const [newTrack, setNewTrack] = useState('');
   const [newCourseIds, setNewCourseIds] = useState<string[]>([]);
   const [threshold, setThreshold] = useState(15);
 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
-  const curriculum = curricula.find(c=>c.id===newCurriculum);
+  const managerCharts=manageableDemandCharts(curricula,user);
+  const scopeOptions=demandChartScopeOptions(managerCharts,newScope);
+  const scopedCharts=demandChartsForScope(managerCharts,newScope);
+  const curriculum = scopedCharts.find(c=>c.id===newCurriculum);
+  const availableDemandCourseIds=chartReady && curriculum
+    ? demandEligibleCourseIds(assigned,newTrack,courses):[];
+  const matchingDemandCourseIds=availableDemandCourseIds.filter(id=>{
+    const search=courseSearch.trim().toLocaleLowerCase('fa');
+    const course=courseMap.get(id);
+    return !search||[course?.name||'',course?.code||'',id].some(value=>value.toLocaleLowerCase('fa').includes(search));
+  });
+  const changeScope=(field:keyof DemandChartScope,value:string)=>{
+    setNewScope(previous=>changeDemandChartScope(previous,field,value));
+    setNewCurriculum('');setNewTrack('');setNewCourseIds([]);
+    setThresholdByCourse({});setCourseSearch('');setSuccess('');setError('');
+  };
   const chartContextId = role === 'student' ? survey?.curriculumId : newCurriculum;
   // Rechecking the same chart after a refresh is not equivalent to reusing the
   // previous academic relationships: the revision must also match.
@@ -91,7 +118,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     const [list, courseResult, meta, chart] = await Promise.all([
       apiRequest<DemandSurvey[]>('/api/demand/surveys'),
       apiRequest<Course[]>('/api/academic/courses'),
-      apiRequest<{ academicTerms: Option[]; entryYears: {id:string;year:number}[]; tracks:Option[] }>('/api/academic/all-meta'),
+      apiRequest<{ academicTerms:Option[]; entryYears:{id:string;year:number;active?:boolean}[]; tracks:Option[];
+        universities:Option[];campuses:Option[];degreeLevels:Option[];majors:Option[] }>('/api/academic/all-meta'),
       apiRequest<Curriculum[]>('/api/curriculum'),
     ]);
     // An older refresh must never replace a newer request, role, or survey.
@@ -109,6 +137,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       if (Array.isArray(meta.data.academicTerms)) setTerms(meta.data.academicTerms);
       if (Array.isArray(meta.data.entryYears)) setEntryYears(meta.data.entryYears);
       if (Array.isArray(meta.data.tracks)) setTracks(meta.data.tracks);
+      if (Array.isArray(meta.data.universities)) setUniversities(meta.data.universities);
+      if (Array.isArray(meta.data.campuses)) setCampuses(meta.data.campuses);
+      if (Array.isArray(meta.data.degreeLevels)) setDegreeLevels(meta.data.degreeLevels);
+      if (Array.isArray(meta.data.majors)) setMajors(meta.data.majors);
     }
     if (chart.success && Array.isArray(chart.data)) setCurricula(chart.data);
     if (role === 'student') {
@@ -122,7 +154,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if ((resetDefaults || !newTerm) && meta.success && meta.data?.academicTerms?.length) {
       setNewTerm(meta.data.academicTerms.find(t=>t.active)?.id || meta.data.academicTerms[0].id);
     }
-    if ((resetDefaults || !newCurriculum) && chart.success && chart.data?.length) setNewCurriculum(chart.data[0].id);
+    // A survey must never default to the first chart from an unrelated cohort.
+    // The manager explicitly selects all five academic dimensions and a chart version.
   };
 
   useEffect(()=>{
@@ -145,6 +178,9 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setLoadedChartRevision(null);
     setNewCourseIds([]);
     setNewCurriculum('');
+    setNewScope(emptyDemandChartScope());
+    setThresholdByCourse({});
+    setCourseSearch('');
     setNewTrack('');
     setError('');
     setSuccess('');
@@ -252,23 +288,35 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   const createSurvey=async()=>{
-    if(!curriculum){setError('ابتدا چارت را انتخاب کن.');return}
+    if(busy)return;
+    if(!curriculum||!chartReady||!newTerm) {
+      setError('اول حوزهٔ رشته/مقطع/ورودی، چارت و نیمسال هدف را کامل انتخاب کن.');return;
+    }
+    if(!newCourseIds.length||newCourseIds.some(id=>!availableDemandCourseIds.includes(id))) {
+      setError('دروس نیازسنجی باید متعلق به همین چارت و گرایش باشند.');return;
+    }
+    let minimums:Record<string,number>;
+    try {minimums=demandCourseThresholds(newCourseIds,thresholdByCourse,threshold);}
+    catch (e) {setError(e instanceof Error?e.message:'حدنصاب‌ها معتبر نیستند.');return;}
+    const chartId=curriculum.id;
     setBusy(true);setError('');setSuccess('');
-    const r=await apiRequest<DemandSurvey>('/api/demand/surveys',{
-      method:'POST',
-      body:JSON.stringify({
-        title:newTitle,description:newDescription,targetTermId:newTerm,
-        universityId:curriculum.universityId,campusId:curriculum.campusId,
-        degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
-        curriculumId:curriculum.id,entryYearIds:[curriculum.entryYearId],
-        trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
-        recommendedMinimumByCourse:Object.fromEntries(newCourseIds.map(id=>[id,threshold])),
-      }),
-    });
-    setBusy(false);
-    if(!r.success){setError(r.error || 'ایجاد نیازسنجی ناموفق بود.');return;}
-    setSuccess('پیش‌نویس نیازسنجی ساخته شد. برای مشاهدهٔ دانشجویان آن را باز کن.');
-    await refresh(); if(r.data) setSelectedId(r.data.id);
+    try {
+      const r=await apiRequest<DemandSurvey>('/api/demand/surveys',{
+        method:'POST',body:JSON.stringify({
+          title:newTitle,description:newDescription,targetTermId:newTerm,
+          universityId:curriculum.universityId,campusId:curriculum.campusId,
+          degreeLevelId:curriculum.degreeLevelId,majorId:curriculum.majorId,
+          curriculumId:chartId,entryYearIds:[curriculum.entryYearId],
+          trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
+          recommendedMinimumByCourse:minimums,
+        }),
+      });
+      if(!r.success||!r.data){setError(r.error||'ایجاد نیازسنجی ناموفق بود.');return;}
+      setSuccess('پیش‌نویس مستقل این رشته و ورودی ساخته شد؛ برای پاسخ دانشجویان آن را باز کن.');
+      await refresh();setSelectedId(r.data.id);
+      setNewCourseIds([]);setThresholdByCourse({});
+    } catch {setError('ساخت نیازسنجی به‌علت مشکل ارتباط ذخیره نشد.');}
+    finally {setBusy(false);}
   };
 
   const updateStatus=async(next:'OPEN'|'CLOSED'|'ARCHIVED')=>{
