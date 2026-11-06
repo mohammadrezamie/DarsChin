@@ -47,17 +47,19 @@ describe('principal isolation and safe role reinitialization', () => {
     expect(s).toContain('<DemandWorkspaceSession key={principalKey} role={role} />');
   });
 
-  it('clears old identity fields and restores valid chart defaults when a role is reset', () => {
+  it('clears old identity fields and never guesses a chart on role reset', () => {
     const s = source();
     for (const token of [
       'setProfile(null);', "setStudentNumber('');", "setGraduation('UNKNOWN');",
       'setAssigned([]);', 'setRules([]);', 'setLoadedChartId(null);',
       'setNewCourseIds([]);', "setNewCurriculum('');", "setSelectedId('');",
       'void refresh(true);', 'const refresh = async (resetDefaults = false) =>',
-      'resetDefaults || !newCurriculum', 'resetDefaults || !newTerm',
+      'setNewScope(emptyDemandChartScope());', 'resetDefaults || !newTerm',
     ]) {
       expect(s).toContain(token);
     }
+    expect(s).not.toContain('chart.data[0].id');
+    expect(s).toContain('changeDemandChartScope(previous,field,value)');
   });
 });
 
@@ -141,7 +143,8 @@ describe('demand UI account/survey guards', () => {
     const s=source();
     expect(s).toContain("if(!survey || !detailReady || busy || survey.status !== 'OPEN')return;");
     expect(s).toContain("disabled={busy||!detailReady||survey.status!=='OPEN'}");
-    expect(s).toContain("disabled={busy||!chartReady||!newCourseIds.length}");
+    expect(s).toContain("disabled={busy||!curriculum||!chartReady||!newTerm||newTitle.trim().length<5||");
+    expect(s).toContain("newCourseIds.some(id=>!availableDemandCourseIds.includes(id))");
     expect(s).toContain("disabled={busy} onClick={()=>setSelectedId(s.id)}");
     expect(s).toContain("currentDetailError");
     expect(s).toContain("setDetailRevision(value=>value+1)");
