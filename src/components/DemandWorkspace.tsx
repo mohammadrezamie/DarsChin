@@ -364,6 +364,32 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     }
   };
 
+  const exportSummary=async()=>{
+    if(!survey||!detailReady||busy)return;
+    const expectedKey=currentDetailKey;
+    const epoch=exportRequestRef.current.begin();
+    const isCurrent=()=>activeDetailKeyRef.current===expectedKey&&
+      exportRequestRef.current.isCurrent(epoch);
+    setBusy(true);setError('');setSuccess('');
+    try {
+      const result=await apiRequest<{csv:string}>(
+        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/summary.csv?format=json');
+      if(!isCurrent())return;
+      if(!result.success||typeof result.data?.csv!=='string'){
+        setError(result.error||'گزارش تجمیعی دریافت نشد.');return;
+      }
+      const blob=new Blob([result.data.csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try {
+        const link=document.createElement('a');
+        link.href=url;link.download='darschin-demand-summary-'+survey.id+'.csv';
+        document.body.appendChild(link);link.click();link.remove();
+        setSuccess('خروجی تجمیعی بدون اطلاعات شناسایی دانشجویان دریافت شد.');
+      } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
+    } catch {if(isCurrent())setError('دریافت خروجی تجمیعی با مشکل ارتباط مواجه شد.');}
+    finally {if(isCurrent())setBusy(false);}
+  };
+
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
   const yearLabel=(entryId:string)=>entryYears.find(y=>y.id===entryId)?.year ?? entryId;
   const isDemoStudent = role==='student' && typeof window!=='undefined' &&
@@ -459,10 +485,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                       className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
                       <option value="">{placeholder}</option>
                       {ids.map(id=>{
-                        const row=entities.find(item=>item.id===id);
+                        const row=entities.find(item=>item.id===id) as (Option & {year?:number})|undefined;
                         return <option value={id} key={id}>
-                          {'year' in (row||{}) && row && typeof (row as {year?:number}).year==='number'
-                            ? 'ورودی '+(row as {year:number}).year.toLocaleString('fa-IR')
+                          {typeof row?.year==='number'
+                            ? 'ورودی '+row.year.toLocaleString('fa-IR')
                             : row?.name||'بدون عنوان'}
                         </option>;
                       })}
@@ -646,7 +672,15 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
-              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()} className="flex min-h-11 items-center gap-2 rounded-xl border border-teal-400 px-3 text-xs font-bold text-teal-900 dark:text-teal-200"><Download className="h-4 w-4"/> CSV ریز تقاضا</button>
+              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportSummary()}
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-teal-400 px-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+                <Download className="h-4 w-4"/> گزارش تجمیعی بدون نام دانشجو
+              </button>
+              {(user?.permissions?.includes('demand.export')||user?.roles?.includes('super-admin'))&&
+                <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()}
+                  className="flex min-h-11 items-center gap-2 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-200">
+                  <Download className="h-4 w-4"/> CSV با مشخصات دانشجویان (مجوز ویژه)
+                </button>}
             </div>
           </div>
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
