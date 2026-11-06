@@ -432,34 +432,171 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       )}
 
       {role==='admin' && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="text-lg font-black">تعریف نیازسنجی جدید</h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">ابتدا پیش‌نویس بساز، بعد برای دانشجویان باز کن. محدودهٔ چارت تعیین‌کنندهٔ دانشجویان واجد دامنه است.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="text-xs font-bold">عنوان نیازسنجی<input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="نیازسنجی ترم آینده برق" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
-            <label className="text-xs font-bold">نیمسال هدف<select value={newTerm} onChange={e=>setNewTerm(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">{terms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-            <label className="text-xs font-bold">چارت اختصاصی ورودی (مثلاً ۱۴۰۲ یا ۱۴۰۳)
-              <select value={newCurriculum} onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
-                {curricula.map(c=><option key={c.id} value={c.id}>ورودی {yearLabel(c.entryYearId)} · {c.name}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-bold">محدودهٔ گرایش
-              <select value={newTrack} onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([])}} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
-                <option value="">تمام دانشجویان این ورودی (دروس مشترک)</option>
-                {tracks.filter(t=>t.majorId===curriculum?.majorId).map(t=><option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-bold">حدنصاب پیشنهادی (نه مصوبه)<input type="number" min={1} max={500} value={threshold} onChange={e=>setThreshold(Number(e.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/></label>
-            <label className="text-xs font-bold md:col-span-2">توضیحات<textarea rows={2} value={newDescription} onChange={e=>setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/></label>
+        <section aria-label="تعریف نیازسنجی برای رشته و ورودی مستقل"
+          className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="text-lg font-black">تعریف نیازسنجی جدید برای چارت مشخص</h3>
+          <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+            ابتدا رشته، مقطع و ورودی را تعیین کن. هر نیازسنجی فقط به یک چارت و یک ورودی وصل می‌شود؛
+            هیچ چارت دیگری خودکار انتخاب نمی‌شود.
+          </p>
+          <div className="mt-4 space-y-4">
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۱. حوزهٔ تحصیلی
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {([
+                  ['universityId','دانشگاه',scopeOptions.universityIds,universities,'دانشگاه را انتخاب کن'],
+                  ['campusId','واحد دانشگاهی',scopeOptions.campusIds,campuses,'ابتدا دانشگاه را انتخاب کن'],
+                  ['degreeLevelId','مقطع',scopeOptions.degreeLevelIds,degreeLevels,'ابتدا واحد دانشگاهی را انتخاب کن'],
+                  ['majorId','رشته',scopeOptions.majorIds,majors,'ابتدا مقطع را انتخاب کن'],
+                  ['entryYearId','سال ورود',scopeOptions.entryYearIds,entryYears,'ابتدا رشته را انتخاب کن'],
+                ] as const).map(([field,label,ids,entities,placeholder])=>
+                  <label key={field} className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {label}
+                    <select value={newScope[field]} disabled={busy || (field!=='universityId'&&!ids.length)}
+                      onChange={e=>changeScope(field,e.target.value)}
+                      className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                      <option value="">{placeholder}</option>
+                      {ids.map(id=>{
+                        const row=entities.find(item=>item.id===id);
+                        return <option value={id} key={id}>
+                          {'year' in (row||{}) && row && typeof (row as {year?:number}).year==='number'
+                            ? 'ورودی '+(row as {year:number}).year.toLocaleString('fa-IR')
+                            : row?.name||'بدون عنوان'}
+                        </option>;
+                      })}
+                    </select>
+                  </label>)}
+              </div>
+              {!managerCharts.length&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                چارت قابل دسترسی برای این مدیر وجود ندارد. مدیر کل باید چارت رشته، مقطع و ورودی را
+                تعریف/فعال کند و مجوز مدیریت نیازسنجی این رشته را بدهد.
+              </p>}
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۲. انتخاب نسخهٔ چارت و گرایش
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold">چارت همین رشته، مقطع و ورودی
+                  <select value={newCurriculum} disabled={busy||!scopedCharts.length}
+                    onChange={e=>{setNewCurriculum(e.target.value);setNewTrack('');setNewCourseIds([]);setThresholdByCourse({});}}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                    <option value="">نسخهٔ چارت را صریحاً انتخاب کن</option>
+                    {scopedCharts.map(chart=><option key={chart.id} value={chart.id}>
+                      {chart.name} · نسخه {chart.version} · {chart.status==='active'?'فعال':'پیش‌نویس'}
+                    </option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-bold">محدودهٔ گرایش
+                  <select value={newTrack} disabled={busy||!curriculum}
+                    onChange={e=>{setNewTrack(e.target.value);setNewCourseIds([]);setThresholdByCourse({});}}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700">
+                    <option value="">تمام ورودی (فقط دروس مشترک)</option>
+                    {tracks.filter(t=>t.active!==false&&t.majorId===curriculum?.majorId).map(t=>
+                      <option key={t.id} value={t.id}>فقط گرایش {t.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              {scopedCharts.length===0 && newScope.entryYearId&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                برای این رشته و ورودی چارت قابل استفاده پیدا نشد؛ آن را در «چارت‌های تحصیلی» تعریف
+                و منتشر کن، سپس نیازسنجی را بساز.
+              </p>}
+              {curriculum&&<p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                چارت انتخابی: {curriculum.name} · ورودی {yearLabel(curriculum.entryYearId)} ·
+                {curriculum.status==='active'?'فعال':'پیش‌نویس'} ·
+                {chartReady?'دروس چارت بارگذاری شدند':'در حال بررسی دروس همین چارت'}
+              </p>}
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۳. مشخصات نیازسنجی و نیمسال هدف
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold">عنوان نیازسنجی
+                  <input maxLength={160} value={newTitle} disabled={busy}
+                    onChange={e=>setNewTitle(e.target.value)} placeholder="مثلاً نیازسنجی برق ورودی ۱۴۰۴"
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold">نیمسال هدف
+                  <select value={newTerm} disabled={busy} onChange={e=>setNewTerm(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+                    <option value="">نیمسال هدف را انتخاب کن</option>
+                    {terms.filter(t=>t.active!==false).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-bold">حدنصاب پیشنهادی پیش‌فرض برای هر درس
+                  <input type="number" min={0} max={500} step={1} value={threshold} disabled={busy}
+                    onChange={e=>setThreshold(Number(e.target.value))}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold sm:col-span-2">توضیحات و اطلاعیه
+                  <textarea maxLength={1000} rows={2} value={newDescription} disabled={busy}
+                    onChange={e=>setNewDescription(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/>
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
+              <legend className="px-2 text-sm font-black text-teal-900 dark:text-teal-200">
+                ۴. دروس مورد نیازسنجی و حدنصاب اختصاصی
+              </legend>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  {newCourseIds.length.toLocaleString('fa-IR')} از {availableDemandCourseIds.length.toLocaleString('fa-IR')} درس
+                  · فقط دروس همین چارت و گرایش
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" disabled={busy||!chartReady||!availableDemandCourseIds.length}
+                    onClick={()=>setNewCourseIds(availableDemandCourseIds.slice(0,100))}
+                    className="min-h-10 rounded-lg border border-teal-300 px-2.5 text-xs font-bold disabled:opacity-40">
+                    انتخاب همه (تا ۱۰۰ درس)
+                  </button>
+                  <button type="button" disabled={busy||!newCourseIds.length} onClick={()=>setNewCourseIds([])}
+                    className="min-h-10 rounded-lg border border-slate-300 px-2.5 text-xs font-bold disabled:opacity-40">
+                    پاک‌کردن انتخاب
+                  </button>
+                </div>
+              </div>
+              <input type="search" aria-label="جستجوی درس‌های چارت"
+                value={courseSearch} disabled={busy||!chartReady} onChange={e=>setCourseSearch(e.target.value)}
+                className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 text-xs dark:border-slate-700"
+                placeholder="جستجوی نام یا کد درس در همین چارت"/>
+              <div className="mt-2 grid max-h-96 gap-2 overflow-auto sm:grid-cols-2">
+                {matchingDemandCourseIds.map(courseId=><div key={courseId}
+                  className="rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+                  <label className="flex min-h-11 items-center gap-2 text-xs">
+                    <input type="checkbox" disabled={busy} checked={newCourseIds.includes(courseId)}
+                      onChange={()=>setNewCourseIds(toggle(courseId))}/>
+                    <span className="min-w-0 font-bold">
+                      {courseMap.get(courseId)?.name||courseId}
+                      <span className="block text-[11px] font-normal text-slate-500">{courseMap.get(courseId)?.code||''}</span>
+                    </span>
+                  </label>
+                  {newCourseIds.includes(courseId)&&<label className="mt-1 block text-[11px] font-bold">
+                    حدنصاب مخصوص همین درس (صفر یعنی بدون حدنصاب)
+                    <input type="number" min={0} max={500} step={1}
+                      value={thresholdByCourse[courseId]??threshold} disabled={busy}
+                      onChange={e=>setThresholdByCourse(previous=>({...previous,[courseId]:Number(e.target.value)}))}
+                      className="mt-1 min-h-10 w-full rounded-lg border border-slate-300 bg-transparent px-2 text-xs dark:border-slate-700"/>
+                  </label>}
+                </div>)}
+                {chartReady&&!availableDemandCourseIds.length&&
+                  <p className="rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    این چارت/گرایش درس فعال قابل نیازسنجی ندارد؛ ابتدا دروس چارت را تعریف کن.
+                  </p>}
+              </div>
+            </fieldset>
           </div>
-          <div className="mt-3">
-            <p className="mb-2 text-sm font-black">دروس چارت مورد نیازسنجی</p>
-            <div className="grid max-h-56 gap-1 overflow-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2 dark:border-slate-700">
-              {assigned.filter(c=>c.active!==false && (!c.trackId||c.trackId===newTrack)).map(row=><label key={row.courseId} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"><input type="checkbox" checked={newCourseIds.includes(row.courseId)} onChange={()=>setNewCourseIds(toggle(row.courseId))}/><span>{courseMap.get(row.courseId)?.name || row.course?.name || row.courseId}</span></label>)}
-              {!assigned.length && <p className="p-3 text-xs text-amber-700">برای این چارت هنوز درس معتبری تعریف نشده است.</p>}
-            </div>
-          </div>
-          <button type="button" disabled={busy||!chartReady||!newCourseIds.length} onClick={()=>void createSurvey()} className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-50">ساخت پیش‌نویس نیازسنجی</button>
+          <button type="button"
+            disabled={busy||!curriculum||!chartReady||!newTerm||newTitle.trim().length<5||
+              !newCourseIds.length||newCourseIds.length>100||
+              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))}
+            onClick={()=>void createSurvey()}
+            className="mt-4 min-h-12 w-full rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-40 sm:w-auto">
+            {busy?'در حال ثبت پیش‌نویس…':'ساخت نیازسنجی مستقل برای همین ورودی'}
+          </button>
         </section>
       )}
 
