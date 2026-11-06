@@ -76,13 +76,6 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const scopeOptions=demandChartScopeOptions(managerCharts,newScope);
   const scopedCharts=demandChartsForScope(managerCharts,newScope);
   const curriculum = scopedCharts.find(c=>c.id===newCurriculum);
-  const availableDemandCourseIds=chartReady && curriculum
-    ? demandEligibleCourseIds(assigned,newTrack,courses):[];
-  const matchingDemandCourseIds=availableDemandCourseIds.filter(id=>{
-    const search=courseSearch.trim().toLocaleLowerCase('fa');
-    const course=courseMap.get(id);
-    return !search||[course?.name||'',course?.code||'',id].some(value=>value.toLocaleLowerCase('fa').includes(search));
-  });
   const changeScope=(field:keyof DemandChartScope,value:string)=>{
     setNewScope(previous=>changeDemandChartScope(previous,field,value));
     setNewCurriculum('');setNewTrack('');setNewCourseIds([]);
@@ -93,6 +86,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   // previous academic relationships: the revision must also match.
   const chartReady = Boolean(chartContextId && loadedChartId === chartContextId &&
     loadedChartRevision === detailRevision);
+  const availableDemandCourseIds=chartReady && curriculum
+    ? demandEligibleCourseIds(assigned,newTrack,courses):[];
+  const matchingDemandCourseIds=availableDemandCourseIds.filter(id=>{
+    const search=courseSearch.trim().toLocaleLowerCase('fa');
+    const course=courseMap.get(id);
+    return !search||[course?.name||'',course?.code||'',id].some(value=>value.toLocaleLowerCase('fa').includes(search));
+  });
   const currentDetailKey = demandDetailKey(role, survey?.id, detailRevision);
   // A save response may arrive after the selected form has changed. The ref
   // updates during render, before effects get a chance to clean up old data.
