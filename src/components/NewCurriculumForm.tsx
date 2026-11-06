@@ -101,7 +101,7 @@ export const NewCurriculumForm: React.FC<{onCreated:(chart:Curriculum)=>void}> =
   return <section dir="rtl" className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h3 className="text-base font-bold">ایجاد چارت تحصیلی جدید</h3>
+        <h3 className="text-base font-bold">افزودن چارت تحصیلی جدید</h3>
         <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
           دانشگاه، واحد، مقطع، رشته و ورودی را خودت به‌ترتیب انتخاب کن؛ هیچ موردی به‌صورت پیش‌فرض به چارت نسبت داده نمی‌شود.
         </p>

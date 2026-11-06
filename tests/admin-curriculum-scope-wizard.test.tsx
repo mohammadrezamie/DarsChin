@@ -52,7 +52,7 @@ describe('ساخت آگاهانه چارت دانشگاه / واحد / مقطع 
   });
   it('فرم مدیریت به صورت آگاهانه و بدون پرکردن شناسه‌های پیش‌فرض ساخته می‌شود',()=>{
     const rendered=renderToStaticMarkup(<NewCurriculumForm onCreated={()=>{}}/>);
-    expect(rendered).toContain('ایجاد چارت تحصیلی جدید');
+    expect(rendered).toContain('افزودن چارت تحصیلی جدید');
     const form=readFileSync('src/components/NewCurriculumForm.tsx','utf8');
     expect(form).toContain('validateCurriculumScope(meta,form)');
     expect(form).toContain('status:\'draft\'');
