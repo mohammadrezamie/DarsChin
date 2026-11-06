@@ -190,7 +190,14 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
                 {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
             ))}
+            {selectedCurriculumId&&!matchingCharts.some(chart=>chart.id===selectedCurriculumId)&&
+              <option value={selectedCurriculumId}>
+                {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'} (انتخاب فعلی)
+              </option>}
           </select>
+          {!matchingCharts.length&&<p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+            نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.
+          </p>}
         </div>
 
         {operationError&&<p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{operationError}</p>}
