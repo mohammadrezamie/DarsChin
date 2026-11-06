@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { extractSourceCourseIds } from '../utils/academic';
@@ -13,9 +13,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [operationError, setOperationError] = useState('');
+  const [chartSearch,setChartSearch]=useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishNotice, setPublishNotice] = useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
+  const detailsRequestRef = useRef(0);
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -26,6 +29,17 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [addRuleForm, setAddRuleForm] = useState({
     sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
   });
+
+  const matchingCharts=curricula.filter(c=>{
+    const major=majors.find(m=>m.id===c.majorId)?.name||'';
+    const year=entryYears.find(y=>y.id===c.entryYearId)?.year?.toString()||'';
+    const search=chartSearch.trim().toLowerCase();
+    return !search||[c.name,c.version,major,year].some(value=>value.toLowerCase().includes(search));
+  });
+  const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
+  const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
+  const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
+  const relevantRuleCourses=courses.filter(c=>c.active&&chartCourseIds.has(c.id)&&c.id!==activeCourseId);
 
   const fetchData = async () => {
     setLoading(true);
@@ -49,19 +63,22 @@ export const AdminCurriculumBuilder: React.FC = () => {
   }, []);
 
   const loadCurriculumDetails = async (id: string) => {
-    const res = await apiRequest(`/api/curriculum/${id}/full`);
-    if (res.success) {
-      setCurriculumFull(res.data);
-    } else {
-      setCurriculumFull(null);
-    }
+    const requestId=++detailsRequestRef.current;
+    const res=await apiRequest(`/api/curriculum/${encodeURIComponent(id)}/full`);
+    if(requestId!==detailsRequestRef.current)return;
+    if(res.success)setCurriculumFull(res.data);
+    else {setCurriculumFull(null);setOperationError(res.error||'جزئیات چارت دریافت نشد.');}
   };
 
   useEffect(() => {
-    if (selectedCurriculumId) {
-      loadCurriculumDetails(selectedCurriculumId);
-      setActiveCourseId(null);
-    }
+    ++detailsRequestRef.current;
+    setCurriculumFull(null);
+    setOperationError('');
+    setPublishNotice('');
+    setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
+    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:''});
+    setActiveCourseId(null);
+    if (selectedCurriculumId) void loadCurriculumDetails(selectedCurriculumId);
   }, [selectedCurriculumId]);
 
   const handlePublishChart = async () => {
@@ -82,7 +99,16 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   const handleAddCourse = async () => {
-    if (!addCourseForm.courseId) return alert('شناسه درس الزامی است');
+    setOperationError('');
+    if(!selectedCurriculumId)return;
+    if(!addCourseForm.courseId){setOperationError('ابتدا درس را انتخاب کن.');return;}
+    if(addCourseForm.trackId&&!relevantTracks.some(t=>t.id===addCourseForm.trackId)){
+      setOperationError('گرایش انتخاب‌شده متعلق به رشتهٔ همین چارت نیست.');return;
+    }
+    if(!Number.isInteger(addCourseForm.suggestedSemester)||addCourseForm.suggestedSemester<1||
+       addCourseForm.suggestedSemester>16){
+      setOperationError('نیمسال پیشنهادی باید بین ۱ تا ۱۶ باشد.');return;
+    }
     const res = await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses`, {
       method: 'POST',
       body: JSON.stringify(addCourseForm)
@@ -91,7 +117,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddCourseForm({ courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED' });
     } else {
-      alert(res.error || 'خطا در افزودن درس');
+      setOperationError(res.error || 'افزودن درس انجام نشد.');
     }
   };
 
@@ -105,7 +131,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
   };
 
   const handleAddRule = async () => {
-    if (!addRuleForm.sourceCourseId) return alert('درس پیش‌نیاز/هم‌نیاز را انتخاب کنید');
+    setOperationError('');
+    if(!selectedCurriculumId||!activeCourseId)return;
+    if(!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)){
+      setOperationError('مبدأ پیش‌نیاز یا هم‌نیاز باید درس دیگری از همین چارت باشد.');return;
+    }
     const res = await apiRequest(`/api/curriculum/rules`, {
       method: 'POST',
       body: JSON.stringify({
@@ -119,7 +149,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       loadCurriculumDetails(selectedCurriculumId!);
       setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '' });
     } else {
-      alert(res.error || 'خطا در افزودن قانون');
+      setOperationError(res.error || 'ثبت قانون انجام نشد.');
     }
   };
   
@@ -144,6 +174,9 @@ export const AdminCurriculumBuilder: React.FC = () => {
         </h2>
         
         <div className="mb-6">
+          <label htmlFor="chart-filter" className="mb-1 block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
+          <input id="chart-filter" type="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
+            className="darschin-field mb-3 min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
           <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
           <select 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
@@ -151,12 +184,23 @@ export const AdminCurriculumBuilder: React.FC = () => {
             onChange={(e) => setSelectedCurriculumId(e.target.value)}
           >
             <option value="">-- یک چارت انتخاب کنید --</option>
-            {curricula.map(c => (
-              <option key={c.id} value={c.id}>{c.name} · {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
+            {matchingCharts.map(c => (
+              <option key={c.id} value={c.id}>{c.name} ·
+                {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} ·
+                ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
+                {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
             ))}
+            {selectedCurriculumId&&!matchingCharts.some(chart=>chart.id===selectedCurriculumId)&&
+              <option value={selectedCurriculumId}>
+                {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'} (انتخاب فعلی)
+              </option>}
           </select>
+          {!matchingCharts.length&&<p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+            نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.
+          </p>}
         </div>
 
+        {operationError&&<p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{operationError}</p>}
         {curriculumFull && (
           <>
           <section aria-label="وضعیت انتشار چارت" className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -192,7 +236,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     onChange={(e) => setAddCourseForm({...addCourseForm, courseId: e.target.value})}
                   >
                     <option value="">-- انتخاب درس --</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
+                    {courses.filter(c=>c.active).map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
                   </select>
                   <select 
                     className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
@@ -209,11 +253,18 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     value={addCourseForm.trackId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
-                    <option value="">همه گرایش‌ها</option>
-                    {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    <option value="">مشترک بین گرایش‌ها</option>
+                    {relevantTracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
-                  <button 
-                    onClick={handleAddCourse}
+                  <label className="flex flex-col gap-1 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    نیمسال پیشنهادی
+                    <input type="number" aria-label="نیمسال پیشنهادی درس" min={1} max={16} step={1}
+                      value={addCourseForm.suggestedSemester}
+                      onChange={e=>setAddCourseForm(prev=>({...prev,suggestedSemester:Number(e.target.value)}))}
+                      className="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
+                  </label>
+                  <button type="button" disabled={!addCourseForm.courseId}
+                    onClick={()=>void handleAddCourse()}
                     className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> افزودن
@@ -221,7 +272,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm text-right">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
@@ -237,7 +288,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <tr 
                         key={cc.id} 
                         className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
-                        onClick={() => setActiveCourseId(cc.courseId)}
+                        onClick={()=>{
+                          setActiveCourseId(cc.courseId);
+                          setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                          setOperationError('');
+                        }}
                       >
                         <td className="p-2 font-mono text-xs">{cc.course?.code}</td>
                         <td className="p-2 font-bold">{cc.course?.name}</td>
@@ -247,7 +302,10 @@ export const AdminCurriculumBuilder: React.FC = () => {
                           {cc.classification === 'TRACK_REQUIRED' && 'گرایشی اجباری'}
                           {cc.classification === 'TRACK_ELECTIVE' && 'گرایشی اختیاری'}
                         </td>
-                        <td className="p-2 text-xs">{cc.trackId ? tracks.find(t => t.id === cc.trackId)?.name : '-'}</td>
+                        <td className="p-2 text-xs">
+                          {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
+                          <span className="mt-0.5 block text-[11px] text-slate-500">نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')}</span>
+                        </td>
                         <td className="p-2 flex items-center gap-2">
                            <button onClick={(e) => { e.stopPropagation(); void handleRemoveCourse(cc.courseId,cc.trackId); }} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button>
                         </td>
@@ -255,6 +313,30 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="grid gap-2 md:hidden" aria-label="دروس چارت در موبایل">
+                {curriculumFull.courses.map((cc:any)=><article key={cc.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                  <strong className="text-sm text-slate-950 dark:text-white">{cc.course?.name||'درس نامشخص'}</strong>
+                  <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                    کد {cc.course?.code||'نامشخص'} · نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')} ·
+                    {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={()=>{
+                      setActiveCourseId(cc.courseId);
+                      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                      setOperationError('');
+                    }} className="min-h-11 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
+                      تنظیم پیش‌نیاز و هم‌نیاز
+                    </button>
+                    <button type="button" aria-label={'حذف درس '+(cc.course?.name||'نامشخص')+' از چارت'}
+                      onClick={()=>void handleRemoveCourse(cc.courseId,cc.trackId)}
+                      className="min-h-11 rounded-lg border border-rose-300 px-3 text-xs font-bold text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                      حذف انتساب
+                    </button>
+                  </div>
+                </article>)}
               </div>
             </div>
 
@@ -303,8 +385,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       value={addRuleForm.sourceCourseId}
                       onChange={(e) => setAddRuleForm({...addRuleForm, sourceCourseId: e.target.value})}
                     >
-                      <option value="">-- انتخاب درس مبدا --</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      <option value="">درس دیگری از همین چارت را انتخاب کن</option>
+                      {relevantRuleCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <select 
@@ -315,10 +397,11 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         <option value="PREREQUISITE">پیش‌نیاز</option>
                         <option value="COREQUISITE">هم‌نیاز</option>
                       </select>
-                      <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">یک درس مرتبط</span>
+                      <span className="self-center text-[11px] text-slate-500 dark:text-slate-300">فقط درس‌های همین چارت</span>
                     </div>
-                    <button 
-                      onClick={handleAddRule}
+                    <button type="button"
+                      onClick={()=>void handleAddRule()}
+                      disabled={!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)}
                       className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-bold p-2 flex items-center justify-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> ثبت قانون
