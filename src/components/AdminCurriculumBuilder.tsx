@@ -265,7 +265,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm text-right">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
@@ -306,6 +306,30 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="grid gap-2 md:hidden" aria-label="دروس چارت در موبایل">
+                {curriculumFull.courses.map((cc:any)=><article key={cc.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                  <strong className="text-sm text-slate-950 dark:text-white">{cc.course?.name||'درس نامشخص'}</strong>
+                  <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                    کد {cc.course?.code||'نامشخص'} · نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')} ·
+                    {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={()=>{
+                      setActiveCourseId(cc.courseId);
+                      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                      setOperationError('');
+                    }} className="min-h-11 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
+                      تنظیم پیش‌نیاز و هم‌نیاز
+                    </button>
+                    <button type="button" aria-label={'حذف درس '+(cc.course?.name||'نامشخص')+' از چارت'}
+                      onClick={()=>void handleRemoveCourse(cc.courseId,cc.trackId)}
+                      className="min-h-11 rounded-lg border border-rose-300 px-3 text-xs font-bold text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                      حذف انتساب
+                    </button>
+                  </div>
+                </article>)}
               </div>
             </div>
 
