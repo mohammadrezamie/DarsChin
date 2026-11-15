@@ -666,6 +666,16 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                     onChange={e=>setNewDescription(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/>
                 </label>
+                <label className="text-xs font-bold">شروع پاسخ‌دهی (اختیاری)
+                  <input type="datetime-local" value={newStartsAt} disabled={busy}
+                    onChange={e=>setNewStartsAt(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold">پایان پاسخ‌دهی (اختیاری)
+                  <input type="datetime-local" value={newEndsAt} disabled={busy}
+                    onChange={e=>setNewEndsAt(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
               </div>
             </fieldset>
             <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
@@ -718,11 +728,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                   </p>}
               </div>
             </fieldset>
+            <DemandFormBuilder value={newQuestions} onChange={setNewQuestions} disabled={busy}/>
           </div>
           <button type="button"
             disabled={busy||!curriculum||!chartReady||!newTerm||newTitle.trim().length<5||
               !newCourseIds.length||newCourseIds.length>100||
-              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))}
+              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))||
+              !parseDemandQuestions(newQuestions).ok}
             onClick={()=>void createSurvey()}
             className="mt-4 min-h-12 w-full rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-40 sm:w-auto">
             {busy?'در حال ثبت پیش‌نویس…':'ساخت نیازسنجی مستقل برای همین ورودی'}
@@ -762,6 +774,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               </label>;
             })}
           </div>
+          {!!survey.questions?.length&&<DemandQuestionFields
+            questions={survey.questions} answers={visibleAnswers}
+            disabled={busy||!detailReady||survey.status!=='OPEN'}
+            onChange={setAnswers}/>}
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
             <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-teal-800 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
@@ -774,6 +790,15 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             <div><h3 className="text-lg font-black">{survey.title}</h3><p className="text-xs text-slate-500 dark:text-slate-400">وضعیت: {survey.status} · نیمسال: {terms.find(t=>t.id===survey.targetTermId)?.name || survey.targetTermId}</p></div>
             <div className="flex flex-wrap gap-2">
               {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
+              {survey.status==='DRAFT'&&<button disabled={busy} type="button"
+                onClick={()=>beginDraftEdit(survey)}
+                className="min-h-11 rounded-xl border border-violet-400 px-3 text-xs font-bold text-violet-900 dark:text-violet-200">
+                ویرایش سؤال‌ها و زمان‌بندی پیش‌نویس
+              </button>}
+              <button disabled={busy} type="button" onClick={()=>copySurveyTemplate(survey)}
+                className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                استفاده از این فرم به‌عنوان الگو
+              </button>
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
               <button type="button" disabled={busy||!detailReady} onClick={()=>void exportSummary()}
@@ -787,6 +812,50 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                 </button>}
             </div>
           </div>
+          {survey.status==='DRAFT'&&editingSurveyId===survey.id&&<section
+            aria-label="ویرایش امن فرم پیش‌نویس"
+            className="space-y-3 rounded-2xl border border-violet-300 bg-violet-50/30 p-3 dark:border-violet-800 dark:bg-violet-950/20">
+            <h4 className="text-sm font-black">ویرایش پیش‌نویس فرم</h4>
+            <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+              تنها عنوان، متن راهنما، زمان‌بندی و سؤال‌های این پیش‌نویس تغییر می‌کنند.
+              برای تغییر رشته، ورودی و دروس، فرم مستقل جدید بساز.
+            </p>
+            <label className="block text-xs font-bold">عنوان فرم
+              <input maxLength={160} value={editTitle} disabled={busy}
+                onChange={e=>setEditTitle(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+            </label>
+            <label className="block text-xs font-bold">راهنمای فرم
+              <textarea rows={2} maxLength={1000} value={editDescription} disabled={busy}
+                onChange={e=>setEditDescription(e.target.value)} className="darschin-field mt-1"/>
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="text-xs font-bold">شروع پاسخ‌دهی
+                <input type="datetime-local" value={editStartsAt} disabled={busy}
+                  onChange={e=>setEditStartsAt(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+              </label>
+              <label className="text-xs font-bold">پایان پاسخ‌دهی
+                <input type="datetime-local" value={editEndsAt} disabled={busy}
+                  onChange={e=>setEditEndsAt(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+              </label>
+            </div>
+            <DemandFormBuilder value={editQuestions} onChange={setEditQuestions} disabled={busy}/>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={()=>void saveDraft()}
+                disabled={busy||editTitle.trim().length<5||!parseDemandQuestions(editQuestions).ok}
+                className="min-h-11 rounded-xl bg-violet-800 px-4 text-xs font-black text-white disabled:opacity-40">
+                ذخیره تغییرات پیش‌نویس
+              </button>
+              <button type="button" onClick={()=>setEditingSurveyId('')}
+                className="min-h-11 rounded-xl border border-slate-300 px-4 text-xs font-bold">
+                انصراف
+              </button>
+            </div>
+          </section>}
+          {survey.startsAt||survey.endsAt?<p className="rounded-xl bg-slate-50 p-3 text-xs leading-6 dark:bg-slate-800">
+            بازه پاسخ‌دهی: {survey.startsAt?new Date(survey.startsAt).toLocaleString('fa-IR'):'بدون تاریخ شروع'}
+            {' تا '}{survey.endsAt?new Date(survey.endsAt).toLocaleString('fa-IR'):'بدون تاریخ پایان'}
+            · انتشار فرم به معنای نادیده‌گرفتن بازهٔ زمانی نیست.
+          </p>:null}
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleReport?.byCourse.map(item=>(
@@ -799,6 +868,26 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               </div>
             ))}
           </div>
+          {!!visibleReport?.byQuestion?.length&&<section aria-label="آمار سؤال‌های فرم" className="space-y-2">
+            <h4 className="text-sm font-black">نتایج سؤال‌های اختصاصی (فقط آمار کلی)</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {visibleReport.byQuestion.map(item=><article key={item.id}
+                className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <strong className="text-xs text-slate-950 dark:text-white">{item.title}</strong>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {item.answeredCount.toLocaleString('fa-IR')} پاسخ
+                  {item.textAnswersPrivate?' · متن پاسخ‌ها خصوصی است':''}
+                </p>
+                {!!item.options.length&&<div className="mt-2 space-y-1">
+                  {item.options.map(option=><div key={option.label}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800">
+                    <span>{option.label}</span><strong>{option.count.toLocaleString('fa-IR')}</strong>
+                  </div>)}
+                </div>}
+              </article>)}
+            </div>
+            <p className="text-xs text-slate-500">متن پاسخ‌های تشریحی در این گزارش عمومی نمایش داده نمی‌شود؛ فقط مدیر دارای مجوز ویژه می‌تواند خروجی جداگانه دریافت کند.</p>
+          </section>}
           <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300"><ShieldCheck className="h-4 w-4"/> گزارش ریز فقط برای مدیر دارای مجوز صادر می‌شود؛ این آمار تشکیل کلاس نیست.</p>
         </section>
       )}
