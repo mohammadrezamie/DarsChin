@@ -166,6 +166,73 @@ describe('نیازسنجی واقعی با فرم‌ساز سفارشی و حر�
     expect(list.body.data.some((s:{id:string})=>s.id===id)).toBe(false);
     expect((await answer(id,{preferredTime:'صبح'})).status).toBe(409);
   });
+  it('مدیر در همان پیش‌نویس درس، حدنصاب و نیمسال را عوض می‌کند ولی حوزهٔ رشته ثابت می‌ماند',async()=>{
+    const created=await create();
+    expect(created.status).toBe(201);
+    const id=created.body.data.id;
+    const extra=db.courses.find(course=>course.active&&course.id!==courseId);
+    if(!extra)throw new Error('Second synthetic course needed');
+    db.curriculumCourses.push({id:'form-fixture-second-course',curriculumId:chart.id,
+      courseId:extra.id,classification:'MAJOR_REQUIRED',suggestedSemester:3,trackId:null,active:true});
+    const edited=await draft(id,{
+      title:'نیازسنجی ویرایش‌شده با دروس بیشتر',description:'قابل انتشار',
+      targetTermId:termId,questions,
+      courseIds:[courseId,extra.id],
+      recommendedMinimumByCourse:{[courseId]:10,[extra.id]:0},
+      startsAt:null,endsAt:null,
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.data.courseIds).toEqual([courseId,extra.id]);
+    expect(edited.body.data.recommendedMinimumByCourse).toEqual({[courseId]:10,[extra.id]:0});
+    expect(edited.body.data.curriculumId).toBe(chart.id);
+    expect(edited.body.data.entryYearIds).toEqual([chart.entryYearId]);
+    expect((await draft(id,{
+      title:'درس خارج از چارت',description:'',questions,
+      courseIds:[courseId,'course-outside-chart'],
+      recommendedMinimumByCourse:{[courseId]:10},
+    })).status).toBe(400);
+    expect((await draft(id,{
+      title:'تکرار درس',description:'',questions,courseIds:[courseId,courseId],
+      recommendedMinimumByCourse:{[courseId]:1},
+    })).status).toBe(400);
+    expect((await draft(id,{
+      title:'غیرمجاز',description:'',questions,
+      courseIds:[courseId],recommendedMinimumByCourse:{[extra.id]:3},
+    })).status).toBe(400);
+    expect((await draft(id,{
+      title:'نیمسال جعلی',description:'',questions,targetTermId:'unknown-term',
+    })).status).toBe(400);
+    expect(db.demandSurveys.find(x=>x.id===id)?.courseIds).toEqual([courseId,extra.id]);
+    const opened=await request(app).put('/api/demand/surveys/'+id+'/status')
+      .set('Authorization',manager).send({status:'OPEN'});
+    expect(opened.status).toBe(200);
+    expect((await draft(id,{
+      title:'انتشار',description:'',questions,
+      courseIds:[courseId],recommendedMinimumByCourse:{[courseId]:2},
+    })).status).toBe(409);
+  });
+  it('سؤال شرطی را در API ثبت می‌کند و پاسخ شاخهٔ مخفی را نمی‌پذیرد',async()=>{
+    const branching=[
+      {id:'parent',title:'کلاس اضافی می‌خواهید؟',kind:'single_choice',required:true,options:['بله','خیر']},
+      {id:'reason',title:'دلیل شما',kind:'short_text',required:true,
+        visibleWhen:{questionId:'parent',equals:'بله'}},
+    ];
+    const created=await create({...payload(),questions:branching});
+    expect(created.status).toBe(201);
+    const id=created.body.data.id;
+    expect(created.body.data.questions[1].visibleWhen).toEqual({questionId:'parent',equals:'بله'});
+    await request(app).put('/api/demand/surveys/'+id+'/status')
+      .set('Authorization',manager).send({status:'OPEN'});
+    expect((await answer(id,{parent:'خیر',reason:'مخفی'})).status).toBe(400);
+    expect((await answer(id,{parent:'بله'})).status).toBe(400);
+    const noExtra=await answer(id,{parent:'خیر'});
+    expect(noExtra.status).toBe(200);
+    expect(noExtra.body.data.answers).toEqual({parent:'خیر'});
+    const withExtra=await answer(id,{parent:'بله',reason:'درخواست زمان جدید'});
+    expect(withExtra.status).toBe(200);
+    expect(withExtra.body.data.answers).toEqual({parent:'بله',reason:'درخواست زمان جدید'});
+    expect(db.demandResponses.filter(r=>r.surveyId===id)).toHaveLength(1);
+  });
   it('فرم قدیمی بدون سؤال سفارشی همچنان پاسخ می‌پذیرد',async()=>{
     const form={...payload()};delete (form as {questions?:unknown}).questions;
     const created=await create(form);
