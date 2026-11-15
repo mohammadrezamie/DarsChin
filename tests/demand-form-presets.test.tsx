@@ -24,7 +24,7 @@ describe('الگوی آماده و پیش‌نمایش فرم‌های هوشم�
     const html=renderToStaticMarkup(React.createElement(DemandFormBuilder,{
       value:demandCourseSurveyStarter(),onChange:()=>{},
     }));
-    expect(html).toContain('شرط نمایش هوشمند سؤال');
+    expect(html).toContain('قانون نمایش هوشمند سؤال');
     expect(html).toContain('پیش‌نمایش سؤال‌ها');
     expect(html).toContain('پاسخ سؤال‌های پنهان ذخیره نمی‌شوند');
   });
