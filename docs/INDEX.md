@@ -123,3 +123,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [چارت مستقل رشته/مقطع/ورودی، تکثیر امن و نیازسنجی مرحله‌ای](CHART_COHORT_CLONE_AND_DEMAND_20261106_FA.md).
 
 - [تکمیل فرم‌ساز نیازسنجی واقعی و برنامهٔ خروج تدریجی از دمو](DEMAND_FORM_BUILDER_PRODUCTION_20261115_FA.md).
+
+- [فرم‌ساز شرطی و ویرایش کامل دروس و حدنصاب در پیش‌نویس نیازسنجی](SMART_DEMAND_DRAFT_EDITOR_20261115_FA.md).

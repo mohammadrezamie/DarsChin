@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from 'lucide-react';
-import type { DemandFormQuestion, DemandQuestionKind } from '../types';
+import type { DemandFormQuestion, DemandQuestionKind, DemandFormAnswers } from '../types';
+import { DemandQuestionFields } from './DemandQuestionFields';
+import { demandCourseSurveyStarter } from '../domain/demand-form-presets';
 import { parseDemandQuestions } from '../domain/demand-form';
 
 const TYPES:{kind:DemandQuestionKind;label:string}[]=[
@@ -22,6 +24,7 @@ export const DemandFormBuilder:React.FC<{
   disabled?:boolean;
 }> = ({value,onChange,disabled=false})=>{
   const [preview,setPreview]=useState(false);
+  const [previewAnswers,setPreviewAnswers]=useState<DemandFormAnswers>({});
   const update=(index:number,change:Partial<DemandFormQuestion>)=>
     onChange(value.map((q,i)=>i===index?{...q,...change}:q));
   const move=(index:number,delta:number)=>{
@@ -52,6 +55,11 @@ export const DemandFormBuilder:React.FC<{
         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-violet-800 px-4 text-xs font-black text-white disabled:opacity-40">
         <Plus className="h-4 w-4"/> افزودن سؤال جدید
       </button>
+      <button type="button" disabled={disabled||value.length!==0}
+        onClick={()=>{onChange(demandCourseSurveyStarter());setPreviewAnswers({});}}
+        className="min-h-11 rounded-xl border border-teal-300 bg-teal-50 px-3 text-xs font-black text-teal-900 disabled:opacity-40 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
+        الگوی آماده نیازسنجی دانشگاهی
+      </button>
       <button type="button" disabled={!value.length} aria-pressed={preview}
         onClick={()=>setPreview(p=>!p)}
         className="min-h-11 rounded-xl border border-violet-300 px-3 text-xs font-bold text-violet-950 dark:text-violet-100 disabled:opacity-40">
@@ -61,8 +69,16 @@ export const DemandFormBuilder:React.FC<{
     {!value.length&&<p className="mt-3 rounded-xl bg-white p-3 text-xs leading-6 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
       افزودن سؤال اختیاری است؛ فرم سادهٔ انتخاب درس مثل قبل کار می‌کند. برای فرم‌های پیشرفته، سؤال سفارشی اضافه کن.
     </p>}
+    {preview&&<div className="mt-3 rounded-2xl border border-teal-200 bg-white p-3 dark:border-teal-900 dark:bg-slate-900"
+      aria-label="پیش‌نمایش تعاملی فرم">
+      <p className="mb-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+        پیش‌نمایش تعاملی: پاسخ‌های آزمایشی ذخیره یا برای دانشجویان ارسال نمی‌شوند.
+      </p>
+      <DemandQuestionFields questions={value} answers={previewAnswers}
+        disabled={false} onChange={setPreviewAnswers}/>
+    </div>}
     <div className="mt-3 space-y-3">
-      {value.map((question,index)=><article key={question.id}
+      {!preview&&value.map((question,index)=><article key={question.id}
         className="rounded-2xl border border-violet-200 bg-white p-3 shadow-xs dark:border-violet-900 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <strong className="text-xs font-black text-violet-900 dark:text-violet-200">
@@ -97,6 +113,9 @@ export const DemandFormBuilder:React.FC<{
             {question.required&&<span className="mr-1 text-rose-600"> * </span>}
           </p>
           {question.description&&<p className="text-xs text-slate-500">{question.description}</p>}
+          {question.visibleWhen&&<p className="rounded-lg bg-violet-50 px-2 py-1 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+            نمایش شرطی: وقتی پاسخ سؤال مرتبط «{question.visibleWhen.equals}» باشد
+          </p>}
           {isChoice(question)?<div className="space-y-1 text-xs">{question.options?.map(option=>
             <p key={option}>{question.kind==='single_choice'?'◯':'□'} {option}</p>)}</div>:
             <p className="text-xs text-slate-500">
@@ -130,6 +149,40 @@ export const DemandFormBuilder:React.FC<{
               onChange={e=>update(index,{description:e.target.value})}
               className="darschin-field mt-1"/>
           </label>
+          <div className="space-y-2 rounded-xl border border-dashed border-violet-200 p-3 dark:border-violet-800 sm:col-span-2">
+            <label className="block text-xs font-bold">قانون نمایش هوشمند سؤال
+              <select aria-label={'شرط نمایش سؤال '+(index+1)}
+                value={question.visibleWhen?.questionId||''} disabled={disabled}
+                onChange={e=>{
+                  const parent=value.slice(0,index).find(q=>q.id===e.target.value);
+                  update(index,{visibleWhen:parent?{
+                    questionId:parent.id,
+                    equals:parent.kind==='rating'?'1':parent.options?.[0]||'',
+                  }:undefined});
+                }} className="darschin-field mt-1 min-h-11">
+                <option value="">همیشه نمایش داده شود</option>
+                {value.slice(0,index).filter(q=>q.kind==='single_choice'||q.kind==='rating').map(parent=>
+                  <option key={parent.id} value={parent.id}>
+                    فقط پس از پاسخ به «{parent.title||'سؤال بدون عنوان'}»
+                  </option>)}
+              </select>
+            </label>
+            {question.visibleWhen&&<label className="block text-xs font-bold">وقتی پاسخ سؤال قبلی برابر باشد با
+              <select value={question.visibleWhen.equals} disabled={disabled}
+                onChange={e=>update(index,{visibleWhen:{...question.visibleWhen!,equals:e.target.value}})}
+                className="darschin-field mt-1 min-h-11">
+                {(()=>{
+                  const parent=value.find(q=>q.id===question.visibleWhen?.questionId);
+                  const choices=parent?.kind==='rating'?['1','2','3','4','5']:parent?.options||[];
+                  return choices.map(choice=><option key={choice} value={choice}>{choice}</option>);
+                })()}
+              </select>
+            </label>}
+            <p className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+              شرط فقط به سؤال تک‌انتخابی یا امتیازیِ بالاتر در همین فرم متصل می‌شود.
+              پاسخ سؤال‌های پنهان ذخیره نمی‌شوند.
+            </p>
+          </div>
           {isChoice(question)&&<fieldset className="space-y-2 sm:col-span-2">
             <legend className="text-xs font-black">گزینه‌های پاسخ</legend>
             {question.options?.map((option,i)=><div key={i} className="flex items-center gap-2">

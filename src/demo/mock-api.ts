@@ -488,8 +488,30 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         return fail(checked.error||'ویرایش پیش‌نویس معتبر نیست.');
       if(data.startsAt&&data.endsAt&&data.startsAt>=data.endsAt)
         return fail('بازهٔ زمانی معتبر نیست.');
+      if(data.courseIds!==undefined||data.recommendedMinimumByCourse!==undefined){
+        const chart=s.collections['/api/curriculum'].find(c=>c.id===survey.curriculumId);
+        const tracks=survey.trackIds||[];
+        const allowed=new Set(s.collections['/api/curriculum-courses'].filter(cc=>
+          cc.curriculumId===chart?.id&&cc.active!==false&&
+          (!cc.trackId||tracks.includes(cc.trackId))).map(cc=>cc.courseId));
+        if(!Array.isArray(data.courseIds)||!data.courseIds.length||data.courseIds.length>100||
+          !data.recommendedMinimumByCourse||typeof data.recommendedMinimumByCourse!=='object'||
+          Array.isArray(data.recommendedMinimumByCourse)||
+          new Set(data.courseIds).size!==data.courseIds.length||
+          data.courseIds.some((id:string)=>!allowed.has(id)||!currentCourses(s).some(c=>c.id===id&&c.active))||
+          Object.entries(data.recommendedMinimumByCourse).some(([id,minimum])=>
+            !data.courseIds.includes(id)||typeof minimum!=='number'||
+            !Number.isInteger(minimum)||minimum<0||minimum>500)){
+          return fail('درس‌ها یا حدنصاب‌ها با چارت پیش‌نویس سازگار نیستند.');
+        }
+      }
+      if(data.targetTermId!==undefined && data.targetTermId!==semester.id)
+        return fail('نیمسال هدف معتبر نیست.');
       survey.title=data.title.trim();survey.description=data.description.trim();
       survey.questions=checked.questions;
+      if(data.courseIds){survey.courseIds=[...data.courseIds];
+        survey.recommendedMinimumByCourse={...data.recommendedMinimumByCourse};}
+      if(data.targetTermId)survey.targetTermId=data.targetTermId;
       survey.startsAt=typeof data.startsAt==='string'?data.startsAt:undefined;
       survey.endsAt=typeof data.endsAt==='string'?data.endsAt:undefined;
       survey.updatedAt=now();saveStore(s);return good(survey) as ApiResponse<T>;

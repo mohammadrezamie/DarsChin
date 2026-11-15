@@ -1,5 +1,6 @@
 import { describe,expect,it } from 'vitest';
-import { parseDemandQuestions,validateDemandAnswers,summarizeFormAnswers } from '../src/domain/demand-form';
+import { parseDemandQuestions,validateDemandAnswers,summarizeFormAnswers,
+  visibleDemandQuestions,pruneDemandAnswers } from '../src/domain/demand-form';
 import type { DemandFormQuestion } from '../src/types';
 
 const sample:DemandFormQuestion[]=[
@@ -33,6 +34,45 @@ describe('فرم‌ساز امن نیازسنجی',()=>{
     expect(validateDemandAnswers(sample,{time:'صبح',rating:'5',reason:'a'.repeat(501)}).ok).toBe(false);
     expect(validateDemandAnswers(sample,{time:'صبح',rating:'5',notes:'a'.repeat(2001)}).ok).toBe(false);
     expect(validateDemandAnswers(sample,{time:'صبح',rating:'5',week:[{}]}).ok).toBe(false);
+  });
+  it('سؤال‌های شرطی فقط با پاسخ معتبر قبلی نمایش داده می‌شوند و شاخهٔ پنهان پاک می‌شود',()=>{
+    const dependent:DemandFormQuestion[]=[
+      {id:'needsExtra',title:'کلاس اضافی می‌خواهید؟',kind:'single_choice',required:true,
+        options:['بله','خیر']},
+      {id:'timeOfExtra',title:'ساعت پیشنهادی کلاس اضافی',kind:'single_choice',required:true,
+        options:['صبح','عصر'],visibleWhen:{questionId:'needsExtra',equals:'بله'}},
+      {id:'detailsExtra',title:'توضیح تکمیلی',kind:'long_text',required:true,
+        visibleWhen:{questionId:'timeOfExtra',equals:'صبح'}},
+    ];
+    expect(parseDemandQuestions(dependent).ok).toBe(true);
+    expect(visibleDemandQuestions(dependent,{needsExtra:'خیر'}).map(q=>q.id)).toEqual(['needsExtra']);
+    expect(validateDemandAnswers(dependent,{needsExtra:'خیر'}).ok).toBe(true);
+    expect(validateDemandAnswers(dependent,{needsExtra:'بله'}).ok).toBe(false);
+    expect(visibleDemandQuestions(dependent,{needsExtra:'بله',timeOfExtra:'صبح'}).map(q=>q.id))
+      .toEqual(['needsExtra','timeOfExtra','detailsExtra']);
+    expect(validateDemandAnswers(dependent,{needsExtra:'بله',timeOfExtra:'صبح'}).ok).toBe(false);
+    expect(validateDemandAnswers(dependent,{needsExtra:'بله',timeOfExtra:'عصر'}).ok).toBe(true);
+    expect(pruneDemandAnswers(dependent,{
+      needsExtra:'خیر',timeOfExtra:'صبح',detailsExtra:'اطلاعات محرمانه',
+    })).toEqual({needsExtra:'خیر'});
+    expect(validateDemandAnswers(dependent,{
+      needsExtra:'خیر',timeOfExtra:'صبح',
+    }).ok).toBe(false);
+  });
+  it('شرط‌های دوری، ارجاع به آینده، نوع ناسازگار، گزینهٔ جعلی و شرط شکسته را نمی‌پذیرد',()=>{
+    const parent:DemandFormQuestion={
+      id:'parent',title:'سؤال اول',kind:'single_choice',required:true,options:['آری','نه'],
+    };
+    const child:DemandFormQuestion={
+      id:'child',title:'سؤال دوم',kind:'short_text',required:false,
+      visibleWhen:{questionId:'parent',equals:'آری'},
+    };
+    expect(parseDemandQuestions([parent,child]).ok).toBe(true);
+    expect(parseDemandQuestions([child,parent]).ok).toBe(false);
+    expect(parseDemandQuestions([parent,{...child,visibleWhen:{questionId:'child',equals:'آری'}}]).ok).toBe(false);
+    expect(parseDemandQuestions([parent,{...child,visibleWhen:{questionId:'parent',equals:'ناموجود'}}]).ok).toBe(false);
+    expect(parseDemandQuestions([{...parent,kind:'short_text',options:undefined},child]).ok).toBe(false);
+    expect(parseDemandQuestions([parent,{...child,visibleWhen:{questionId:'__proto__',equals:'آری'}}]).ok).toBe(false);
   });
   it('سازگاری فرم‌های قدیمی فاقد سؤال سفارشی حفظ می‌شود',()=>{
     expect(parseDemandQuestions(undefined)).toEqual({ok:true,questions:[]});

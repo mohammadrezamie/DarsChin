@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
-import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
+import { parseDemandQuestions, validateDemandAnswers, visibleDemandQuestions } from '../domain/demand-form';
 import { DemandFormBuilder } from './DemandFormBuilder';
 import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
@@ -81,6 +81,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [editQuestions,setEditQuestions]=useState<DemandFormQuestion[]>([]);
   const [editStartsAt,setEditStartsAt]=useState('');
   const [editEndsAt,setEditEndsAt]=useState('');
+  const [editTerm,setEditTerm]=useState('');
+  const [editCourseIds,setEditCourseIds]=useState<string[]>([]);
+  const [editMinimums,setEditMinimums]=useState<Record<string,number>>({});
+  const [editSearch,setEditSearch]=useState('');
+  const [editAssigned,setEditAssigned]=useState<CourseAssigned[]>([]);
+  const [editLoadedKey,setEditLoadedKey]=useState('');
+  const [editLoadError,setEditLoadError]=useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
   const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
@@ -92,6 +99,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
+  const editContextKey=editingSurveyId&&survey?.id===editingSurveyId
+    ?editingSurveyId+'|'+survey.curriculumId:'';
+  const editReady=!!editContextKey&&editLoadedKey===editContextKey;
+  const editAvailableIds=editReady&&survey
+    ?demandEligibleCourseIds(editAssigned,survey.trackIds[0]||'',courses):[];
+  const editMissingIds=editCourseIds.filter(id=>!editAvailableIds.includes(id));
   const managerCharts=manageableDemandCharts(curricula,user);
   const scopeOptions=demandChartScopeOptions(managerCharts,newScope);
   const scopedCharts=demandChartsForScope(managerCharts,newScope);
@@ -125,6 +138,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
   const visibleSelectedCourses = detailReady ? selectedCourses : [];
   const visibleAnswers = detailReady ? answers : {};
+  const requiredAnswers=survey&&detailReady?visibleDemandQuestions(survey.questions||[],visibleAnswers)
+    .filter(q=>q.required):[];
+  const answeredRequired=requiredAnswers.filter(q=>{
+    const a=visibleAnswers[q.id];
+    return Array.isArray(a)?a.length>0:typeof a==='string'&&a.trim().length>0;
+  }).length;
   const visibleResponse = detailReady ? myResponse : null;
   const visibleReport = detailReady ? report : null;
 
@@ -367,6 +386,27 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     finally {setBusy(false);}
   };
 
+  // Draft editor loads its OWN chart, independently of the create-survey wizard.
+  // A response for a previous survey can never populate a newly selected form.
+  useEffect(()=>{
+    let active=true;
+    setEditLoadedKey('');setEditAssigned([]);setEditLoadError('');
+    if(!editContextKey||!survey?.curriculumId)return;
+    const key=editContextKey;
+    void apiRequest<{courses:CourseAssigned[]}>(
+      '/api/curriculum/'+encodeURIComponent(survey.curriculumId)+'/full'
+    ).then(result=>{
+      if(!active)return;
+      if(!result.success||!result.data?.courses){
+        setEditLoadError(result.error||'بارگذاری درس‌های چارت ویرایش ناموفق بود.');
+        return;
+      }
+      setEditAssigned(result.data.courses);
+      setEditLoadedKey(key);
+    }).catch(()=>{if(active)setEditLoadError('ارتباط با سرور هنگام دریافت دروس چارت قطع شد.');});
+    return ()=>{active=false;};
+  },[editContextKey,survey?.curriculumId]);
+
   const asLocalInput=(value:string|undefined)=>{
     if(!value)return '';
     const date=new Date(value);
@@ -381,10 +421,22 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setEditQuestions(structuredClone(target.questions||[]));
     setEditStartsAt(asLocalInput(target.startsAt));
     setEditEndsAt(asLocalInput(target.endsAt));
+    setEditTerm(target.targetTermId);
+    setEditCourseIds([...target.courseIds]);
+    setEditMinimums({...target.recommendedMinimumByCourse});
+    setEditSearch('');
+    setEditLoadedKey('');
+    setEditLoadError('');
     setError('');setSuccess('');
   };
   const saveDraft=async()=>{
-    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy)return;
+    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy||!editReady)return;
+    if(!editCourseIds.length||editCourseIds.length>100||editMissingIds.length){
+      setError('ابتدا فهرست درس‌های همین چارت را تکمیل کن و درس‌های نامعتبر را حذف کن.');return;
+    }
+    let minimums:Record<string,number>;
+    try{minimums=demandCourseThresholds(editCourseIds,editMinimums,0);}
+    catch(e){setError(e instanceof Error?e.message:'حدنصاب دروس معتبر نیست.');return;}
     const checked=parseDemandQuestions(editQuestions);
     if(!checked.ok){setError(checked.error||'سؤال‌ها معتبر نیستند.');return;}
     const start=editStartsAt?new Date(editStartsAt):null,end=editEndsAt?new Date(editEndsAt):null;
@@ -398,6 +450,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/draft',{
           method:'PUT',body:JSON.stringify({
             title:editTitle.trim(),description:editDescription.trim(),
+            targetTermId:editTerm,
+            courseIds:editCourseIds,recommendedMinimumByCourse:minimums,
             questions:checked.questions,
             startsAt:start?start.toISOString():null,endsAt:end?end.toISOString():null,
           }),
@@ -819,6 +873,16 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             questions={survey.questions} answers={visibleAnswers}
             disabled={busy||!detailReady||survey.status!=='OPEN'}
             onChange={setAnswers}/>}
+          {!!survey.questions?.length&&detailReady&&<div role="status"
+            className="rounded-xl border border-teal-200 bg-teal-50 p-3 text-xs font-bold text-teal-900 dark:border-teal-800 dark:bg-teal-950/30 dark:text-teal-200">
+            تکمیل سؤال‌های اجباری قابل‌مشاهده: {answeredRequired.toLocaleString('fa-IR')}
+            {' از '}{requiredAnswers.length.toLocaleString('fa-IR')}
+            {requiredAnswers.length>0&&<div className="mt-2 h-2 overflow-hidden rounded-full bg-white dark:bg-slate-800">
+              <div className="h-full bg-teal-700 transition-all" style={{
+                width:((answeredRequired/requiredAnswers.length)*100)+'%',
+              }}/>
+            </div>}
+          </div>}
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
             <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-teal-800 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
@@ -869,8 +933,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             className="space-y-3 rounded-2xl border border-violet-300 bg-violet-50/30 p-3 dark:border-violet-800 dark:bg-violet-950/20">
             <h4 className="text-sm font-black">ویرایش پیش‌نویس فرم</h4>
             <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-              تنها عنوان، متن راهنما، زمان‌بندی و سؤال‌های این پیش‌نویس تغییر می‌کنند.
-              برای تغییر رشته، ورودی و دروس، فرم مستقل جدید بساز.
+              تمام اجزای پیش‌نویس، از جمله نیمسال هدف، دروس، حدنصاب‌ها، زمان‌بندی و سؤال‌ها قابل اصلاح‌اند.
+              رشته و ورودی همین فرم ثابت می‌مانند تا تقاضای ورودی‌ها مخلوط نشود.
             </p>
             <label className="block text-xs font-bold">عنوان فرم
               <input maxLength={160} value={editTitle} disabled={busy}
@@ -890,10 +954,90 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                   onChange={e=>setEditEndsAt(e.target.value)} className="darschin-field mt-1 min-h-11"/>
               </label>
             </div>
+            <section className="space-y-3 rounded-2xl border border-teal-200 bg-white p-3 dark:border-teal-900 dark:bg-slate-900"
+              aria-label="ویرایش دروس و حدنصاب پیش‌نویس">
+              <h5 className="text-sm font-black">دروس نیازسنجی و حدنصاب پیشنهادی</h5>
+              <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+                چارت همین ورودی مبناست؛ افزودن، حذف و تغییر حدنصاب فقط پیش از انتشار ذخیره می‌شود.
+              </p>
+              <label className="block text-xs font-bold">نیمسال مورد نیازسنجی
+                <select value={editTerm} disabled={busy} onChange={e=>setEditTerm(e.target.value)}
+                  className="darschin-field mt-1 min-h-11 w-full">
+                  {terms.filter(t=>t.active!==false||t.id===editTerm).map(term=>
+                    <option key={term.id} value={term.id}>{term.name}</option>)}
+                </select>
+              </label>
+              {!editReady&&<p role="status" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                {editLoadError||'در حال دریافت فهرست دروس همین چارت…'}
+              </p>}
+              {editReady&&<>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold">
+                    {editCourseIds.length.toLocaleString('fa-IR')} درس انتخاب‌شده
+                  </span>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={busy||!editAvailableIds.length}
+                      onClick={()=>setEditCourseIds(editAvailableIds.slice(0,100))}
+                      className="min-h-10 rounded-lg border border-teal-300 px-3 text-xs font-bold disabled:opacity-40">
+                      انتخاب همه
+                    </button>
+                    <button type="button" disabled={busy||!editCourseIds.length}
+                      onClick={()=>setEditCourseIds([])}
+                      className="min-h-10 rounded-lg border border-slate-300 px-3 text-xs font-bold disabled:opacity-40">
+                      پاک‌کردن
+                    </button>
+                  </div>
+                </div>
+                {!!editMissingIds.length&&<div role="alert"
+                  className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/30">
+                  <p className="text-xs font-bold text-rose-800 dark:text-rose-200">
+                    تعدادی درس قبلی دیگر در چارت فعال نیستند؛ قبل از ذخیره حذفشان کن.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">{editMissingIds.map(id=>
+                    <button key={id} type="button" disabled={busy}
+                      onClick={()=>setEditCourseIds(prev=>prev.filter(x=>x!==id))}
+                      className="min-h-10 rounded-lg border border-rose-300 px-2 text-xs text-rose-800 dark:text-rose-200">
+                      حذف {courseMap.get(id)?.name||id}
+                    </button>)}</div>
+                </div>}
+                <input type="search" value={editSearch} disabled={busy} aria-label="جستجوی دروس پیش‌نویس"
+                  onChange={e=>setEditSearch(e.target.value)}
+                  placeholder="نام یا کد درس را جستجو کن"
+                  className="darschin-field min-h-11 w-full"/>
+                <div className="grid max-h-96 gap-2 overflow-auto sm:grid-cols-2">
+                  {editAvailableIds.filter(id=>{
+                    const query=editSearch.trim().toLocaleLowerCase('fa');
+                    const course=courseMap.get(id);
+                    return !query||[course?.name||'',course?.code||''].some(value=>
+                      value.toLocaleLowerCase('fa').includes(query));
+                  }).map(id=><div key={id}
+                    className="rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+                    <label className="flex min-h-11 items-center gap-2 text-xs font-bold">
+                      <input type="checkbox" checked={editCourseIds.includes(id)} disabled={busy}
+                        onChange={()=>setEditCourseIds(prev=>prev.includes(id)?
+                          prev.filter(x=>x!==id):prev.length>=100?prev:[...prev,id])}/>
+                      <span>{courseMap.get(id)?.name||id}
+                        <span className="block text-[11px] font-normal text-slate-500">
+                          {courseMap.get(id)?.code||''}
+                        </span>
+                      </span>
+                    </label>
+                    {editCourseIds.includes(id)&&<label className="mt-1 block text-xs font-bold">
+                      حدنصاب پیشنهادی این درس
+                      <input type="number" min={0} max={500} step={1} disabled={busy}
+                        value={editMinimums[id]??0}
+                        onChange={e=>setEditMinimums(old=>({...old,[id]:Number(e.target.value)}))}
+                        className="darschin-field mt-1 min-h-10 w-full"/>
+                    </label>}
+                  </div>)}
+                </div>
+              </>}
+            </section>
             <DemandFormBuilder value={editQuestions} onChange={setEditQuestions} disabled={busy}/>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={()=>void saveDraft()}
-                disabled={busy||editTitle.trim().length<5||!parseDemandQuestions(editQuestions).ok}
+                disabled={busy||!editReady||!editTerm||!editCourseIds.length||editCourseIds.length>100||
+                  !!editMissingIds.length||editTitle.trim().length<5||!parseDemandQuestions(editQuestions).ok}
                 className="min-h-11 rounded-xl bg-violet-800 px-4 text-xs font-black text-white disabled:opacity-40">
                 ذخیره تغییرات پیش‌نویس
               </button>
