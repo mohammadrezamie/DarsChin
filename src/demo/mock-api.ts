@@ -3,7 +3,8 @@ import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
-import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv } from '../domain/course-demand';
+import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv, exportDemandSummaryCsv, exportDemandAnswersCsv } from '../domain/course-demand';
+import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
 import type { DemandSurvey, DemandResponse } from '../types';
 import type { AcademicRule } from '../types';
 import type {
@@ -412,7 +413,8 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     const studentView = typeof window !== 'undefined' && window.location.pathname === '/demo/student';
     return good(studentView ? s.demandSurveys.filter(survey =>
       surveyAppliesToProfile(survey, s.profile) && (
-        survey.status === 'OPEN' ||
+        (survey.status === 'OPEN' && (!survey.startsAt || Date.parse(survey.startsAt)<=Date.now()) &&
+          (!survey.endsAt || Date.parse(survey.endsAt)>=Date.now())) ||
         s.demandResponses.some(response => response.userId === 'demo-student' && response.surveyId === survey.id)
       )) : s.demandSurveys) as ApiResponse<T>;
   }
@@ -442,6 +444,10 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         !Number.isInteger(minimum) || minimum < 0 || minimum > 500)) {
       return fail('برای ساخت نیازسنجی، اطلاعات فرم، چارت و درس‌های معتبر نمونه لازم است.');
     }
+    const checkedQuestions=parseDemandQuestions(data.questions);
+    if(!checkedQuestions.ok)return fail(checkedQuestions.error||'سؤال‌های فرم نمونه معتبر نیستند.');
+    if(data.startsAt&&data.endsAt&&data.startsAt>=data.endsAt)
+      return fail('پایان فرم باید پس از شروع باشد.');
     // Match the typed real survey schema; never persist an unchecked body spread.
     const currentTime = now();
     const record: DemandSurvey = {
@@ -458,6 +464,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       trackIds: [...data.trackIds],
       courseIds: [...data.courseIds],
       recommendedMinimumByCourse: { ...data.recommendedMinimumByCourse },
+      questions:checkedQuestions.questions,
       startsAt: typeof data.startsAt === 'string' ? data.startsAt : undefined,
       endsAt: typeof data.endsAt === 'string' ? data.endsAt : undefined,
       status: 'DRAFT',
@@ -467,11 +474,26 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     };
     s.demandSurveys.push(record);saveStore(s);return good(record) as ApiResponse<T>;
   }
-  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|export\.csv))?$/);
+  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|draft|summary\.csv|answers\.csv|export\.csv))?$/);
   if (demandRoute) {
     const survey = s.demandSurveys.find(row=>row.id===demandRoute[1]);
     if(!survey)return fail('نیازسنجی نمونه یافت نشد.');
     const operation=demandRoute[2];
+    if(operation==='draft'&&method==='PUT'){
+      if(survey.status!=='DRAFT'||s.demandResponses.some(r=>r.surveyId===survey.id))
+        return fail('فرم منتشرشده یا دارای پاسخ قابل تغییر نیست.');
+      const checked=parseDemandQuestions(data.questions);
+      if(!checked.ok||typeof data.title!=='string'||data.title.trim().length<5||
+        data.title.length>160||typeof data.description!=='string'||data.description.length>1000)
+        return fail(checked.error||'ویرایش پیش‌نویس معتبر نیست.');
+      if(data.startsAt&&data.endsAt&&data.startsAt>=data.endsAt)
+        return fail('بازهٔ زمانی معتبر نیست.');
+      survey.title=data.title.trim();survey.description=data.description.trim();
+      survey.questions=checked.questions;
+      survey.startsAt=typeof data.startsAt==='string'?data.startsAt:undefined;
+      survey.endsAt=typeof data.endsAt==='string'?data.endsAt:undefined;
+      survey.updatedAt=now();saveStore(s);return good(survey) as ApiResponse<T>;
+    }
     if(operation==='status' && method==='PUT'){
       if(!['OPEN','CLOSED','ARCHIVED'].includes(data.status))return fail('وضعیت نیازسنجی نامعتبر است.');
       const allowed:Record<string,string[]>={DRAFT:['OPEN','ARCHIVED'],OPEN:['CLOSED'],CLOSED:['OPEN','ARCHIVED'],ARCHIVED:[]};
@@ -482,7 +504,12 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good(s.demandResponses.find(x=>x.surveyId===survey.id&&x.userId==='demo-student')||null) as ApiResponse<T>;
     }
     if(operation==='response' && method==='PUT'){
-      if(survey.status!=='OPEN'||!surveyAppliesToProfile(survey,s.profile))return fail('نیازسنجی بسته یا نامنطبق است.');
+      if(survey.status!=='OPEN'||!surveyAppliesToProfile(survey,s.profile)||
+        (survey.startsAt&&Date.parse(survey.startsAt)>Date.now())||
+        (survey.endsAt&&Date.parse(survey.endsAt)<Date.now()))
+        return fail('نیازسنجی بسته، خارج از بازه یا نامنطبق است.');
+      const checkedAnswers=validateDemandAnswers(survey.questions||[],data.answers);
+      if(!checkedAnswers.ok)return fail(checkedAnswers.error||'پاسخ سؤال‌ها معتبر نیست.');
       if(!Array.isArray(data.courseIds)||new Set(data.courseIds).size!==data.courseIds.length||
         data.courseIds.some((courseId:string)=>!survey.courseIds.includes(courseId))||
         !/^[0-9۰-۹٠-٩]{6,20}$/.test(data.studentNumber||'') ||
@@ -492,6 +519,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
         id:old?.id||id(),surveyId:survey.id,userId:'demo-student',
         studentNumber:String(data.studentNumber),
         anticipatedGraduation:data.anticipatedGraduation,courseIds:data.courseIds,
+        answers:checkedAnswers.answers,
         snapshot:{studentName:'دانشجوی نمونه',campusId:s.profile.campusId,majorId:s.profile.majorId,
           entryYearId:s.profile.entryYearId,isTrackSelected:s.profile.isTrackSelected,
           selectedTrackId:s.profile.selectedTrackId},
@@ -502,6 +530,14 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good(response) as ApiResponse<T>;
     }
     if(operation==='report' && method==='GET')return good(summarizeDemand(survey,s.demandResponses)) as ApiResponse<T>;
+    if(operation==='summary.csv'&&method==='GET')return good({
+      csv:exportDemandSummaryCsv(survey,s.demandResponses,
+        new Map(currentCourses(s).map(c=>[c.id,c.name])),
+        new Map(currentCourses(s).map(c=>[c.id,c.code]))),
+    }) as ApiResponse<T>;
+    if(operation==='answers.csv'&&method==='GET')return good({
+      csv:exportDemandAnswersCsv(survey,s.demandResponses),
+    }) as ApiResponse<T>;
     if(operation==='export.csv' && method==='GET') {
       const csv=exportDemandCsv(survey,s.demandResponses,
         new Map(currentCourses(s).map(course=>[course.id,course.name])),
