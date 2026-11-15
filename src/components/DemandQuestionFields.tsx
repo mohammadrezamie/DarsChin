@@ -1,5 +1,6 @@
 import React from 'react';
 import type { DemandFormAnswers, DemandFormQuestion } from '../types';
+import { pruneDemandAnswers, visibleDemandQuestions } from '../domain/demand-form';
 
 /** Semantic, mobile-friendly student answer controls. Server revalidates all inputs. */
 export const DemandQuestionFields:React.FC<{
@@ -8,9 +9,10 @@ export const DemandQuestionFields:React.FC<{
   disabled:boolean;
   onChange:(next:DemandFormAnswers)=>void;
 }> = ({questions,answers,disabled,onChange})=>{
-  const set=(id:string,value:string|string[])=>onChange({...answers,[id]:value});
+  const set=(id:string,value:string|string[])=>
+    onChange(pruneDemandAnswers(questions,{...answers,[id]:value}));
   return <div dir="rtl" className="space-y-3" aria-label="سؤال‌های تکمیلی نیازسنجی">
-    {questions.map((question,index)=>{
+    {visibleDemandQuestions(questions,answers).map((question,index)=>{
       const answer=answers[question.id];
       const current=typeof answer==='string'?answer:'';
       const currentMany=Array.isArray(answer)?answer:[];
