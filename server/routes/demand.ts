@@ -40,6 +40,9 @@ const statusSchema = z.object({ status: z.enum(['OPEN','CLOSED','ARCHIVED']) }).
 /** Editing questions and schedule is permitted only before the first public opening. */
 const draftUpdateSchema = z.object({
   title:z.string().trim().min(5).max(160),
+  targetTermId:identifier.optional(),
+  courseIds:z.array(identifier).min(1).max(100).optional(),
+  recommendedMinimumByCourse:z.record(z.string(),z.number().int().min(0).max(500)).optional(),
   description:z.string().trim().max(1000),
   questions:z.array(z.unknown()).max(20),
   startsAt:z.string().datetime().nullable().optional(),
@@ -142,6 +145,25 @@ demandRouter.put('/surveys/:id/draft', (req: AuthenticatedRequest, res) => {
   if(!parsed.success)return failure(res,400,'ویرایش عنوان، سؤال‌ها یا زمان‌بندی معتبر نیست.');
   const questions=parseDemandQuestions(parsed.data.questions);
   if(!questions.ok)return failure(res,400,questions.error||'پرسش‌ها معتبر نیستند.');
+  const changeCourses=parsed.data.courseIds!==undefined||
+    parsed.data.recommendedMinimumByCourse!==undefined;
+  if(changeCourses){
+    const courseIds=parsed.data.courseIds;
+    const minimum=parsed.data.recommendedMinimumByCourse;
+    if(!courseIds||!minimum||new Set(courseIds).size!==courseIds.length)
+      return failure(res,400,'درس‌ها و حدنصاب‌ها باید با هم و بدون تکرار ارسال شوند.');
+    const chart=db.curricula.find(c=>c.id===survey.curriculumId&&c.universityId===survey.universityId&&
+      c.campusId===survey.campusId&&c.degreeLevelId===survey.degreeLevelId&&
+      c.majorId===survey.majorId&&c.entryYearId===survey.entryYearIds[0]&&c.status!=='archived');
+    if(!chart)return failure(res,409,'چارت این پیش‌نویس معتبر یا قابل استفاده نیست.');
+    const allowed=new Set(db.curriculumCourses.filter(cc=>cc.curriculumId===chart.id&&cc.active!==false&&
+      (!cc.trackId||survey.trackIds.includes(cc.trackId))).map(cc=>cc.courseId));
+    if(courseIds.some(id=>!allowed.has(id)||!db.courses.some(course=>course.id===id&&course.active))||
+      Object.keys(minimum).some(id=>!courseIds.includes(id)))
+      return failure(res,400,'درس‌ها یا حدنصاب‌ها با چارت و گرایش این ورودی سازگار نیستند.');
+  }
+  if(parsed.data.targetTermId && !db.academicTerms.some(term=>term.id===parsed.data.targetTermId))
+    return failure(res,400,'نیمسال هدف معتبر نیست.');
   const {startsAt,endsAt,...fields}=parsed.data;
   const start=startsAt===undefined?survey.startsAt:startsAt||undefined;
   const end=endsAt===undefined?survey.endsAt:endsAt||undefined;
