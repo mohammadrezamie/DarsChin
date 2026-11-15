@@ -81,6 +81,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [editQuestions,setEditQuestions]=useState<DemandFormQuestion[]>([]);
   const [editStartsAt,setEditStartsAt]=useState('');
   const [editEndsAt,setEditEndsAt]=useState('');
+  const [editTerm,setEditTerm]=useState('');
+  const [editCourseIds,setEditCourseIds]=useState<string[]>([]);
+  const [editMinimums,setEditMinimums]=useState<Record<string,number>>({});
+  const [editSearch,setEditSearch]=useState('');
+  const [editAssigned,setEditAssigned]=useState<CourseAssigned[]>([]);
+  const [editLoadedKey,setEditLoadedKey]=useState('');
+  const [editLoadError,setEditLoadError]=useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
   const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
@@ -92,6 +99,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
 
   const survey = surveys.find(x=>x.id===selectedId);
   const courseMap = useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
+  const editContextKey=editingSurveyId&&survey?.id===editingSurveyId
+    ?editingSurveyId+'|'+survey.curriculumId:'';
+  const editReady=!!editContextKey&&editLoadedKey===editContextKey;
+  const editAvailableIds=editReady&&survey
+    ?demandEligibleCourseIds(editAssigned,survey.trackIds[0]||'',courses):[];
+  const editMissingIds=editCourseIds.filter(id=>!editAvailableIds.includes(id));
   const managerCharts=manageableDemandCharts(curricula,user);
   const scopeOptions=demandChartScopeOptions(managerCharts,newScope);
   const scopedCharts=demandChartsForScope(managerCharts,newScope);
@@ -367,6 +380,27 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     finally {setBusy(false);}
   };
 
+  // Draft editor loads its OWN chart, independently of the create-survey wizard.
+  // A response for a previous survey can never populate a newly selected form.
+  useEffect(()=>{
+    let active=true;
+    setEditLoadedKey('');setEditAssigned([]);setEditLoadError('');
+    if(!editContextKey||!survey?.curriculumId)return;
+    const key=editContextKey;
+    void apiRequest<{courses:CourseAssigned[]}>(
+      '/api/curriculum/'+encodeURIComponent(survey.curriculumId)+'/full'
+    ).then(result=>{
+      if(!active)return;
+      if(!result.success||!result.data?.courses){
+        setEditLoadError(result.error||'بارگذاری درس‌های چارت ویرایش ناموفق بود.');
+        return;
+      }
+      setEditAssigned(result.data.courses);
+      setEditLoadedKey(key);
+    }).catch(()=>{if(active)setEditLoadError('ارتباط با سرور هنگام دریافت دروس چارت قطع شد.');});
+    return ()=>{active=false;};
+  },[editContextKey,survey?.curriculumId]);
+
   const asLocalInput=(value:string|undefined)=>{
     if(!value)return '';
     const date=new Date(value);
@@ -381,10 +415,22 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setEditQuestions(structuredClone(target.questions||[]));
     setEditStartsAt(asLocalInput(target.startsAt));
     setEditEndsAt(asLocalInput(target.endsAt));
+    setEditTerm(target.targetTermId);
+    setEditCourseIds([...target.courseIds]);
+    setEditMinimums({...target.recommendedMinimumByCourse});
+    setEditSearch('');
+    setEditLoadedKey('');
+    setEditLoadError('');
     setError('');setSuccess('');
   };
   const saveDraft=async()=>{
-    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy)return;
+    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy||!editReady)return;
+    if(!editCourseIds.length||editCourseIds.length>100||editMissingIds.length){
+      setError('ابتدا فهرست درس‌های همین چارت را تکمیل کن و درس‌های نامعتبر را حذف کن.');return;
+    }
+    let minimums:Record<string,number>;
+    try{minimums=demandCourseThresholds(editCourseIds,editMinimums,0);}
+    catch(e){setError(e instanceof Error?e.message:'حدنصاب دروس معتبر نیست.');return;}
     const checked=parseDemandQuestions(editQuestions);
     if(!checked.ok){setError(checked.error||'سؤال‌ها معتبر نیستند.');return;}
     const start=editStartsAt?new Date(editStartsAt):null,end=editEndsAt?new Date(editEndsAt):null;
@@ -398,6 +444,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/draft',{
           method:'PUT',body:JSON.stringify({
             title:editTitle.trim(),description:editDescription.trim(),
+            targetTermId:editTerm,
+            courseIds:editCourseIds,recommendedMinimumByCourse:minimums,
             questions:checked.questions,
             startsAt:start?start.toISOString():null,endsAt:end?end.toISOString():null,
           }),
