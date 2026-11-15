@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, type AuthenticatedRequest } from '../middleware/auth';
-import { exportDemandCsv, exportDemandSummaryCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
+import { exportDemandCsv, exportDemandSummaryCsv, exportDemandAnswersCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
+import { parseDemandQuestions, validateDemandAnswers } from '../../src/domain/demand-form';
 import type { DemandResponse, DemandSurvey } from '../../src/types';
 
 export const demandRouter = Router();
@@ -25,6 +26,7 @@ const surveySchema = z.object({
   trackIds: z.array(identifier).max(1).default([]),
   courseIds: z.array(identifier).min(1).max(100),
   recommendedMinimumByCourse: z.record(z.string(), z.number().int().min(0).max(500)).default({}),
+  questions: z.array(z.unknown()).max(20).optional(),
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
 }).strict();
@@ -32,8 +34,17 @@ const responseSchema = z.object({
   courseIds: z.array(identifier).max(100),
   studentNumber: z.string().trim().regex(/^[0-9۰-۹٠-٩]{6,20}$/),
   anticipatedGraduation: z.enum(['YES', 'NO', 'UNKNOWN']),
+  answers: z.record(z.string(),z.union([z.string(),z.array(z.string())])).optional(),
 }).strict();
 const statusSchema = z.object({ status: z.enum(['OPEN','CLOSED','ARCHIVED']) }).strict();
+/** Editing questions and schedule is permitted only before the first public opening. */
+const draftUpdateSchema = z.object({
+  title:z.string().trim().min(5).max(160),
+  description:z.string().trim().max(1000),
+  questions:z.array(z.unknown()).max(20),
+  startsAt:z.string().datetime().nullable().optional(),
+  endsAt:z.string().datetime().nullable().optional(),
+}).strict();
 const fresh = () => new Date().toISOString();
 const failure = (res: any, code: number, error: string) => res.status(code).json({ success: false, error });
 function scopeStudent(req: AuthenticatedRequest, survey: DemandSurvey) {
@@ -78,6 +89,8 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
   const input = surveySchema.safeParse(req.body);
   if (!input.success) return failure(res, 400, 'داده‌های فرم نیازسنجی معتبر نیستند.');
   const x = input.data;
+  const customQuestions=parseDemandQuestions(x.questions);
+  if(!customQuestions.ok)return failure(res,400,customQuestions.error||'ساختار سؤال‌های فرم معتبر نیست.');
   if (!mayManageDemand(req, x)) return failure(res, 403, 'مدیریت نیازسنجی این رشته در دسترسی شما نیست.');
   const validScope = db.universities.some(u => u.id === x.universityId && u.active) &&
     db.campuses.some(c => c.id === x.campusId && c.universityId === x.universityId && c.active) &&
@@ -102,7 +115,8 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     return failure(res, 400, 'درس‌های نیازسنجی باید یکتا و متعلق به چارت فعال باشند.');
   }
   if (x.startsAt && x.endsAt && x.startsAt >= x.endsAt) return failure(res, 400, 'زمان پایان باید پس از آغاز باشد.');
-  const survey: DemandSurvey = { ...x, id: 'demand-' + randomUUID(), status: 'DRAFT',
+  const survey: DemandSurvey = { ...x, questions:customQuestions.questions,
+    id: 'demand-' + randomUUID(), status: 'DRAFT',
     createdBy: req.user!.id, createdAt: fresh(), updatedAt: fresh() };
   const auditCount = db.auditLogs.length;
   db.demandSurveys.push(survey);
@@ -115,6 +129,37 @@ demandRouter.post('/surveys', (req: AuthenticatedRequest, res) => {
     return failure(res, 503, 'ثبت نیازسنجی ناموفق بود؛ لطفاً دوباره تلاش کنید.');
   }
   return res.status(201).json({ success: true, data: survey });
+});
+
+// Editing an unopened draft preserves the academic scope, questions and historical submissions.
+demandRouter.put('/surveys/:id/draft', (req: AuthenticatedRequest, res) => {
+  const survey=getSurvey(req.params.id);
+  if(!survey)return failure(res,404,'نیازسنجی یافت نشد.');
+  if(!mayManageDemand(req,survey))return failure(res,403,'ویرایش فرم این رشته در دسترسی شما نیست.');
+  if(survey.status!=='DRAFT'||db.demandResponses.some(item=>item.surveyId===survey.id))
+    return failure(res,409,'سؤال‌های فرم پس از انتشار یا ثبت پاسخ قابل تغییر نیستند؛ فرم جدید بسازید.');
+  const parsed=draftUpdateSchema.safeParse(req.body);
+  if(!parsed.success)return failure(res,400,'ویرایش عنوان، سؤال‌ها یا زمان‌بندی معتبر نیست.');
+  const questions=parseDemandQuestions(parsed.data.questions);
+  if(!questions.ok)return failure(res,400,questions.error||'پرسش‌ها معتبر نیستند.');
+  const {startsAt,endsAt,...fields}=parsed.data;
+  const start=startsAt===undefined?survey.startsAt:startsAt||undefined;
+  const end=endsAt===undefined?survey.endsAt:endsAt||undefined;
+  if(start&&end&&start>=end)return failure(res,400,'پایان پاسخ‌دهی باید پس از آغاز باشد.');
+  const previous=structuredClone(survey);
+  Object.assign(survey,fields,{
+    questions:questions.questions,
+    startsAt:start,endsAt:end,updatedAt:fresh(),
+  });
+  const auditCount=db.auditLogs.length;
+  audit(req.user!.id,'DEMAND_SURVEY_DRAFT_EDITED',survey.id);
+  try {db.save();}
+  catch {
+    Object.assign(survey,previous);
+    db.auditLogs.splice(auditCount);
+    return failure(res,503,'ویرایش پیش‌نویس ذخیره نشد؛ نسخه قبلی حفظ شد.');
+  }
+  return res.json({success:true,data:survey});
 });
 
 demandRouter.put('/surveys/:id/status', (req: AuthenticatedRequest, res) => {
@@ -160,6 +205,8 @@ demandRouter.put('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
   const parsed = responseSchema.safeParse(req.body);
   if (!parsed.success) return failure(res, 400, 'شماره دانشجویی، وضعیت ترم آخر یا لیست دروس معتبر نیست.');
   const x = parsed.data;
+  const parsedAnswers=validateDemandAnswers(survey.questions||[],x.answers);
+  if(!parsedAnswers.ok)return failure(res,400,parsedAnswers.error||'پاسخ پرسش‌ها معتبر نیست.');
   if (new Set(x.courseIds).size !== x.courseIds.length || x.courseIds.some(id => !survey.courseIds.includes(id))) {
     return failure(res, 400, 'فقط دروس تعریف‌شدهٔ همین نیازسنجی قابل درخواست‌اند.');
   }
@@ -171,6 +218,7 @@ demandRouter.put('/surveys/:id/response', (req: AuthenticatedRequest, res) => {
     id: previous?.id || 'demand-response-' + randomUUID(),
     surveyId: survey.id, userId: req.user!.id,
     studentNumber, anticipatedGraduation: x.anticipatedGraduation, courseIds: x.courseIds,
+    answers:parsedAnswers.answers,
     snapshot: {
       studentName: req.user!.name, campusId: profile.campusId, majorId: profile.majorId,
       entryYearId: profile.entryYearId, isTrackSelected: profile.isTrackSelected,
@@ -215,6 +263,23 @@ demandRouter.get('/surveys/:id/summary.csv', (req: AuthenticatedRequest, res) =>
   if(req.query.format==='json')return res.json({success:true,data:{csv}});
   res.setHeader('Content-Type','text/csv; charset=utf-8');
   res.setHeader('Content-Disposition','attachment; filename="darschin-demand-summary-'+survey.id+'.csv"');
+  return res.send(csv);
+});
+
+// Free text may contain identifying information: only demand.export may obtain raw answers.
+demandRouter.get('/surveys/:id/answers.csv', (req: AuthenticatedRequest, res) => {
+  const survey=getSurvey(req.params.id);
+  if(!survey)return failure(res,404,'نیازسنجی یافت نشد.');
+  if(!mayManageDemand(req,survey,true))
+    return failure(res,403,'مجوز ویژهٔ مشاهده پاسخ‌های متنی دانشجویان را ندارید.');
+  const csv=exportDemandAnswersCsv(survey,db.demandResponses);
+  const auditCount=db.auditLogs.length;
+  audit(req.user!.id,'DEMAND_PRIVATE_ANSWERS_EXPORTED',survey.id);
+  try {db.save();}
+  catch {db.auditLogs.splice(auditCount);return failure(res,503,'ثبت رویداد دسترسی به پاسخ‌ها ناموفق بود.');}
+  if(req.query.format==='json')return res.json({success:true,data:{csv}});
+  res.setHeader('Content-Type','text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="darschin-demand-answers-'+survey.id+'.csv"');
   return res.send(csv);
 });
 
