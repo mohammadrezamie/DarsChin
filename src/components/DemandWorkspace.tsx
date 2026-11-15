@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
-import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
+import { parseDemandQuestions, validateDemandAnswers, visibleDemandQuestions } from '../domain/demand-form';
 import { DemandFormBuilder } from './DemandFormBuilder';
 import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
@@ -138,6 +138,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
   const visibleSelectedCourses = detailReady ? selectedCourses : [];
   const visibleAnswers = detailReady ? answers : {};
+  const requiredAnswers=survey&&detailReady?visibleDemandQuestions(survey.questions||[],visibleAnswers)
+    .filter(q=>q.required):[];
+  const answeredRequired=requiredAnswers.filter(q=>{
+    const a=visibleAnswers[q.id];
+    return Array.isArray(a)?a.length>0:typeof a==='string'&&a.trim().length>0;
+  }).length;
   const visibleResponse = detailReady ? myResponse : null;
   const visibleReport = detailReady ? report : null;
 
@@ -867,6 +873,16 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             questions={survey.questions} answers={visibleAnswers}
             disabled={busy||!detailReady||survey.status!=='OPEN'}
             onChange={setAnswers}/>}
+          {!!survey.questions?.length&&detailReady&&<div role="status"
+            className="rounded-xl border border-teal-200 bg-teal-50 p-3 text-xs font-bold text-teal-900 dark:border-teal-800 dark:bg-teal-950/30 dark:text-teal-200">
+            تکمیل سؤال‌های اجباری قابل‌مشاهده: {answeredRequired.toLocaleString('fa-IR')}
+            {' از '}{requiredAnswers.length.toLocaleString('fa-IR')}
+            {requiredAnswers.length>0&&<div className="mt-2 h-2 overflow-hidden rounded-full bg-white dark:bg-slate-800">
+              <div className="h-full bg-teal-700 transition-all" style={{
+                width:((answeredRequired/requiredAnswers.length)*100)+'%',
+              }}/>
+            </div>}
+          </div>}
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
             <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-teal-800 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
