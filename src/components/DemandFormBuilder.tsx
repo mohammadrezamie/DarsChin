@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from 'lucide-react';
-import type { DemandFormQuestion, DemandQuestionKind } from '../types';
+import type { DemandFormQuestion, DemandQuestionKind, DemandFormAnswers } from '../types';
+import { DemandQuestionFields } from './DemandQuestionFields';
 import { parseDemandQuestions } from '../domain/demand-form';
 
 const TYPES:{kind:DemandQuestionKind;label:string}[]=[
@@ -22,6 +23,7 @@ export const DemandFormBuilder:React.FC<{
   disabled?:boolean;
 }> = ({value,onChange,disabled=false})=>{
   const [preview,setPreview]=useState(false);
+  const [previewAnswers,setPreviewAnswers]=useState<DemandFormAnswers>({});
   const update=(index:number,change:Partial<DemandFormQuestion>)=>
     onChange(value.map((q,i)=>i===index?{...q,...change}:q));
   const move=(index:number,delta:number)=>{
@@ -61,8 +63,16 @@ export const DemandFormBuilder:React.FC<{
     {!value.length&&<p className="mt-3 rounded-xl bg-white p-3 text-xs leading-6 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
       افزودن سؤال اختیاری است؛ فرم سادهٔ انتخاب درس مثل قبل کار می‌کند. برای فرم‌های پیشرفته، سؤال سفارشی اضافه کن.
     </p>}
+    {preview&&<div className="mt-3 rounded-2xl border border-teal-200 bg-white p-3 dark:border-teal-900 dark:bg-slate-900"
+      aria-label="پیش‌نمایش تعاملی فرم">
+      <p className="mb-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+        پیش‌نمایش تعاملی: پاسخ‌های آزمایشی ذخیره یا برای دانشجویان ارسال نمی‌شوند.
+      </p>
+      <DemandQuestionFields questions={value} answers={previewAnswers}
+        disabled={false} onChange={setPreviewAnswers}/>
+    </div>}
     <div className="mt-3 space-y-3">
-      {value.map((question,index)=><article key={question.id}
+      {!preview&&value.map((question,index)=><article key={question.id}
         className="rounded-2xl border border-violet-200 bg-white p-3 shadow-xs dark:border-violet-900 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <strong className="text-xs font-black text-violet-900 dark:text-violet-200">
