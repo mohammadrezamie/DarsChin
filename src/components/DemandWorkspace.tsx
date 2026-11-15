@@ -150,7 +150,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       return;
     }
     setSurveys(list.data);
-    setSelectedId(prev => list.data.some(item => item.id === prev) ? prev : list.data[0]?.id || '');
+    // Shared form links select only a survey that THIS authenticated student can see.
+    const linkedId=role==='student'&&typeof window!=='undefined'
+      ?new URLSearchParams(window.location.search).get('survey'):null;
+    setSelectedId(prev=>list.data.some(item=>item.id===prev)?prev:
+      linkedId&&list.data.some(item=>item.id===linkedId)?linkedId:list.data[0]?.id||'');
     // The revision was already invalidated when refresh began, so the current
     // survey detail must be reloaded even if its ID has not changed.
     if (courseResult.success && Array.isArray(courseResult.data)) setCourses(courseResult.data);
@@ -405,6 +409,17 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     }catch{setError('ذخیرهٔ تغییرات به‌دلیل قطع ارتباط انجام نشد.');}
     finally{setBusy(false);}
   };
+  const shareSurvey=async(target:DemandSurvey)=>{
+    if(target.status!=='OPEN'||typeof window==='undefined')return;
+    const url=new URL('/dashboard',window.location.origin);
+    url.searchParams.set('tab','demand');
+    url.searchParams.set('survey',target.id);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setSuccess('لینک ورود به همین فرم کپی شد. دانشجو باید با حساب واقعی و ورودی مرتبط وارد شود.');
+    } catch {setError('کپی لینک در این مرورگر فعال نیست؛ از HTTPS و مجوز کلیپ‌بورد استفاده کن.');}
+  };
+
   const copySurveyTemplate=(target:DemandSurvey)=>{
     const chart=managerCharts.find(c=>c.id===target.curriculumId);
     if(!chart){setError('چارت این فرم در حوزهٔ مجاز شما نیست.');return;}
@@ -820,6 +835,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                 onClick={()=>beginDraftEdit(survey)}
                 className="min-h-11 rounded-xl border border-violet-400 px-3 text-xs font-bold text-violet-900 dark:text-violet-200">
                 ویرایش سؤال‌ها و زمان‌بندی پیش‌نویس
+              </button>}
+              {survey.status==='OPEN'&&<button disabled={busy} type="button"
+                onClick={()=>void shareSurvey(survey)}
+                className="min-h-11 rounded-xl border border-teal-300 px-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+                کپی لینک امن فرم برای دانشجویان
               </button>}
               <button disabled={busy} type="button" onClick={()=>copySurveyTemplate(survey)}
                 className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-200">
