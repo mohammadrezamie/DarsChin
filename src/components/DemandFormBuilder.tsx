@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from 'lucide-react';
 import type { DemandFormQuestion, DemandQuestionKind, DemandFormAnswers } from '../types';
 import { DemandQuestionFields } from './DemandQuestionFields';
+import { demandCourseSurveyStarter } from '../domain/demand-form-presets';
 import { parseDemandQuestions } from '../domain/demand-form';
 
 const TYPES:{kind:DemandQuestionKind;label:string}[]=[
@@ -53,6 +54,11 @@ export const DemandFormBuilder:React.FC<{
         onClick={()=>onChange([...value,freshQuestion()])}
         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-violet-800 px-4 text-xs font-black text-white disabled:opacity-40">
         <Plus className="h-4 w-4"/> افزودن سؤال جدید
+      </button>
+      <button type="button" disabled={disabled||value.length!==0}
+        onClick={()=>{onChange(demandCourseSurveyStarter());setPreviewAnswers({});}}
+        className="min-h-11 rounded-xl border border-teal-300 bg-teal-50 px-3 text-xs font-black text-teal-900 disabled:opacity-40 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
+        الگوی آماده نیازسنجی دانشگاهی
       </button>
       <button type="button" disabled={!value.length} aria-pressed={preview}
         onClick={()=>setPreview(p=>!p)}
