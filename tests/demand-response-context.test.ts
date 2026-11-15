@@ -67,10 +67,21 @@ describe('demand response identity and payload trust boundary', () => {
     expect(isCurrent(second, oldKey)).toBe(true);
   });
 
+  it('rejects mismatched answer schema even if response identity and courses match', () => {
+    const questions=[{id:'time',kind:'single_choice' as const,title:'زمان',
+      required:true,options:['صبح','عصر']}];
+    expect(isDemandResponseForContext({...response,answers:{time:'صبح'}},
+      'student-A','survey-A',['math','circuits'],questions)).toBe(true);
+    expect(isDemandResponseForContext({...response,answers:{time:'شب'}},
+      'student-A','survey-A',['math','circuits'],questions)).toBe(false);
+    expect(isDemandResponseForContext({...response,answers:{unknown:'صبح'}},
+      'student-A','survey-A',['math','circuits'],questions)).toBe(false);
+  });
+
   it('enforces the identity checks on both GET and PUT result paths', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/DemandWorkspace.tsx'), 'utf8');
-    expect(source).toContain('isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds)');
-    expect(source).toContain('isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds)');
+    expect(source).toContain('isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds,survey.questions||[])');
+    expect(source).toContain('isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds,survey.questions||[])');
     expect(source).toContain('activeDetailKeyRef.current === submittedKey');
     expect(source).toContain('saveRequestRef.current.isCurrent(submissionEpoch)');
     expect(source).toContain("survey.status !== 'OPEN'");

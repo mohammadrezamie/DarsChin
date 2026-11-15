@@ -5,16 +5,26 @@ import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
+import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
+import { DemandFormBuilder } from './DemandFormBuilder';
+import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
 import {
   changeDemandChartScope,demandChartScopeOptions,demandChartsForScope,
   demandCourseThresholds,demandEligibleCourseIds,emptyDemandChartScope,
   manageableDemandCharts,type DemandChartScope,
 } from '../domain/demand-chart-workflow';
-import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
+import type {
+  AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile,
+  DemandFormQuestion,DemandFormAnswers,
+} from '../types';
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
-type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[] };
+type SurveyStats = {
+  participantCount:number;
+  byCourse:{courseId:string;count:number;threshold:number;meetsSuggestedThreshold:boolean;selfReportedFinalSemester:number}[];
+  byQuestion?:{id:string;title:string;kind:string;answeredCount:number;options:{label:string;count:number}[];textAnswersPrivate:boolean}[];
+};
 type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
 // A new account, role, permission set or department scope must remount this
@@ -38,6 +48,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [studentNumber, setStudentNumber] = useState('');
   const [graduation, setGraduation] = useState<'YES'|'NO'|'UNKNOWN'>('UNKNOWN');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [answers,setAnswers]=useState<DemandFormAnswers>({});
   const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
@@ -61,6 +72,15 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [success, setSuccess] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newQuestions,setNewQuestions]=useState<DemandFormQuestion[]>([]);
+  const [newStartsAt,setNewStartsAt]=useState('');
+  const [newEndsAt,setNewEndsAt]=useState('');
+  const [editingSurveyId,setEditingSurveyId]=useState('');
+  const [editTitle,setEditTitle]=useState('');
+  const [editDescription,setEditDescription]=useState('');
+  const [editQuestions,setEditQuestions]=useState<DemandFormQuestion[]>([]);
+  const [editStartsAt,setEditStartsAt]=useState('');
+  const [editEndsAt,setEditEndsAt]=useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
   const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
@@ -104,6 +124,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState);
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
   const visibleSelectedCourses = detailReady ? selectedCourses : [];
+  const visibleAnswers = detailReady ? answers : {};
   const visibleResponse = detailReady ? myResponse : null;
   const visibleReport = detailReady ? report : null;
 
@@ -129,7 +150,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       return;
     }
     setSurveys(list.data);
-    setSelectedId(prev => list.data.some(item => item.id === prev) ? prev : list.data[0]?.id || '');
+    // Shared form links select only a survey that THIS authenticated student can see.
+    const linkedId=role==='student'&&typeof window!=='undefined'
+      ?new URLSearchParams(window.location.search).get('survey'):null;
+    setSelectedId(prev=>list.data.some(item=>item.id===prev)?prev:
+      linkedId&&list.data.some(item=>item.id===linkedId)?linkedId:list.data[0]?.id||'');
     // The revision was already invalidated when refresh began, so the current
     // survey detail must be reloaded even if its ID has not changed.
     if (courseResult.success && Array.isArray(courseResult.data)) setCourses(courseResult.data);
@@ -170,6 +195,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setDetailState('idle');
     setSettledDetailKey(null);
     setSelectedCourses([]);
+    setAnswers({});
+    setEditingSurveyId('');
+    setNewQuestions([]);
+    setNewStartsAt('');
+    setNewEndsAt('');
     setStudentNumber('');
     setGraduation('UNKNOWN');
     setAssigned([]);
@@ -198,6 +228,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       setMyResponse(null); setReport(null); setDetailState('idle');
       setSettledDetailKey(null);
       setSelectedCourses([]);
+      setAnswers({});
       return;
     }
     const requestedKey = demandDetailKey(role, survey.id, detailRevision);
@@ -207,11 +238,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setMyResponse(null);
     setReport(null);
     setSelectedCourses([]);
+    setAnswers({});
     setSuccess('');
     if (role==='student') {
       void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(result=>{
         if(!active) return;
-        if (!result.success || !isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds)) {
+        if (!result.success || !isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds,survey.questions||[])) {
           setError(result.success ? 'پاسخ دریافتی با دانشجو یا این فرم مطابقت ندارد؛ برای حفظ حریم خصوصی امکان ویرایش موقتاً متوقف شد.' : (result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.'));
           setSettledDetailKey(requestedKey);
           setDetailState('error');
@@ -219,6 +251,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         }
         setMyResponse(result.data || null);
         setSelectedCourses(result.data?.courseIds || []);
+        setAnswers(result.data?.answers || {});
         setStudentNumber(previous => result.data?.studentNumber || previous);
         setGraduation(result.data?.anticipatedGraduation || 'UNKNOWN');
         setSettledDetailKey(requestedKey);
@@ -270,15 +303,18 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     const submissionEpoch = saveRequestRef.current.begin();
     const stillCurrent = () => activeDetailKeyRef.current === submittedKey &&
       saveRequestRef.current.isCurrent(submissionEpoch);
+    const validated=validateDemandAnswers(survey.questions||[],answers);
+    if(!validated.ok){setError(validated.error||'سؤال‌ها را بررسی کن.');return;}
     setError('');setSuccess('');setBusy(true);
     try {
       const r=await apiRequest<DemandResponse>(`/api/demand/surveys/${survey.id}/response`,{
         method:'PUT',
-        body:JSON.stringify({ courseIds:selectedCourses,studentNumber,anticipatedGraduation:graduation }),
+        body:JSON.stringify({courseIds:selectedCourses,studentNumber,
+          anticipatedGraduation:graduation,answers:validated.answers}),
       });
       if (!stillCurrent()) return;
       if(!r.success){setError(r.error || 'ذخیره نشد.');return;}
-      if (!isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds) || !r.data) {
+      if (!isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds,survey.questions||[]) || !r.data) {
         setError('تأیید پاسخ ذخیره‌شده معتبر نبود؛ وضعیت فرم را دوباره بارگذاری کن.');
         return;
       }
@@ -295,6 +331,14 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if(!newCourseIds.length||newCourseIds.some(id=>!availableDemandCourseIds.includes(id))) {
       setError('دروس نیازسنجی باید متعلق به همین چارت و گرایش باشند.');return;
     }
+    const parsedQuestions=parseDemandQuestions(newQuestions);
+    if(!parsedQuestions.ok){setError(parsedQuestions.error||'سؤال‌های فرم نامعتبرند.');return;}
+    const start=newStartsAt?new Date(newStartsAt):null;
+    const end=newEndsAt?new Date(newEndsAt):null;
+    if((start&&!Number.isFinite(start.getTime()))||(end&&!Number.isFinite(end.getTime()))||
+      (start&&end&&end<=start)){
+      setError('زمان شروع و پایان پاسخ‌دهی معتبر نیست؛ پایان باید پس از شروع باشد.');return;
+    }
     let minimums:Record<string,number>;
     try {minimums=demandCourseThresholds(newCourseIds,thresholdByCourse,threshold);}
     catch (e) {setError(e instanceof Error?e.message:'حدنصاب‌ها معتبر نیستند.');return;}
@@ -309,14 +353,89 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           curriculumId:chartId,entryYearIds:[curriculum.entryYearId],
           trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
           recommendedMinimumByCourse:minimums,
+          questions:parsedQuestions.questions,
+          ...(start?{startsAt:start.toISOString()}:{}),
+          ...(end?{endsAt:end.toISOString()}:{}),
         }),
       });
       if(!r.success||!r.data){setError(r.error||'ایجاد نیازسنجی ناموفق بود.');return;}
       setSuccess('پیش‌نویس مستقل این رشته و ورودی ساخته شد؛ برای پاسخ دانشجویان آن را باز کن.');
       await refresh();setSelectedId(r.data.id);
-      setNewCourseIds([]);setThresholdByCourse({});
+      setNewCourseIds([]);setThresholdByCourse({});setNewQuestions([]);
+      setNewStartsAt('');setNewEndsAt('');
     } catch {setError('ساخت نیازسنجی به‌علت مشکل ارتباط ذخیره نشد.');}
     finally {setBusy(false);}
+  };
+
+  const asLocalInput=(value:string|undefined)=>{
+    if(!value)return '';
+    const date=new Date(value);
+    if(!Number.isFinite(date.getTime()))return '';
+    return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  };
+  const beginDraftEdit=(target:DemandSurvey)=>{
+    if(target.status!=='DRAFT')return;
+    setEditingSurveyId(target.id);
+    setEditTitle(target.title);
+    setEditDescription(target.description);
+    setEditQuestions(structuredClone(target.questions||[]));
+    setEditStartsAt(asLocalInput(target.startsAt));
+    setEditEndsAt(asLocalInput(target.endsAt));
+    setError('');setSuccess('');
+  };
+  const saveDraft=async()=>{
+    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy)return;
+    const checked=parseDemandQuestions(editQuestions);
+    if(!checked.ok){setError(checked.error||'سؤال‌ها معتبر نیستند.');return;}
+    const start=editStartsAt?new Date(editStartsAt):null,end=editEndsAt?new Date(editEndsAt):null;
+    if((start&&!Number.isFinite(start.getTime()))||(end&&!Number.isFinite(end.getTime()))||
+      (start&&end&&end<=start)){
+      setError('زمان‌بندی فرم معتبر نیست.');return;
+    }
+    setBusy(true);setError('');
+    try{
+      const result=await apiRequest<DemandSurvey>(
+        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/draft',{
+          method:'PUT',body:JSON.stringify({
+            title:editTitle.trim(),description:editDescription.trim(),
+            questions:checked.questions,
+            startsAt:start?start.toISOString():null,endsAt:end?end.toISOString():null,
+          }),
+        });
+      if(!result.success||!result.data){setError(result.error||'ویرایش پیش‌نویس ذخیره نشد.');return;}
+      setSurveys(previous=>previous.map(item=>item.id===result.data!.id?result.data!:item));
+      setEditingSurveyId('');
+      setSuccess('تغییرات فرم ذخیره شد. پیش از انتشار، سؤال‌ها را بررسی کن.');
+    }catch{setError('ذخیرهٔ تغییرات به‌دلیل قطع ارتباط انجام نشد.');}
+    finally{setBusy(false);}
+  };
+  const shareSurvey=async(target:DemandSurvey)=>{
+    if(target.status!=='OPEN'||typeof window==='undefined')return;
+    const url=new URL('/dashboard',window.location.origin);
+    url.searchParams.set('tab','demand');
+    url.searchParams.set('survey',target.id);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setSuccess('لینک ورود به همین فرم کپی شد. دانشجو باید با حساب واقعی و ورودی مرتبط وارد شود.');
+    } catch {setError('کپی لینک در این مرورگر فعال نیست؛ از HTTPS و مجوز کلیپ‌بورد استفاده کن.');}
+  };
+
+  const copySurveyTemplate=(target:DemandSurvey)=>{
+    const chart=managerCharts.find(c=>c.id===target.curriculumId);
+    if(!chart){setError('چارت این فرم در حوزهٔ مجاز شما نیست.');return;}
+    setNewScope({universityId:chart.universityId,campusId:chart.campusId,
+      degreeLevelId:chart.degreeLevelId,majorId:chart.majorId,entryYearId:chart.entryYearId});
+    setNewCurriculum(chart.id);
+    setNewTrack(target.trackIds[0]||'');
+    setNewTerm(target.targetTermId);
+    setNewTitle(target.title+' (نسخه جدید)');
+    setNewDescription(target.description);
+    setNewQuestions(structuredClone(target.questions||[]));
+    setNewCourseIds([...target.courseIds]);
+    setThresholdByCourse({...target.recommendedMinimumByCourse});
+    setNewStartsAt('');
+    setNewEndsAt('');
+    setSuccess('الگوی فرم به سازنده منتقل شد؛ چارت و دروس را پیش از ثبت دوباره بررسی کن. هیچ پاسخی کپی نشده است.');
   };
 
   const updateStatus=async(next:'OPEN'|'CLOSED'|'ARCHIVED')=>{
@@ -388,6 +507,32 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
     } catch {if(isCurrent())setError('دریافت خروجی تجمیعی با مشکل ارتباط مواجه شد.');}
     finally {if(isCurrent())setBusy(false);}
+  };
+
+  const exportPrivateAnswers=async()=>{
+    if(!survey||!detailReady||busy)return;
+    const requestedKey=currentDetailKey;
+    const ticket=exportRequestRef.current.begin();
+    const stillCurrent=()=>activeDetailKeyRef.current===requestedKey&&
+      exportRequestRef.current.isCurrent(ticket);
+    setBusy(true);setError('');setSuccess('');
+    try {
+      const r=await apiRequest<{csv:string}>('/api/demand/surveys/'+
+        encodeURIComponent(survey.id)+'/answers.csv?format=json');
+      if(!stillCurrent())return;
+      if(!r.success||typeof r.data?.csv!=='string'){
+        setError(r.error||'برای دریافت متن پاسخ‌ها مجوز ویژه لازم است.');return;
+      }
+      const blob=new Blob([r.data.csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try {
+        const a=document.createElement('a');a.href=url;
+        a.download='darschin-private-answers-'+survey.id+'.csv';
+        document.body.appendChild(a);a.click();a.remove();
+        setSuccess('خروجی خصوصی پاسخ‌ها دریافت شد؛ از اطلاعات دانشجویان محافظت کن.');
+      } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
+    } catch {if(stillCurrent())setError('دریافت خروجی خصوصی ناموفق بود.');}
+    finally {if(stillCurrent())setBusy(false);}
   };
 
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
@@ -562,6 +707,16 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                     onChange={e=>setNewDescription(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent p-3 dark:border-slate-700"/>
                 </label>
+                <label className="text-xs font-bold">شروع پاسخ‌دهی (اختیاری)
+                  <input type="datetime-local" value={newStartsAt} disabled={busy}
+                    onChange={e=>setNewStartsAt(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
+                <label className="text-xs font-bold">پایان پاسخ‌دهی (اختیاری)
+                  <input type="datetime-local" value={newEndsAt} disabled={busy}
+                    onChange={e=>setNewEndsAt(e.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700"/>
+                </label>
               </div>
             </fieldset>
             <fieldset className="rounded-2xl border border-teal-200 p-3 dark:border-teal-900">
@@ -614,11 +769,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                   </p>}
               </div>
             </fieldset>
+            <DemandFormBuilder value={newQuestions} onChange={setNewQuestions} disabled={busy}/>
           </div>
           <button type="button"
             disabled={busy||!curriculum||!chartReady||!newTerm||newTitle.trim().length<5||
               !newCourseIds.length||newCourseIds.length>100||
-              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))}
+              newCourseIds.some(id=>!availableDemandCourseIds.includes(id))||
+              !parseDemandQuestions(newQuestions).ok}
             onClick={()=>void createSurvey()}
             className="mt-4 min-h-12 w-full rounded-xl bg-teal-800 px-5 text-sm font-black text-white disabled:opacity-40 sm:w-auto">
             {busy?'در حال ثبت پیش‌نویس…':'ساخت نیازسنجی مستقل برای همین ورودی'}
@@ -658,6 +815,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               </label>;
             })}
           </div>
+          {!!survey.questions?.length&&<DemandQuestionFields
+            questions={survey.questions} answers={visibleAnswers}
+            disabled={busy||!detailReady||survey.status!=='OPEN'}
+            onChange={setAnswers}/>}
           <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-600 dark:text-slate-300">{visibleSelectedCourses.length} درس انتخاب شده · {visibleResponse?'پاسخ قبلی قابل ویرایش است':'اولین پاسخ شما'}</p>
             <button type="button" disabled={busy||!detailReady||survey.status!=='OPEN'} onClick={()=>void submit()} className="min-h-12 rounded-xl bg-teal-800 px-6 text-sm font-black text-white disabled:opacity-50">{busy?'در حال ذخیره…':'ثبت/به‌روزرسانی درخواست‌ها'}</button>
           </div>
@@ -670,6 +831,20 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             <div><h3 className="text-lg font-black">{survey.title}</h3><p className="text-xs text-slate-500 dark:text-slate-400">وضعیت: {survey.status} · نیمسال: {terms.find(t=>t.id===survey.targetTermId)?.name || survey.targetTermId}</p></div>
             <div className="flex flex-wrap gap-2">
               {(survey.status==='DRAFT'||survey.status==='CLOSED')&&<button disabled={busy} type="button" onClick={()=>void updateStatus('OPEN')} className="min-h-11 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white">بازکردن برای دانشجویان</button>}
+              {survey.status==='DRAFT'&&<button disabled={busy} type="button"
+                onClick={()=>beginDraftEdit(survey)}
+                className="min-h-11 rounded-xl border border-violet-400 px-3 text-xs font-bold text-violet-900 dark:text-violet-200">
+                ویرایش سؤال‌ها و زمان‌بندی پیش‌نویس
+              </button>}
+              {survey.status==='OPEN'&&<button disabled={busy} type="button"
+                onClick={()=>void shareSurvey(survey)}
+                className="min-h-11 rounded-xl border border-teal-300 px-3 text-xs font-bold text-teal-900 dark:text-teal-200">
+                کپی لینک امن فرم برای دانشجویان
+              </button>}
+              <button disabled={busy} type="button" onClick={()=>copySurveyTemplate(survey)}
+                className="min-h-11 rounded-xl border border-indigo-300 px-3 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                استفاده از این فرم به‌عنوان الگو
+              </button>
               {survey.status==='OPEN'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('CLOSED')} className="min-h-11 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-700">بستن نیازسنجی</button>}
               {survey.status==='CLOSED'&&<button disabled={busy} type="button" onClick={()=>void updateStatus('ARCHIVED')} className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold">آرشیو</button>}
               <button type="button" disabled={busy||!detailReady} onClick={()=>void exportSummary()}
@@ -681,8 +856,58 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                   className="flex min-h-11 items-center gap-2 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-200">
                   <Download className="h-4 w-4"/> CSV با مشخصات دانشجویان (مجوز ویژه)
                 </button>}
+              {(user?.permissions?.includes('demand.export')||user?.roles?.includes('super-admin'))&&
+                !!survey.questions?.length&&<button type="button" disabled={busy||!detailReady}
+                  onClick={()=>void exportPrivateAnswers()}
+                  className="flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 px-3 text-xs font-bold text-rose-800 dark:text-rose-200">
+                  <Download className="h-4 w-4"/> خروجی خصوصی پاسخ سؤال‌ها
+                </button>}
             </div>
           </div>
+          {survey.status==='DRAFT'&&editingSurveyId===survey.id&&<section
+            aria-label="ویرایش امن فرم پیش‌نویس"
+            className="space-y-3 rounded-2xl border border-violet-300 bg-violet-50/30 p-3 dark:border-violet-800 dark:bg-violet-950/20">
+            <h4 className="text-sm font-black">ویرایش پیش‌نویس فرم</h4>
+            <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+              تنها عنوان، متن راهنما، زمان‌بندی و سؤال‌های این پیش‌نویس تغییر می‌کنند.
+              برای تغییر رشته، ورودی و دروس، فرم مستقل جدید بساز.
+            </p>
+            <label className="block text-xs font-bold">عنوان فرم
+              <input maxLength={160} value={editTitle} disabled={busy}
+                onChange={e=>setEditTitle(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+            </label>
+            <label className="block text-xs font-bold">راهنمای فرم
+              <textarea rows={2} maxLength={1000} value={editDescription} disabled={busy}
+                onChange={e=>setEditDescription(e.target.value)} className="darschin-field mt-1"/>
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="text-xs font-bold">شروع پاسخ‌دهی
+                <input type="datetime-local" value={editStartsAt} disabled={busy}
+                  onChange={e=>setEditStartsAt(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+              </label>
+              <label className="text-xs font-bold">پایان پاسخ‌دهی
+                <input type="datetime-local" value={editEndsAt} disabled={busy}
+                  onChange={e=>setEditEndsAt(e.target.value)} className="darschin-field mt-1 min-h-11"/>
+              </label>
+            </div>
+            <DemandFormBuilder value={editQuestions} onChange={setEditQuestions} disabled={busy}/>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={()=>void saveDraft()}
+                disabled={busy||editTitle.trim().length<5||!parseDemandQuestions(editQuestions).ok}
+                className="min-h-11 rounded-xl bg-violet-800 px-4 text-xs font-black text-white disabled:opacity-40">
+                ذخیره تغییرات پیش‌نویس
+              </button>
+              <button type="button" onClick={()=>setEditingSurveyId('')}
+                className="min-h-11 rounded-xl border border-slate-300 px-4 text-xs font-bold">
+                انصراف
+              </button>
+            </div>
+          </section>}
+          {survey.startsAt||survey.endsAt?<p className="rounded-xl bg-slate-50 p-3 text-xs leading-6 dark:bg-slate-800">
+            بازه پاسخ‌دهی: {survey.startsAt?new Date(survey.startsAt).toLocaleString('fa-IR'):'بدون تاریخ شروع'}
+            {' تا '}{survey.endsAt?new Date(survey.endsAt).toLocaleString('fa-IR'):'بدون تاریخ پایان'}
+            · انتشار فرم به معنای نادیده‌گرفتن بازهٔ زمانی نیست.
+          </p>:null}
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleReport?.byCourse.map(item=>(
@@ -695,6 +920,26 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
               </div>
             ))}
           </div>
+          {!!visibleReport?.byQuestion?.length&&<section aria-label="آمار سؤال‌های فرم" className="space-y-2">
+            <h4 className="text-sm font-black">نتایج سؤال‌های اختصاصی (فقط آمار کلی)</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {visibleReport.byQuestion.map(item=><article key={item.id}
+                className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <strong className="text-xs text-slate-950 dark:text-white">{item.title}</strong>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {item.answeredCount.toLocaleString('fa-IR')} پاسخ
+                  {item.textAnswersPrivate?' · متن پاسخ‌ها خصوصی است':''}
+                </p>
+                {!!item.options.length&&<div className="mt-2 space-y-1">
+                  {item.options.map(option=><div key={option.label}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800">
+                    <span>{option.label}</span><strong>{option.count.toLocaleString('fa-IR')}</strong>
+                  </div>)}
+                </div>}
+              </article>)}
+            </div>
+            <p className="text-xs text-slate-500">متن پاسخ‌های تشریحی در این گزارش عمومی نمایش داده نمی‌شود؛ فقط مدیر دارای مجوز ویژه می‌تواند خروجی جداگانه دریافت کند.</p>
+          </section>}
           <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300"><ShieldCheck className="h-4 w-4"/> گزارش ریز فقط برای مدیر دارای مجوز صادر می‌شود؛ این آمار تشکیل کلاس نیست.</p>
         </section>
       )}

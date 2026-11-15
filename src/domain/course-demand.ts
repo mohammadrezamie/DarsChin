@@ -3,6 +3,7 @@ import type {
   StudentAcademicProfile, User,
 } from '../types';
 import { extractSourceCourseIds } from '../utils/academic';
+import { summarizeFormAnswers } from './demand-form';
 
 /** The same survey has one effective response per user; repeated submissions replace it. */
 export function surveyAppliesToProfile(s: DemandSurvey, profile: StudentAcademicProfile): boolean {
@@ -36,7 +37,10 @@ export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[
       selfReportedFinalSemester: relevant.filter(r => r.courseIds.includes(courseId) && r.anticipatedGraduation === 'YES').length,
     };
   });
-  return { surveyId: survey.id, participantCount: relevant.length, byCourse };
+  return {
+    surveyId: survey.id,participantCount:relevant.length,byCourse,
+    byQuestion:summarizeFormAnswers(survey.questions||[],relevant),
+  };
 }
 
 /** No user-supplied CSV values may execute as a formula when opened by spreadsheet software. */
@@ -92,6 +96,25 @@ export function exportDemandSummaryCsv(
     ].map(safeCell).join(','));
   }
   return '\uFEFF'+lines.join('\r\n')+'\r\n';
+}
+
+/** Full custom answers are sensitive: restricted to the separately authorized personal-data export. */
+export function exportDemandAnswersCsv(
+  survey:DemandSurvey,responses:readonly DemandResponse[],
+):string {
+  const questions=survey.questions||[];
+  const header=['نام دانشجو','شماره دانشجویی','زمان پاسخ',...questions.map(q=>q.title)];
+  const rows=[header.map(safeCell).join(',')];
+  for(const response of responses.filter(item=>item.surveyId===survey.id)){
+    rows.push([
+      response.snapshot.studentName,response.studentNumber,response.updatedAt,
+      ...questions.map(q=>{
+        const answer=response.answers?.[q.id];
+        return Array.isArray(answer)?answer.join(' | '):answer||'';
+      }),
+    ].map(safeCell).join(','));
+  }
+  return '\uFEFF'+rows.join('\r\n')+'\r\n';
 }
 
 /** Only graph-derived planning insights; never a statement of eligibility. */
