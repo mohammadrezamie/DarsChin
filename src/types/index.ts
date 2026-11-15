@@ -288,6 +288,8 @@ export interface DemandFormQuestion {
   required: boolean;
   /** Only for single_choice / multiple_choice. No arbitrary uploaded files. */
   options?: string[];
+  /** Conditional visibility based on a PREVIOUS single-choice or rating answer. */
+  visibleWhen?: {questionId:string;equals:string};
 }
 export type DemandFormAnswers = Record<string,string|string[]>;
 
