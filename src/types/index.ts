@@ -277,6 +277,20 @@ export interface DemandManagerScope {
   majorId: string;
 }
 
+/** Questions are versioned with their survey and fixed once a survey opens. */
+export type DemandQuestionKind =
+  'single_choice' | 'multiple_choice' | 'short_text' | 'long_text' | 'rating';
+export interface DemandFormQuestion {
+  id: string;
+  kind: DemandQuestionKind;
+  title: string;
+  description?: string;
+  required: boolean;
+  /** Only for single_choice / multiple_choice. No arbitrary uploaded files. */
+  options?: string[];
+}
+export type DemandFormAnswers = Record<string,string|string[]>;
+
 export type DemandSurveyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
 export interface DemandSurvey {
   id: string;
@@ -292,6 +306,8 @@ export interface DemandSurvey {
   trackIds: string[];
   courseIds: string[];
   recommendedMinimumByCourse: Record<string, number>;
+  /** Optional for legacy course-only forms; empty array keeps them working. */
+  questions?: DemandFormQuestion[];
   startsAt?: string;
   endsAt?: string;
   status: DemandSurveyStatus;
@@ -307,6 +323,8 @@ export interface DemandResponse {
   studentNumber: string;
   anticipatedGraduation: 'YES' | 'NO' | 'UNKNOWN';
   courseIds: string[];
+  /** Exact validated answers to custom questions in this survey. */
+  answers?: DemandFormAnswers;
   /** Context at time of submission: never inferred to be officially verified. */
   snapshot: {
     studentName: string;
