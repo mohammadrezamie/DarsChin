@@ -239,7 +239,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if (role==='student') {
       void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(result=>{
         if(!active) return;
-        if (!result.success || !isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds)) {
+        if (!result.success || !isDemandResponseForContext(result.data, user?.id, survey.id, survey.courseIds,survey.questions||[])) {
           setError(result.success ? 'پاسخ دریافتی با دانشجو یا این فرم مطابقت ندارد؛ برای حفظ حریم خصوصی امکان ویرایش موقتاً متوقف شد.' : (result.error || 'پاسخ قبلی این نیازسنجی دریافت نشد؛ ذخیره تا بازیابی اطلاعات غیرفعال است.'));
           setSettledDetailKey(requestedKey);
           setDetailState('error');
@@ -310,7 +310,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       });
       if (!stillCurrent()) return;
       if(!r.success){setError(r.error || 'ذخیره نشد.');return;}
-      if (!isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds) || !r.data) {
+      if (!isDemandResponseForContext(r.data, user?.id, survey.id, survey.courseIds,survey.questions||[]) || !r.data) {
         setError('تأیید پاسخ ذخیره‌شده معتبر نبود؛ وضعیت فرم را دوباره بارگذاری کن.');
         return;
       }

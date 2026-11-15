@@ -1,4 +1,5 @@
-import type { DemandResponse } from '../types';
+import type { DemandResponse, DemandFormQuestion } from '../types';
+import { validateDemandAnswers } from '../domain/demand-form';
 
 /**
  * Check identity and response shape at the UI boundary. Successful HTTP is not
@@ -12,6 +13,7 @@ export function isDemandResponseForContext(
   userId: string | null | undefined,
   surveyId: string,
   allowedCourseIds: readonly string[],
+  questions?: readonly DemandFormQuestion[],
 ): response is DemandResponse | null {
   if (!userId || !surveyId) return false;
   if (response === null) return true;
@@ -25,5 +27,7 @@ export function isDemandResponseForContext(
 
   const unique = new Set(candidate.courseIds);
   const allowed = new Set(allowedCourseIds);
-  return unique.size === candidate.courseIds.length && candidate.courseIds.every(id => allowed.has(id));
+  return unique.size === candidate.courseIds.length &&
+    candidate.courseIds.every(id => allowed.has(id)) &&
+    (!questions || validateDemandAnswers(questions,candidate.answers).ok);
 }
