@@ -23,7 +23,7 @@ export function parseDemandQuestions(input:unknown):{
       return {ok:false,questions:[],error:'تعریف سؤال معتبر نیست.'};
     const q=candidate as Record<string,unknown>;
     if(Object.keys(q).some(key=>!['id','kind','title','description','required','options'].includes(key))||
-      typeof q.id!=='string'||!IDS.test(q.id)||seen.has(q.id)||
+      typeof q.id!=='string'||!IDS.test(q.id)||['__proto__','constructor','prototype'].includes(q.id)||seen.has(q.id)||
       typeof q.title!=='string'||!q.title.trim()||q.title.trim().length>160||
       !KINDS.includes(q.kind as DemandQuestionKind)||typeof q.required!=='boolean'||
       (q.description!==undefined&&(typeof q.description!=='string'||q.description.length>400)))

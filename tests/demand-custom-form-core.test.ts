@@ -21,7 +21,7 @@ describe('فرم‌ساز امن نیازسنجی',()=>{
   it('شناسهٔ تکراری، گزینه تکراری و سؤال ناشناخته را رد می‌کند',()=>{
     expect(parseDemandQuestions([...sample,{...sample[0]}]).ok).toBe(false);
     expect(parseDemandQuestions([{...sample[0],options:['صبح','صبح']}]).ok).toBe(false);
-    expect(parseDemandQuestions([{...sample[0],id:'__proto__'}]).ok).toBe(true);
+    expect(parseDemandQuestions([{...sample[0],id:'__proto__'}]).ok).toBe(false);
     expect(validateDemandAnswers(sample,{time:'صبح',rating:'3',hacked:'data'}).ok).toBe(false);
     expect(parseDemandQuestions(Array.from({length:21},(_,i)=>({...sample[2],id:'q'+i}))).ok).toBe(false);
   });
