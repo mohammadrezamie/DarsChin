@@ -17,12 +17,13 @@ export function parseDemandQuestions(input:unknown):{
   if(!Array.isArray(input)||input.length>MAX_QUESTIONS)
     return {ok:false,questions:[],error:'حداکثر ۲۰ سؤال برای هر فرم مجاز است.'};
   const seen=new Set<string>();
+  const previous=new Map<string,DemandFormQuestion>();
   const questions:DemandFormQuestion[]=[];
   for(const candidate of input){
     if(!candidate||typeof candidate!=='object'||Array.isArray(candidate))
       return {ok:false,questions:[],error:'تعریف سؤال معتبر نیست.'};
     const q=candidate as Record<string,unknown>;
-    if(Object.keys(q).some(key=>!['id','kind','title','description','required','options'].includes(key))||
+    if(Object.keys(q).some(key=>!['id','kind','title','description','required','options','visibleWhen'].includes(key))||
       typeof q.id!=='string'||!IDS.test(q.id)||['__proto__','constructor','prototype'].includes(q.id)||seen.has(q.id)||
       typeof q.title!=='string'||!q.title.trim()||q.title.trim().length>160||
       !KINDS.includes(q.kind as DemandQuestionKind)||typeof q.required!=='boolean'||
@@ -46,9 +47,52 @@ export function parseDemandQuestions(input:unknown):{
     } else if(q.options!==undefined&&(!(Array.isArray(q.options))||q.options.length>0)){
       return {ok:false,questions:[],error:'این نوع سؤال گزینهٔ انتخابی ندارد.'};
     }
+    if(q.visibleWhen!==undefined){
+      if(!q.visibleWhen||typeof q.visibleWhen!=='object'||Array.isArray(q.visibleWhen))
+        return {ok:false,questions:[],error:'شرط نمایش سؤال معتبر نیست.'};
+      const rule=q.visibleWhen as Record<string,unknown>;
+      if(Object.keys(rule).some(key=>!['questionId','equals'].includes(key))||
+        typeof rule.questionId!=='string'||typeof rule.equals!=='string') {
+        return {ok:false,questions:[],error:'شرط نمایش باید به یک پاسخ مشخص اشاره کند.'};
+      }
+      // Only a PREVIOUS single-choice or rating controller can be referenced;
+      // this prevents loops, hidden future controllers and ambiguous conditions.
+      const controller=previous.get(rule.questionId);
+      if(!controller||!['single_choice','rating'].includes(controller.kind)||
+        (controller.kind==='single_choice'&&!controller.options?.includes(rule.equals))||
+        (controller.kind==='rating'&&!['1','2','3','4','5'].includes(rule.equals))) {
+        return {ok:false,questions:[],
+          error:'شرط نمایش باید به یک گزینهٔ معتبر از سؤال تک‌انتخابی یا امتیازیِ قبلی اشاره کند.'};
+      }
+      question.visibleWhen={questionId:rule.questionId,equals:rule.equals};
+    }
     questions.push(question);
+    previous.set(question.id,question);
   }
   return {ok:true,questions};
+}
+
+/** Questions may depend on an earlier answer. Earlier hidden controls never trigger descendants. */
+export function visibleDemandQuestions(
+  questions:readonly DemandFormQuestion[],answers:Readonly<DemandFormAnswers>,
+):DemandFormQuestion[] {
+  const shown=new Set<string>();
+  const result:DemandFormQuestion[]=[];
+  for(const question of questions){
+    const condition=question.visibleWhen;
+    if(condition&&(!shown.has(condition.questionId)||
+      answers[condition.questionId]!==condition.equals))continue;
+    shown.add(question.id);result.push(question);
+  }
+  return result;
+}
+
+/** Remove answers that are now hidden when a student changes a controlling choice. */
+export function pruneDemandAnswers(
+  questions:readonly DemandFormQuestion[],answers:DemandFormAnswers,
+):DemandFormAnswers {
+  const visible=new Set(visibleDemandQuestions(questions,answers).map(q=>q.id));
+  return Object.fromEntries(Object.entries(answers).filter(([id])=>visible.has(id)));
 }
 
 /** Validates even when a crafted client bypasses all browser controls. */
@@ -65,6 +109,12 @@ export function validateDemandAnswers(questions:readonly DemandFormQuestion[],va
     return {ok:false,answers:{},error:'پاسخ مربوط به سؤال ناشناخته یا فرم دیگری است.'};
   const answers:DemandFormAnswers={};
   for(const q of questions){
+    const condition=q.visibleWhen;
+    if(condition&&answers[condition.questionId]!==condition.equals){
+      if(Object.prototype.hasOwnProperty.call(raw,q.id))
+        return {ok:false,answers:{},error:'پاسخ سؤال مخفی یا خارج از مسیر فرم قابل ثبت نیست.'};
+      continue;
+    }
     const value=raw[q.id];
     const empty=value===undefined||value===null||value===''||
       (Array.isArray(value)&&value.length===0);
