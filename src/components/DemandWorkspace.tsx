@@ -5,16 +5,26 @@ import { useAuth } from '../context/AuthContext';
 import { createRequestEpoch } from '../utils/request-epoch';
 import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-context';
 import { isDemandResponseForContext } from '../utils/demand-response-context';
+import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
+import { DemandFormBuilder } from './DemandFormBuilder';
+import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
 import {
   changeDemandChartScope,demandChartScopeOptions,demandChartsForScope,
   demandCourseThresholds,demandEligibleCourseIds,emptyDemandChartScope,
   manageableDemandCharts,type DemandChartScope,
 } from '../domain/demand-chart-workflow';
-import type { AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile } from '../types';
+import type {
+  AcademicRule, Course, Curriculum, DemandResponse, DemandSurvey, StudentAcademicProfile,
+  DemandFormQuestion,DemandFormAnswers,
+} from '../types';
 
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
-type SurveyStats = { participantCount: number; byCourse: { courseId: string; count: number; threshold: number; meetsSuggestedThreshold: boolean; selfReportedFinalSemester: number }[] };
+type SurveyStats = {
+  participantCount:number;
+  byCourse:{courseId:string;count:number;threshold:number;meetsSuggestedThreshold:boolean;selfReportedFinalSemester:number}[];
+  byQuestion?:{id:string;title:string;kind:string;answeredCount:number;options:{label:string;count:number}[];textAnswersPrivate:boolean}[];
+};
 type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
 // A new account, role, permission set or department scope must remount this
@@ -38,6 +48,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [studentNumber, setStudentNumber] = useState('');
   const [graduation, setGraduation] = useState<'YES'|'NO'|'UNKNOWN'>('UNKNOWN');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [answers,setAnswers]=useState<DemandFormAnswers>({});
   const [courses, setCourses] = useState<Course[]>([]);
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
@@ -61,6 +72,15 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const [success, setSuccess] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newQuestions,setNewQuestions]=useState<DemandFormQuestion[]>([]);
+  const [newStartsAt,setNewStartsAt]=useState('');
+  const [newEndsAt,setNewEndsAt]=useState('');
+  const [editingSurveyId,setEditingSurveyId]=useState('');
+  const [editTitle,setEditTitle]=useState('');
+  const [editDescription,setEditDescription]=useState('');
+  const [editQuestions,setEditQuestions]=useState<DemandFormQuestion[]>([]);
+  const [editStartsAt,setEditStartsAt]=useState('');
+  const [editEndsAt,setEditEndsAt]=useState('');
   const [newTerm, setNewTerm] = useState('');
   const [newCurriculum, setNewCurriculum] = useState('');
   const [newScope,setNewScope]=useState<DemandChartScope>(emptyDemandChartScope);
@@ -104,6 +124,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   const detailReady = isCurrentDemandDetail(currentDetailKey, settledDetailKey, detailState);
   const currentDetailError = Boolean(currentDetailKey && settledDetailKey === currentDetailKey && detailState === 'error');
   const visibleSelectedCourses = detailReady ? selectedCourses : [];
+  const visibleAnswers = detailReady ? answers : {};
   const visibleResponse = detailReady ? myResponse : null;
   const visibleReport = detailReady ? report : null;
 
@@ -170,6 +191,11 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setDetailState('idle');
     setSettledDetailKey(null);
     setSelectedCourses([]);
+    setAnswers({});
+    setEditingSurveyId('');
+    setNewQuestions([]);
+    setNewStartsAt('');
+    setNewEndsAt('');
     setStudentNumber('');
     setGraduation('UNKNOWN');
     setAssigned([]);
@@ -198,6 +224,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       setMyResponse(null); setReport(null); setDetailState('idle');
       setSettledDetailKey(null);
       setSelectedCourses([]);
+      setAnswers({});
       return;
     }
     const requestedKey = demandDetailKey(role, survey.id, detailRevision);
@@ -207,6 +234,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setMyResponse(null);
     setReport(null);
     setSelectedCourses([]);
+    setAnswers({});
     setSuccess('');
     if (role==='student') {
       void apiRequest<DemandResponse | null>(`/api/demand/surveys/${survey.id}/response`).then(result=>{
@@ -219,6 +247,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
         }
         setMyResponse(result.data || null);
         setSelectedCourses(result.data?.courseIds || []);
+        setAnswers(result.data?.answers || {});
         setStudentNumber(previous => result.data?.studentNumber || previous);
         setGraduation(result.data?.anticipatedGraduation || 'UNKNOWN');
         setSettledDetailKey(requestedKey);
@@ -270,11 +299,14 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     const submissionEpoch = saveRequestRef.current.begin();
     const stillCurrent = () => activeDetailKeyRef.current === submittedKey &&
       saveRequestRef.current.isCurrent(submissionEpoch);
+    const validated=validateDemandAnswers(survey.questions||[],answers);
+    if(!validated.ok){setError(validated.error||'سؤال‌ها را بررسی کن.');return;}
     setError('');setSuccess('');setBusy(true);
     try {
       const r=await apiRequest<DemandResponse>(`/api/demand/surveys/${survey.id}/response`,{
         method:'PUT',
-        body:JSON.stringify({ courseIds:selectedCourses,studentNumber,anticipatedGraduation:graduation }),
+        body:JSON.stringify({courseIds:selectedCourses,studentNumber,
+          anticipatedGraduation:graduation,answers:validated.answers}),
       });
       if (!stillCurrent()) return;
       if(!r.success){setError(r.error || 'ذخیره نشد.');return;}
@@ -295,6 +327,14 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     if(!newCourseIds.length||newCourseIds.some(id=>!availableDemandCourseIds.includes(id))) {
       setError('دروس نیازسنجی باید متعلق به همین چارت و گرایش باشند.');return;
     }
+    const parsedQuestions=parseDemandQuestions(newQuestions);
+    if(!parsedQuestions.ok){setError(parsedQuestions.error||'سؤال‌های فرم نامعتبرند.');return;}
+    const start=newStartsAt?new Date(newStartsAt):null;
+    const end=newEndsAt?new Date(newEndsAt):null;
+    if((start&&!Number.isFinite(start.getTime()))||(end&&!Number.isFinite(end.getTime()))||
+      (start&&end&&end<=start)){
+      setError('زمان شروع و پایان پاسخ‌دهی معتبر نیست؛ پایان باید پس از شروع باشد.');return;
+    }
     let minimums:Record<string,number>;
     try {minimums=demandCourseThresholds(newCourseIds,thresholdByCourse,threshold);}
     catch (e) {setError(e instanceof Error?e.message:'حدنصاب‌ها معتبر نیستند.');return;}
@@ -309,14 +349,78 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
           curriculumId:chartId,entryYearIds:[curriculum.entryYearId],
           trackIds:newTrack?[newTrack]:[],courseIds:newCourseIds,
           recommendedMinimumByCourse:minimums,
+          questions:parsedQuestions.questions,
+          ...(start?{startsAt:start.toISOString()}:{}),
+          ...(end?{endsAt:end.toISOString()}:{}),
         }),
       });
       if(!r.success||!r.data){setError(r.error||'ایجاد نیازسنجی ناموفق بود.');return;}
       setSuccess('پیش‌نویس مستقل این رشته و ورودی ساخته شد؛ برای پاسخ دانشجویان آن را باز کن.');
       await refresh();setSelectedId(r.data.id);
-      setNewCourseIds([]);setThresholdByCourse({});
+      setNewCourseIds([]);setThresholdByCourse({});setNewQuestions([]);
+      setNewStartsAt('');setNewEndsAt('');
     } catch {setError('ساخت نیازسنجی به‌علت مشکل ارتباط ذخیره نشد.');}
     finally {setBusy(false);}
+  };
+
+  const asLocalInput=(value:string|undefined)=>{
+    if(!value)return '';
+    const date=new Date(value);
+    if(!Number.isFinite(date.getTime()))return '';
+    return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  };
+  const beginDraftEdit=(target:DemandSurvey)=>{
+    if(target.status!=='DRAFT')return;
+    setEditingSurveyId(target.id);
+    setEditTitle(target.title);
+    setEditDescription(target.description);
+    setEditQuestions(structuredClone(target.questions||[]));
+    setEditStartsAt(asLocalInput(target.startsAt));
+    setEditEndsAt(asLocalInput(target.endsAt));
+    setError('');setSuccess('');
+  };
+  const saveDraft=async()=>{
+    if(!survey||survey.status!=='DRAFT'||editingSurveyId!==survey.id||busy)return;
+    const checked=parseDemandQuestions(editQuestions);
+    if(!checked.ok){setError(checked.error||'سؤال‌ها معتبر نیستند.');return;}
+    const start=editStartsAt?new Date(editStartsAt):null,end=editEndsAt?new Date(editEndsAt):null;
+    if((start&&!Number.isFinite(start.getTime()))||(end&&!Number.isFinite(end.getTime()))||
+      (start&&end&&end<=start)){
+      setError('زمان‌بندی فرم معتبر نیست.');return;
+    }
+    setBusy(true);setError('');
+    try{
+      const result=await apiRequest<DemandSurvey>(
+        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/draft',{
+          method:'PUT',body:JSON.stringify({
+            title:editTitle.trim(),description:editDescription.trim(),
+            questions:checked.questions,
+            startsAt:start?start.toISOString():null,endsAt:end?end.toISOString():null,
+          }),
+        });
+      if(!result.success||!result.data){setError(result.error||'ویرایش پیش‌نویس ذخیره نشد.');return;}
+      setSurveys(previous=>previous.map(item=>item.id===result.data!.id?result.data!:item));
+      setEditingSurveyId('');
+      setSuccess('تغییرات فرم ذخیره شد. پیش از انتشار، سؤال‌ها را بررسی کن.');
+    }catch{setError('ذخیرهٔ تغییرات به‌دلیل قطع ارتباط انجام نشد.');}
+    finally{setBusy(false);}
+  };
+  const copySurveyTemplate=(target:DemandSurvey)=>{
+    const chart=managerCharts.find(c=>c.id===target.curriculumId);
+    if(!chart){setError('چارت این فرم در حوزهٔ مجاز شما نیست.');return;}
+    setNewScope({universityId:chart.universityId,campusId:chart.campusId,
+      degreeLevelId:chart.degreeLevelId,majorId:chart.majorId,entryYearId:chart.entryYearId});
+    setNewCurriculum(chart.id);
+    setNewTrack(target.trackIds[0]||'');
+    setNewTerm(target.targetTermId);
+    setNewTitle(target.title+' (نسخه جدید)');
+    setNewDescription(target.description);
+    setNewQuestions(structuredClone(target.questions||[]));
+    setNewCourseIds([...target.courseIds]);
+    setThresholdByCourse({...target.recommendedMinimumByCourse});
+    setNewStartsAt('');
+    setNewEndsAt('');
+    setSuccess('الگوی فرم به سازنده منتقل شد؛ چارت و دروس را پیش از ثبت دوباره بررسی کن. هیچ پاسخی کپی نشده است.');
   };
 
   const updateStatus=async(next:'OPEN'|'CLOSED'|'ARCHIVED')=>{
