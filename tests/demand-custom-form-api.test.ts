@@ -66,7 +66,7 @@ const payload=()=>({
   entryYearIds:[chart.entryYearId],trackIds:[],courseIds:[courseId],
   recommendedMinimumByCourse:{[courseId]:3},questions,
 });
-const create=(body=payload())=>request(app).post('/api/demand/surveys')
+const create=(body:Record<string,unknown>=payload())=>request(app).post('/api/demand/surveys')
   .set('Authorization',manager).send(body);
 const draft=(id:string,body:object)=>request(app).put('/api/demand/surveys/'+id+'/draft')
   .set('Authorization',manager).send(body);
@@ -168,7 +168,7 @@ describe('نیازسنجی واقعی با فرم‌ساز سفارشی و حر�
   });
   it('فرم قدیمی بدون سؤال سفارشی همچنان پاسخ می‌پذیرد',async()=>{
     const form={...payload()};delete (form as {questions?:unknown}).questions;
-    const created=await create(form as ReturnType<typeof payload>);
+    const created=await create(form);
     expect(created.status).toBe(201);const id=created.body.data.id;
     await request(app).put('/api/demand/surveys/'+id+'/status')
       .set('Authorization',manager).send({status:'OPEN'});
