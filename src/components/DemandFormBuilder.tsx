@@ -97,6 +97,9 @@ export const DemandFormBuilder:React.FC<{
             {question.required&&<span className="mr-1 text-rose-600"> * </span>}
           </p>
           {question.description&&<p className="text-xs text-slate-500">{question.description}</p>}
+          {question.visibleWhen&&<p className="rounded-lg bg-violet-50 px-2 py-1 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+            نمایش شرطی: وقتی پاسخ سؤال مرتبط «{question.visibleWhen.equals}» باشد
+          </p>}
           {isChoice(question)?<div className="space-y-1 text-xs">{question.options?.map(option=>
             <p key={option}>{question.kind==='single_choice'?'◯':'□'} {option}</p>)}</div>:
             <p className="text-xs text-slate-500">
@@ -130,6 +133,40 @@ export const DemandFormBuilder:React.FC<{
               onChange={e=>update(index,{description:e.target.value})}
               className="darschin-field mt-1"/>
           </label>
+          <div className="space-y-2 rounded-xl border border-dashed border-violet-200 p-3 dark:border-violet-800 sm:col-span-2">
+            <label className="block text-xs font-bold">قانون نمایش هوشمند سؤال
+              <select aria-label={'شرط نمایش سؤال '+(index+1)}
+                value={question.visibleWhen?.questionId||''} disabled={disabled}
+                onChange={e=>{
+                  const parent=value.slice(0,index).find(q=>q.id===e.target.value);
+                  update(index,{visibleWhen:parent?{
+                    questionId:parent.id,
+                    equals:parent.kind==='rating'?'1':parent.options?.[0]||'',
+                  }:undefined});
+                }} className="darschin-field mt-1 min-h-11">
+                <option value="">همیشه نمایش داده شود</option>
+                {value.slice(0,index).filter(q=>q.kind==='single_choice'||q.kind==='rating').map(parent=>
+                  <option key={parent.id} value={parent.id}>
+                    فقط پس از پاسخ به «{parent.title||'سؤال بدون عنوان'}»
+                  </option>)}
+              </select>
+            </label>
+            {question.visibleWhen&&<label className="block text-xs font-bold">وقتی پاسخ سؤال قبلی برابر باشد با
+              <select value={question.visibleWhen.equals} disabled={disabled}
+                onChange={e=>update(index,{visibleWhen:{...question.visibleWhen!,equals:e.target.value}})}
+                className="darschin-field mt-1 min-h-11">
+                {(()=>{
+                  const parent=value.find(q=>q.id===question.visibleWhen?.questionId);
+                  const choices=parent?.kind==='rating'?['1','2','3','4','5']:parent?.options||[];
+                  return choices.map(choice=><option key={choice} value={choice}>{choice}</option>);
+                })()}
+              </select>
+            </label>}
+            <p className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+              شرط فقط به سؤال تک‌انتخابی یا امتیازیِ بالاتر در همین فرم متصل می‌شود.
+              پاسخ سؤال‌های پنهان ذخیره نمی‌شوند.
+            </p>
+          </div>
           {isChoice(question)&&<fieldset className="space-y-2 sm:col-span-2">
             <legend className="text-xs font-black">گزینه‌های پاسخ</legend>
             {question.options?.map((option,i)=><div key={i} className="flex items-center gap-2">
