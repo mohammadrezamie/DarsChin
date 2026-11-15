@@ -494,6 +494,32 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     finally {if(isCurrent())setBusy(false);}
   };
 
+  const exportPrivateAnswers=async()=>{
+    if(!survey||!detailReady||busy)return;
+    const requestedKey=currentDetailKey;
+    const ticket=exportRequestRef.current.begin();
+    const stillCurrent=()=>activeDetailKeyRef.current===requestedKey&&
+      exportRequestRef.current.isCurrent(ticket);
+    setBusy(true);setError('');setSuccess('');
+    try {
+      const r=await apiRequest<{csv:string}>('/api/demand/surveys/'+
+        encodeURIComponent(survey.id)+'/answers.csv?format=json');
+      if(!stillCurrent())return;
+      if(!r.success||typeof r.data?.csv!=='string'){
+        setError(r.error||'برای دریافت متن پاسخ‌ها مجوز ویژه لازم است.');return;
+      }
+      const blob=new Blob([r.data.csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try {
+        const a=document.createElement('a');a.href=url;
+        a.download='darschin-private-answers-'+survey.id+'.csv';
+        document.body.appendChild(a);a.click();a.remove();
+        setSuccess('خروجی خصوصی پاسخ‌ها دریافت شد؛ از اطلاعات دانشجویان محافظت کن.');
+      } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
+    } catch {if(stillCurrent())setError('دریافت خروجی خصوصی ناموفق بود.');}
+    finally {if(stillCurrent())setBusy(false);}
+  };
+
   const toggle=(id:string)=>(ids:string[])=> ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
   const yearLabel=(entryId:string)=>entryYears.find(y=>y.id===entryId)?.year ?? entryId;
   const isDemoStudent = role==='student' && typeof window!=='undefined' &&
@@ -809,6 +835,12 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                 <button type="button" disabled={busy||!detailReady} onClick={()=>void exportFile()}
                   className="flex min-h-11 items-center gap-2 rounded-xl border border-amber-400 px-3 text-xs font-bold text-amber-900 dark:text-amber-200">
                   <Download className="h-4 w-4"/> CSV با مشخصات دانشجویان (مجوز ویژه)
+                </button>}
+              {(user?.permissions?.includes('demand.export')||user?.roles?.includes('super-admin'))&&
+                !!survey.questions?.length&&<button type="button" disabled={busy||!detailReady}
+                  onClick={()=>void exportPrivateAnswers()}
+                  className="flex min-h-11 items-center gap-2 rounded-xl border border-rose-300 px-3 text-xs font-bold text-rose-800 dark:text-rose-200">
+                  <Download className="h-4 w-4"/> خروجی خصوصی پاسخ سؤال‌ها
                 </button>}
             </div>
           </div>
