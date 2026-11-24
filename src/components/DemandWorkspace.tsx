@@ -23,7 +23,7 @@ type Option = { id: string; name: string; active?: boolean; universityId?: strin
 type SurveyStats = {
   participantCount:number;
   byCourse:{courseId:string;count:number;threshold:number;meetsSuggestedThreshold:boolean;selfReportedFinalSemester:number}[];
-  byQuestion?:{id:string;title:string;kind:string;answeredCount:number;options:{label:string;count:number}[];textAnswersPrivate:boolean}[];
+  byQuestion?:{id:string;title:string;kind:string;visibleCount?:number;answeredCount:number;options:{label:string;count:number}[];textAnswersPrivate:boolean}[];
 };
 type CourseAssigned = { courseId: string; active?: boolean; trackId?: string | null; course?: Course };
 
@@ -1072,6 +1072,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
                 <strong className="text-xs text-slate-950 dark:text-white">{item.title}</strong>
                 <p className="mt-1 text-[11px] text-slate-500">
                   {item.answeredCount.toLocaleString('fa-IR')} پاسخ
+                  {typeof item.visibleCount==='number'&&` از ${item.visibleCount.toLocaleString('fa-IR')} نفر مشمول سؤال`}
                   {item.textAnswersPrivate?' · متن پاسخ‌ها خصوصی است':''}
                 </p>
                 {!!item.options.length&&<div className="mt-2 space-y-1">

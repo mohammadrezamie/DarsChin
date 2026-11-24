@@ -151,24 +151,40 @@ export function validateDemandAnswers(questions:readonly DemandFormQuestion[],va
 export function summarizeFormAnswers(
   questions:readonly DemandFormQuestion[],responses:readonly Pick<DemandResponse,'answers'>[],
 ){
-  return questions.map(question=>{
-    const count:Record<string,number>={};
-    const options=question.kind==='rating'?['1','2','3','4','5']:question.options||[];
-    if(question.kind==='single_choice'||question.kind==='multiple_choice'||question.kind==='rating')
-      for(const option of options)count[option]=0;
-    let answeredCount=0;
-    for(const response of responses){
-      const answer=response.answers?.[question.id];
-      if(!answer||(Array.isArray(answer)&&!answer.length))continue;
-      answeredCount++;
-      if(question.kind==='short_text'||question.kind==='long_text')continue;
-      for(const option of Array.isArray(answer)?answer:[answer])
-        if(Object.prototype.hasOwnProperty.call(count,option))count[option]++;
+  const summaries=questions.map(question=>({
+    question,
+    visibleCount:0,
+    answeredCount:0,
+    counts:new Map<string,number>(
+      (question.kind==='rating'?['1','2','3','4','5']:
+        CHOICES.has(question.kind)?question.options||[]:[]).map(option=>[option,0]),
+    ),
+  }));
+  const byId=new Map(summaries.map(summary=>[summary.question.id,summary]));
+  for(const response of responses){
+    const answers=response.answers||{};
+    for(const question of visibleDemandQuestions(questions,answers)){
+      const summary=byId.get(question.id)!;
+      summary.visibleCount++;
+      if(!Object.prototype.hasOwnProperty.call(answers,question.id))continue;
+      const answer=answers[question.id];
+      if(question.kind==='short_text'||question.kind==='long_text'){
+        if(typeof answer==='string'&&answer.trim()&&
+          answer.length<=(question.kind==='short_text'?500:2000))summary.answeredCount++;
+        continue;
+      }
+      const selected=question.kind==='multiple_choice'
+        ?(Array.isArray(answer)?answer:[])
+        :(typeof answer==='string'?[answer]:[]);
+      if(!selected.length||new Set(selected).size!==selected.length||
+        selected.some(option=>!summary.counts.has(option)))continue;
+      summary.answeredCount++;
+      for(const option of selected)summary.counts.set(option,summary.counts.get(option)!+1);
     }
-    return {
-      id:question.id,title:question.title,kind:question.kind,
-      answeredCount,options:Object.entries(count).map(([label,count])=>({label,count})),
-      textAnswersPrivate:question.kind==='short_text'||question.kind==='long_text',
-    };
-  });
+  }
+  return summaries.map(({question,visibleCount,answeredCount,counts})=>({
+    id:question.id,title:question.title,kind:question.kind,
+    visibleCount,answeredCount,options:Array.from(counts,([label,count])=>({label,count})),
+    textAnswersPrivate:question.kind==='short_text'||question.kind==='long_text',
+  }));
 }
