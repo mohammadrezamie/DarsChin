@@ -537,7 +537,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     }
   };
 
-  const exportSummary=async()=>{
+  const exportSummary=async(section:'summary'|'questions'='summary')=>{
     if(!survey||!detailReady||busy)return;
     const expectedKey=currentDetailKey;
     const epoch=exportRequestRef.current.begin();
@@ -546,7 +546,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
     setBusy(true);setError('');setSuccess('');
     try {
       const result=await apiRequest<{csv:string}>(
-        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/summary.csv?format=json');
+        '/api/demand/surveys/'+encodeURIComponent(survey.id)+'/'+section+'.csv?format=json');
       if(!isCurrent())return;
       if(!result.success||typeof result.data?.csv!=='string'){
         setError(result.error||'گزارش تجمیعی دریافت نشد.');return;
@@ -555,7 +555,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       const url=URL.createObjectURL(blob);
       try {
         const link=document.createElement('a');
-        link.href=url;link.download='darschin-demand-summary-'+survey.id+'.csv';
+        link.href=url;link.download='darschin-demand-'+section+'-'+survey.id+'.csv';
         document.body.appendChild(link);link.click();link.remove();
         setSuccess('خروجی تجمیعی بدون اطلاعات شناسایی دانشجویان دریافت شد.');
       } finally {window.setTimeout(()=>URL.revokeObjectURL(url),2000);}
@@ -1065,7 +1065,13 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             ))}
           </div>
           {!!visibleReport?.byQuestion?.length&&<section aria-label="آمار سؤال‌های فرم" className="space-y-2">
-            <h4 className="text-sm font-black">نتایج سؤال‌های اختصاصی (فقط آمار کلی)</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-black">نتایج سؤال‌های اختصاصی (فقط آمار کلی)</h4>
+              <button type="button" disabled={busy||!detailReady} onClick={()=>void exportSummary('questions')}
+                className="min-h-11 rounded-xl border border-slate-300 px-3 text-xs font-bold disabled:opacity-40 dark:border-slate-600">
+                دریافت CSV آمار سؤال‌ها
+              </button>
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {visibleReport.byQuestion.map(item=><article key={item.id}
                 className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">

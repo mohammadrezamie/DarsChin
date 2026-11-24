@@ -98,6 +98,34 @@ export function exportDemandSummaryCsv(
   return '\uFEFF'+lines.join('\r\n')+'\r\n';
 }
 
+/** خروجی آماری سؤال‌ها؛ متن آزاد و شناسهٔ پاسخ‌دهنده هرگز صادر نمی‌شود. */
+export function exportDemandQuestionSummaryCsv(
+  survey:DemandSurvey,responses:DemandResponse[],
+):string {
+  const questions=summarizeDemand(survey,responses).byQuestion;
+  const rows=[['عنوان سؤال','نوع سؤال','تعداد مشمولان','تعداد پاسخ معتبر',
+    'درصد تکمیل از مشمولان','گزینه','تعداد انتخاب گزینه','درصد از پاسخ‌دهندگان'].map(safeCell).join(',')];
+  const kinds={
+    single_choice:'تک‌انتخابی',multiple_choice:'چندانتخابی',rating:'امتیازی',
+    short_text:'متن کوتاه',long_text:'متن بلند',
+  } as const;
+  const percent=(count:number,total:number)=>total>0?
+    (Math.round(count/total*1000)/10).toFixed(1)+'%':'—';
+  for(const question of questions){
+    const common=[question.title,kinds[question.kind],question.visibleCount,question.answeredCount,
+      percent(question.answeredCount,question.visibleCount)];
+    if(question.textAnswersPrivate){
+      rows.push([...common,'متن خصوصی است','',''].map(safeCell).join(','));
+      continue;
+    }
+    for(const option of question.options){
+      rows.push([...common,option.label,option.count,
+        percent(option.count,question.answeredCount)].map(safeCell).join(','));
+    }
+  }
+  return '\uFEFF'+rows.join('\r\n')+'\r\n';
+}
+
 /** Full custom answers are sensitive: restricted to the separately authorized personal-data export. */
 export function exportDemandAnswersCsv(
   survey:DemandSurvey,responses:readonly DemandResponse[],

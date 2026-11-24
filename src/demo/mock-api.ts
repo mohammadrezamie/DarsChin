@@ -3,7 +3,7 @@ import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
-import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv, exportDemandSummaryCsv, exportDemandAnswersCsv } from '../domain/course-demand';
+import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv, exportDemandSummaryCsv, exportDemandQuestionSummaryCsv, exportDemandAnswersCsv } from '../domain/course-demand';
 import { parseDemandQuestions, validateDemandAnswers } from '../domain/demand-form';
 import type { DemandSurvey, DemandResponse } from '../types';
 import type { AcademicRule } from '../types';
@@ -474,7 +474,7 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
     };
     s.demandSurveys.push(record);saveStore(s);return good(record) as ApiResponse<T>;
   }
-  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|draft|summary\.csv|answers\.csv|export\.csv))?$/);
+  const demandRoute = path.match(/^\/api\/demand\/surveys\/([^/]+)(?:\/(response|report|status|draft|summary\.csv|questions\.csv|answers\.csv|export\.csv))?$/);
   if (demandRoute) {
     const survey = s.demandSurveys.find(row=>row.id===demandRoute[1]);
     if(!survey)return fail('نیازسنجی نمونه یافت نشد.');
@@ -556,6 +556,9 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       csv:exportDemandSummaryCsv(survey,s.demandResponses,
         new Map(currentCourses(s).map(c=>[c.id,c.name])),
         new Map(currentCourses(s).map(c=>[c.id,c.code]))),
+    }) as ApiResponse<T>;
+    if(operation==='questions.csv'&&method==='GET')return good({
+      csv:exportDemandQuestionSummaryCsv(survey,s.demandResponses),
     }) as ApiResponse<T>;
     if(operation==='answers.csv'&&method==='GET')return good({
       csv:exportDemandAnswersCsv(survey,s.demandResponses),
