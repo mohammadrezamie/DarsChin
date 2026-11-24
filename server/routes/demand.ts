@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, type AuthenticatedRequest } from '../middleware/auth';
-import { exportDemandCsv, exportDemandSummaryCsv, exportDemandAnswersCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
+import { exportDemandCsv, exportDemandSummaryCsv, exportDemandQuestionSummaryCsv, exportDemandAnswersCsv, managerCanAccessDemand, summarizeDemand, surveyAppliesToProfile } from '../../src/domain/course-demand';
 import { parseDemandQuestions, validateDemandAnswers } from '../../src/domain/demand-form';
 import type { DemandResponse, DemandSurvey } from '../../src/types';
 
@@ -285,6 +285,19 @@ demandRouter.get('/surveys/:id/summary.csv', (req: AuthenticatedRequest, res) =>
   if(req.query.format==='json')return res.json({success:true,data:{csv}});
   res.setHeader('Content-Type','text/csv; charset=utf-8');
   res.setHeader('Content-Disposition','attachment; filename="darschin-demand-summary-'+survey.id+'.csv"');
+  return res.send(csv);
+});
+
+// Scoped aggregate question statistics; raw answers remain in the private export.
+demandRouter.get('/surveys/:id/questions.csv', (req: AuthenticatedRequest, res) => {
+  const survey=getSurvey(req.params.id);
+  if(!survey)return failure(res,404,'نیازسنجی یافت نشد.');
+  if(!mayManageDemand(req,survey))return failure(res,403,'دسترسی به گزارش رشتهٔ دیگر مجاز نیست.');
+  const csv=exportDemandQuestionSummaryCsv(survey,db.demandResponses);
+  res.setHeader('Cache-Control','no-store');
+  if(req.query.format==='json')return res.json({success:true,data:{csv}});
+  res.setHeader('Content-Type','text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="darschin-demand-questions-'+survey.id+'.csv"');
   return res.send(csv);
 });
 
