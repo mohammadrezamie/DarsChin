@@ -7,6 +7,7 @@ import { demandDetailKey, isCurrentDemandDetail } from '../utils/demand-detail-c
 import { isDemandResponseForContext } from '../utils/demand-response-context';
 import { parseDemandQuestions, validateDemandAnswers, visibleDemandQuestions } from '../domain/demand-form';
 import { DemandFormBuilder } from './DemandFormBuilder';
+import { DemandCourseReport } from './DemandCourseReport';
 import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
 import {
@@ -1053,17 +1054,10 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             · انتشار فرم به معنای نادیده‌گرفتن بازهٔ زمانی نیست.
           </p>:null}
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleReport?.byCourse.map(item=>(
-              <div key={item.courseId} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <h4 className="text-sm font-black">{courseMap.get(item.courseId)?.name || item.courseId}</h4>
-                <div className="mt-3 flex items-end justify-between gap-2"><strong className="text-2xl font-black text-teal-800 dark:text-teal-300">{item.count}</strong><span className="text-xs text-slate-500">حدنصاب پیشنهادی: {item.threshold||'تعریف نشده'}</span></div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full bg-teal-700" style={{width:`${item.threshold>0?Math.min(100,item.count/item.threshold*100):0}%`}}/></div>
-                <p className="mt-2 text-xs">{item.meetsSuggestedThreshold?'تقاضا به حدنصاب پیشنهادی رسیده؛ نیازمند تأیید تشکیل کلاس':'در حال جمع‌آوری تقاضا'}</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">خوداظهاری ترم آخر: {item.selfReportedFinalSemester}</p>
-              </div>
-            ))}
-          </div>
+          {visibleReport&&<DemandCourseReport key={currentDetailKey} rows={visibleReport?.byCourse.map(item=>({
+            ...item,name:courseMap.get(item.courseId)?.name||item.courseId,
+            code:courseMap.get(item.courseId)?.code||'',
+          }))}/>}
           {!!visibleReport?.byQuestion?.length&&<section aria-label="آمار سؤال‌های فرم" className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-black">نتایج سؤال‌های اختصاصی (فقط آمار کلی)</h4>
