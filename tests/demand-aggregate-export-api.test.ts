@@ -101,7 +101,7 @@ describe('خروجی آماری سؤال‌های نیازسنجی',()=>{
     expect((await request(app).get(endpoint)).status).toBe(401);
   });
   it('درصد بدون پاسخ را به صورت ناموجود و نه صفر قطعی نشان می‌دهد',async()=>{
-    db.demandResponses=db.demandResponses.filter(item=>item.surveyId!==surveyId);
+    db.data.demandResponses=db.demandResponses.filter(item=>item.surveyId!==surveyId);
     const r=await request(app).get('/api/demand/surveys/'+surveyId+'/questions.csv?format=json')
       .set('Authorization',auth);
     expect(r.status).toBe(200);
