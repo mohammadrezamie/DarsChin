@@ -65,3 +65,46 @@ describe('صادرات جمع‌آوری تقاضا فقط با دسترسی م�
       .set('Authorization',auth)).status).toBe(403);
   });
 });
+
+describe('خروجی آماری سؤال‌های نیازسنجی',()=>{
+  beforeEach(()=>{
+    const survey=db.demandSurveys.find(item=>item.id===surveyId)!;
+    survey.questions=[
+      {id:'day',kind:'multiple_choice',title:'روزهای پیشنهادی',required:false,options:['شنبه','دوشنبه']},
+      {id:'note',kind:'short_text',title:'توضیحات',required:false},
+      {id:'choice',kind:'single_choice',title:'سؤال عددی',required:false,options:['10','2']},
+    ];
+    const answer=db.demandResponses.find(item=>item.surveyId===surveyId)!;
+    answer.answers={day:['شنبه','دوشنبه'],note:'متن خصوصی آزمایشی',choice:'2'};
+  });
+  it('آمار گزینه‌ها و درصد تکمیل را بدون پاسخ متنی یا هویت صادر می‌کند',async()=>{
+    const r=await request(app).get('/api/demand/surveys/'+surveyId+'/questions.csv?format=json')
+      .set('Authorization',auth);
+    expect(r.status).toBe(200);
+    expect(r.headers['cache-control']).toBe('no-store');
+    const csv=r.body.data.csv as string;
+    expect(csv).toContain('"روزهای پیشنهادی","چندانتخابی","1","1","100.0%","شنبه","1","100.0%"');
+    expect(csv).toContain('"توضیحات","متن کوتاه","1","1","100.0%","متن خصوصی است","",""');
+    expect(csv).not.toContain('متن خصوصی آزمایشی');
+    expect(csv).not.toContain('4010027416');
+    expect(csv).not.toContain('نام محرمانه');
+    expect(csv).not.toContain('summary-student');
+    expect(csv.indexOf('"10"')).toBeLessThan(csv.indexOf('"2"'));
+  });
+  it('دانلود مستقیم و منع دسترسی حوزهٔ دیگر را بررسی می‌کند',async()=>{
+    const endpoint='/api/demand/surveys/'+surveyId+'/questions.csv';
+    const r=await request(app).get(endpoint).set('Authorization',auth);
+    expect(r.status).toBe(200);
+    expect(r.headers['content-type']).toContain('text/csv');
+    expect(r.headers['content-disposition']).toContain('attachment');
+    expect((await request(app).get(endpoint).set('Authorization',foreignAuth)).status).toBe(403);
+    expect((await request(app).get(endpoint)).status).toBe(401);
+  });
+  it('درصد بدون پاسخ را به صورت ناموجود و نه صفر قطعی نشان می‌دهد',async()=>{
+    db.demandResponses=db.demandResponses.filter(item=>item.surveyId!==surveyId);
+    const r=await request(app).get('/api/demand/surveys/'+surveyId+'/questions.csv?format=json')
+      .set('Authorization',auth);
+    expect(r.status).toBe(200);
+    expect(r.body.data.csv).toContain('"روزهای پیشنهادی","چندانتخابی","0","0","—","شنبه","0","—"');
+  });
+});
