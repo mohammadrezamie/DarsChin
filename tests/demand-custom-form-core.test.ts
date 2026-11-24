@@ -96,3 +96,51 @@ describe('فرم‌ساز امن نیازسنجی',()=>{
     expect(JSON.stringify(results)).not.toContain('اطلاعات شخصی');
   });
 });
+
+describe('درستی گزارش سؤال‌های شرطی',()=>{
+  it('تعداد مشمولان را مستقل از پاسخ معتبر و پاسخ پنهان محاسبه می‌کند',()=>{
+    const questions:DemandFormQuestion[]=[
+      {id:'parent',title:'نیاز دارید؟',kind:'single_choice',required:true,options:['بله','خیر']},
+      {id:'child',title:'روز مناسب',kind:'multiple_choice',required:false,options:['شنبه','دوشنبه'],
+        visibleWhen:{questionId:'parent',equals:'بله'}},
+    ];
+    const results=summarizeFormAnswers(questions,[
+      {answers:{parent:'بله',child:['شنبه']}},
+      {answers:{parent:'خیر',child:['دوشنبه']}},
+      {answers:{parent:'بله'}},
+      {answers:{parent:'بله',child:['شنبه','شنبه']}},
+      {answers:{parent:'بله',child:['ناشناخته']}},
+      {answers:{parent:'بله',child:'شنبه'}},
+    ]);
+    expect(results[0]).toMatchObject({visibleCount:6,answeredCount:6});
+    expect(results[1]).toMatchObject({visibleCount:5,answeredCount:1,
+      options:[{label:'شنبه',count:1},{label:'دوشنبه',count:0}]});
+  });
+  it('ترتیب تعریف گزینه‌های عددی و متنی را حفظ می‌کند',()=>{
+    const questions:DemandFormQuestion[]=[
+      {id:'choice',title:'گزینه',kind:'single_choice',required:true,options:['10','2','سایر']},
+    ];
+    expect(summarizeFormAnswers(questions,[
+      {answers:{choice:'سایر'}},{answers:{choice:'2'}},
+    ])[0]).toMatchObject({visibleCount:2,answeredCount:2,options:[
+      {label:'10',count:0},{label:'2',count:1},{label:'سایر',count:1},
+    ]});
+  });
+  it('متن خالی، نامعتبر یا پنهان را نمی‌شمارد و محتوا را منتشر نمی‌کند',()=>{
+    const questions:DemandFormQuestion[]=[
+      {id:'choice',title:'گزینه',kind:'single_choice',required:true,options:['بله','خیر']},
+      {id:'detail',title:'توضیح',kind:'short_text',required:false,
+        visibleWhen:{questionId:'choice',equals:'بله'}},
+    ];
+    const result=summarizeFormAnswers(questions,[
+      {answers:{choice:'بله',detail:'نمونهٔ خصوصی'}},
+      {answers:{choice:'بله',detail:'   '}},
+      {answers:{choice:'بله',detail:['متن نامعتبر']}},
+      {answers:{choice:'خیر',detail:'متن پنهان'}},
+      {answers:{choice:'بله',detail:'x'.repeat(501)}},
+    ]);
+    expect(result[1]).toMatchObject({visibleCount:4,answeredCount:1,options:[],textAnswersPrivate:true});
+    expect(JSON.stringify(result)).not.toContain('نمونهٔ خصوصی');
+    expect(JSON.stringify(result)).not.toContain('متن پنهان');
+  });
+});
