@@ -20,7 +20,7 @@ export const SyncSection: React.FC = () => {
         <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"><RefreshCw className="h-3.5 w-3.5" /> مسیر ورود داده</span>
         <h2 className="mb-5 text-3xl font-black text-slate-900 dark:text-white sm:text-4xl md:text-5xl">از داده خام تا برنامه‌ریزی قابل اتکا</h2>
         <p className="text-base leading-8 text-slate-600 dark:text-slate-400 sm:text-lg">
-          افزونه یکی از مسیرهای ورود داده به درس‌چین است. داده دریافتی باید اعتبارسنجی و با اطلاعات آموزشی تطبیق داده شود؛ صرف دریافت فایل به معنی تأیید نهایی یا به‌روز بودن اطلاعات نیست.
+          معیار مرجع توسعهٔ جدید درس‌چین است؛ فعلاً ورود فایل استاندارد دروس در دسترس است و اتصال مستقیم به معیار تأیید نشده است. داده دریافتی باید اعتبارسنجی و با اطلاعات آموزشی تطبیق داده شود؛ صرف دریافت فایل به معنی تأیید نهایی یا به‌روز بودن اطلاعات نیست.
         </p>
       </div>
 
@@ -28,12 +28,12 @@ export const SyncSection: React.FC = () => {
         <div className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/75 sm:p-7">
           <div className="mb-5 flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-800 dark:bg-teal-600/10 dark:text-teal-300"><Chrome className="h-7 w-7" /></div>
-            <div><h3 className="text-lg font-black text-slate-900 dark:text-white">منبع داده</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">افزونه یا منبع مجاز دیگر</p></div>
+            <div><h3 className="text-lg font-black text-slate-900 dark:text-white">منبع داده</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">فایل استاندارد از منبع مجاز</p></div>
           </div>
           <div className="space-y-2.5">
             {['شناسه و نام درس', 'گروه و اطلاعات ارائه', 'زمان دریافت و ترم'].map((label) => <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3.5 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300"><span className="h-2 w-2 rounded-full bg-teal-600" />{label}</div>)}
           </div>
-          <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">این موارد، نمونه فیلدهای داده هستند؛ داده زنده آموزشیار در این پیش‌نمایش نمایش داده نمی‌شود.</p>
+          <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">این موارد، نمونه فیلدهای داده هستند؛ داده زنده معیار در این پیش‌نمایش نمایش داده نمی‌شود.</p>
         </div>
 
         <motion.div style={{ opacity: arrowOpacity, x: arrowX }} className="flex items-center justify-center py-1 text-teal-700 dark:text-teal-400">
@@ -53,7 +53,7 @@ export const SyncSection: React.FC = () => {
 
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/5 dark:text-amber-100">
         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
-        <p className="text-sm leading-6">در این مسیر، «دریافت شد» با «با موفقیت تطبیق داده شد» یکسان نیست. رکورد ناقص یا مبهم باید خطا بگیرد و تا زمان تأیید کامل، نباید جایگزین داده‌های معتبر قبلی شود. این بخش توضیح فرایند است و وضعیت زنده‌ای از آموزشیار نمایش نمی‌دهد.</p>
+        <p className="text-sm leading-6">در این مسیر، «دریافت شد» با «با موفقیت تطبیق داده شد» یکسان نیست. رکورد ناقص یا مبهم باید خطا بگیرد و تا زمان تأیید کامل، نباید جایگزین داده‌های معتبر قبلی شود. این بخش توضیح فرایند است و وضعیت زنده‌ای از معیار نمایش نمی‌دهد.</p>
       </div>
     </section>
   );
