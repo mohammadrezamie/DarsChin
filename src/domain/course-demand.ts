@@ -27,10 +27,19 @@ export function managerCanAccessDemand(user: User, survey: Pick<DemandSurvey, 'c
     scope.degreeLevelId === survey.degreeLevelId && scope.majorId === survey.majorId);
 }
 
+export type DemandParticipationStats={
+  withCourseRequests:number;
+  withoutCourseRequests:number;
+  totalCourseRequests:number;
+  graduationYes:number;
+  graduationNo:number;
+  graduationUnknown:number;
+};
+
 export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[]) {
   const relevant = responses.filter(r => r.surveyId === survey.id);
   const surveyCourseIds=new Set(survey.courseIds);
-  const participation={
+  const participation:DemandParticipationStats={
     withCourseRequests:0,withoutCourseRequests:0,totalCourseRequests:0,
     graduationYes:0,graduationNo:0,graduationUnknown:0,
   };
