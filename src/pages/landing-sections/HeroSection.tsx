@@ -55,7 +55,7 @@ export const HeroSection: React.FC = () => {
             <Link to={publicDemoEnabled ? '/demo/student' : '/register'} className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-[#2455A6] px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:bg-[#1E4080] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600/30 sm:flex-none sm:px-6 sm:text-base">
               {publicDemoEnabled ? 'دیدن نمونهٔ پنل دانشجو' : 'شروع استفاده از درس‌چین'} <ArrowLeft className="h-4 w-4" />
             </Link>
-            <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-secondary-action border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-teal-600">
+            <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-secondary-action border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-blue-600">
               ساخت حساب دانشجو
             </Link>
           </motion.div>
@@ -117,10 +117,10 @@ export const HeroSection: React.FC = () => {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-                <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 font-extrabold text-slate-900 dark:text-white"><CalendarDays className="h-4 w-4 text-blue-700 dark:text-teal-400" /> برنامه انتخابی نمونه</div><span className="text-xs text-slate-500 dark:text-slate-400">{persianNumber(selectedOfferings.length)} درس</span></div>
+                <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 font-extrabold text-slate-900 dark:text-white"><CalendarDays className="h-4 w-4 text-blue-700 dark:text-blue-400" /> برنامه انتخابی نمونه</div><span className="text-xs text-slate-500 dark:text-slate-400">{persianNumber(selectedOfferings.length)} درس</span></div>
                 {selectedOfferings.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">{selectedOfferings.map((offering) => <div key={offering.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900"><span className="min-w-0"><span className="block break-words text-sm font-bold leading-6 text-slate-800 [overflow-wrap:anywhere] dark:text-slate-100">{offering.name}</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{offering.day} · {offering.time}</span></span><span className="shrink-0 text-xs font-extrabold text-blue-800 dark:text-blue-300">{persianNumber(offering.units)} واحد</span></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">هنوز درسی انتخاب نکرده‌ای؛ یک گزینه را اضافه کن تا این بخش به‌روزرسانی شود.</div>}
               </div>
-              <p className="text-right text-xs leading-6 text-slate-500 dark:text-slate-400">این پیش‌نمایش صرفاً برای نمایش تعاملات رابط کاربری است؛ اطلاعات آن از حساب یا سامانه آموزشیار دریافت نمی‌شود.</p>
+              <p className="text-right text-xs leading-6 text-slate-500 dark:text-slate-400">این پیش‌نمایش فقط برای نمایش رابط کاربری است؛ هیچ اطلاعاتی از حساب واقعی یا درگاه دانشگاه دریافت نمی‌کند.</p>
             </div>
           </div>
         </motion.div>
