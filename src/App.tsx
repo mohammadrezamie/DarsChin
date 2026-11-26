@@ -67,7 +67,7 @@ const DashboardLayout: React.FC = () => {
         onOpenProfile={() => {}}
         onOpenPasswordChange={() => setPasswordChangeOpen(true)}
       />
-      <main className="max-w-[1440px] mx-auto min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <main className="max-w-[1440px] mx-auto min-w-0 px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
         <Outlet />
       </main>
 
