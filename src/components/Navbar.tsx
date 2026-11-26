@@ -138,14 +138,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
             </div>
             <div className="space-y-2 text-sm font-bold">
               <Link to="/dashboard" onClick={closeMenu} aria-current={activeTab === 'student' ? 'page' : undefined}
-                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">میز کار دانشجو</Link>
+                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">میز کار دانشجو</Link>
               {canManage && <Link to="/admin" onClick={closeMenu} aria-current={activeTab === 'admin' ? 'page' : undefined}
-                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
-              <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
+                className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
+              <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
               <button type="button" onClick={() => { closeMenu(); setExtModalOpen(true); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">راهنمای معیار</button>
+                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">راهنمای معیار</button>
               {onOpenPasswordChange && <button type="button" onClick={() => { closeMenu(); onOpenPasswordChange(); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
+                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-blue-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
               <button type="button" onClick={() => { closeMenu(); logout(); }}
                 className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">خروج از حساب</button>
             </div>
