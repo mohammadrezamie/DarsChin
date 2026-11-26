@@ -52,6 +52,8 @@ jobs:
           bun-version: "1.4.4"
       - name: Verify isolated synthetic test database and production bundle
         run: bun run verify
+      - name: Exercise bundled API lifecycle in isolated production mode
+        run: bun run smoke:api
       - name: Report verified commit
         if: success()
         run: echo "Verified commit $GITHUB_SHA"

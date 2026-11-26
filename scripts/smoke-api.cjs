@@ -20,6 +20,9 @@ const environment = {
   // Smoke bootstraps an intentionally empty disposable store. Real release
   // instances should require the already-provisioned persistent DB.
   DARSCHYN_REQUIRE_EXISTING_DB: 'false',
+  DARSCHYN_ACCESS_MODE: 'multiuser',
+  DARSCHYN_REGISTRATION_OTP_REQUIRED: 'false',
+  SMS_PROVIDER: 'log',
   JWT_SECRET: crypto.randomBytes(32).toString('hex'),
   DARSCHYN_RELEASE_SHA: testReleaseSha,
   ROOT_OWNER_MOBILE: rootMobile,
@@ -29,6 +32,7 @@ const environment = {
   TURNSTILE_ENABLED: 'false',
 };
 delete environment.NIAZPARDAZ_API_KEY;
+delete environment.MOCK_OTP_CODE;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let activeServer = null;
@@ -187,6 +191,131 @@ async function main() {
     throw new Error('Safe academic catalogue restore failed or hid its non-destructive scope');
   }
 
+  // سناریوی واقعی نیازسنجی روی دادهٔ کاملاً مصنوعی و فرایند production.
+  // حساب‌ها فقط در فایل موقت همین آزمون، وقتی سرویس خاموش است، ایجاد می‌شوند.
+  // هیچ مسیر ثبت‌نام یا احراز هویت production برای تست تغییر نمی‌کند.
+  await stopServer();
+  const fixturePath = path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json');
+  if (path.dirname(fixturePath) !== path.join(temporary, 'data')) throw new Error('Unsafe smoke fixture path');
+  const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+  const chart = fixture.curricula.find(c => c.status === 'active' &&
+    fixture.entryYears.some(y => y.id === c.entryYearId && y.active) &&
+    fixture.curriculumCourses.some(cc => cc.curriculumId === c.id && cc.active !== false &&
+      !cc.trackId && fixture.courses.some(course => course.id === cc.courseId && course.active)));
+  if (!chart) throw new Error('Missing synthetic active curriculum');
+  const courseId = fixture.curriculumCourses.find(cc => cc.curriculumId === chart.id &&
+    cc.active !== false && !cc.trackId &&
+    fixture.courses.some(course => course.id === cc.courseId && course.active)).courseId;
+  const termId = fixture.academicTerms.find(t => t.active)?.id;
+  const alternateYear = fixture.entryYears.find(y => y.active && y.id !== chart.entryYearId)?.id;
+  if (!termId || !alternateYear) throw new Error('Missing synthetic term or second cohort');
+  const password = crypto.randomBytes(24).toString('hex');
+  const bcrypt = require('bcryptjs');
+  const createdAt = new Date().toISOString();
+  const academicScope = { universityId: chart.universityId, campusId: chart.campusId,
+    degreeLevelId: chart.degreeLevelId, majorId: chart.majorId, entryYearId: chart.entryYearId };
+  const accounts = [
+    {id:'smoke-demand-student',mobile:'09999999991',name:'دانشجوی مصنوعی',roles:['student']},
+    {id:'smoke-demand-other',mobile:'09999999992',name:'ورودی دیگر مصنوعی',roles:['student']},
+    {id:'smoke-demand-manager',mobile:'09999999993',name:'مدیر محدود مصنوعی',roles:['admin'],
+      permissions:['demand.manage'],demandScopes:[{campusId:chart.campusId,
+        degreeLevelId:chart.degreeLevelId,majorId:chart.majorId}]},
+  ];
+  for (const account of accounts) {
+    if (fixture.users.some(u => u.id === account.id || u.mobile === account.mobile)) throw new Error('Synthetic fixture identity collision');
+    fixture.users.push({...account,password:bcrypt.hashSync(password,10),createdAt});
+  }
+  fs.writeFileSync(fixturePath, JSON.stringify(fixture), {mode:0o600});
+  environment.DARSCHYN_REQUIRE_EXISTING_DB = 'true';
+  await startServer();
+
+  async function fixtureLogin(account) {
+    const challenge = await requestJson('/api/auth/otp/captcha/generate?action=login');
+    const saved = JSON.parse(fs.readFileSync(fixturePath,'utf8')).captchaChallenges
+      .find(row => row.id === challenge.body?.data?.id && row.action === 'login');
+    if (challenge.status !== 200 || !saved || typeof saved.value !== 'string') throw new Error('Synthetic login challenge unavailable');
+    const result = await requestJson('/api/auth/login', {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mobile:account.mobile,password,captchaToken:'local:'+saved.id+':'+saved.value}),
+    });
+    if (result.status !== 200 || typeof result.body?.data?.token !== 'string') throw new Error('Synthetic demand account login failed');
+    return result.body.data.token;
+  }
+  const studentToken = await fixtureLogin(accounts[0]);
+  const otherToken = await fixtureLogin(accounts[1]);
+  const managerToken = await fixtureLogin(accounts[2]);
+  const authenticated = (route, accessToken, method='GET', body) => requestJson(route, {
+    method, headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    ...(body === undefined ? {} : {body:JSON.stringify(body)}),
+  });
+  const expectStatus = (result, status, label) => {
+    if (result.status !== status) throw new Error(label+' expected HTTP '+status+', got '+result.status);
+    return result.body;
+  };
+  const profile = {...academicScope,currentTermId:termId,isTrackSelected:false,desiredTrackIds:[]};
+  expectStatus(await authenticated('/api/student/profile',studentToken,'PUT',profile),200,'Student profile');
+  expectStatus(await authenticated('/api/student/profile',otherToken,'PUT',{...profile,entryYearId:alternateYear}),200,'Other cohort profile');
+  const questions = [
+    {id:'preference',kind:'single_choice',title:'زمان مطلوب',required:true,options:['صبح','عصر']},
+    {id:'detail',kind:'short_text',title:'توضیح تکمیلی',required:true,
+      visibleWhen:{questionId:'preference',equals:'صبح'}},
+  ];
+  const draft = expectStatus(await authenticated('/api/demand/surveys',managerToken,'POST',{
+    universityId:chart.universityId,campusId:chart.campusId,degreeLevelId:chart.degreeLevelId,
+    majorId:chart.majorId,entryYearIds:[chart.entryYearId],curriculumId:chart.id,
+    title:'نیازسنجی آزمون عملیاتی',description:'فقط داده مصنوعی',
+    targetTermId:termId,trackIds:[],courseIds:[courseId],
+    recommendedMinimumByCourse:{[courseId]:1},questions,
+  }),201,'Create demand draft');
+  const demandId = draft.data?.id;
+  if (typeof demandId !== 'string' || draft.data.status !== 'DRAFT') throw new Error('Draft identity or state invalid');
+  const demandPath = '/api/demand/surveys/'+encodeURIComponent(demandId);
+  const listFor = async accessToken => expectStatus(await authenticated('/api/demand/surveys',accessToken),200,'Survey list').data;
+  if ((await listFor(studentToken)).some(s=>s.id===demandId)) throw new Error('Draft visible to student');
+  expectStatus(await authenticated(demandPath+'/status',managerToken,'PUT',{status:'OPEN'}),200,'Open demand');
+  if (!(await listFor(studentToken)).some(s=>s.id===demandId) ||
+      (await listFor(otherToken)).some(s=>s.id===demandId)) throw new Error('Demand cohort isolation failed');
+
+  const studentNumber='1405000001';
+  const baseAnswer={studentNumber,anticipatedGraduation:'YES',courseIds:[courseId]};
+  expectStatus(await authenticated(demandPath+'/response',otherToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),404,'Other cohort submission');
+  expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'صبح'}}),400,'Missing conditional answer');
+  const first=expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{
+    ...baseAnswer,answers:{preference:'صبح',detail:'متن محرمانه مصنوعی'},
+  }),200,'First demand response');
+  const privateDenied=await authenticated(demandPath+'/answers.csv?format=json',managerToken);
+  expectStatus(privateDenied,403,'Private export denied before response edit');
+  const reportBeforeEdit=expectStatus(await authenticated(demandPath+'/report',managerToken),200,'Initial aggregate').data;
+  if (reportBeforeEdit.participantCount!==1 || reportBeforeEdit.byCourse?.[0]?.count!==1 ||
+      JSON.stringify(reportBeforeEdit).includes(studentNumber) ||
+      JSON.stringify(reportBeforeEdit).includes('متن محرمانه مصنوعی')) throw new Error('Initial aggregate privacy or count failed');
+  const privateExport=expectStatus(await authenticated(demandPath+'/answers.csv?format=json',token),200,'Root private export').data?.csv;
+  if (typeof privateExport!=='string' || !privateExport.includes(studentNumber) ||
+      !privateExport.includes('متن محرمانه مصنوعی')) throw new Error('Authorized private export failed');
+  expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{
+    ...baseAnswer,answers:{preference:'عصر',detail:'پاسخ پنهان'},
+  }),400,'Hidden answer rejection');
+  const edited=expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{
+    ...baseAnswer,courseIds:[],anticipatedGraduation:'NO',answers:{preference:'عصر'},
+  }),200,'Replace demand response');
+  if (edited.data?.id !== first.data?.id || edited.data?.answers?.detail !== undefined) throw new Error('Response replacement failed');
+  expectStatus(await authenticated(demandPath+'/report',studentToken),403,'Student report denied');
+  expectStatus(await authenticated(demandPath+'/answers.csv?format=json',managerToken),403,'Private answers denied to scoped manager');
+  async function verifyDemandPersistence() {
+    const report=expectStatus(await authenticated(demandPath+'/report',managerToken),200,'Demand aggregate report').data;
+    if (report.participantCount!==1 || report.byCourse?.[0]?.count!==0 ||
+        report.byQuestion?.find(q=>q.id==='preference')?.options?.find(o=>o.label==='عصر')?.count!==1 ||
+        JSON.stringify(report).includes(studentNumber)) throw new Error('Aggregate response inconsistent or exposed identity');
+    const csv=expectStatus(await authenticated(demandPath+'/questions.csv?format=json',managerToken),200,'Question aggregate export').data?.csv;
+    if (typeof csv !== 'string' || !csv.includes('عصر') || csv.includes(studentNumber) || csv.includes('متن محرمانه مصنوعی')) throw new Error('Aggregate CSV inconsistent or exposed private data');
+    const own=expectStatus(await authenticated(demandPath+'/response',studentToken),200,'Own demand response').data;
+    if (own?.id!==first.data.id || own?.courseIds?.length!==0 || own?.answers?.preference!=='عصر' ||
+        own?.answers?.detail!==undefined) throw new Error('Own response did not survive replacement or restart');
+  }
+  await verifyDemandPersistence();
+  expectStatus(await authenticated(demandPath+'/status',managerToken,'PUT',{status:'CLOSED'}),200,'Close demand');
+  expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey submission');
+
   for (const previewPath of ['/demo/student', '/demo/admin']) {
     const response = await fetch(`${baseUrl}${previewPath}`, { signal: AbortSignal.timeout(2500) });
     const page = await response.text();
@@ -208,6 +337,8 @@ async function main() {
   await stopServer();
   await startServer();
 
+  await verifyDemandPersistence();
+  expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey remains closed after restart');
   const afterRestart = await requestJson('/api/sync/state', {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -312,7 +443,7 @@ async function main() {
     throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, scoped demand lifecycle and restart persistence, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
