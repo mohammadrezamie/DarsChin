@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const hero = readFileSync(resolve(process.cwd(), 'src/pages/landing-sections/HeroSection.tsx'), 'utf8');
-const landing = readFileSync(resolve(process.cwd(), 'src/pages/Landing.tsx'), 'utf8');
+const managerSection = readFileSync(resolve(process.cwd(), 'src/pages/landing-sections/DashboardShowcaseSection.tsx'), 'utf8');
 
 describe('پیام روشن صفحهٔ اول درس‌چین', () => {
   it('در چند ثانیه مسیر اصلی دانشجو را توضیح می‌دهد', () => {
@@ -18,7 +18,7 @@ describe('پیام روشن صفحهٔ اول درس‌چین', () => {
   it('مسیر مدیر گروه را جدا و واضح معرفی می‌کند', () => {
     expect(hero).toContain('ویژهٔ مدیران گروه و مدیران آموزشی');
     expect(hero).toContain('href="#workspaces"');
-    expect(landing).toContain('id="workspaces"');
+    expect(managerSection).toContain('id="workspaces"');
   });
 
   it('هیچ ادعای اتصال/ثبت خودکار یا نام درگاه منسوخ در لندینگ ندارد', () => {
