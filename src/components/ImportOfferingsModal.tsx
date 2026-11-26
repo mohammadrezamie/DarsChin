@@ -6,7 +6,7 @@ import React, { useState, useRef } from 'react';
 import {
   X,
   UploadCloud,
-  Download,
+  ExternalLink,
   FileJson,
   CheckCircle2,
   AlertTriangle,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ExtensionExportPayload, ImportBatch, ImportRecord } from '../types';
 import { apiRequest } from '../utils/api';
+import { academicPortal } from '../config/academic-portal';
 
 interface ImportOfferingsModalProps {
   isOpen: boolean;
@@ -171,31 +172,11 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
 
       ],
     };
-    setSelectedFileName('داده‌های ساختگی آموزشیار (۳ گروه؛ یکی نیازمند بررسی)');
+    setSelectedFileName('داده‌های ساختگی آزمایشی (۳ گروه؛ یکی نیازمند بررسی)');
     setJsonText(JSON.stringify(demoPayload, null, 2));
     handleProcessImport(demoPayload);
   };
 
-  const handleDownloadExtension = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/extension/download');
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'darschyn-chrome-extension-v3.zip';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Download failed:', err);
-      setError('خطا در دریافت فایل افزونه. لطفاً مجدداً تلاش کنید.');
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
@@ -225,7 +206,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               دریافت و تطبیق دروس ارائه‌شده نیمسال
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              خروجی افزونه آموزشیار را اینجا وارد کنید یا بکشید و رها کنید.
+              فایل استاندارد دروس را اینجا وارد کنید یا بکشید و رها کنید.
             </p>
           </div>
         </div>
@@ -359,28 +340,10 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
         ) : (
           /* FORM VIEW */
           <div className="space-y-4">
-            {/* Chrome Extension Download Card */}
-            <div className="p-4 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-xl shrink-0 mt-0.5">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                    افزونه مرورگر درس‌چین (استخراج مستقیم از آموزشیار)
-                  </h4>
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5 leading-relaxed">
-                    با نصب افزونه در کروم، در صفحه انتخاب واحد آموزشیار دکمه «استخراج دروس» را بزنید و فایل JSON را در این کادر قرار دهید.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadExtension}
-                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs text-center shrink-0 active:scale-95 flex items-center justify-center gap-1.5"
-              >
-                <span>دانلود افزونه کروم</span>
-              </button>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+              <h4 className="text-sm font-bold">سامانهٔ معیار؛ مسیر جدید اطلاعات آموزشی</h4>
+              <p className="mt-1 text-xs leading-7 text-slate-600 dark:text-slate-300">اتصال مستقیم و قالب بومی خروجی معیار هنوز تأیید نشده است. فایل استاندارد JSON، CSV یا TSV شامل اطلاعات مجاز دروس را وارد کنید؛ رمز، کد ملی یا اطلاعات حساب دانشگاهی را وارد نکنید.</p>
+              <a href={academicPortal.studentUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">مشاهدهٔ سامانهٔ معیار <ExternalLink className="h-4 w-4" aria-hidden="true"/></a>
             </div>
 
             {/* Quick Demo Button */}
@@ -388,7 +351,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="text-xs text-blue-900 dark:text-blue-200">
-                  برای آزمون و دیباگ رابط کاربری می‌توانید سه ردیف کاملاً ساختگی را بررسی کنید؛ این داده‌ها از آموزشیار واقعی دریافت نشده‌اند.
+                  برای آزمون و دیباگ رابط کاربری می‌توانید سه ردیف کاملاً ساختگی را بررسی کنید؛ این داده‌ها از هیچ سامانهٔ واقعی دریافت نشده‌اند.
                 </span>
               </div>
               <button
@@ -429,7 +392,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
               ) : (
                 <div className="text-center">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 block">
-                    کلیک برای انتخاب فایل خروجی افزونه آموزشیار
+                    کلیک برای انتخاب فایل استاندارد دروس
                   </span>
                   <span className="text-[11px] text-slate-500">
                     یا هر فایلی را مستقیماً به داخل این کادر بکشید و رها کنید
@@ -452,7 +415,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  یا جای‌گذاری متن خروجی افزونه:
+                  یا جای‌گذاری متن استاندارد دروس:
                 </label>
                 <button
                   type="button"
@@ -471,7 +434,7 @@ export const ImportOfferingsModal: React.FC<ImportOfferingsModalProps> = ({
                   setJsonText(e.target.value);
                   setSelectedFileName(null);
                 }}
-                placeholder='متن خروجی افزونه یا ساختار JSON را در اینجا قرار دهید...'
+                placeholder='متن CSV، TSV یا JSON استاندارد را در اینجا قرار دهید...'
                 className="w-full p-3 font-mono text-[11px] rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
               />
             </div>
