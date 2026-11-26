@@ -135,7 +135,7 @@ const Landing: React.FC = () => {
       <main>
         <HeroSection />
         {publicDemoEnabled && <section aria-label="انتخاب دسترسی دمو" className="darschin-demo-entry relative mx-auto -mt-3 mb-10 max-w-7xl px-3 sm:px-6 lg:px-8">
-          <div className="darschin-demo-entry__body dc-demo-entry grid min-w-0 gap-4 rounded-[1.75rem] border border-teal-200/80 bg-gradient-to-br from-white via-teal-50/80 to-emerald-50/60 p-4 shadow-[0_22px_60px_-32px_rgba(37,99,235,0.35)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-teal-950/70 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/40">
+          <div className="darschin-demo-entry__body dc-demo-entry grid min-w-0 gap-4 rounded-[1.75rem] border border-teal-200/80 bg-white p-4 shadow-[0_22px_60px_-32px_rgba(37,99,235,0.35)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-7 dark:border-teal-950/70 dark:bg-slate-900">
             <div>
               <p className="text-xs font-black tracking-wide text-teal-800 dark:text-teal-300">پایلوت دانشگاه آزاد · مهندسی برق کارشناسی · علوم و تحقیقات</p>
               <h2 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl dark:text-white">بدون ساخت حساب، میز کار دانشجو را امتحان کن</h2>
@@ -154,7 +154,7 @@ const Landing: React.FC = () => {
         <DashboardShowcaseSection />
 
         <section className="dc-final-cta relative overflow-hidden bg-slate-950 px-4 py-20 text-center text-white sm:px-6 sm:py-28 lg:px-8">
-          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-l from-teal-950/70 via-slate-950 to-amber-950/50" />
+          <div aria-hidden="true" className="absolute inset-0 bg-slate-950" />
           <div className="relative mx-auto max-w-4xl">
             <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold text-teal-200">قدم بعدی، برنامه‌ریزی دقیق‌تر</span>
             <h2 className="mb-6 text-3xl font-black leading-tight sm:text-4xl md:text-5xl">مسیر تحصیلی‌ات را یک‌جا ببین</h2>
