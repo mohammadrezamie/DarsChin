@@ -304,7 +304,7 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div dir="rtl" className="dc-product-workspace darschin-page darschin-admin space-y-5">
-      <header className="dc-workspace-masthead px-4 py-5 sm:px-7 sm:py-7">
+      <header className="dc-workspace-masthead px-3.5 py-3.5 sm:px-7 sm:py-7">
         <div aria-hidden="true" className="dc-masthead-decoration pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-teal-600/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-5">
           <div className="max-w-2xl">
