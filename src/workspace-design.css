@@ -114,7 +114,8 @@
 .dc-auth-layout > * { width:100%; max-width:none; margin:0; min-width:0; }
 @media (min-width:900px) {
   .dc-auth-layout { grid-template-columns:minmax(0,.9fr) minmax(0,1fr); gap:1.25rem 2rem; }
-  .dc-auth-intro { grid-column:1; grid-row:1 / span 2; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+  .dc-auth-intro { grid-column:1; grid-row:1; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+  .dc-auth-layout:has(.dc-auth-demo) .dc-auth-intro { grid-row:1 / span 2; }
   .dc-auth-intro > a:first-child { align-self:flex-start; }
   .dc-auth-card,.dc-auth-demo { grid-column:2; }
   .dc-auth-card { grid-row:1; }
@@ -137,3 +138,28 @@
   .dc-product-shell,.dc-product-workspace { background:white; color:black; }
   .dc-workspace-masthead,.dc-workspace-navigation,.dc-workspace-section-heading { display:none!important; }
 }
+
+/* عناصر واقعی ناوبری و برگهٔ موبایل، با حفظ موقعیت ثابت و Safe Area قبلی. */
+.dc-product-shell .dc-workspace-global-nav {
+  background:var(--ws-paper);
+  border-color:var(--ws-border);
+  box-shadow:var(--ws-shadow);
+}
+.dc-product-workspace .dc-workspace-sheet {
+  background:var(--ws-paper); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-product-workspace .dc-student-dock {
+  background:var(--ws-paper); border-color:var(--ws-border);
+  box-shadow:0 -8px 24px -16px rgb(10 60 48 / 45%);
+}
+.dc-product-auth .dc-auth-intro a:focus-visible,
+.dc-workspace-masthead :is(button,a,summary):focus-visible {
+  outline:3px solid #f8d69b; outline-offset:3px;
+}
+.dc-auth-card :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  background:var(--ws-canvas); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-auth-card button[type="submit"]:not(:disabled) {
+  background:var(--ws-brand); color:var(--ws-on-brand);
+}
+.dc-product-workspace .dc-workspace-summary :where(h2,h3) { color:var(--ws-ink); }
