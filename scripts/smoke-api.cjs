@@ -163,6 +163,34 @@ async function main() {
     throw new Error('Authenticated demand survey endpoint was not available');
   }
 
+  // Exercise the REAL root-authorized backup/restore API on a disposable
+  // student-free production fixture. Never use this against a live database.
+  const adminBackup = await requestJson('/api/admin/backup', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (adminBackup.status !== 200 || !Array.isArray(adminBackup.body?.courses) ||
+      'smsSettings' in adminBackup.body ||
+      !Array.isArray(adminBackup.body?.smsHistory) || adminBackup.body.smsHistory.length !== 0) {
+    throw new Error('SECURITY: administrative backup leaked provider configuration or is malformed');
+  }
+  const submitRestore = (body) => requestJson('/api/admin/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const invalidRestore = await submitRestore({
+    ...adminBackup.body,
+    courses: [{ id: 'course-duplicate' }, { id: 'course-duplicate' }],
+  });
+  if (invalidRestore.status !== 400) {
+    throw new Error('SECURITY: invalid backup was not rejected before writing student data');
+  }
+  const validRestore = await submitRestore(adminBackup.body);
+  if (validRestore.status !== 200 ||
+      !validRestore.body?.message?.includes('برنامه‌ها')) {
+    throw new Error('Safe academic catalogue restore failed or hid its non-destructive scope');
+  }
+
   // سناریوی واقعی نیازسنجی روی دادهٔ کاملاً مصنوعی و فرایند production.
   // حساب‌ها فقط در فایل موقت همین آزمون، وقتی سرویس خاموش است، ایجاد می‌شوند.
   // هیچ مسیر ثبت‌نام یا احراز هویت production برای تست تغییر نمی‌کند.
@@ -278,34 +306,6 @@ async function main() {
   await verifyDemandPersistence();
   expectStatus(await authenticated(demandPath+'/status',managerToken,'PUT',{status:'CLOSED'}),200,'Close demand');
   expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey submission');
-
-  // Exercise the REAL root-authorized backup/restore API on a disposable
-  // student-free production fixture. Never use this against a live database.
-  const adminBackup = await requestJson('/api/admin/backup', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (adminBackup.status !== 200 || !Array.isArray(adminBackup.body?.courses) ||
-      'smsSettings' in adminBackup.body ||
-      !Array.isArray(adminBackup.body?.smsHistory) || adminBackup.body.smsHistory.length !== 0) {
-    throw new Error('SECURITY: administrative backup leaked provider configuration or is malformed');
-  }
-  const submitRestore = (body) => requestJson('/api/admin/restore', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  });
-  const invalidRestore = await submitRestore({
-    ...adminBackup.body,
-    courses: [{ id: 'course-duplicate' }, { id: 'course-duplicate' }],
-  });
-  if (invalidRestore.status !== 400) {
-    throw new Error('SECURITY: invalid backup was not rejected before writing student data');
-  }
-  const validRestore = await submitRestore(adminBackup.body);
-  if (validRestore.status !== 200 ||
-      !validRestore.body?.message?.includes('برنامه‌ها')) {
-    throw new Error('Safe academic catalogue restore failed or hid its non-destructive scope');
-  }
 
   for (const previewPath of ['/demo/student', '/demo/admin']) {
     const response = await fetch(`${baseUrl}${previewPath}`, { signal: AbortSignal.timeout(2500) });
