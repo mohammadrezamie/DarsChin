@@ -1,31 +1,31 @@
-/* هویت پنل‌های محصول؛ لندینگ و پیش‌نمایش‌های آن خارج از این محدوده‌اند. */
+/* هویت خنثی و آبی دانشگاهی؛ فقط در پنل‌ها و مسیرهای احراز هویت. */
 .dc-product-shell, .dc-product-workspace, .dc-product-auth {
   --ws-paper: #ffffff;
-  --ws-canvas: #eff5f3;
-  --ws-soft: #e8f3ef;
-  --ws-border: #cbded6;
-  --ws-ink: #16342f;
-  --ws-muted: #526b65;
-  --ws-brand: #08685e;
+  --ws-canvas: #f5f7fa;
+  --ws-soft: #edf2f8;
+  --ws-border: #dce3ed;
+  --ws-ink: #17253c;
+  --ws-muted: #526177;
+  --ws-brand: #2455a6;
   --ws-on-brand: #ffffff;
-  --ws-accent: #9a5d19;
-  --ws-shadow: 0 10px 30px -20px rgb(17 63 50 / 35%);
+  --ws-accent: #2455a6;
+  --ws-shadow: 0 10px 30px -20px rgb(23 37 60 / 16%);
   color: var(--ws-ink);
 }
 .dark :is(.dc-product-shell,.dc-product-workspace,.dc-product-auth) {
-  --ws-paper: #142b29;
-  --ws-canvas: #0c201f;
-  --ws-soft: #1d3934;
-  --ws-border: #385b52;
-  --ws-ink: #edf8f2;
-  --ws-muted: #bdd3ca;
-  --ws-brand: #8be4ce;
-  --ws-on-brand: #102f29;
-  --ws-accent: #f5c480;
+  --ws-paper: #162235;
+  --ws-canvas: #101827;
+  --ws-soft: #202f45;
+  --ws-border: #35465e;
+  --ws-ink: #edf2f9;
+  --ws-muted: #bfccde;
+  --ws-brand: #91b9ff;
+  --ws-on-brand: #13233e;
+  --ws-accent: #91b9ff;
   --ws-shadow: 0 10px 30px -20px rgb(0 0 0 / 65%);
 }
 .dc-product-shell,.dc-product-auth {
-  background: radial-gradient(ellipse at 95% 0%,var(--ws-soft),transparent 35rem),var(--ws-canvas);
+  background:var(--ws-canvas);
 }
 .dc-product-workspace :is(.darschin-surface,.bg-glass-primary,.bg-glass-elevated,.bg-liquid-glass,.darschin-admin-panel) {
   background: var(--ws-paper);
@@ -36,12 +36,11 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: #103e37;
-  background-image: radial-gradient(ellipse at 90% 0%,#216c59,transparent 65%),linear-gradient(115deg,#103e37,#132e36);
-  border: 1px solid #326a5c;
-  border-radius: 1.5rem;
-  color: #fff;
-  box-shadow: 0 18px 42px -28px rgb(10 65 51 / 70%);
+  background:var(--ws-paper);
+  border:1px solid var(--ws-border);
+  border-radius: 1rem;
+  color:var(--ws-ink);
+  box-shadow:var(--ws-shadow);
 }
 .dc-workspace-masthead::before {
   content: '';
@@ -51,16 +50,16 @@
   inset-block: -5rem;
   inset-inline-end: -5rem;
   inline-size: 22rem;
-  background: repeating-radial-gradient(circle at center,transparent 0 24px,rgb(255 255 255 / 7%) 25px 26px,transparent 27px 48px);
+  background: none;
 }
-.dc-workspace-kicker { color:#b7e9d7; font-size:.75rem; font-weight:700; }
+.dc-workspace-kicker { color:var(--ws-muted); font-size:.75rem; font-weight:700; }
 .dc-workspace-heading { font-size:clamp(1.25rem,2.5vw,1.85rem); line-height:1.6; font-weight:800; }
-.dc-workspace-caption { color:#d6e9e2; font-size:.875rem; line-height:1.9; }
+.dc-workspace-caption { color:var(--ws-muted); font-size:.875rem; line-height:1.9; }
 .dc-workspace-section-heading {
   display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;
   padding:1rem 1.25rem;
   background:var(--ws-paper); border:1px solid var(--ws-border); border-radius:1rem;
-  border-inline-start:4px solid var(--ws-brand);
+  border-inline-start:2px solid var(--ws-brand);
   box-shadow:var(--ws-shadow);
 }
 .dc-workspace-section-heading h2 { color:var(--ws-ink); font-size:1.125rem; font-weight:800; line-height:1.7; }
@@ -72,7 +71,7 @@
   color:var(--ws-on-brand);
   background:var(--ws-brand);
   border-color:var(--ws-brand);
-  box-shadow:0 3px 9px -5px rgb(9 55 42 / 40%);
+  box-shadow:0 3px 9px -5px rgb(23 37 60 / 22%);
 }
 .dc-workspace-navigation :is(button,a):focus-visible,
 .dc-product-auth :is(button,a,input,select,textarea):focus-visible {
@@ -97,17 +96,18 @@
   background:var(--ws-soft); border:1px solid var(--ws-border); color:var(--ws-ink);
 }
 .dc-auth-intro {
-  background:linear-gradient(145deg,#103e37,#1e5547 70%,#354b3a);
-  color:white;
-  border-radius:1.5rem;
+  background:var(--ws-paper);
+  border:1px solid var(--ws-border);
+  color:var(--ws-ink);
+  border-radius:1rem;
   padding:clamp(1.25rem,4vw,3rem);
   position:relative;
   overflow:hidden;
 }
-.dc-auth-intro h2 { color:white; }
-.dc-auth-intro p { color:#d8eee5; }
-.dc-auth-intro p a { color:#f8d69b; text-decoration:underline; text-underline-offset:4px; }
-.dc-auth-intro > a:first-child { background:#fff; border-color:#fff; color:#126456; }
+.dc-auth-intro h2 { color:var(--ws-ink); }
+.dc-auth-intro p { color:var(--ws-muted); }
+.dc-auth-intro p a { color:var(--ws-brand); text-decoration:underline; text-underline-offset:4px; }
+.dc-auth-intro > a:first-child { background:var(--ws-soft); border-color:var(--ws-border); color:var(--ws-brand); }
 .dc-auth-card > .darschin-surface { background:var(--ws-paper); border-color:var(--ws-border); box-shadow:var(--ws-shadow); }
 .dc-auth-demo > div { background:var(--ws-soft); border-color:var(--ws-border); }
 .dc-auth-layout { display:grid; gap:1rem; width:min(100%,70rem); margin-inline:auto; align-items:start; }
@@ -150,11 +150,11 @@
 }
 .dc-product-workspace .dc-student-dock {
   background:var(--ws-paper); border-color:var(--ws-border);
-  box-shadow:0 -8px 24px -16px rgb(10 60 48 / 45%);
+  box-shadow:0 -8px 24px -16px rgb(23 37 60 / 20%);
 }
 .dc-product-auth .dc-auth-intro a:focus-visible,
 .dc-workspace-masthead :is(button,a,summary):focus-visible {
-  outline:3px solid #f8d69b; outline-offset:3px;
+  outline:3px solid var(--ws-brand); outline-offset:3px;
 }
 .dc-auth-card :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
   background:var(--ws-canvas); border-color:var(--ws-border); color:var(--ws-ink);
@@ -163,3 +163,19 @@
   background:var(--ws-brand); color:var(--ws-on-brand);
 }
 .dc-product-workspace .dc-workspace-summary :where(h2,h3) { color:var(--ws-ink); }
+
+/* اجزای سربرگ: بدون گرادیان، رنگ انباشته یا متن سفید روی سطح روشن. */
+.dc-workspace-masthead::before { display:none; }
+.dc-workspace-masthead .dc-masthead-decoration { display:none; }
+.dc-workspace-masthead .dc-masthead-label {
+  color:var(--ws-brand); background:var(--ws-soft); border:1px solid var(--ws-border);
+}
+.dc-workspace-masthead .dc-masthead-action {
+  color:var(--ws-brand); background:var(--ws-paper); border:1px solid var(--ws-border);
+}
+.dc-workspace-masthead .dc-masthead-action:hover { background:var(--ws-soft); }
+.dc-workspace-masthead .dc-masthead-details { background:var(--ws-soft); color:var(--ws-ink); border-color:var(--ws-border); }
+.dc-workspace-masthead .dc-masthead-details :is(summary,span) { color:var(--ws-ink); }
+.dc-workspace-masthead .dc-masthead-details > div { border-color:var(--ws-border); }
+.dc-workspace-masthead .dc-workspace-heading { color:var(--ws-ink); }
+.dc-workspace-masthead .dc-workspace-caption { color:var(--ws-muted); }
