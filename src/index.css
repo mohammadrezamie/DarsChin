@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./fonts.css";
+@import "./workspace-design.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
