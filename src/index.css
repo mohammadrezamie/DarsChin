@@ -744,3 +744,15 @@
 }
 .dc-hero-preview,.dc-hero-feature,.dc-demo-entry { box-shadow:0 8px 22px -16px rgb(23 37 60 / 25%); }
 .dc-auth-backdrop { background:none; }
+
+/* زمینهٔ ثابت و خنثی به‌جای لکه‌های نور رنگی. */
+body,.dark body { background:var(--dc-canvas); }
+.darschin-app-shell { background:none; }
+.dc-flow-next,.dark .dc-flow-next { background:var(--darschin-surface); border-color:var(--darschin-stroke); box-shadow:var(--darschin-shadow); }
+.dc-flow-course { box-shadow:var(--darschin-shadow); }
+.dc-flow-active,.dark .dc-flow-active { background:var(--darschin-subtle); border-color:var(--darschin-brand); }
+.dc-primary-action:hover { filter:none; background:#1e4080; box-shadow:none; }
+.dc-brand-mark { border-color:transparent; }
+@media (prefers-reduced-motion:reduce) {
+  .dc-primary-action:hover { transform:none; }
+}
