@@ -111,3 +111,27 @@ describe('course demand domain boundaries',()=>{
     expect(downstreamCourseIds('a','other-curriculum',links)).toEqual(['x']);
   });
 });
+
+describe('آمار مشارکت نیازسنجی',()=>{
+  it('پاسخ بدون درس و تعداد تقاضای معتبر را جدا می‌کند و فقط همان فرم را می‌شمارد',()=>{
+    const result=summarizeDemand(survey,[
+      response('u1',['a','a','b','unknown'],'YES'),
+      response('u2',[],'NO'),
+      response('u3',['unknown'],'UNKNOWN'),
+      {...response('other',['a'],'YES'),surveyId:'other-survey'},
+    ]);
+    expect(result.participantCount).toBe(3);
+    expect(result.participation).toEqual({
+      withCourseRequests:1,withoutCourseRequests:2,totalCourseRequests:2,
+      graduationYes:1,graduationNo:1,graduationUnknown:1,
+    });
+    expect(result.byCourse.reduce((total,row)=>total+row.count,0)).toBe(result.participation.totalCourseRequests);
+    expect(JSON.stringify(result.participation)).not.toContain('1403123456');
+  });
+  it('برای فرم بدون پاسخ همهٔ شمارنده‌ها صفر هستند',()=>{
+    expect(summarizeDemand(survey,[]).participation).toEqual({
+      withCourseRequests:0,withoutCourseRequests:0,totalCourseRequests:0,
+      graduationYes:0,graduationNo:0,graduationUnknown:0,
+    });
+  });
+});
