@@ -730,13 +730,13 @@ export const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div dir="rtl" className="dc-student-workspace darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
+    <div dir="rtl" className="dc-product-workspace dc-student-workspace darschin-page space-y-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:space-y-6 md:pb-0">
       {/* Compact app home header: the desktop hero remains a separate layout. */}
-      <section className="darschin-mobile-home relative min-w-0 overflow-hidden rounded-2xl border border-teal-200/75 bg-gradient-to-bl from-white via-teal-50 to-emerald-50 px-3.5 py-3.5 shadow-sm dark:border-teal-950/70 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/35 md:hidden print:hidden" aria-label="ابزارهای سریع دانشجو">
+      <section className="dc-workspace-masthead darschin-mobile-home min-w-0 px-4 py-4 md:hidden print:hidden" aria-label="ابزارهای سریع دانشجو">
         <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="truncate text-base font-extrabold text-slate-950 dark:text-white">سلام، {user.name} 👋</h2>
-            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">برنامهٔ این ترم، همیشه دم دستت</p>
+            <h2 className="dc-workspace-heading break-words">سلام، {user.name}</h2>
+            <p className="dc-workspace-caption mt-0.5">برنامهٔ این ترم، همیشه دم دستت</p>
           </div>
           <button type="button" onClick={() => selectMobileWorkspace('schedule')} aria-label="مشاهدهٔ برنامهٔ انتخابی"
             className="inline-flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border border-teal-200 bg-white/90 px-3 text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-teal-900 dark:bg-slate-800 dark:text-teal-200">
@@ -754,43 +754,43 @@ export const StudentDashboard: React.FC = () => {
             <UploadCloud aria-hidden="true" className="h-4 w-4" /> دریافت دروس
           </button>
         </div>
-        <p className="mt-2 text-[11px] leading-5 text-amber-800 dark:text-amber-300">چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</p>
+        <p className="mt-3 text-[11px] leading-6 text-amber-100">چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</p>
       </section>
 
       {/* Header Panel */}
-      <div className="darschin-surface relative hidden min-w-0 overflow-hidden rounded-[1.35rem] md:block border border-teal-100/80 bg-gradient-to-bl from-white via-teal-50/50 to-emerald-50/40 p-3.5 shadow-[0_16px_50px_-36px_rgba(37,99,235,0.35)] sm:p-6 dark:border-teal-950/30 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/30 print:hidden">
+      <div className="dc-workspace-masthead hidden min-w-0 p-6 md:block lg:p-7 print:hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-teal-600/10 dark:bg-teal-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
-            <h2 className="mb-1.5 break-words text-[clamp(1.1rem,4vw,1.45rem)] font-bold leading-8 tracking-tight text-slate-950 dark:text-white">
-              سلام، {user.name} 👋
+            <h2 className="dc-workspace-heading mb-1.5 break-words">
+              سلام، {user.name}
             </h2>
             <div className="mb-2 inline-flex max-w-full items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50/85 px-2.5 py-1 text-[11px] font-bold leading-5 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
               <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="dc-workspace-caption">
               از اینجا درس‌ها، برنامهٔ هفتگی و ترتیب ثبت را سریع مدیریت کن.
             </p>
             {academicLimits && (
-              <details className="group mt-3 min-w-0 rounded-xl border border-teal-100 bg-white/65 dark:border-slate-700/70 dark:bg-slate-900/50">
-                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-teal-900 dark:text-teal-200">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
-                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-teal-100 p-3 sm:grid-cols-3 dark:border-slate-700/70">
+              <details className="group mt-3 min-w-0 rounded-xl border border-white/20 bg-white/10">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-white">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
+                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-white/20 p-3 sm:grid-cols-3">
                 <div className="min-w-0 flex flex-col gap-1">
-                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">رشته‌ای اجباری</span>
-                  <span className="break-words text-[11px] font-bold leading-5 text-slate-700 dark:text-slate-300">
+                  <span className="break-words text-[10px] leading-5 text-teal-100">رشته‌ای اجباری</span>
+                  <span className="break-words text-[11px] font-bold leading-5 text-white">
                     پاس‌شده: {academicLimits.majorRequiredPassed} | باقیمانده: {academicLimits.majorRequiredRemaining}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">گرایشی اجباری</span>
+                  <span className="break-words text-[10px] leading-5 text-teal-100">گرایشی اجباری</span>
                   <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                     پاس‌شده: {academicLimits.trackRequiredPassed} | باقیمانده: {academicLimits.trackRequiredRemaining}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="break-words text-[10px] leading-5 text-slate-500 dark:text-slate-400">اختیاری (کل)</span>
+                  <span className="break-words text-[10px] leading-5 text-teal-100">اختیاری (کل)</span>
                   <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                     پاس‌شده: {academicLimits.electivesPassed}
                   </span>
@@ -808,7 +808,7 @@ export const StudentDashboard: React.FC = () => {
               className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-teal-700 to-emerald-700 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-teal-700/15 transition hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
               <UploadCloud aria-hidden="true" className="h-4 w-4 shrink-0" /> دریافت دروس
             </button>
-            <p className="col-span-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
+            <p className="col-span-2 text-[11px] leading-5 text-teal-100">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
           </div>
         </div>
       </div>
@@ -868,7 +868,7 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Mobile-first student workspace navigation: no 4-tab overflow on phones. */}
-      <nav aria-label="بخش‌های میز کار دانشجو" className={`sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden ${isBrowserDemo ? 'md:top-0' : ''}`}>
+      <nav aria-label="بخش‌های میز کار دانشجو" className={`dc-workspace-navigation sticky top-[68px] z-30 hidden min-w-0 md:block rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 print:hidden ${isBrowserDemo ? 'md:top-0' : ''}`}>
         <div ref={tabStripRef} className="darschin-scroll-x flex flex-nowrap gap-1.5 pb-1" aria-label="جابجایی سریع بین بخش‌ها">
           {studentTabs.filter(tab => tab.id !== 'wishlist').map(tab => {
             const TabIcon = tab.icon;
@@ -923,7 +923,8 @@ export const StudentDashboard: React.FC = () => {
       )}
 
       {/* Tab Content */}
-      <section ref={workspaceRef} tabIndex={-1} className="min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+      <section ref={workspaceRef} tabIndex={-1} className="dc-workspace-content min-h-[240px] min-w-0 scroll-mt-6 focus:outline-none sm:min-h-[400px] md:scroll-mt-36" aria-label={studentTabs.find(tab => tab.id === activeTab)?.label}>
+        <div className="dc-workspace-section-heading mb-3 print:hidden"><div><p className="dc-workspace-eyebrow">میز کار دانشجو</p><h2>{studentTabs.find(tab => tab.id === activeTab)?.label}</h2></div></div>
         <div className="mb-4"><ContextualHelp key={activeTab} audience="student" content={studentSectionHelp[activeTab]} /></div>
         {journeyReady && activeTab === 'offerings' && (journeyStep === 0 || journeyStep === 2) ? (
           <div className="mx-auto max-w-xl rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-center dark:border-emerald-950 dark:bg-emerald-950/30">
