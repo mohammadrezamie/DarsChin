@@ -257,7 +257,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const navigation = (
-    <nav aria-label="بخش‌های پنل مدیریت" className="space-y-5">
+    <nav aria-label="بخش‌های پنل مدیریت" className="dc-workspace-navigation space-y-5">
       <div className="relative">
         <Search aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
@@ -303,8 +303,8 @@ export const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div dir="rtl" className="darschin-page darschin-admin space-y-5">
-      <header className="relative overflow-hidden rounded-[1.25rem] border border-teal-300/10 bg-[#101c33] px-3.5 py-3.5 text-white shadow-lg shadow-slate-950/10 sm:px-6 sm:py-5">
+    <div dir="rtl" className="dc-product-workspace darschin-page darschin-admin space-y-5">
+      <header className="dc-workspace-masthead px-4 py-5 sm:px-7 sm:py-7">
         <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-teal-600/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-5">
           <div className="max-w-2xl">
@@ -314,8 +314,8 @@ export const AdminDashboard: React.FC = () => {
               </span>
               سامانهٔ مدیریت آموزشی
             </div>
-            <h1 className="text-xl font-extrabold leading-relaxed tracking-tight sm:text-2xl">مرکز مدیریت درس‌چین</h1>
-            <p className="mt-2 hidden max-w-xl text-sm leading-7 text-slate-300 sm:block">
+            <h1 className="dc-workspace-heading">مرکز مدیریت درس‌چین</h1>
+            <p className="dc-workspace-caption mt-2 hidden max-w-xl sm:block">
               {demandOnly
                 ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
                 : 'داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.'}
@@ -362,7 +362,7 @@ export const AdminDashboard: React.FC = () => {
         <ChevronLeft aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" />
       </div>
 
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-6">
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[272px_minmax(0,1fr)] lg:gap-6">
         <aside ref={desktopNavRef} className="dc-admin-workspace darschin-admin-panel hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-4 lg:sticky lg:top-4 lg:block" aria-label="ناوبری دسکتاپ مدیریت">
           <div className="mb-5 border-b border-slate-200 px-3 pb-4 text-sm font-black text-slate-900 dark:border-slate-700 dark:text-slate-100">
             بخش‌های مدیریت
@@ -400,15 +400,15 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        <section aria-label="محتوای مدیریت" className="min-w-0 space-y-4">
-          <ContextualHelp key={activeTab} audience="admin" content={adminSectionHelp(activeTab)} />
-          <div className="darschin-admin-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
+        <section aria-label="محتوای مدیریت" className="dc-workspace-content min-w-0 space-y-4">
+          <div className="dc-workspace-section-heading">
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">مدیریت / {navGroups.find(group => group.items.some(item => item.id === activeTab))?.title}</p>
               <h2 ref={sectionHeadingRef} tabIndex={-1} className="mt-1 rounded-lg text-xl font-black leading-relaxed text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-white">{activeNavigation?.label}</h2>
             </div>
             <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isBrowserDemo ? 'اطلاعات نمونه' : 'محیط مدیریت'}</span>
           </div>
+          <ContextualHelp key={activeTab} audience="admin" content={adminSectionHelp(activeTab)} />
       {statsError && activeTab === 'overview' && (
         <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
           <span className="font-bold">آمار در دسترس نیست: </span>{statsError}
