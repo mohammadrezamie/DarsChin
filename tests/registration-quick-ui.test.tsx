@@ -48,7 +48,7 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('چیدمان');
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('aria-controls="registration-queue-list"');
-    expect(html).toContain('ثبت خودکار در آموزشیار نیست');
+    expect(html).toContain('ثبت خودکار در معیار یا سامانهٔ رسمی دانشگاه نیست');
     expect(html).toContain('02');
     expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
     expect(html).toContain('کپی شماره گروه');
