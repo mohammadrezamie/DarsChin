@@ -30,7 +30,7 @@ function renderQueue(row: CourseEligibilityResult = offering) {
   />);
 }
 
-describe('compact manual Educationalyar registration queue', () => {
+describe('صف دستی ثبت بدون اتصال خودکار به درگاه دانشگاه', () => {
   it('shows the real course/group and direct keyboard-accessible copy/reorder actions', () => {
     const html = renderQueue();
     expect(html).toContain('dir="rtl"');
