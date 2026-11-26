@@ -7,6 +7,7 @@
 **وضعیت محصول: نسخهٔ نمایشی و توسعه‌ای.** داده‌های دروس و واحدهای آزمایشی الزاماً رسمی نیستند. افزونهٔ مرورگر فقط یکی از ابزارهای دریافت داده است، نه خود محصول.
 
 | موضوع | راهنما |
+| **معیار به‌عنوان درگاه فعلی و معماری قابل تعویض provider** | [MEYAR_TRANSITION_FA.md](MEYAR_TRANSITION_FA.md) — اتصال مستقیم هنوز تأیید نشده |
 | **الگوچین هوشمند مدیر گروه برای ورودی جدید: کمترین روز، بدون تداخل** | [ADMIN_COHORT_PATTERN_PLANNER_FA.md](ADMIN_COHORT_PATTERN_PLANNER_FA.md) |
 | --- | --- |
 | **تحول سراسری UI و UX: پالت فیروزه‌ای، یشمی و زعفرانی برای روز/شب، صفحهٔ اول و پنل‌ها** | [VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md](VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md) |
@@ -41,8 +42,8 @@
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | بازخورد دموی زنده: صف ثبت فشرده، فعال‌سازی نیازسنجی و ساخت چارت توسط مدیر | [UX_LIVE_DEMO_FEEDBACK_FA.md](UX_LIVE_DEMO_FEEDBACK_FA.md) |
 | ورود بدون حساب به دمو، محدوده پایلوت برق علوم‌وتحقیقات و راه‌اندازی سریع VPS | [PILOT_LAUNCH_FA.md](PILOT_LAUNCH_FA.md) |
-| روند بررسی و تأیید فایل‌های استخراج‌شده از آموزشیار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
-| آماده‌باش انتخاب واحد: صف کپی سریع کدهای آموزشیار، اولویت‌ها و تقدم همنیاز | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
+| سابقهٔ تاریخی واردات؛ مرجع جاری معیار است — روند بررسی و تأیید فایل‌ها | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
+| سابقهٔ تاریخی صف کپی؛ محتوای جاری باید مستقل از نام درگاه باشد | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
 | ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | نیازسنجی درس‌های ترم آینده، گزارش مدیر گروه، حریم خصوصی و برنامهٔ توسعه | [FEATURE_COURSE_DEMAND.md](FEATURE_COURSE_DEMAND.md) |
 | **محافظت اطلاعات نیازسنجی، خروجی CSV و جلوگیری از درخواست‌های قدیمی** | [DEMAND_ASYNC_SAFETY_FA.md](DEMAND_ASYNC_SAFETY_FA.md) |
