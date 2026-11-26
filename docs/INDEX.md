@@ -7,6 +7,7 @@
 **وضعیت محصول: نسخهٔ نمایشی و توسعه‌ای.** داده‌های دروس و واحدهای آزمایشی الزاماً رسمی نیستند. افزونهٔ مرورگر فقط یکی از ابزارهای دریافت داده است، نه خود محصول.
 
 | موضوع | راهنما |
+| **الگوچین هوشمند مدیر گروه برای ورودی جدید: کمترین روز، بدون تداخل** | [ADMIN_COHORT_PATTERN_PLANNER_FA.md](ADMIN_COHORT_PATTERN_PLANNER_FA.md) |
 | --- | --- |
 | **تحول سراسری UI و UX: پالت فیروزه‌ای، یشمی و زعفرانی برای روز/شب، صفحهٔ اول و پنل‌ها** | [VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md](VISUAL_IDENTITY_TURQUOISE_SAFFRON_20261102_FA.md) |
 | **آغاز امن راهنمای دانشجو بدون ساخت پروندهٔ حدسی دانشگاه و رشته** | [STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md](STUDENT_FIRST_PROFILE_EXPLICIT_ONBOARDING_20261101_FA.md) |
