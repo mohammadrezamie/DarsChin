@@ -305,11 +305,11 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div dir="rtl" className="dc-product-workspace darschin-page darschin-admin space-y-5">
       <header className="dc-workspace-masthead px-4 py-5 sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-teal-600/15 blur-3xl" />
+        <div aria-hidden="true" className="dc-masthead-decoration pointer-events-none absolute -left-12 -top-32 h-72 w-72 rounded-full bg-teal-600/15 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-5">
           <div className="max-w-2xl">
-            <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold text-teal-200 sm:mb-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+            <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold dc-workspace-eyebrow sm:mb-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-800 dark:bg-teal-950 dark:text-teal-200">
                 <Shield aria-hidden="true" className="h-4 w-4" />
               </span>
               سامانهٔ مدیریت آموزشی
@@ -320,8 +320,8 @@ export const AdminDashboard: React.FC = () => {
                 ? 'برنامه‌ریزی تقاضای دروس و گزارش‌های حوزهٔ تعیین‌شده توسط مدیر ارشد.'
                 : 'داده‌های آموزشی، ساختار دانشگاه، ارائه‌های ترمی و پشتیبانی در یک محیط منظم.'}
             </p>
-            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-100 sm:mt-3 sm:px-3 sm:text-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
+            <span className="mt-2 inline-flex items-center gap-2 dc-masthead-label rounded-full px-2.5 py-1 text-[11px] font-bold sm:mt-3 sm:px-3 sm:text-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
               {isBrowserDemo ? 'نمایش آزمایشی، بدون سرور' : demandOnly ? 'محدودهٔ مدیر گروه' : 'پنل مدیریتی'}
               {isSuperAdmin ? ' · مدیر ارشد' : ''}
             </span>
@@ -331,7 +331,7 @@ export const AdminDashboard: React.FC = () => {
               type="button"
               onClick={fetchStats}
               disabled={loadingStats}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 dc-masthead-action rounded-xl px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 disabled:opacity-50"
             >
               <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
               <span>به‌روزرسانی</span>
@@ -441,11 +441,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                     دانشجویان ثبت‌نام‌شده
                   </span>
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
                     {stats?.totalStudents ?? '...'}
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 flex items-center justify-center">
                   <GraduationCap className="w-5 h-5" />
                 </div>
               </div>
@@ -455,11 +455,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                     عناوین دروس در بانک
                   </span>
-                  <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
                     {stats?.totalCourses ?? '...'}
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 flex items-center justify-center">
                   <BookOpen className="w-5 h-5" />
                 </div>
               </div>
@@ -483,11 +483,11 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                     واحدهای دانشگاهی
                   </span>
-                  <span className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono">
                     {stats?.totalCampuses ?? '...'}
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 flex items-center justify-center">
                   <School className="w-5 h-5" />
                 </div>
               </div>
