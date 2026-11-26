@@ -12,7 +12,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
   const [resetConfirm, setResetConfirm] = useState(false);
   return (
     <DemoAuthProvider role={role}>
-      <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 font-[Vazirmatn] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div dir="rtl" className="dc-product-shell darschin-page min-h-screen font-[Vazirmatn]">
         <div className="relative z-50 border-b border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950 md:px-5 md:py-3">
           <div className="mx-auto flex max-w-7xl flex-col gap-1.5 md:flex-row md:items-center md:justify-between md:gap-3">
             <div className="flex items-start gap-2 text-amber-950 dark:text-amber-100">
@@ -53,7 +53,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
           )}
         </div>
 
-        <main className="mx-auto max-w-7xl min-w-0 px-3 py-5 sm:px-6 sm:py-7">
+        <main className="mx-auto max-w-[1440px] min-w-0 px-3 py-5 sm:px-6 sm:py-7">
           {role === 'student' ? <StudentDashboard /> : <AdminDashboard />}
         </main>
         <aside role="note" className="mx-auto max-w-7xl border-t border-slate-200 px-4 pb-28 pt-6 text-xs text-slate-500 dark:border-slate-800 md:pb-6">
