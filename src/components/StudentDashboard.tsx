@@ -754,12 +754,12 @@ export const StudentDashboard: React.FC = () => {
             <UploadCloud aria-hidden="true" className="h-4 w-4" /> دریافت دروس
           </button>
         </div>
-        <p className="mt-3 text-[11px] leading-6 text-amber-100">چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</p>
+        <p className="mt-3 text-[11px] leading-6 text-amber-800 dark:text-amber-300">چارت‌های نمونهٔ دمو مصوبهٔ رسمی دانشگاه نیستند.</p>
       </section>
 
       {/* Header Panel */}
       <div className="dc-workspace-masthead hidden min-w-0 p-6 md:block lg:p-7 print:hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-600/10 dark:bg-teal-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+        <div className="dc-masthead-decoration absolute top-0 right-0 w-32 h-32 bg-teal-600/10 dark:bg-teal-600/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
         <div className="relative flex min-w-0 flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
@@ -774,12 +774,12 @@ export const StudentDashboard: React.FC = () => {
               از اینجا درس‌ها، برنامهٔ هفتگی و ترتیب ثبت را سریع مدیریت کن.
             </p>
             {academicLimits && (
-              <details className="group mt-3 min-w-0 rounded-xl border border-white/20 bg-white/10">
-                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-white">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
-                <div className="grid min-w-0 grid-cols-1 gap-2 border-t border-white/20 p-3 sm:grid-cols-3">
+              <details className="dc-masthead-details group mt-3 min-w-0 rounded-xl border">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-bold">جزئیات پیشرفت تحصیلی <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span></summary>
+                <div className="grid min-w-0 grid-cols-1 gap-2 border-t p-3 sm:grid-cols-3">
                 <div className="min-w-0 flex flex-col gap-1">
-                  <span className="break-words text-[10px] leading-5 text-teal-100">رشته‌ای اجباری</span>
-                  <span className="break-words text-[11px] font-bold leading-5 text-white">
+                  <span className="break-words text-[10px] leading-5">رشته‌ای اجباری</span>
+                  <span className="break-words text-[11px] font-bold leading-5">
                     پاس‌شده: {academicLimits.majorRequiredPassed} | باقیمانده: {academicLimits.majorRequiredRemaining}
                   </span>
                 </div>
@@ -805,10 +805,10 @@ export const StudentDashboard: React.FC = () => {
               پروندهٔ تحصیلی
             </button>
             <button type="button" onClick={() => setImportModalOpen(true)}
-              className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-teal-700 to-emerald-700 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-teal-700/15 transition hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
+              className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-teal-700/15 transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
               <UploadCloud aria-hidden="true" className="h-4 w-4 shrink-0" /> دریافت دروس
             </button>
-            <p className="col-span-2 text-[11px] leading-5 text-teal-100">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
+            <p className="col-span-2 text-[11px] leading-5 dc-workspace-eyebrow">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
           </div>
         </div>
       </div>
