@@ -30,7 +30,7 @@ function renderQueue(row: CourseEligibilityResult = offering) {
   />);
 }
 
-describe('compact manual Educationalyar registration queue', () => {
+describe('صف دستی ثبت در سامانهٔ دانشگاه', () => {
   it('shows the real course/group and direct keyboard-accessible copy/reorder actions', () => {
     const html = renderQueue();
     expect(html).toContain('dir="rtl"');
@@ -48,7 +48,8 @@ describe('compact manual Educationalyar registration queue', () => {
     expect(html).toContain('چیدمان');
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('aria-controls="registration-queue-list"');
-    expect(html).toContain('ثبت خودکار در آموزشیار نیست');
+    expect(html).toContain('ثبت خودکار در معیار یا سامانهٔ رسمی دانشگاه نیست');
+    expect(html).toContain('فقط بعد از ثبت واقعی همان گروه');
     expect(html).toContain('02');
     expect(html).toContain('کپی شماره گروه مدارهای الکتریکی');
     expect(html).toContain('کپی شماره گروه');
