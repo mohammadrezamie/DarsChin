@@ -283,6 +283,15 @@ async function main() {
   const first=expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{
     ...baseAnswer,answers:{preference:'صبح',detail:'متن محرمانه مصنوعی'},
   }),200,'First demand response');
+  const privateDenied=await authenticated(demandPath+'/answers.csv?format=json',managerToken);
+  expectStatus(privateDenied,403,'Private export denied before response edit');
+  const reportBeforeEdit=expectStatus(await authenticated(demandPath+'/report',managerToken),200,'Initial aggregate').data;
+  if (reportBeforeEdit.participantCount!==1 || reportBeforeEdit.byCourse?.[0]?.count!==1 ||
+      JSON.stringify(reportBeforeEdit).includes(studentNumber) ||
+      JSON.stringify(reportBeforeEdit).includes('متن محرمانه مصنوعی')) throw new Error('Initial aggregate privacy or count failed');
+  const privateExport=expectStatus(await authenticated(demandPath+'/answers.csv?format=json',token),200,'Root private export').data?.csv;
+  if (typeof privateExport!=='string' || !privateExport.includes(studentNumber) ||
+      !privateExport.includes('متن محرمانه مصنوعی')) throw new Error('Authorized private export failed');
   expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{
     ...baseAnswer,answers:{preference:'عصر',detail:'پاسخ پنهان'},
   }),400,'Hidden answer rejection');
