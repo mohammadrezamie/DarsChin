@@ -29,7 +29,7 @@ export const HeroSection: React.FC = () => {
     <section id="hero" dir="rtl" className="dc-hero scroll-mt-24 relative isolate overflow-hidden px-4 pb-12 pt-24 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-28 top-12 h-80 w-80 rounded-full bg-teal-400/15 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
-        <div className="absolute -left-24 top-40 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
+        <div className="absolute -left-24 top-40 h-72 w-72 rounded-full bg-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-slate-50 dark:to-slate-950" />
       </div>
 
@@ -43,7 +43,7 @@ export const HeroSection: React.FC = () => {
           <motion.h1 initial={heroAnimation(18)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.06 }}
             className="mb-5 max-w-2xl text-[clamp(1.9rem,7.5vw,3.65rem)] font-black leading-[1.45] tracking-tight text-slate-950 dark:text-white">
             انتخاب واحد را
-            <span className="mt-1 block dc-brand-text bg-gradient-to-l from-teal-700 via-emerald-700 to-amber-700 bg-clip-text text-transparent dark:from-teal-400 dark:via-emerald-400 dark:to-amber-400">با آگاهی برنامه‌ریزی کن</span>
+            <span className="mt-1 block dc-brand-text ">با آگاهی برنامه‌ریزی کن</span>
           </motion.h1>
 
           <motion.p initial={heroAnimation(14)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12 }}
@@ -52,7 +52,7 @@ export const HeroSection: React.FC = () => {
           </motion.p>
 
           <motion.div initial={heroAnimation(12)} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }} className="mb-4 flex flex-col gap-2.5 min-[380px]:flex-row min-[380px]:flex-wrap">
-            <Link to={publicDemoEnabled ? '/demo/student' : '/register'} className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-gradient-to-l from-teal-700 to-emerald-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:from-teal-800 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
+            <Link to={publicDemoEnabled ? '/demo/student' : '/register'} className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-primary-action bg-teal-700 px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_35px_-18px_rgba(37,99,235,0.6)] transition hover:-translate-y-0.5 hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/30 sm:flex-none sm:px-6 sm:text-base">
               {publicDemoEnabled ? 'تست رایگان پنل دانشجو' : 'شروع استفاده از درس‌چین'} <ArrowLeft className="h-4 w-4" />
             </Link>
             <Link to="/register" className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl dc-secondary-action border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20 sm:flex-none sm:px-6 sm:text-base dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-teal-600">
@@ -80,7 +80,7 @@ export const HeroSection: React.FC = () => {
 
         <motion.div initial={demoAnimation} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.65, delay: 0.12, ease: 'easeOut' }} className="relative mx-auto w-full min-w-0 max-w-2xl">
-          <div aria-hidden="true" className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-br from-teal-600/20 via-emerald-600/10 to-amber-600/20 blur-2xl" />
+          <div aria-hidden="true" className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-transparent" />
           <div className="overflow-hidden rounded-[1.75rem] dc-hero-preview border border-slate-200/80 bg-white/90 shadow-[0_28px_90px_-32px_rgba(30,64,175,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-4 dark:border-slate-800 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
