@@ -1,0 +1,139 @@
+/* هویت پنل‌های محصول؛ لندینگ و پیش‌نمایش‌های آن خارج از این محدوده‌اند. */
+.dc-product-shell, .dc-product-workspace, .dc-product-auth {
+  --ws-paper: #ffffff;
+  --ws-canvas: #eff5f3;
+  --ws-soft: #e8f3ef;
+  --ws-border: #cbded6;
+  --ws-ink: #16342f;
+  --ws-muted: #526b65;
+  --ws-brand: #08685e;
+  --ws-on-brand: #ffffff;
+  --ws-accent: #9a5d19;
+  --ws-shadow: 0 10px 30px -20px rgb(17 63 50 / 35%);
+  color: var(--ws-ink);
+}
+.dark :is(.dc-product-shell,.dc-product-workspace,.dc-product-auth) {
+  --ws-paper: #142b29;
+  --ws-canvas: #0c201f;
+  --ws-soft: #1d3934;
+  --ws-border: #385b52;
+  --ws-ink: #edf8f2;
+  --ws-muted: #bdd3ca;
+  --ws-brand: #8be4ce;
+  --ws-on-brand: #102f29;
+  --ws-accent: #f5c480;
+  --ws-shadow: 0 10px 30px -20px rgb(0 0 0 / 65%);
+}
+.dc-product-shell,.dc-product-auth {
+  background: radial-gradient(ellipse at 95% 0%,var(--ws-soft),transparent 35rem),var(--ws-canvas);
+}
+.dc-product-workspace :is(.darschin-surface,.bg-glass-primary,.bg-glass-elevated,.bg-liquid-glass,.darschin-admin-panel) {
+  background: var(--ws-paper);
+  border-color: var(--ws-border);
+  box-shadow: var(--ws-shadow);
+}
+.dc-workspace-masthead {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #103e37;
+  background-image: radial-gradient(ellipse at 90% 0%,#216c59,transparent 65%),linear-gradient(115deg,#103e37,#132e36);
+  border: 1px solid #326a5c;
+  border-radius: 1.5rem;
+  color: #fff;
+  box-shadow: 0 18px 42px -28px rgb(10 65 51 / 70%);
+}
+.dc-workspace-masthead::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset-block: -5rem;
+  inset-inline-end: -5rem;
+  inline-size: 22rem;
+  background: repeating-radial-gradient(circle at center,transparent 0 24px,rgb(255 255 255 / 7%) 25px 26px,transparent 27px 48px);
+}
+.dc-workspace-kicker { color:#b7e9d7; font-size:.75rem; font-weight:700; }
+.dc-workspace-heading { font-size:clamp(1.25rem,2.5vw,1.85rem); line-height:1.6; font-weight:800; }
+.dc-workspace-caption { color:#d6e9e2; font-size:.875rem; line-height:1.9; }
+.dc-workspace-section-heading {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;
+  padding:1rem 1.25rem;
+  background:var(--ws-paper); border:1px solid var(--ws-border); border-radius:1rem;
+  border-inline-start:4px solid var(--ws-brand);
+  box-shadow:var(--ws-shadow);
+}
+.dc-workspace-section-heading h2 { color:var(--ws-ink); font-size:1.125rem; font-weight:800; line-height:1.7; }
+.dc-workspace-eyebrow { color:var(--ws-muted); font-size:.75rem; font-weight:650; }
+.dc-workspace-navigation {
+  background:var(--ws-paper); border-color:var(--ws-border); box-shadow:var(--ws-shadow);
+}
+.dc-workspace-navigation :is(button,a)[aria-current="page"] {
+  color:var(--ws-on-brand);
+  background:var(--ws-brand);
+  border-color:var(--ws-brand);
+  box-shadow:0 3px 9px -5px rgb(9 55 42 / 40%);
+}
+.dc-workspace-navigation :is(button,a):focus-visible,
+.dc-product-auth :is(button,a,input,select,textarea):focus-visible {
+  outline:3px solid var(--ws-brand); outline-offset:2px;
+}
+.dc-product-workspace .dc-context-help {
+  background:var(--ws-paper); border:1px solid var(--ws-border); box-shadow:none;
+}
+.dc-product-workspace .dc-context-help summary { color:var(--ws-brand); }
+.dc-product-workspace .dc-context-help summary > span:last-child { background:var(--ws-soft); color:var(--ws-brand); }
+.dc-product-workspace .dc-context-help > div { border-color:var(--ws-border); }
+.dc-product-workspace .dc-workspace-table-head { background:var(--ws-soft); border-color:var(--ws-border); }
+.dc-product-workspace .dc-workspace-content { min-width:0; }
+.dc-product-workspace .dc-workspace-content :where(h3,h4) { line-height:1.65; }
+.dc-product-workspace .dc-workspace-content :where(.darschin-field) {
+  background:var(--ws-paper); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-product-workspace .dc-workspace-content :where(.darschin-field:focus-visible) {
+  border-color:var(--ws-brand); outline:2px solid var(--ws-brand); outline-offset:2px;
+}
+.dc-product-workspace .dc-workspace-summary {
+  background:var(--ws-soft); border:1px solid var(--ws-border); color:var(--ws-ink);
+}
+.dc-auth-intro {
+  background:linear-gradient(145deg,#103e37,#1e5547 70%,#354b3a);
+  color:white;
+  border-radius:1.5rem;
+  padding:clamp(1.25rem,4vw,3rem);
+  position:relative;
+  overflow:hidden;
+}
+.dc-auth-intro h2 { color:white; }
+.dc-auth-intro p { color:#d8eee5; }
+.dc-auth-intro p a { color:#f8d69b; text-decoration:underline; text-underline-offset:4px; }
+.dc-auth-intro > a:first-child { background:#fff; border-color:#fff; color:#126456; }
+.dc-auth-card > .darschin-surface { background:var(--ws-paper); border-color:var(--ws-border); box-shadow:var(--ws-shadow); }
+.dc-auth-demo > div { background:var(--ws-soft); border-color:var(--ws-border); }
+.dc-auth-layout { display:grid; gap:1rem; width:min(100%,70rem); margin-inline:auto; align-items:start; }
+.dc-auth-layout > * { width:100%; max-width:none; margin:0; min-width:0; }
+@media (min-width:900px) {
+  .dc-auth-layout { grid-template-columns:minmax(0,.9fr) minmax(0,1fr); gap:1.25rem 2rem; }
+  .dc-auth-intro { grid-column:1; grid-row:1 / span 2; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+  .dc-auth-intro > a:first-child { align-self:flex-start; }
+  .dc-auth-card,.dc-auth-demo { grid-column:2; }
+  .dc-auth-card { grid-row:1; }
+  .dc-auth-demo { grid-row:2; }
+}
+@media (max-width:639px) {
+  .dc-workspace-masthead { border-radius:1.125rem; }
+  .dc-workspace-masthead::before { inline-size:12rem; opacity:.6; }
+  .dc-workspace-section-heading { padding:.75rem 1rem; }
+  .dc-auth-intro { border-radius:1.125rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .dc-product-workspace *, .dc-product-auth * { scroll-behavior:auto; }
+}
+@media (forced-colors:active) {
+  .dc-workspace-masthead,.dc-auth-intro,.dc-workspace-section-heading { border:1px solid CanvasText; }
+  .dc-workspace-navigation :is(button,a)[aria-current="page"] { border:2px solid Highlight; }
+}
+@media print {
+  .dc-product-shell,.dc-product-workspace { background:white; color:black; }
+  .dc-workspace-masthead,.dc-workspace-navigation,.dc-workspace-section-heading { display:none!important; }
+}
