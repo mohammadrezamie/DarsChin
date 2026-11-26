@@ -8,6 +8,8 @@ import { isDemandResponseForContext } from '../utils/demand-response-context';
 import { parseDemandQuestions, validateDemandAnswers, visibleDemandQuestions } from '../domain/demand-form';
 import { DemandFormBuilder } from './DemandFormBuilder';
 import { DemandCourseReport } from './DemandCourseReport';
+import { DemandParticipationReport } from './DemandParticipationReport';
+import type { DemandParticipationStats } from '../domain/course-demand';
 import { DemandQuestionFields } from './DemandQuestionFields';
 import { downstreamCourseIds } from '../domain/course-demand';
 import {
@@ -23,6 +25,7 @@ import type {
 type Option = { id: string; name: string; active?: boolean; universityId?: string; campusId?: string; majorId?: string; degreeLevelId?: string; entryYearId?: string };
 type SurveyStats = {
   participantCount:number;
+  participation?:DemandParticipationStats;
   byCourse:{courseId:string;count:number;threshold:number;meetsSuggestedThreshold:boolean;selfReportedFinalSemester:number}[];
   byQuestion?:{id:string;title:string;kind:string;visibleCount?:number;answeredCount:number;options:{label:string;count:number}[];textAnswersPrivate:boolean}[];
 };
@@ -1054,6 +1057,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
             · انتشار فرم به معنای نادیده‌گرفتن بازهٔ زمانی نیست.
           </p>:null}
           <div className="rounded-xl bg-teal-50 p-4 dark:bg-teal-950/40"><p className="text-xs font-semibold text-teal-900 dark:text-teal-200">تعداد دانشجویان پاسخ‌دهنده</p><strong className="text-3xl font-black">{visibleReport?.participantCount ?? '—'}</strong></div>
+          {visibleReport?.participation&&<DemandParticipationReport stats={visibleReport.participation}/>}
+
           {visibleReport&&<DemandCourseReport key={currentDetailKey} rows={visibleReport?.byCourse.map(item=>({
             ...item,name:courseMap.get(item.courseId)?.name||item.courseId,
             code:courseMap.get(item.courseId)?.code||'',

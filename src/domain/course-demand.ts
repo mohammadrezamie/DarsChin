@@ -27,8 +27,31 @@ export function managerCanAccessDemand(user: User, survey: Pick<DemandSurvey, 'c
     scope.degreeLevelId === survey.degreeLevelId && scope.majorId === survey.majorId);
 }
 
+export type DemandParticipationStats={
+  withCourseRequests:number;
+  withoutCourseRequests:number;
+  totalCourseRequests:number;
+  graduationYes:number;
+  graduationNo:number;
+  graduationUnknown:number;
+};
+
 export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[]) {
   const relevant = responses.filter(r => r.surveyId === survey.id);
+  const surveyCourseIds=new Set(survey.courseIds);
+  const participation:DemandParticipationStats={
+    withCourseRequests:0,withoutCourseRequests:0,totalCourseRequests:0,
+    graduationYes:0,graduationNo:0,graduationUnknown:0,
+  };
+  for(const response of relevant){
+    const count=new Set(response.courseIds.filter(id=>surveyCourseIds.has(id))).size;
+    if(count>0)participation.withCourseRequests++;
+    else participation.withoutCourseRequests++;
+    participation.totalCourseRequests+=count;
+    if(response.anticipatedGraduation==='YES')participation.graduationYes++;
+    else if(response.anticipatedGraduation==='NO')participation.graduationNo++;
+    else participation.graduationUnknown++;
+  }
   const byCourse = survey.courseIds.map(courseId => {
     const count = relevant.reduce((total, r) => total + Number(r.courseIds.includes(courseId)), 0);
     const threshold = survey.recommendedMinimumByCourse[courseId] || 0;
@@ -38,7 +61,7 @@ export function summarizeDemand(survey: DemandSurvey, responses: DemandResponse[
     };
   });
   return {
-    surveyId: survey.id,participantCount:relevant.length,byCourse,
+    surveyId: survey.id,participantCount:relevant.length,participation,byCourse,
     byQuestion:summarizeFormAnswers(survey.questions||[],relevant),
   };
 }
