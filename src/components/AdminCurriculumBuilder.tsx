@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { extractSourceCourseIds } from '../utils/academic';
+import { ruleScopeCourseIds } from '../domain/curriculum-rule-scope';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
@@ -34,7 +35,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED'
   });
   const [addRuleForm, setAddRuleForm] = useState({
-    sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
+    sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '', trackId: ''
   });
 
   const matchingCharts=curricula.filter(c=>{
@@ -46,7 +47,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
   const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
   const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
-  const relevantRuleCourses=courses.filter(c=>c.active&&chartCourseIds.has(c.id)&&c.id!==activeCourseId);
+  const assignments: CurriculumCourse[]=curriculumFull?.courses||[];
+  const ruleTrackOptions=relevantTracks.filter(track=>ruleScopeCourseIds(assignments,selectedChart?.id||'',track.id).has(activeCourseId||''));
+  const commonRuleAllowed=ruleScopeCourseIds(assignments,selectedChart?.id||'',null).has(activeCourseId||'');
+  const scopedRuleIds=ruleScopeCourseIds(assignments,selectedChart?.id||'',addRuleForm.trackId);
+  const validRuleScope=(addRuleForm.trackId?ruleTrackOptions.some(t=>t.id===addRuleForm.trackId):commonRuleAllowed)&&scopedRuleIds.has(activeCourseId||'');
+  const relevantRuleCourses=courses.filter(c=>validRuleScope&&c.active&&scopedRuleIds.has(c.id)&&c.id!==activeCourseId);
 
   const fetchData = async () => {
     setLoading(true);
@@ -87,7 +93,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     setCloneName('');
     setCloneFeedback('');
     setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
-    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:''});
+    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:'',trackId:''});
     setActiveCourseId(null);
     if (selectedCurriculumId) void loadCurriculumDetails(selectedCurriculumId);
   }, [selectedCurriculumId]);
@@ -169,6 +175,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const handleAddRule = async () => {
     setOperationError('');
     if(!selectedCurriculumId||!activeCourseId)return;
+    if(!validRuleScope){setOperationError('ابتدا دامنهٔ معتبر قانون را انتخاب کنید.');return;}
     if(!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)){
       setOperationError('مبدأ پیش‌نیاز یا هم‌نیاز باید درس دیگری از همین چارت باشد.');return;
     }
@@ -177,20 +184,22 @@ export const AdminCurriculumBuilder: React.FC = () => {
       body: JSON.stringify({
         curriculumId: selectedCurriculumId,
         targetCourseId: activeCourseId,
+        trackId: addRuleForm.trackId || null,
         relationshipType: addRuleForm.relationshipType,
         expression: { type: 'COURSE', courseId: addRuleForm.sourceCourseId }
       })
     });
     if (res.success) {
       loadCurriculumDetails(selectedCurriculumId!);
-      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '' });
+      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '', trackId: '' });
     } else {
       setOperationError(res.error || 'ثبت قانون انجام نشد.');
     }
   };
   
   const handleRemoveRule = async (ruleId: string) => {
-    await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
+    const result=await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
+    if(!result.success){setOperationError(result.error||'حذف قانون انجام نشد.');return;}
     loadCurriculumDetails(selectedCurriculumId!);
   };
 
@@ -375,7 +384,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
                         onClick={()=>{
                           setActiveCourseId(cc.courseId);
-                          setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                          setAddRuleForm(prev=>({...prev,sourceCourseId:'',trackId:cc.trackId||''}));
                           setOperationError('');
                         }}
                       >
@@ -443,6 +452,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span className="rounded bg-teal-50 px-1 dark:bg-teal-950">{r.trackId ? relevantTracks.find(t=>t.id===r.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
@@ -456,6 +466,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span className="rounded bg-teal-50 px-1 dark:bg-teal-950">{r.trackId ? relevantTracks.find(t=>t.id===r.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
@@ -465,6 +476,14 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="mt-6 border-t pt-4 dark:border-slate-700 space-y-3">
                     <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">افزودن قانون جدید</h4>
+                    <label className="block text-xs font-bold">دامنهٔ قانون
+                      <select className="mt-1 w-full min-h-11 rounded-lg border p-2 dark:bg-slate-900 dark:border-slate-700"
+                        value={addRuleForm.trackId} onChange={e=>setAddRuleForm(prev=>({...prev,trackId:e.target.value,sourceCourseId:''}))}>
+                        <option value="" disabled={!commonRuleAllowed}>{commonRuleAllowed?'مشترک بین گرایش‌ها':'ابتدا گرایش را انتخاب کنید'}</option>
+                        {ruleTrackOptions.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+                      </select>
+                    </label>
+                    <p className="text-xs leading-6 text-slate-500">برای قانون اختصاصی، فقط درس‌های مشترک و همان گرایش قابل انتخاب‌اند.</p>
                     <select 
                       className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                       value={addRuleForm.sourceCourseId}

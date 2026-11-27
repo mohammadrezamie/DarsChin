@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
+import { ruleScopeCourseIds } from '../../src/domain/curriculum-rule-scope';
 import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
 import { validate } from '../middleware/validate';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
@@ -430,13 +431,13 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   const assignedCourseIds = [...new Set(db.curriculumCourses
     .filter(item => item.curriculumId === curriculumId && item.active !== false)
     .map(item => item.courseId))];
-  const allowedCourses = new Set(assignedCourseIds);
+  const allowedCourses = ruleScopeCourseIds(db.curriculumCourses, curriculumId, trackId);
   const sourceIds = extractSourceCourseIds(expression);
   if (!allowedCourses.has(targetCourseId) || !sourceIds.length ||
       sourceIds.some(id => !allowedCourses.has(id))) {
     return res.status(400).json({
       success: false,
-      error: 'درس هدف و همهٔ درس‌های مرتبط باید در چارت انتخابی حضور داشته باشند.',
+      error: 'درس هدف و همهٔ درس‌های مرتبط باید در دامنهٔ مشترک یا گرایش انتخابی همین چارت حضور داشته باشند.',
     });
   }
 
@@ -487,7 +488,10 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   };
 
   db.data.academicRules.push(newRule as any);
-  db.save();
+  try { db.save(); } catch {
+    db.data.academicRules = db.academicRules.filter(rule=>rule.id!==newRule.id);
+    return res.status(503).json({success:false,error:'ذخیرهٔ قانون انجام نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, data: newRule });
 });
 
@@ -495,7 +499,10 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
 curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
-  db.data.academicRules.splice(idx, 1);
-  db.save();
+  const [removed] = db.data.academicRules.splice(idx, 1);
+  try { db.save(); } catch {
+    db.data.academicRules.splice(idx, 0, removed);
+    return res.status(503).json({success:false,error:'حذف قانون ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'قانون حذف شد.' });
 });
