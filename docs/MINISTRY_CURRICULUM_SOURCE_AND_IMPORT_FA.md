@@ -178,3 +178,7 @@
 ## پذیرش API production و restart — ۶ آذر ۱۴۰۵
 
 `scripts/smoke-api.cjs` گسترش یافت: API واقعی production bundle با دیتابیس موقت، نقش root مصنوعی و chart/course seed، رد دسترسی student و demand-only manager، optimistic revision، رد stale update/delete، ماندگاری پس از restart process و حذف نسخه‌دار را بررسی می‌کند. این تست با مرورگر static mock یکی نیست و به staging واقعی تعمیم داده نمی‌شود. نتیجهٔ گیت تازه لازم است.
+
+## اصلاح مقایسهٔ ماندگاری و نام کنترل‌ها — ۶ آذر ۱۴۰۵
+
+گیت [46039677876](https://github.com/mohammadrezamie/DarsChin/actions/runs/46039677876) در smoke مقایسهٔ برنامه پس از restart و در مرورگر انتخاب نوع دوره ناموفق بود. اسکیما ترتیب کلیدهای period/item را تغییر می‌دهد، بنابراین برابری JSON.stringify شاهد قابل اتکا نبود. مقایسهٔ ساختاری دقیق با کنترل جداگانهٔ revision و خواندن فایل موقت قبل از restart جایگزین شد؛ در صورت اختلاف واقعی همچنان شکست می‌خورد. علت ماندگاری تا تأیید گیت تازه قطعی نیست. selectهای UI نام دسترس‌پذیر صریح دارند و گزارش مرورگر مرحلهٔ شکست را مشخص می‌کند. هیچ دادهٔ واقعی یا مجوزی تغییر نکرد.

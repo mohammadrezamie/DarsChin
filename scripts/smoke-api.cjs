@@ -1,5 +1,6 @@
 // Production-mode, disposable API smoke test. No real accounts, network dependencies or mutable project data.
 const crypto = require('node:crypto');
+const { isDeepStrictEqual } = require('node:util');
 const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
@@ -281,6 +282,11 @@ async function main() {
   expectStatus(await authenticated(studyPlanPath,token,'PUT',{
     trackId:null,plan:null,expectedRevision:studyPlanRevision,
   }),409,'Stale advisory draft deletion');
+  // Schema parsing normalizes object-key order; compare JSON values, not serialization.
+  if(!isDeepStrictEqual(updateStudyPlan.data?.plan,revisedPlan))throw new Error('Advisory update returned different plan data');
+  const diskPlan=JSON.parse(fs.readFileSync(fixturePath,'utf8')).studyPlanDrafts?.find(row=>row.curriculumId===chart.id&&row.trackId===null);
+  if(!isDeepStrictEqual(diskPlan?.plan,revisedPlan)||diskPlan?.revision!==updateStudyPlan.data.revision)
+    throw new Error('Advisory update was not persisted before restart');
   const profile = {...academicScope,currentTermId:termId,isTrackSelected:false,desiredTrackIds:[]};
   expectStatus(await authenticated('/api/student/profile',studentToken,'PUT',profile),200,'Student profile');
   expectStatus(await authenticated('/api/student/profile',otherToken,'PUT',{...profile,entryYearId:alternateYear}),200,'Other cohort profile');
@@ -367,10 +373,8 @@ async function main() {
   await startServer();
 
   const persistedStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Advisory draft after restart');
-  if(JSON.stringify(persistedStudyPlan.data?.plan)!==JSON.stringify(revisedPlan)||
-      persistedStudyPlan.data?.revision!==updateStudyPlan.data?.revision) {
-    throw new Error('Advisory draft or revision did not survive a production process restart');
-  }
+  if(!isDeepStrictEqual(persistedStudyPlan.data?.plan,revisedPlan))throw new Error('Advisory draft content did not survive restart');
+  if(persistedStudyPlan.data?.revision!==updateStudyPlan.data?.revision)throw new Error('Advisory revision did not survive restart');
   expectStatus(await authenticated(studyPlanPath,token,'PUT',{
     trackId:null,plan:null,expectedRevision:persistedStudyPlan.data.revision,
   }),200,'Delete advisory draft after restart');
@@ -378,6 +382,7 @@ async function main() {
   if(removedStudyPlan.data?.plan!==null||removedStudyPlan.data?.revision!==null) {
     throw new Error('Advisory draft deletion was not persisted');
   }
+  console.log('PASS: advisory draft content and revision persisted across restart; stale changes and unauthorized reads denied');
   await verifyDemandPersistence();
   expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey remains closed after restart');
   const afterRestart = await requestJson('/api/sync/state', {
