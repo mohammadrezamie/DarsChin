@@ -49,6 +49,16 @@ async function runCase(origin,width,height) {
     const layout=await page.evaluate(()=>({lang:document.documentElement.lang,dir:document.documentElement.dir,viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
     assert.equal(layout.lang,'fa',name+' language');
     assert.equal(layout.dir,'rtl',name+' direction');
+    if(layout.scroll>layout.viewport+2){
+      // Report dimensions only; never include element text, values, URLs or user data.
+      const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>{
+        const r=el.getBoundingClientRect();
+        return {tag:el.tagName,left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),
+          client:el.clientWidth,scroll:el.scrollWidth,display:getComputedStyle(el).display};
+      }).filter(r=>r.width>0&&(r.left < -2||r.right>document.documentElement.clientWidth+2||r.scroll>r.client+2))
+        .sort((a,b)=>Math.max(b.width,b.scroll)-Math.max(a.width,a.scroll)).slice(0,15));
+      console.log('Overflow geometry (no content): '+JSON.stringify(offenders));
+    }
     assert(layout.scroll<=layout.viewport+2,name+' horizontal overflow: '+layout.scroll+' > '+layout.viewport);
     assert.equal(errors.length,0,name+' uncaught browser error');
   };
@@ -147,6 +157,12 @@ async function runCase(origin,width,height) {
     await summer.getByRole('button',{name:'حذف دوره',exact:true}).click();
     await wait(editor.getByRole('alert').filter({hasText:'ابتدا درس‌های این دوره'}));
     // Attempt chart switch, cancel, and verify the local draft was not lost.
+    step('verify layout with populated draft and long period label');
+    const titleInput=summer.getByRole('textbox',{name:'عنوان دورهٔ 2',exact:true});
+    await titleInput.fill('عنوان آزمایشی بسیار طولانی '.repeat(5).trim());
+    await checkLayout('study plan long period label');
+    await titleInput.fill('تابستان آزمایشی');
+    await checkLayout('study plan populated before save');
     step('reject dirty curriculum switch');
     let rejectedSwitch=false;
     page.once('dialog',async dialog=>{rejectedSwitch=dialog.type()==='confirm';await dialog.dismiss();});

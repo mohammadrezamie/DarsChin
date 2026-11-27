@@ -331,12 +331,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
             assignments={assignments} courses={courses} tracks={relevantTracks}/>}
           {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks} leaveGuard={studyPlanGuard}/>}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
+            <div className="min-w-0 lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <h3 className="font-bold text-sm mb-4">افزودن درس به چارت</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.courseId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, courseId: e.target.value})}
                   >
@@ -344,7 +344,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     {courses.filter(c=>c.active).map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
                   </select>
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.classification}
                     onChange={(e) => setAddCourseForm({...addCourseForm, classification: e.target.value as CourseClassification})}
                   >
@@ -354,7 +354,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     <option value="TRACK_ELECTIVE">گرایشی اختیاری</option>
                   </select>
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.trackId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
@@ -446,7 +446,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
             </div>
 
             {/* Rule Builder Sidebar */}
-            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+            <div className="min-w-0 lg:col-span-1 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
               {!activeCourseId ? (
                 <div className="text-center text-slate-500 text-sm py-8">
                   یک درس را از جدول انتخاب کنید تا قوانین آن را مدیریت کنید.

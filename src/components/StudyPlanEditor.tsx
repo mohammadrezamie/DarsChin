@@ -100,12 +100,12 @@ export function StudyPlanEditor({chart,assignments,courses,tracks,leaveGuard}:{
    }catch{if(gen===generation.current)setError('نتیجهٔ ذخیره مشخص نیست؛ پس از بررسی اتصال، دوباره بارگذاری کنید.');}
    finally{busy.current=false;if(gen===generation.current)setSaving(false);}
  }
- const field='min-h-11 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-700 dark:bg-slate-900';
- const action='min-h-11 rounded-lg border border-slate-300 px-3 text-xs font-bold dark:border-slate-700 disabled:opacity-50';
- return <section aria-label="ویرایش برنامهٔ پیشنهادی مستقل" className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+ const field='block min-h-11 min-w-0 w-full max-w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-700 dark:bg-slate-900';
+ const action='min-h-11 min-w-0 max-w-full whitespace-normal break-words rounded-lg border border-slate-300 px-3 text-xs font-bold dark:border-slate-700 disabled:opacity-50';
+ return <section aria-label="ویرایش برنامهٔ پیشنهادی مستقل" className="min-w-0 w-full max-w-full space-y-4 rounded-2xl border border-slate-200 p-3 sm:p-4 dark:border-slate-700">
   <div className="space-y-1"><h3 className="font-black">برنامهٔ پیشنهادی مستقل</h3>
    <p className="text-xs leading-6 text-slate-500 dark:text-slate-300">اختیاری؛ تغییر این برنامه هیچ درس یا قانون الزامی چارت را تغییر نمی‌دهد. تغییرات را قبل از خروج از چارت ذخیره کنید.</p></div>
-  <label className="block text-xs font-bold">دامنهٔ برنامهٔ پیشنهادی<select aria-label="دامنهٔ برنامهٔ پیشنهادی" className={field} value={track} disabled={saving} onChange={e=>changeTrack(e.target.value)}>
+  <label className="block min-w-0 max-w-full text-xs font-bold">دامنهٔ برنامهٔ پیشنهادی<select aria-label="دامنهٔ برنامهٔ پیشنهادی" className={field} value={track} disabled={saving} onChange={e=>changeTrack(e.target.value)}>
     <option value="">دروس مشترک</option>{relevant.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
   </select></label>
   {error&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{error}</p>}
@@ -118,30 +118,30 @@ export function StudyPlanEditor({chart,assignments,courses,tracks,leaveGuard}:{
    <p className="text-sm text-slate-500">برای این دامنه برنامهٔ مستقلی ثبت نشده است.</p>
    <button type="button" className={action} disabled={blocked} onClick={()=>setDraft({curriculumId:chart.id,periods:[],items:[]})}>ایجاد برنامهٔ پیشنهادی</button>
   </div>:<>
-   <div className="grid gap-2 sm:grid-cols-3">
-    <label className="text-xs font-bold">عنوان دوره<input className={field} disabled={blocked} maxLength={150} value={periodLabel} onChange={e=>setPeriodLabel(e.target.value)}/></label>
-    <label className="text-xs font-bold">نوع دوره<select aria-label="نوع دوره" className={field} disabled={blocked} value={periodKind} onChange={e=>setPeriodKind(e.target.value as StudyPeriod['kind'])}><option value="regular">نیمسال عادی</option><option value="summer">تابستان</option><option value="other">دورهٔ دیگر</option></select></label>
+   <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+    <label className="min-w-0 max-w-full text-xs font-bold">عنوان دوره<input className={field} disabled={blocked} maxLength={150} value={periodLabel} onChange={e=>setPeriodLabel(e.target.value)}/></label>
+    <label className="min-w-0 max-w-full text-xs font-bold">نوع دوره<select aria-label="نوع دوره" className={field} disabled={blocked} value={periodKind} onChange={e=>setPeriodKind(e.target.value as StudyPeriod['kind'])}><option value="regular">نیمسال عادی</option><option value="summer">تابستان</option><option value="other">دورهٔ دیگر</option></select></label>
     <button type="button" className={action+' self-end'} disabled={blocked||!periodLabel.trim()||draft.periods.length>=100} onClick={addPeriod}>افزودن دوره</button>
    </div>
-   <div className="grid gap-3 lg:grid-cols-2">{draft.periods.map((p,index)=><article key={p.id} className="min-w-0 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-     <label className="block text-xs font-bold">عنوان دورهٔ {index+1}<input className={field} disabled={blocked} maxLength={150} value={p.label} onChange={e=>setDraft({...draft,periods:draft.periods.map(row=>row.id===p.id?{...row,label:e.target.value}:row)})}/></label>
+   <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">{draft.periods.map((p,index)=><article key={p.id} className="min-w-0 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+     <label className="block min-w-0 max-w-full text-xs font-bold">عنوان دورهٔ {index+1}<input className={field} disabled={blocked} maxLength={150} value={p.label} onChange={e=>setDraft({...draft,periods:draft.periods.map(row=>row.id===p.id?{...row,label:e.target.value}:row)})}/></label>
      <p className="text-xs text-slate-500">{p.kind==='summer'?'تابستان':p.kind==='regular'?'نیمسال عادی':'دورهٔ دیگر'}</p>
      <div className="my-2 flex flex-wrap gap-1"><button type="button" className={action} disabled={blocked||index===0} onClick={()=>movePeriod(index,-1)}>زودتر</button><button type="button" className={action} disabled={blocked||index===draft.periods.length-1} onClick={()=>movePeriod(index,1)}>دیرتر</button><button type="button" className={action} disabled={blocked} onClick={()=>removePeriod(p.id)}>حذف دوره</button></div>
-     {draft.items.filter(i=>i.periodId===p.id).map(i=><div key={i.id} className="flex flex-wrap items-center justify-between gap-2 border-t py-2 text-xs">
-       <span>{i.kind==='course'?courses.find(c=>c.id===i.courseId)?.name||'درس نامشخص':i.label}</span>
-       <label>انتقال به<select aria-label="انتقال به" className={field} disabled={blocked} value={i.periodId} onChange={e=>setDraft({...draft,items:draft.items.map(row=>row.id===i.id?{...row,periodId:e.target.value}:row)})}>{draft.periods.map(period=><option key={period.id} value={period.id}>{period.label}</option>)}</select></label>
+     {draft.items.filter(i=>i.periodId===p.id).map(i=><div key={i.id} className="grid min-w-0 grid-cols-1 items-center gap-2 border-t py-2 text-xs sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+       <span className="min-w-0 break-words [overflow-wrap:anywhere]">{i.kind==='course'?courses.find(c=>c.id===i.courseId)?.name||'درس نامشخص':i.label}</span>
+       <label className="block min-w-0 max-w-full">انتقال به<select aria-label="انتقال به" className={field} disabled={blocked} value={i.periodId} onChange={e=>setDraft({...draft,items:draft.items.map(row=>row.id===i.id?{...row,periodId:e.target.value}:row)})}>{draft.periods.map(period=><option key={period.id} value={period.id}>{period.label}</option>)}</select></label>
        <button type="button" className={action} disabled={blocked} onClick={()=>setDraft({...draft,items:draft.items.filter(row=>row.id!==i.id)})}>حذف از برنامه</button>
      </div>)}
    </article>)}</div>
-   <div className="grid gap-2 sm:grid-cols-3">
-     <label className="text-xs font-bold">درس پیشنهادی<select aria-label="درس پیشنهادی" className={field} disabled={blocked} value={courseId} onChange={e=>setCourseId(e.target.value)}><option value="">انتخاب درس</option>{allowed.filter(c=>!draft.items.some(i=>i.kind==='course'&&i.courseId===c.id)).map(c=><option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}</select></label>
-     <label className="text-xs font-bold">دورهٔ مقصد<select aria-label="دورهٔ مقصد" className={field} disabled={blocked} value={periodId} onChange={e=>setPeriodId(e.target.value)}><option value="">انتخاب دوره</option>{draft.periods.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
+   <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+     <label className="min-w-0 max-w-full text-xs font-bold">درس پیشنهادی<select aria-label="درس پیشنهادی" className={field} disabled={blocked} value={courseId} onChange={e=>setCourseId(e.target.value)}><option value="">انتخاب درس</option>{allowed.filter(c=>!draft.items.some(i=>i.kind==='course'&&i.courseId===c.id)).map(c=><option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}</select></label>
+     <label className="min-w-0 max-w-full text-xs font-bold">دورهٔ مقصد<select aria-label="دورهٔ مقصد" className={field} disabled={blocked} value={periodId} onChange={e=>setPeriodId(e.target.value)}><option value="">انتخاب دوره</option>{draft.periods.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
      <button type="button" className={action+' self-end'} disabled={blocked||!courseId||!periodId} onClick={addCourse}>افزودن درس به برنامه</button>
    </div>
    {validation.status==='invalid'&&<p role="alert" className="text-xs text-rose-700">{validation.issues.join('؛ ')}</p>}
    {validation.status==='valid'&&<p className="text-xs text-slate-500">{validation.unplannedCourseIds.length.toLocaleString('fa-IR')} درس بدون پیشنهاد؛ پوشش کامل الزامی نیست.</p>}
-   <div className="flex flex-wrap gap-2">
-    <button type="button" disabled={blocked||!dirty||validation.status!=='valid'} onClick={()=>void save(draft)} className="min-h-11 rounded-lg bg-teal-700 px-4 text-sm font-bold text-white disabled:opacity-50">{saving?'در حال ذخیره…':'ذخیرهٔ برنامهٔ پیشنهادی'}</button>
+   <div className="flex min-w-0 flex-wrap gap-2">
+    <button type="button" disabled={blocked||!dirty||validation.status!=='valid'} onClick={()=>void save(draft)} className="min-h-11 min-w-0 max-w-full whitespace-normal break-words rounded-lg bg-teal-700 px-4 text-sm font-bold text-white disabled:opacity-50">{saving?'در حال ذخیره…':'ذخیرهٔ برنامهٔ پیشنهادی'}</button>
     <button type="button" className={action} disabled={blocked||!dirty} onClick={()=>setDraft(saved)}>لغو تغییرات محلی</button>
     {saved&&<button type="button" className={action} disabled={blocked} onClick={()=>{if(window.confirm('فقط برنامهٔ پیشنهادی این دامنه حذف شود؟'))void save(null);}}>حذف برنامهٔ ذخیره‌شده</button>}
    </div>
