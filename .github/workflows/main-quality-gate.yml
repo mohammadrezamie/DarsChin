@@ -82,6 +82,43 @@ jobs:
       - run: node scripts/verify.cjs --ci-stage=build
       - run: bun run smoke:api
 
+  browser:
+    name: Browser preview / ${{ matrix.engine }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        engine: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: bun install --frozen-lockfile
+      - name: Build synthetic static frontend
+        run: node scripts/build-pages-preview.mjs
+      - name: Install isolated pinned browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/darschin-browser" --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          node "$RUNNER_TEMP/darschin-browser/node_modules/playwright/cli.js" install --with-deps "${{ matrix.engine }}"
+      - name: Exercise real browser on loopback only
+        env:
+          DARSCHIN_BROWSER_MODULE: ${{ runner.temp }}/darschin-browser/node_modules/playwright
+          DARSCHIN_BROWSER_ENGINE: ${{ matrix.engine }}
+        run: node scripts/browser-preview-smoke.cjs
+      - name: Save synthetic browser screenshots and report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-preview-${{ matrix.engine }}-${{ github.sha }}
+          path: browser-qa-output/
+          if-no-files-found: ignore
+          retention-days: 7
+
   reference:
     name: Full-suite reference audit
     # Initial adoption and explicit manual runs only.
@@ -103,7 +140,7 @@ jobs:
     name: Typecheck / Tests / Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [source, typecheck, tests, bundle, reference]
+    needs: [source, typecheck, tests, bundle, browser, reference]
     if: ${{ always() }}
     steps:
       - name: Require all parallel checks to succeed
@@ -112,10 +149,11 @@ jobs:
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           TESTS_RESULT: ${{ needs.tests.result }}
           BUNDLE_RESULT: ${{ needs.bundle.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
           REFERENCE_RESULT: ${{ needs.reference.result }}
           REFERENCE_REQUIRED: ${{ github.event_name == 'workflow_dispatch' || (github.head_ref == 'ci/parallel-quality-gate-20261127' || github.head_ref == 'release/v1-integration-20261127') }}
         run: |
-          for result in "$SOURCE_RESULT" "$TYPECHECK_RESULT" "$TESTS_RESULT" "$BUNDLE_RESULT"; do
+          for result in "$SOURCE_RESULT" "$TYPECHECK_RESULT" "$TESTS_RESULT" "$BUNDLE_RESULT" "$BROWSER_RESULT"; do
             if [ "$result" != success ]; then
               echo "Quality gate failed: $result"
               exit 1
