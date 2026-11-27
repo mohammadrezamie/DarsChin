@@ -11,7 +11,7 @@
     <link rel="icon" type="image/svg+xml" href="/app-icon.svg" />
     <title>درس‌چین - سامانه هوشمند تصمیم‌یار انتخاب واحد</title>
     <meta name="description" content="سامانه تصمیم‌یار انتخاب واحد دانشگاهی و بررسی تطبیقی پیش‌نیازها و هم‌نیازها" />
-    <meta name="theme-color" content="#f4faf7" />
+    <meta name="theme-color" content="#f5f7fa" />
     <script>
       // Apply the saved display preference before rendering React to avoid
       // the wrong light/dark background flashing on small screens.
@@ -21,7 +21,7 @@
         const dark = mode === 'dark' || (mode === 'system' && prefersDark);
         document.documentElement.classList.toggle('dark', dark);
         document.querySelector('meta[name="theme-color"]')
-          ?.setAttribute('content', dark ? '#0a1b1d' : '#f4faf7');
+          ?.setAttribute('content', dark ? '#101827' : '#f5f7fa');
       } catch {
         // Storage may be inaccessible in private browser contexts.
         const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
