@@ -434,7 +434,7 @@
   --dc-jade: #2455a6;
   --dc-jade-deep: #1e4080;
   --dc-glow: rgb(36 85 166 / 12%);
-  --dc-glass: rgb(255 254 250 / 88%);
+  --dc-glass: rgb(255 255 255 / 96%);
   --darschin-surface: #ffffff;
   --darschin-subtle: #edf2f8;
   --darschin-stroke: #dce3ed;
@@ -457,7 +457,7 @@
   --dc-jade: #91b9ff;
   --dc-jade-deep: #c6dcff;
   --dc-glow: rgb(36 85 166 / 12%);
-  --dc-glass: rgb(16 42 43 / 91%);
+  --dc-glass: rgb(22 34 53 / 96%);
   --darschin-surface: #162235;
   --darschin-subtle: #202f45;
   --darschin-stroke: #35465e;
@@ -709,7 +709,7 @@
 .dc-flow-course {
   border: 1px solid var(--darschin-stroke);
   background: var(--darschin-surface);
-  box-shadow: 0 12px 30px -25px rgb(122 39 166 / 42%);
+  box-shadow: 0 12px 30px -25px rgb(23 37 60 / 24%);
 }
 .dc-flow-index { background: #edf2f8; color: #2455a6; }
 .dark .dc-flow-index { background: #202f45; color: #c6dcff; }
@@ -723,12 +723,12 @@
 .dc-flow-next {
   background: rgb(255 255 255 / 96%);
   border: 1px solid #dce3ed;
-  box-shadow: 0 15px 36px -25px rgb(125 49 151 / 45%);
+  box-shadow: 0 15px 36px -25px rgb(23 37 60 / 24%);
 }
-.dark .dc-flow-next { background: rgb(35 27 59 / 96%); border-color: #35465e; }
+.dark .dc-flow-next { background: rgb(22 34 53 / 96%); border-color: #35465e; }
 .dc-flow-next-button {
   background: linear-gradient(115deg,#2455a6,#2455a6);
-  box-shadow: 0 12px 24px -16px rgb(162 28 175 / 60%);
+  box-shadow: 0 12px 24px -16px rgb(36 85 166 / 24%);
 }
 
 @media (max-width: 639px) { .dc-flow-next, .dc-flow-heading { backdrop-filter: none; } }
@@ -756,3 +756,11 @@ body,.dark body { background:var(--dc-canvas); }
 @media (prefers-reduced-motion:reduce) {
   .dc-primary-action:hover { transform:none; }
 }
+
+/* سطح ثابت در ناحیه‌های تعاملی؛ متن و مرز مطابق تم، بدون تغییر رنگ معنایی. */
+.dc-landing-header,.darschin-global-nav,.dc-student-dock { background:var(--darschin-surface); backdrop-filter:none; -webkit-backdrop-filter:none; }
+.dc-hero-preview,.dc-hero-feature { background:var(--darschin-surface); backdrop-filter:none; -webkit-backdrop-filter:none; }
+.dc-landing :where(h1,h2,h3,p) { overflow-wrap:anywhere; }
+.dc-landing :where(a,button):focus-visible { outline:2px solid var(--darschin-focus); outline-offset:3px; }
+.dc-landing .dc-final-cta :where(a,button):focus-visible { outline-color:#fff; }
+@media (max-width:379px) { .dc-hero-feature { padding:.5rem; } .dc-hero-feature svg { flex-shrink:0; } }
