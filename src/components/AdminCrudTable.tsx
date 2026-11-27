@@ -142,7 +142,7 @@ export const AdminCrudTable: React.FC<AdminCrudTableProps> = ({ title, descripti
   return (
     <div className="darschin-crud bg-liquid-glass min-w-0 rounded-3xl overflow-hidden shadow-xs border border-white/40 dark:border-slate-800/60" dir="rtl">
       {/* Table Header & Controls */}
-      <div className="p-5 border-b border-slate-200/60 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/40 dark:bg-slate-800/40">
+      <div className="dc-workspace-table-head p-5 border-b border-slate-200/60 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/40 dark:bg-slate-800/40">
         <div>
           <h3 className="font-bold text-base text-slate-900 dark:text-white">{title}</h3>
           {description && (

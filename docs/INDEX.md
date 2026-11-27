@@ -7,6 +7,7 @@
 **وضعیت محصول: نسخهٔ نمایشی و توسعه‌ای.** داده‌های دروس و واحدهای آزمایشی الزاماً رسمی نیستند. معیار درگاه فعلی است؛ اتصال مستقیم هنوز تأیید نشده و پیکربندی درگاه باید قابل تعویض باشد. اسناد آموزشیار تاریخی‌اند و مرجع جاری محصول نیستند.
 
 | موضوع | راهنما |
+| **معیار و معماری قابل تعویض درگاه دانشگاه** | [MEYAR_TRANSITION_FA.md](MEYAR_TRANSITION_FA.md) — اتصال مستقیم هنوز تأیید نشده |
 | **مرجع وزارت علوم، ورود/نسخه‌بندی چارت و برنامهٔ پیشنهادی اختیاری** | [MINISTRY_CURRICULUM_SOURCE_AND_IMPORT_FA.md](MINISTRY_CURRICULUM_SOURCE_AND_IMPORT_FA.md) — Issue #141 |
 | **بازطراحی لندینگ و مسیر روشن دانشجو؛ درگاه قابل تعویض معیار** | [LANDING_STUDENT_JOURNEY_REDESIGN_FA.md](LANDING_STUDENT_JOURNEY_REDESIGN_FA.md) — Issue #142 |
 | **الگوچین هوشمند مدیر گروه برای ورودی جدید: کمترین روز، بدون تداخل** | [ADMIN_COHORT_PATTERN_PLANNER_FA.md](ADMIN_COHORT_PATTERN_PLANNER_FA.md) |
@@ -43,8 +44,8 @@
 | استاندارد RTL فارسی، سیستم ظاهری، فونت محلی و چک‌لیست دیباگ موبایل/دسکتاپ | [RTL_VISUAL_QA_FA.md](RTL_VISUAL_QA_FA.md) |
 | بازخورد دموی زنده: صف ثبت فشرده، فعال‌سازی نیازسنجی و ساخت چارت توسط مدیر | [UX_LIVE_DEMO_FEEDBACK_FA.md](UX_LIVE_DEMO_FEEDBACK_FA.md) |
 | ورود بدون حساب به دمو، محدوده پایلوت برق علوم‌وتحقیقات و راه‌اندازی سریع VPS | [PILOT_LAUNCH_FA.md](PILOT_LAUNCH_FA.md) |
-| روند بررسی و تأیید فایل‌های استخراج‌شده از آموزشیار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
-| آماده‌باش انتخاب واحد: صف کپی سریع کدهای آموزشیار، اولویت‌ها و تقدم همنیاز | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
+| سابقهٔ تاریخی واردات؛ درگاه جاری معیار است | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
+| سابقهٔ تاریخی صف کپی؛ محتوای جاری مستقل از نام درگاه | [EDUCATIONALYAR_REGISTRATION_FA.md](EDUCATIONALYAR_REGISTRATION_FA.md) |
 | ایمنی ورودی آموزشیار، صف بررسی مدیر و ممنوعیت انتشار خودکار | [EDUCATIONALYAR_IMPORT_REVIEW_FA.md](EDUCATIONALYAR_IMPORT_REVIEW_FA.md) |
 | نیازسنجی درس‌های ترم آینده، گزارش مدیر گروه، حریم خصوصی و برنامهٔ توسعه | [FEATURE_COURSE_DEMAND.md](FEATURE_COURSE_DEMAND.md) |
 | **محافظت اطلاعات نیازسنجی، خروجی CSV و جلوگیری از درخواست‌های قدیمی** | [DEMAND_ASYNC_SAFETY_FA.md](DEMAND_ASYNC_SAFETY_FA.md) |
@@ -128,3 +129,9 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [تکمیل فرم‌ساز نیازسنجی واقعی و برنامهٔ خروج تدریجی از دمو](DEMAND_FORM_BUILDER_PRODUCTION_20261115_FA.md).
 
 - [فرم‌ساز شرطی و ویرایش کامل دروس و حدنصاب در پیش‌نویس نیازسنجی](SMART_DEMAND_DRAFT_EDITOR_20261115_FA.md).
+
+
+- [سیاست دائمی گیت کیفیت موازی و پوشش جامع آزمون](PARALLEL_CI_QUALITY_POLICY_FA.md) — OWN-CI-PARALLEL-026؛ ده بخش Vitest، گیت تجمیعی و معیارهای اندازه‌گیری.
+
+
+- [نقشهٔ راه انتشار نسخهٔ پایدار ۱.۰](V1_STABLE_RELEASE_ROADMAP_FA.md) — پروندهٔ مادر #150، چک‌لیست Issueها، ترتیب اجرا و معیار انتشار.
