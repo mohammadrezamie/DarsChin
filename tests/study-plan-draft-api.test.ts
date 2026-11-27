@@ -25,7 +25,7 @@ beforeEach(()=>{
  db.users.push(u,s);admin='Bearer '+generateToken(u);student='Bearer '+generateToken(s);
 });
 afterEach(()=>{vi.restoreAllMocks();db.data=backup;});
-const payload=(scope:string|null=null,courseId=a)=>({trackId:scope,plan:{curriculumId:chartId,periods:[{id:'p',label:'تابستان',kind:'summer'}],items:[{id:'i',kind:'course',courseId,periodId:'p'}]}});
+const payload=(scope:string|null=null,courseId=a)=>({trackId:scope,expectedRevision:null,plan:{curriculumId:chartId,periods:[{id:'p',label:'تابستان',kind:'summer'}],items:[{id:'i',kind:'course',courseId,periodId:'p'}]}});
 const put=(body:object,token=admin)=>request(app).put(url).set('Authorization',token).send(body);
 describe('برنامهٔ پیشنهادی مستقل و اختیاری',()=>{
  it('returns absent and stores a partial plan without changing assignments or rules',async()=>{
@@ -48,14 +48,14 @@ describe('برنامهٔ پیشنهادی مستقل و اختیاری',()=>{
  it('protects the draft from student access and supports explicit removal',async()=>{
   expect((await put(payload(),student)).status).toBe(403);
   expect((await request(app).get(url).set('Authorization',student)).status).toBe(403);
-  expect((await put(payload())).status).toBe(200);
-  expect((await put({trackId:null,plan:null})).body.data.validation.status).toBe('absent');
+  const created=await put(payload());expect(created.status).toBe(200);
+  expect((await put({trackId:null,plan:null,expectedRevision:created.body.data.revision})).body.data.validation.status).toBe('absent');
   expect(db.data.studyPlanDrafts).toEqual([]);
  });
  it('rolls back failed writes without revealing disk errors',async()=>{
-  const initial=payload();expect((await put(initial)).status).toBe(200);
+  const initial=payload();const created=await put(initial);expect(created.status).toBe(200);
   vi.spyOn(db,'save').mockImplementationOnce(()=>{throw Error('synthetic-secret-path');});
-  const response=await put({trackId:null,plan:null});
+  const response=await put({trackId:null,plan:null,expectedRevision:created.body.data.revision});
   expect(response.status).toBe(503);expect(JSON.stringify(response.body)).not.toContain('synthetic-secret-path');
   expect(db.data.studyPlanDrafts?.[0].plan).toEqual(initial.plan);
  });
@@ -64,4 +64,21 @@ describe('برنامهٔ پیشنهادی مستقل و اختیاری',()=>{
   expect((await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a).set('Authorization',admin)).status).toBe(409);
   expect((await request(app).delete('/api/curriculum/'+chartId).set('Authorization',admin)).status).toBe(409);
  });
+ it('rejects stale writes and deletion from a second editor, and requires a revision',async()=>{
+  const created=await put(payload());expect(created.status).toBe(200);
+  const revision=created.body.data.revision;
+  expect(typeof revision).toBe('string');
+  const changed={...payload(),expectedRevision:revision,plan:{...payload().plan,periods:[{id:'p',label:'نسخه تازه',kind:'regular'}]}};
+  const update=await put(changed);expect(update.status).toBe(200);
+  expect(update.body.data.revision).not.toBe(revision);
+  expect((await put(changed)).status).toBe(409);
+  expect((await put({trackId:null,plan:null,expectedRevision:revision})).status).toBe(409);
+  expect((await put({trackId:null,plan:null})).status).toBe(400);
+  expect((await request(app).get(url).set('Authorization',admin)).body.data.plan).toEqual(changed.plan);
+  expect((await put({trackId:null,plan:null,expectedRevision:update.body.data.revision})).status).toBe(200);
+ });
+ it('rejects ambiguous repeated track query parameters',async()=>{
+  expect((await request(app).get(url+'?trackId=a&trackId=b').set('Authorization',admin)).status).toBe(400);
+ });
+
 });

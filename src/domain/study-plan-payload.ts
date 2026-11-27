@@ -8,3 +8,7 @@ export const studyPlanPayload=z.object({
   plan:z.object({curriculumId:id,periods:z.array(period).max(100),items:z.array(item).max(2000)}).strict().nullable(),
 }).strict();
 
+
+/** Required precondition for every mutation, including deletion. Null means no saved draft. */
+export const studyPlanMutation=studyPlanPayload.extend({expectedRevision:z.string().min(1).max(150).nullable()});
+export function studyPlanRevision(row:{revision?:string}|undefined):string|null{return row?row.revision||'legacy':null;}

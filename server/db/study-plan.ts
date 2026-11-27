@@ -8,6 +8,7 @@ export interface StoredStudyPlanDraft {
   curriculumId:string;
   trackId:string|null;
   plan:StudyPlanDraft;
+  revision?:string; // Legacy rows use an explicit legacy revision until first write.
 }
 type ContextData=Pick<DatabaseSchema,'curricula'|'curriculumCourses'|'courses'|'tracks'>;
 export function studyPlanScope(data:ContextData,curriculumId:string,trackId:string|null){

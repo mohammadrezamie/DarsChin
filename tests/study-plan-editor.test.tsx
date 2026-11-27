@@ -17,11 +17,13 @@ describe('ویرایش برنامهٔ مستقل در رابط و دمو',()=>{
    const courseId=before.courses.find((r:any)=>!r.trackId&&r.active!==false).courseId;
    const plan={curriculumId:chart,periods:[{id:'p',kind:'summer',label:'تابستان آزمایشی'}],items:[{id:'i',kind:'course',courseId,periodId:'p'}]};
    expect((await browserDemoRequest<any>(url)).data.validation.status).toBe('absent');
-   expect((await browserDemoRequest(url,{method:'PUT',body:JSON.stringify({trackId:null,plan})})).success).toBe(true);
-   expect((await browserDemoRequest<any>(url)).data.plan).toEqual(plan);
+   expect((await browserDemoRequest(url,{method:'PUT',body:JSON.stringify({trackId:null,plan,expectedRevision:null})})).success).toBe(true);
+   const loaded=(await browserDemoRequest<any>(url)).data;
+   expect(loaded.plan).toEqual(plan);
+   expect((await browserDemoRequest(url,{method:'PUT',body:JSON.stringify({trackId:null,plan:null,expectedRevision:null})})).success).toBe(false);
    expect((await browserDemoRequest<any>('/api/curriculum/'+chart+'/full')).data).toEqual(before);
    expect((await browserDemoRequest<any>('/api/curriculum/demo-curriculum-1402/study-plan-draft')).data.plan).toBeNull();
-   expect((await browserDemoRequest(url,{method:'PUT',body:JSON.stringify({trackId:null,plan:null})})).success).toBe(true);
+   expect((await browserDemoRequest(url,{method:'PUT',body:JSON.stringify({trackId:null,plan:null,expectedRevision:loaded.revision})})).success).toBe(true);
    expect((await browserDemoRequest<any>(url)).data.plan).toBeNull();
  });
  it('rejects malformed or invented choice pools using shared payload schema',()=>{

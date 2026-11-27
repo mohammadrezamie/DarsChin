@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { CurriculumSemesterPreview } from './CurriculumSemesterPreview';
-import { StudyPlanEditor } from './StudyPlanEditor';
+import { StudyPlanEditor, type StudyPlanLeaveGuard } from './StudyPlanEditor';
 import { extractSourceCourseIds } from '../utils/academic';
 import { ruleScopeCourseIds } from '../domain/curriculum-rule-scope';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
@@ -29,6 +29,13 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [cloneFeedback,setCloneFeedback]=useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   const detailsRequestRef = useRef(0);
+  const studyPlanGuard=useRef<StudyPlanLeaveGuard>({dirty:false,saving:false});
+  const selectChart=(id:string)=>{
+    if(id===selectedCurriculumId)return;
+    if(studyPlanGuard.current.saving){setOperationError('ابتدا نتیجهٔ ذخیرهٔ برنامهٔ پیشنهادی را دریافت کنید.');return;}
+    if(studyPlanGuard.current.dirty&&!window.confirm('تغییرات ذخیره‌نشدهٔ برنامهٔ پیشنهادی کنار گذاشته شود؟'))return;
+    setSelectedCurriculumId(id);
+  };
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -133,7 +140,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       }
       const draft=result.data.curriculum;
       setCurricula(old=>[...old,draft]);
-      setSelectedCurriculumId(draft.id);
+      selectChart(draft.id);
       setCloneOpen(false);
       setCloneFeedback('');
       await fetchData();
@@ -210,7 +217,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     <div dir="rtl" className="darschin-page space-y-4">
       <NewCurriculumForm onCreated={(chart) => {
         setCurricula(prev => [...prev, chart]);
-        setSelectedCurriculumId(chart.id);
+        selectChart(chart.id);
         void fetchData();
       }} />
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800">
@@ -227,7 +234,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
           <select 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
             value={selectedCurriculumId || ''}
-            onChange={(e) => setSelectedCurriculumId(e.target.value)}
+            onChange={(e) => selectChart(e.target.value)}
           >
             <option value="">-- یک چارت انتخاب کنید --</option>
             {matchingCharts.map(c => (
@@ -322,7 +329,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
           </section>
           {selectedChart&&<CurriculumSemesterPreview key={selectedChart.id} chart={selectedChart}
             assignments={assignments} courses={courses} tracks={relevantTracks}/>}
-          {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks}/>}
+          {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks} leaveGuard={studyPlanGuard}/>}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">

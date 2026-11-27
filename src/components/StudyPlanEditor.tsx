@@ -5,11 +5,13 @@ import {validateStudyPlanDraft} from '../domain/study-plan-draft';
 import {ruleScopeCourseIds} from '../domain/curriculum-rule-scope';
 import {apiRequest} from '../utils/api';
 
-type ResponseData={plan:StudyPlanDraft|null;validation:StudyPlanValidation};
-export function StudyPlanEditor({chart,assignments,courses,tracks}:{
- chart:Curriculum;assignments:CurriculumCourse[];courses:Course[];tracks:Track[];
+type ResponseData={plan:StudyPlanDraft|null;revision:string|null;validation:StudyPlanValidation};
+export type StudyPlanLeaveGuard={dirty:boolean;saving:boolean};
+export function StudyPlanEditor({chart,assignments,courses,tracks,leaveGuard}:{
+ chart:Curriculum;assignments:CurriculumCourse[];courses:Course[];tracks:Track[];leaveGuard?:React.MutableRefObject<StudyPlanLeaveGuard>;
 }){
  const [track,setTrack]=useState('');
+ const [revision,setRevision]=useState<string|null>(null);
  const [saved,setSaved]=useState<StudyPlanDraft|null>(null);
  const [draft,setDraft]=useState<StudyPlanDraft|null>(null);
  const [status,setStatus]=useState<'loading'|'ready'|'error'>('loading');
@@ -35,17 +37,22 @@ export function StudyPlanEditor({chart,assignments,courses,tracks}:{
  useEffect(()=>{
    const controller=new AbortController();
    const gen=++generation.current;
-   setStatus('loading');setError('');setMessage('');setSaved(null);setDraft(null);
+   setStatus('loading');setError('');setMessage('');setSaved(null);setDraft(null);setRevision(null);
    setPeriodId('');setCourseId('');setPeriodLabel('');
    void apiRequest<ResponseData>(endpoint+'?trackId='+encodeURIComponent(track),{signal:controller.signal}).then(result=>{
      if(controller.signal.aborted||gen!==generation.current)return;
-     if(!result.success||!result.data||!Object.hasOwn(result.data,'plan')){
+     if(!result.success||!result.data||!Object.hasOwn(result.data,'plan')||!(result.data.revision===null||typeof result.data.revision==='string')){
        setStatus('error');setError(result.error||'دریافت برنامهٔ پیشنهادی ناموفق بود.');return;
      }
-     setSaved(result.data.plan);setDraft(result.data.plan);setStatus('ready');
+     setSaved(result.data.plan);setDraft(result.data.plan);setRevision(result.data.revision);setStatus('ready');
    }).catch(()=>{if(!controller.signal.aborted&&gen===generation.current){setStatus('error');setError('ارتباط با سرور برقرار نشد.');}});
    return ()=>{controller.abort();generation.current++;};
  },[endpoint,track,retry]);
+ useEffect(()=>{
+   if(!leaveGuard)return;
+   leaveGuard.current={dirty,saving};
+   return ()=>{leaveGuard.current={dirty:false,saving:false};};
+ },[leaveGuard,dirty,saving]);
  useEffect(()=>{
    if(!dirty&&!saving)return;
    const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
@@ -83,13 +90,13 @@ export function StudyPlanEditor({chart,assignments,courses,tracks}:{
  async function save(value:StudyPlanDraft|null){
    if(blocked||busy.current)return;
    if(value!==null&&validation.status!=='valid')return;
-   busy.current=true;setSaving(true);setError('');setMessage('');
+   busy.current=true;if(leaveGuard)leaveGuard.current={dirty,saving:true};setSaving(true);setError('');setMessage('');
    const gen=generation.current;
    try{
-     const result=await apiRequest<ResponseData>(endpoint,{method:'PUT',body:JSON.stringify({trackId:track||null,plan:value})});
+     const result=await apiRequest<ResponseData>(endpoint,{method:'PUT',body:JSON.stringify({trackId:track||null,plan:value,expectedRevision:revision})});
      if(gen!==generation.current)return;
-     if(!result.success||!result.data||!Object.hasOwn(result.data,'plan')){setError(result.error||'ذخیره انجام نشد؛ پیش‌نویس محلی حفظ شد.');return;}
-     setSaved(result.data.plan);setDraft(result.data.plan);setMessage('برنامهٔ پیشنهادی ذخیره شد.');
+     if(!result.success||!result.data||!Object.hasOwn(result.data,'plan')||!(result.data.revision===null||typeof result.data.revision==='string')){setError(result.error||'ذخیره انجام نشد؛ پیش‌نویس محلی حفظ شد.');return;}
+     setSaved(result.data.plan);setDraft(result.data.plan);setRevision(result.data.revision);setMessage('برنامهٔ پیشنهادی ذخیره شد.');
    }catch{if(gen===generation.current)setError('نتیجهٔ ذخیره مشخص نیست؛ پس از بررسی اتصال، دوباره بارگذاری کنید.');}
    finally{busy.current=false;if(gen===generation.current)setSaving(false);}
  }
@@ -105,6 +112,8 @@ export function StudyPlanEditor({chart,assignments,courses,tracks}:{
   {message&&<p role="status" className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{message}</p>}
   {status==='loading'&&<p role="status">در حال دریافت برنامه…</p>}
   {status==='error'&&<button type="button" className={action} onClick={()=>setRetry(n=>n+1)}>تلاش مجدد دریافت برنامه</button>}
+  {status==='ready'&&<button type="button" className={action} disabled={saving} onClick={()=>{if(!dirty||window.confirm('تغییرات محلی کنار گذاشته و آخرین نسخه دریافت شود؟')){setStatus('loading');setRetry(n=>n+1);}}}>دریافت آخرین نسخه</button>}
+  {dirty&&<p role="status" className="text-xs font-bold text-amber-800 dark:text-amber-200">تغییرات ذخیره‌نشده</p>}
   {status==='ready'&&(!draft?<div className="space-y-2">
    <p className="text-sm text-slate-500">برای این دامنه برنامهٔ مستقلی ثبت نشده است.</p>
    <button type="button" className={action} disabled={blocked} onClick={()=>setDraft({curriculumId:chart.id,periods:[],items:[]})}>ایجاد برنامهٔ پیشنهادی</button>

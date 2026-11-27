@@ -9,7 +9,8 @@ import { authenticate, isRootOwner, requireAdmin, requirePermission, type Authen
 import { extractSourceCourseIds } from '../../src/utils/academic';
 import { ruleScopeCourseIds, validateScopedCurriculumRules } from '../../src/domain/curriculum-rule-scope';
 import { validate } from '../middleware/validate';
-import { studyPlanPayload, studyPlanScope, validateStoredStudyPlan } from '../db/study-plan';
+import { studyPlanScope, validateStoredStudyPlan } from '../db/study-plan';
+import { studyPlanMutation, studyPlanRevision } from '../../src/domain/study-plan-payload';
 import { validateStudyPlanDraft } from '../../src/domain/study-plan-draft';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
@@ -71,20 +72,21 @@ curriculumRouter.get('/:id/full', optionalIdentity, (req: AuthenticatedRequest, 
 
 // Independent, optional advisory drafts. Never feed these into eligibility.
 curriculumRouter.get('/:id/study-plan-draft', authenticate, requirePermission('curriculum.manage'), (req,res)=>{
-  const trackId=req.query.trackId===undefined||req.query.trackId===''?null:req.query.trackId;
-  if(trackId!==null&&typeof trackId!=='string')return res.status(400).json({success:false,error:'گرایش نامعتبر است.'});
+  const rawTrack=req.query.trackId;
+  if(rawTrack!==undefined&&typeof rawTrack!=='string')return res.status(400).json({success:false,error:'گرایش نامعتبر است.'});
+  const trackId:string|null=typeof rawTrack==='string'&&rawTrack!==''?rawTrack:null;
   const scope=studyPlanScope(db.data,req.params.id,trackId);
   if(!scope)return res.status(404).json({success:false,error:'چارت یا گرایش یافت نشد.'});
   const row=(db.data.studyPlanDrafts||[]).find(r=>r.curriculumId===req.params.id&&r.trackId===trackId);
   if(row&&!validateStoredStudyPlan(db.data,row))return res.status(409).json({success:false,error:'پیش‌نویس موجود نیازمند بازبینی است.'});
   const plan=row?.plan||null;
-  return res.json({success:true,data:{plan,validation:validateStudyPlanDraft(scope,plan)}});
+  return res.json({success:true,data:{plan,revision:studyPlanRevision(row),validation:validateStudyPlanDraft(scope,plan)}});
 });
 
 curriculumRouter.put('/:id/study-plan-draft', authenticate, requirePermission('curriculum.manage'), (req,res)=>{
-  const parsed=studyPlanPayload.safeParse(req.body);
+  const parsed=studyPlanMutation.safeParse(req.body);
   if(!parsed.success)return res.status(400).json({success:false,error:'ساختار برنامهٔ پیشنهادی معتبر نیست.'});
-  const {trackId,plan}=parsed.data;
+  const {trackId,plan,expectedRevision}=parsed.data;
   const chart=db.curricula.find(c=>c.id===req.params.id);
   const scope=studyPlanScope(db.data,req.params.id,trackId);
   if(!chart||!scope)return res.status(404).json({success:false,error:'چارت یا گرایش یافت نشد.'});
@@ -92,14 +94,17 @@ curriculumRouter.put('/:id/study-plan-draft', authenticate, requirePermission('c
   const validation=validateStudyPlanDraft(scope,plan);
   if(validation.status==='invalid')return res.status(400).json({success:false,error:validation.issues[0]});
   const before=db.data.studyPlanDrafts;
+  const existing=(before||[]).find(row=>row.curriculumId===chart.id&&row.trackId===trackId);
+  if(studyPlanRevision(existing)!==expectedRevision)return res.status(409).json({success:false,error:'برنامه توسط مدیر دیگری تغییر کرده است؛ آخرین نسخه را دریافت کنید.'});
+  const revision=plan?randomUUID():null;
   const next=(before||[]).filter(row=>row.curriculumId!==chart.id||row.trackId!==trackId);
-  if(plan)next.push({curriculumId:chart.id,trackId,plan});
+  if(plan&&revision)next.push({curriculumId:chart.id,trackId,plan,revision});
   db.data.studyPlanDrafts=next;
   try{db.save();}catch{
     db.data.studyPlanDrafts=before;
     return res.status(503).json({success:false,error:'ذخیرهٔ برنامهٔ پیشنهادی انجام نشد.'});
   }
-  return res.json({success:true,data:{plan,validation}});
+  return res.json({success:true,data:{plan,revision,validation}});
 });
 
 // Admin: Create Curriculum
