@@ -25,12 +25,13 @@ describe('بازبینی ساختاری رابط درس‌چین',()=>{
     expect(student).toContain('lg:min-w-[16rem]');
     expect(student).toContain('bg-amber-800 px-3 py-2');
   });
-  it('ستون‌های صفحهٔ اول امکان کوچک شدن دارند و به مقصد مدیریت می‌رسند',()=>{
+  it('ستون‌های صفحهٔ اول امکان کوچک شدن دارند و به مقصد راهنمای دانشجو می‌رسند',()=>{
     const hero=read('src/pages/landing-sections/HeroSection.tsx');
-    const manager=read('src/pages/landing-sections/DashboardShowcaseSection.tsx');
+    const journey=read('src/pages/landing-sections/DashboardShowcaseSection.tsx');
     expect(hero).toContain('lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]');
-    expect(hero).toContain('href="#manager-workspace"');
-    expect(manager).toContain('id="manager-workspace"');
-    expect(manager).toContain('publicDemoEnabled && <div');
+    expect(hero).toContain('href="#student-journey"');
+    expect(journey).toContain('id="student-journey"');
+    expect(journey).not.toContain('to="/demo/admin"');
+    expect(journey).toContain('publicDemoEnabled && <div');
   });
 });
