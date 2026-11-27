@@ -252,6 +252,35 @@ async function main() {
     if (result.status !== status) throw new Error(label+' expected HTTP '+status+', got '+result.status);
     return result.body;
   };
+  // Real production-mode API acceptance for optional curriculum advisory drafts.
+  // Uses only the disposable, seeded fixture and the synthetic root identity.
+  const studyPlanPath='/api/curriculum/'+encodeURIComponent(chart.id)+'/study-plan-draft';
+  expectStatus(await authenticated(studyPlanPath,studentToken),403,'Student cannot read advisory draft');
+  expectStatus(await authenticated(studyPlanPath,managerToken),403,'Demand-only manager cannot read curriculum draft');
+  const emptyStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Initial advisory draft');
+  if(emptyStudyPlan.data?.plan!==null||emptyStudyPlan.data?.revision!==null)throw new Error('New advisory draft must be explicitly absent');
+  const studyPlan={
+    curriculumId:chart.id,
+    periods:[{id:'smoke-period',label:'دورهٔ مصنوعی پس از بوت',kind:'summer'}],
+    items:[{id:'smoke-item',kind:'course',courseId,periodId:'smoke-period'}],
+  };
+  const createStudyPlan=expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:studyPlan,expectedRevision:null,
+  }),200,'Create production advisory draft');
+  const studyPlanRevision=createStudyPlan.data?.revision;
+  if(typeof studyPlanRevision!=='string'||!studyPlanRevision)throw new Error('Advisory draft revision missing');
+  const staleUpdate=await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:studyPlan,expectedRevision:null,
+  });
+  expectStatus(staleUpdate,409,'Stale advisory draft update');
+  const revisedPlan={...studyPlan,periods:[{...studyPlan.periods[0],label:'نسخهٔ دوم مصنوعی'}]};
+  const updateStudyPlan=expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:revisedPlan,expectedRevision:studyPlanRevision,
+  }),200,'Update production advisory draft');
+  if(updateStudyPlan.data?.revision===studyPlanRevision)throw new Error('Advisory revision did not advance');
+  expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:null,expectedRevision:studyPlanRevision,
+  }),409,'Stale advisory draft deletion');
   const profile = {...academicScope,currentTermId:termId,isTrackSelected:false,desiredTrackIds:[]};
   expectStatus(await authenticated('/api/student/profile',studentToken,'PUT',profile),200,'Student profile');
   expectStatus(await authenticated('/api/student/profile',otherToken,'PUT',{...profile,entryYearId:alternateYear}),200,'Other cohort profile');
@@ -337,6 +366,18 @@ async function main() {
   await stopServer();
   await startServer();
 
+  const persistedStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Advisory draft after restart');
+  if(JSON.stringify(persistedStudyPlan.data?.plan)!==JSON.stringify(revisedPlan)||
+      persistedStudyPlan.data?.revision!==updateStudyPlan.data?.revision) {
+    throw new Error('Advisory draft or revision did not survive a production process restart');
+  }
+  expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:null,expectedRevision:persistedStudyPlan.data.revision,
+  }),200,'Delete advisory draft after restart');
+  const removedStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Read deleted advisory draft');
+  if(removedStudyPlan.data?.plan!==null||removedStudyPlan.data?.revision!==null) {
+    throw new Error('Advisory draft deletion was not persisted');
+  }
   await verifyDemandPersistence();
   expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey remains closed after restart');
   const afterRestart = await requestJson('/api/sync/state', {

@@ -173,3 +173,8 @@
 ## اصلاح آزمون ناوبری سازندهٔ چارت — ۶ آذر ۱۴۰۵
 
 [اجرای 46037845187](https://github.com/mohammadrezamie/DarsChin/actions/runs/46037845187) نشان داد آزمون تعاملی به‌جای کلیک مسیر واقعی منوی مدیریت، query tab را به URL دمو اضافه کرده بود؛ این روش در پیش‌نمایش HashRouter تب چارت را فعال نکرد و selector وجود نداشت. سناریو اکنون ناوبری واقعی را از drawer موبایل/تبلت و sidebar دسکتاپ انجام می‌دهد و وجود heading و گزینهٔ چارت را پیش از انتخاب بررسی می‌کند. هیچ مجوزی تغییر نکرده است؛ اجرای تازه لازم است.
+
+
+## پذیرش API production و restart — ۶ آذر ۱۴۰۵
+
+`scripts/smoke-api.cjs` گسترش یافت: API واقعی production bundle با دیتابیس موقت، نقش root مصنوعی و chart/course seed، رد دسترسی student و demand-only manager، optimistic revision، رد stale update/delete، ماندگاری پس از restart process و حذف نسخه‌دار را بررسی می‌کند. این تست با مرورگر static mock یکی نیست و به staging واقعی تعمیم داده نمی‌شود. نتیجهٔ گیت تازه لازم است.
