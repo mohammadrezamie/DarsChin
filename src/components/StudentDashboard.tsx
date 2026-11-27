@@ -808,7 +808,7 @@ export const StudentDashboard: React.FC = () => {
               className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-3 py-2 text-center text-xs font-extrabold leading-5 text-white shadow-lg shadow-teal-700/15 transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
               <UploadCloud aria-hidden="true" className="h-4 w-4 shrink-0" /> دریافت دروس
             </button>
-            <p className="col-span-2 text-[11px] leading-5 dc-workspace-eyebrow">فایل دروس و راهنمای افزونه در پنجرهٔ «دریافت دروس» است.</p>
+            <p className="col-span-2 text-[11px] leading-5 dc-workspace-eyebrow">فایل استاندارد دروس و راهنمای معیار در پنجرهٔ «دریافت دروس» است.</p>
           </div>
         </div>
       </div>
