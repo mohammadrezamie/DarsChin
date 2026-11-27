@@ -70,7 +70,7 @@ describe('ساخت آگاهانه چارت دانشگاه / واحد / مقطع 
 
  describe('دامنهٔ قانون در سازندهٔ چارت',()=>{
   it('گرایش صریح را در فرم و درخواست API حفظ می‌کند',()=>{
-    const editor=readFileSync(resolve(process.cwd(),'src/components/AdminCurriculumBuilder.tsx'),'utf8');
+    const editor=readFileSync('src/components/AdminCurriculumBuilder.tsx','utf8');
     expect(editor).toContain('trackId: addRuleForm.trackId || null');
     expect(editor).toContain('ruleScopeCourseIds');
     expect(editor).toContain('دامنهٔ قانون');

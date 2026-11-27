@@ -46,7 +46,6 @@ export const AdminCurriculumBuilder: React.FC = () => {
   });
   const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
   const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
-  const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
   const assignments: CurriculumCourse[]=curriculumFull?.courses||[];
   const ruleTrackOptions=relevantTracks.filter(track=>ruleScopeCourseIds(assignments,selectedChart?.id||'',track.id).has(activeCourseId||''));
   const commonRuleAllowed=ruleScopeCourseIds(assignments,selectedChart?.id||'',null).has(activeCourseId||'');
@@ -191,7 +190,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     });
     if (res.success) {
       loadCurriculumDetails(selectedCurriculumId!);
-      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '', trackId: '' });
+      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
     } else {
       setOperationError(res.error || 'ثبت قانون انجام نشد.');
     }
@@ -419,7 +418,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" onClick={()=>{
                       setActiveCourseId(cc.courseId);
-                      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                      setAddRuleForm(prev=>({...prev,sourceCourseId:'',trackId:cc.trackId||''}));
                       setOperationError('');
                     }} className="min-h-11 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
                       تنظیم پیش‌نیاز و هم‌نیاز
