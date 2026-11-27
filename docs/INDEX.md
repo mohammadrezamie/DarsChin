@@ -128,3 +128,5 @@ No changes to academic eligibility rules without the owner's explicit confirmati
 - [تکمیل فرم‌ساز نیازسنجی واقعی و برنامهٔ خروج تدریجی از دمو](DEMAND_FORM_BUILDER_PRODUCTION_20261115_FA.md).
 
 - [فرم‌ساز شرطی و ویرایش کامل دروس و حدنصاب در پیش‌نویس نیازسنجی](SMART_DEMAND_DRAFT_EDITOR_20261115_FA.md).
+
+- [نقشهٔ راه انتشار نسخهٔ پایدار ۱.۰](V1_STABLE_RELEASE_ROADMAP_FA.md) — پروندهٔ مادر #150، چک‌لیست Issueها، ترتیب اجرا و معیار انتشار.
