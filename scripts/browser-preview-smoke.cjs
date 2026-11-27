@@ -83,15 +83,31 @@ async function runCase(origin,width,height) {
     await page.goto(base+'#/demo/admin');await wait(page.getByLabel('ابزارهای دموی درس‌چین'));
     await checkLayout('admin demo');await screenshot('admin-demo');
     // Interactive curriculum QA: same real UI, synthetic mock only, independent cohorts.
-    const adminChartUrl=base+'#/demo/admin?tab=curricula';
+    const adminChartUrl=base+'#/demo/admin';
     const editorName='ویرایش برنامهٔ پیشنهادی مستقل';
     const chartSelector='چارت‌های فعال و پیش‌نویس:';
     const saveLabel='ذخیرهٔ برنامهٔ پیشنهادی';
     const createLabel='ایجاد برنامهٔ پیشنهادی';
+    const openCurriculumTab=async p=>{
+      if(width<1024){
+        await p.getByRole('button',{name:'بازکردن فهرست بخش‌های مدیریت',exact:true}).click();
+        const drawer=p.getByRole('dialog',{name:'فهرست بخش‌های مدیریت'});
+        await wait(drawer);
+        await drawer.getByRole('button',{name:'چارت‌های تحصیلی',exact:true}).click();
+        await drawer.waitFor({state:'hidden'});
+      } else {
+        const nav=p.locator('aside[aria-label="ناوبری دسکتاپ مدیریت"]');
+        await nav.getByRole('button',{name:'چارت‌های تحصیلی',exact:true}).click();
+      }
+      await wait(p.getByRole('heading',{name:'مدیریت ساختار چارت تحصیلی'}));
+    };
     const scope=async p=>{
       await p.goto(adminChartUrl);
-      await wait(p.getByRole('heading',{name:'مدیریت ساختار چارت تحصیلی'}));
+      await wait(p.getByLabel('ابزارهای دموی درس‌چین'));
+      await openCurriculumTab(p);
       const selector=p.getByLabel(chartSelector,{exact:true});
+      await wait(selector);
+      await selector.locator('option[value="demo-curriculum"]').waitFor({state:'attached',timeout:15000});
       await selector.selectOption('demo-curriculum');
       const editor=p.getByRole('region',{name:editorName});
       await wait(editor);
