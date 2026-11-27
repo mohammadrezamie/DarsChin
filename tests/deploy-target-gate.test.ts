@@ -257,4 +257,16 @@ describe('isolated staging and production deployment gate', () => {
     expect(result[0].systemdVerified).toBe(true);
   });
 
+  it('requires stable systemd identity on both targets, not just staging',async()=>{
+    const units:string[]=[];
+    const stable={pid:'42',restarts:'0',invocation:'a'.repeat(32),activeSince:'12345'};
+    const result=await gate.verifyDeployment({target:'production',sha:SHA,samples:2,check:true,systemd:true},{
+      unitReader:(unit:string)=>{units.push(unit);return stable;},sleep:async()=>{},
+      fetchImpl:async(url:string)=>url.endsWith('/health')?ok():url.endsWith('/challenge')?challenge():missing(),
+    });
+    expect(result.map((r:{systemdVerified:boolean})=>r.systemdVerified)).toEqual([true,true]);
+    expect(units).toContain('darschyn-staging.service');
+    expect(units).toContain('darschyn.service');
+  });
+
 });

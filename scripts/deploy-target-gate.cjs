@@ -202,7 +202,7 @@ async function verifyDeployment(input, deps = {}) {
     // and healthy in the isolated staging environment.
     result.push(await checkOne('staging', input.sha, input.samples, probeDeps));
   }
-  result.push(await checkOne(input.target, input.sha, input.samples, deps));
+  result.push(await checkOne(input.target, input.sha, input.samples, probeDeps));
   return result;
 }
 
