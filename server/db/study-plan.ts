@@ -23,3 +23,8 @@ export function validateStoredStudyPlan(data:ContextData,row:StoredStudyPlanDraf
   const scope=studyPlanScope(data,row.curriculumId,row.trackId);
   return scope!==null&&validateStudyPlanDraft(scope,parsed.data.plan).status==='valid';
 }
+
+/** Protect even a legacy inconsistent row from silently losing its referenced course. */
+export function studyPlanReferencesCourse(data:Pick<DatabaseSchema,'studyPlanDrafts'>,courseId:string):boolean{
+  return (data.studyPlanDrafts||[]).some(row=>Array.isArray(row.plan?.items)&&row.plan.items.some(item=>item?.kind==='course'&&item.courseId===courseId));
+}

@@ -268,6 +268,10 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
        survey.curriculumId===existing.id&&(survey.status==='OPEN'||survey.status==='DRAFT'))))) {
     return res.status(409).json({success:false,error:'این چارت سابقهٔ نیازسنجی دارد؛ تغییر حوزه یا آرشیو تا بستن نیازسنجی‌ها مجاز نیست.'});
   }
+  if ((db.data.studyPlanDrafts||[]).some(row=>row.curriculumId===existing.id)&&
+      ((majorId&&majorId!==existing.majorId)||(entryYearId&&entryYearId!==existing.entryYearId))) {
+    return res.status(409).json({success:false,error:'چارت دارای برنامهٔ پیشنهادی مستقل است؛ برای تغییر رشته یا ورودی، نسخهٔ جدید بسازید یا ابتدا برنامه را تعیین تکلیف کنید.'});
+  }
   const futureMajor=majorId||existing.majorId;
   const futureYear=entryYearId||existing.entryYearId;
   if ((majorId && !db.majors.some(m=>m.id===majorId&&m.degreeLevelId===existing.degreeLevelId&&m.active)) ||
@@ -331,14 +335,15 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
   if((db.data.studyPlanDrafts||[]).some(row=>row.curriculumId===req.params.id)){
     return res.status(409).json({success:false,error:'ابتدا پیش‌نویس‌های برنامهٔ پیشنهادی این چارت را تعیین تکلیف کنید.'});
   }
-  // Only unused charts can be removed; never cascade through survey history.
-  db.curricula.splice(idx, 1);
-  
-  // Cascade delete curriculum courses and rules
-  db.data.curriculumCourses = db.curriculumCourses.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
-  
-  db.save();
+  // Replace all affected collections together; retain originals for failed writes.
+  const before={curricula:db.data.curricula,curriculumCourses:db.data.curriculumCourses,academicRules:db.data.academicRules};
+  db.data.curricula=before.curricula.filter(c=>c.id!==req.params.id);
+  db.data.curriculumCourses=before.curriculumCourses.filter(c=>c.curriculumId!==req.params.id);
+  db.data.academicRules=before.academicRules.filter(c=>c.curriculumId!==req.params.id);
+  try{db.save();}catch{
+    Object.assign(db.data,before);
+    return res.status(503).json({success:false,error:'حذف چارت ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'چارت با موفقیت حذف شد.' });
 });
 
@@ -383,8 +388,12 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
     active: true,
   };
 
-  db.curriculumCourses.push(newEntry);
-  db.save();
+  const previousAssignments=db.data.curriculumCourses;
+  db.data.curriculumCourses=[...previousAssignments,newEntry];
+  try{db.save();}catch{
+    db.data.curriculumCourses=previousAssignments;
+    return res.status(503).json({success:false,error:'انتساب درس ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, data: newEntry });
 });
 
@@ -394,7 +403,9 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
     cc => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
   if (!matches.length) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
-  const selectedTrack = typeof req.query.trackId === 'string' ? req.query.trackId : null;
+  const rawTrack=req.query.trackId;
+  if(rawTrack!==undefined&&typeof rawTrack!=='string')return res.status(400).json({success:false,error:'پارامتر گرایش مبهم است.'});
+  const selectedTrack = typeof rawTrack === 'string' ? rawTrack : null;
   if (!selectedTrack && matches.length > 1) {
     return res.status(409).json({
       success: false, error: 'این درس برای بیش از یک گرایش ثبت شده؛ گرایش را با trackId مشخص کنید تا درس اشتباه حذف نشود.',
@@ -416,7 +427,8 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
     !validateStoredStudyPlan({...db.data,curriculumCourses:remainingAssignments},row))){
     return res.status(409).json({success:false,error:'ابتدا برنامهٔ پیشنهادی مرتبط را بازبینی کنید.'});
   }
-  db.data.curriculumCourses = db.curriculumCourses.filter(cc => cc.id !== assignment.id);
+  const before={curriculumCourses:db.data.curriculumCourses,academicRules:db.data.academicRules};
+  db.data.curriculumCourses=remainingAssignments;
   // Keep shared prerequisite rules if the same course remains in another track.
   const stillAssigned = db.curriculumCourses.some(cc =>
     cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
@@ -428,7 +440,10 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
          extractSourceCourseIds(rule.expression).includes(req.params.courseId)))
     );
   }
-  db.save();
+  try{db.save();}catch{
+    Object.assign(db.data,before);
+    return res.status(503).json({success:false,error:'حذف انتساب ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'انتساب درس به چارت/گرایش حذف شد.' });
 });
 
