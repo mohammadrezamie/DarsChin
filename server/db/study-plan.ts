@@ -1,16 +1,8 @@
-import { z } from 'zod';
+import { studyPlanPayload } from '../../src/domain/study-plan-payload';
+export { studyPlanPayload } from '../../src/domain/study-plan-payload';
 import type { DatabaseSchema } from './database';
 import { validateStudyPlanDraft, type StudyPlanDraft } from '../../src/domain/study-plan-draft';
 import { ruleScopeCourseIds } from '../../src/domain/curriculum-rule-scope';
-
-const id=z.string().trim().min(1).max(150);
-const period=z.object({id,kind:z.enum(['regular','summer','other']),label:z.string().trim().min(1).max(150)}).strict();
-// Choice placeholders require an approved pool catalogue; do not invent one.
-const item=z.object({id,kind:z.literal('course'),courseId:id,periodId:id}).strict();
-export const studyPlanPayload=z.object({
-  trackId:id.nullable(),
-  plan:z.object({curriculumId:id,periods:z.array(period).max(100),items:z.array(item).max(2000)}).strict().nullable(),
-}).strict();
 
 export interface StoredStudyPlanDraft {
   curriculumId:string;

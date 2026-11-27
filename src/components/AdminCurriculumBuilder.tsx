@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
 import { CurriculumSemesterPreview } from './CurriculumSemesterPreview';
+import { StudyPlanEditor } from './StudyPlanEditor';
 import { extractSourceCourseIds } from '../utils/academic';
 import { ruleScopeCourseIds } from '../domain/curriculum-rule-scope';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
@@ -321,6 +322,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
           </section>
           {selectedChart&&<CurriculumSemesterPreview key={selectedChart.id} chart={selectedChart}
             assignments={assignments} courses={courses} tracks={relevantTracks}/>}
+          {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks}/>}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
