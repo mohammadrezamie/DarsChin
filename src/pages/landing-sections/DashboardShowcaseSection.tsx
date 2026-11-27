@@ -60,28 +60,22 @@ export const DashboardShowcaseSection: React.FC = () => {
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
           نتیجهٔ نهایی هر درس به اطلاعات واقعی و مقررات رسمی دانشگاه وابسته است.
         </p>
-        <section id="manager-workspace" aria-labelledby="manager-workspace-title" className="mt-10 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 sm:mt-14 sm:p-7 dark:border-slate-700 dark:bg-slate-900">
-          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-blue-800 dark:text-blue-300">برای مدیران گروه و مدیران آموزشی</p>
-              <h2 id="manager-workspace-title" className="mt-2 text-xl font-black leading-relaxed text-slate-950 sm:text-2xl dark:text-white">میز کار مدیریت آموزشی</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">چارت رشته و ورودی، نیازسنجی دروس و اطلاعات ارائه‌ها را در فضای مدیریت بررسی کنید. دسترسی واقعی به مجوز حساب وابسته است.</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {publicDemoEnabled && <Link to="/demo/admin" className="dc-primary-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold">مشاهدهٔ دموی مدیر <ArrowLeft className="h-4 w-4 shrink-0" /></Link>}
-                <Link to="/login" className="dc-secondary-action inline-flex min-h-12 items-center justify-center rounded-xl px-4 text-sm font-bold">ورود مدیر مجاز</Link>
-              </div>
-            </div>
-            <div className="grid min-w-0 gap-2 sm:grid-cols-3 lg:grid-cols-1">
-              {[
-                {icon:BookOpen,title:'چارت و دروس',detail:'تفکیک رشته، مقطع و ورودی'},
-                {icon:ListChecks,title:'نیازسنجی',detail:'جمع‌آوری تقاضای دانشجویان'},
-                {icon:CalendarDays,title:'ارائه‌های نیمسال',detail:'بررسی گروه‌ها و زمان‌ها'},
-              ].map(({icon:Icon,title,detail})=><div key={title} className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                <Icon aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-blue-700 dark:text-blue-300"/>
-                <div className="min-w-0"><h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3><p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">{detail}</p></div>
-              </div>)}
-            </div>
-          </div>
+        <section id="student-journey" aria-labelledby="student-journey-title" className="mt-10 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 sm:mt-14 sm:p-7 dark:border-slate-700 dark:bg-slate-900">
+          <h2 id="student-journey-title" className="text-xl font-black leading-relaxed text-slate-950 sm:text-2xl dark:text-white">برای ترم جدید از کجا شروع کنم؟</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">چهار قدم ساده برای آماده‌شدن پیش از انتخاب واحد رسمی.</p>
+          <ol className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {title:'پروندهٔ تحصیلی',detail:'رشته، مقطع و ورودی خودت را مشخص کن.'},
+              {title:'چارت و سوابق',detail:'درس‌های گذرانده و شرایط درس‌های باقی‌مانده را بررسی کن.'},
+              {title:'تقاضا و انتخاب درس',detail:'در صورت فعال‌بودن نیازسنجی، تقاضای ترم را ثبت کن.'},
+              {title:'برنامهٔ هفتگی',detail:'گروه‌های موجود و تداخل‌ها را بررسی کن؛ ثبت نهایی در درگاه رسمی دانشگاه است.'},
+            ].map(({title,detail},index)=><li key={title} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+              <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-bold text-blue-900 dark:bg-blue-950 dark:text-blue-200">{(index+1).toLocaleString('fa-IR')}</span>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{detail}</p>
+            </li>)}
+          </ol>
+          <Link to="/help" className="dc-secondary-action mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold">راهنمای گام‌به‌گام دانشجو <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true"/></Link>
         </section>
       </div>
     </section>
