@@ -80,6 +80,36 @@ function releasePlan(input, settings = targets) {
   };
 }
 
+// All probes stay on the configured loopback endpoint. Never follow a redirect,
+// send credentials, print response bodies or treat cached challenge config as ready.
+async function getJson(fetchImpl, base, route, status, label, noStore = false) {
+  let response;
+  try {
+    response = await fetchImpl(base + route, {
+      method: 'GET', headers: {accept: 'application/json'}, redirect: 'error',
+      credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(3500),
+    });
+  } catch {
+    throw new Error(label + ': connection refused or network/redirect error');
+  }
+  if (response.status !== status ||
+      !response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error(label + ': expected HTTP ' + status + ' JSON (' + (status === 404 ? 'JSON 404' : 'invalid response') + ')');
+  }
+  if (noStore && !/\bno-store\b/i.test(response.headers.get('cache-control') || '')) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error(label + ': unsafe cache policy');
+  }
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error(label + ': body must be valid JSON'); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error(label + ': body must be valid JSON object');
+  }
+  return body;
+}
+
 async function checkOne(name, sha, samples, {
   fetchImpl = globalThis.fetch,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
@@ -87,27 +117,19 @@ async function checkOne(name, sha, samples, {
 } = {}) {
   const base = 'http://127.0.0.1:' + settings[name].port;
   for (let i = 0; i < samples; i++) {
-    const health = await fetchImpl(base + '/api/health', {
-      headers: {accept: 'application/json'}, signal: AbortSignal.timeout(3500),
-    });
-    if (health.status !== 200 || !health.headers.get('content-type')?.includes('application/json')) {
-      throw new Error(name + ': health is not HTTP 200 JSON');
-    }
-    const data = await health.json();
-    if (data?.status !== 'ok' || data?.product !== 'درس‌چین' ||
-        data?.releaseSha?.toLowerCase() !== sha.toLowerCase()) {
+    const data = await getJson(fetchImpl, base, '/api/health', 200, name + ' health');
+    if (data.status !== 'ok' || data.product !== 'درس‌چین' ||
+        typeof data.releaseSha !== 'string' || data.releaseSha.toLowerCase() !== sha.toLowerCase()) {
       throw new Error(name + ': unexpected health status or release SHA');
     }
-    const missing = await fetchImpl(base + '/api/__darschin_release_probe_not_found__', {
-      headers: {accept: 'application/json'}, signal: AbortSignal.timeout(3500),
-    });
-    if (missing.status !== 404 || !missing.headers.get('content-type')?.includes('application/json')) {
-      throw new Error(name + ': API fallback must return JSON 404, not a frontend page');
+    const challenge = await getJson(fetchImpl, base, '/api/security/challenge', 200, name + ' challenge', true);
+    const config = challenge.data;
+    if (challenge.success !== true || typeof config?.enabled !== 'boolean' ||
+        typeof config.registrationOtpRequired !== 'boolean' || typeof config.siteKey !== 'string' ||
+        (config.enabled ? !config.siteKey.trim() : config.siteKey !== '')) {
+      throw new Error(name + ': invalid challenge configuration');
     }
-    const missingBody = await missing.json().catch(() => null);
-    if (!missingBody || typeof missingBody !== 'object' || Array.isArray(missingBody)) {
-      throw new Error(name + ': API 404 body must be valid JSON');
-    }
+    await getJson(fetchImpl, base, '/api/__darschin_release_probe_not_found__', 404, name + ' API fallback');
     if (i + 1 < samples) await sleep(250);
   }
   return {target: name, port: settings[name].port, sha, samples, ok: true};

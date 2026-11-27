@@ -12,6 +12,9 @@ const cloned = () => JSON.parse(JSON.stringify(gate.targets));
 const ok = (sha = SHA) => new Response(JSON.stringify({status:'ok',product:'درس‌چین',releaseSha:sha}),{
   status:200,headers:{'content-type':'application/json; charset=utf-8'},
 });
+const challenge = (enabled=false, siteKey='', cache='no-store') => new Response(JSON.stringify({
+  success:true,data:{enabled,siteKey,registrationOtpRequired:false},
+}),{status:200,headers:{'content-type':'application/json','cache-control':cache}});
 const missing = () => new Response(JSON.stringify({error:'Not Found'}),{
   status:404,headers:{'content-type':'application/json'},
 });
@@ -67,24 +70,24 @@ describe('isolated staging and production deployment gate', () => {
   it('checks staging repeatedly for matching health and JSON 404',async()=>{
     const urls:string[]=[];
     const x=await gate.verifyDeployment({target:'staging',sha:SHA,samples:3},{
-      fetchImpl:async (url:string)=>{urls.push(url);return url.endsWith('/api/health')?ok():missing();},
+      fetchImpl:async (url:string)=>{urls.push(url);return url.endsWith('/api/health')?ok():url.endsWith('/challenge')?challenge():missing();},
       sleep:async()=>{},
     });
     expect(x).toHaveLength(1);
-    expect(urls).toHaveLength(6);
+    expect(urls).toHaveLength(9);
     expect(urls.every(u=>u.startsWith('http://127.0.0.1:3002/api/'))).toBe(true);
   });
 
   it('checks the exact SHA on staging before any production request',async()=>{
     const urls:string[]=[];
     const x=await gate.verifyDeployment({target:'production',sha:SHA,samples:2},{
-      fetchImpl:async(url:string)=>{urls.push(url);return url.endsWith('/api/health')?ok():missing();},
+      fetchImpl:async(url:string)=>{urls.push(url);return url.endsWith('/api/health')?ok():url.endsWith('/challenge')?challenge():missing();},
       sleep:async()=>{},
     });
     expect(x.map((o:{target:string})=>o.target)).toEqual(['staging','production']);
-    expect(urls).toHaveLength(8);
-    expect(urls.slice(0,4).every(u=>u.includes(':3002/'))).toBe(true);
-    expect(urls.slice(4).every(u=>u.includes(':3001/'))).toBe(true);
+    expect(urls).toHaveLength(12);
+    expect(urls.slice(0,6).every(u=>u.includes(':3002/'))).toBe(true);
+    expect(urls.slice(6).every(u=>u.includes(':3001/'))).toBe(true);
   });
 
   it('refuses a production check when staging has a different SHA',async()=>{
@@ -98,7 +101,7 @@ describe('isolated staging and production deployment gate', () => {
 
   it('rejects frontend HTML being served for an unknown API route',async()=>{
     await expect(gate.verifyDeployment({target:'staging',sha:SHA,samples:2},{
-      fetchImpl:async(url:string)=>url.endsWith('/api/health')?ok():new Response('<html>SPA</html>',{
+      fetchImpl:async(url:string)=>url.endsWith('/api/health')?ok():url.endsWith('/challenge')?challenge():new Response('<html>SPA</html>',{
         status:200,headers:{'content-type':'text/html'},
       }),
       sleep:async()=>{},
@@ -107,7 +110,7 @@ describe('isolated staging and production deployment gate', () => {
 
   it('rejects an invalid 404 body even if Content-Type pretends to be JSON',async()=>{
     await expect(gate.verifyDeployment({target:'staging',sha:SHA,samples:2},{
-      fetchImpl:async(url:string)=>url.endsWith('/api/health')?ok():new Response('<html>not JSON</html>',{
+      fetchImpl:async(url:string)=>url.endsWith('/api/health')?ok():url.endsWith('/challenge')?challenge():new Response('<html>not JSON</html>',{
         status:404,headers:{'content-type':'application/json'},
       }),
       sleep:async()=>{},
@@ -129,10 +132,11 @@ describe('isolated staging and production deployment gate', () => {
       const server=createServer((req,res)=>{
         if(kind==='production')productionRequests+=1;
         const health=req.url==='/api/health';
-        res.writeHead(health?200:404,{'content-type':'application/json'});
+        const config=req.url==='/api/security/challenge';
+        res.writeHead(health||config?200:404,{'content-type':'application/json','cache-control':'no-store'});
         res.end(JSON.stringify(health
           ? {status:'ok',product:'درس‌چین',releaseSha:kind==='staging'&&wrongStage?'0'.repeat(40):SHA}
-          : {error:'not found'}));
+          : config ? {success:true,data:{enabled:false,siteKey:'',registrationOtpRequired:false}} : {error:'not found'}));
       });
       await new Promise<void>((resolve,reject)=>{
         server.once('error',reject);
@@ -158,6 +162,40 @@ describe('isolated staging and production deployment gate', () => {
     }finally{
       await Promise.all([staging,production].map(server=>
         new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()))));
+    }
+  });
+
+  it('never checks production when staging challenge configuration is invalid or cacheable',async()=>{
+    for(const config of [()=>challenge(true,''),()=>challenge(false,'unexpected'),()=>challenge(false,'','public')]){
+      const urls:string[]=[];
+      await expect(gate.verifyDeployment({target:'production',sha:SHA,samples:2},{
+        fetchImpl:async(url:string,options:RequestInit)=>{
+          urls.push(url);
+          expect(options.method).toBe('GET');
+          expect(options.redirect).toBe('error');
+          expect(options.credentials).toBe('omit');
+          expect(options.cache).toBe('no-store');
+          return url.endsWith('/health')?ok():config();
+        },sleep:async()=>{},
+      })).rejects.toThrow(/challenge/);
+      expect(urls.every(url=>url.includes(':3002/'))).toBe(true);
+    }
+  });
+
+  it('rejects a redirect from loopback without contacting the redirected server or printing raw errors',async()=>{
+    let outsideRequests=0;
+    const outside=createServer((_req,res)=>{outsideRequests++;res.end('unexpected');});
+    await new Promise<void>(resolve=>outside.listen(0,'127.0.0.1',resolve));
+    const port=(outside.address() as AddressInfo).port;
+    const local=createServer((_req,res)=>{res.writeHead(302,{location:'http://127.0.0.1:'+port+'/private'});res.end();});
+    await new Promise<void>(resolve=>local.listen(0,'127.0.0.1',resolve));
+    const settings=cloned();
+    settings.staging.port=(local.address() as AddressInfo).port;
+    try{
+      await expect(gate.verifyDeployment({target:'staging',sha:SHA,samples:2},{settings,sleep:async()=>{}})).rejects.toThrow(/network\/redirect error/);
+      expect(outsideRequests).toBe(0);
+    }finally{
+      await Promise.all([local,outside].map(s=>new Promise<void>((resolve,reject)=>s.close(e=>e?reject(e):resolve()))));
     }
   });
 
