@@ -69,7 +69,11 @@ export function assertExistingDatabasePresent(filePath: string, requireExisting:
  * failure, regardless of NODE_ENV. Retain original bytes for forensic restore.
  */
 export function readPersistedJson(filePath: string): unknown {
-  const parsed: unknown = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parsePersistedJson(fs.readFileSync(filePath, 'utf8'));
+}
+
+export function parsePersistedJson(contents: string): unknown {
+  const parsed: unknown = JSON.parse(contents);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
       !Array.isArray((parsed as { users?: unknown }).users)) {
     throw new Error('Persisted database has an invalid root/users collection');
