@@ -3,10 +3,11 @@ import express from 'express';
 import request from 'supertest';
 import {db,type DatabaseSchema} from '../server/db/database';
 import {curriculumRouter} from '../server/routes/curriculum';
+import {academicRouter} from '../server/routes/academic';
 import {generateToken} from '../server/middleware/auth';
 import type {User,Track} from '../src/types';
 
-const app=express();app.use(express.json());app.use('/api/curriculum',curriculumRouter);
+const app=express();app.use(express.json());app.use('/api/curriculum',curriculumRouter);app.use('/api/academic',academicRouter);
 let backup:DatabaseSchema,admin='',student='',a='',b='';
 const chartId='study-plan-fixture',trackId='study-plan-track';
 const url='/api/curriculum/'+chartId+'/study-plan-draft';
@@ -21,7 +22,7 @@ beforeEach(()=>{
  {id:'sp-track',curriculumId:chartId,courseId:b,trackId,classification:'TRACK_REQUIRED',suggestedSemester:2,active:true});
  db.data.studyPlanDrafts=[];
  const user=(id:string,roles:User['roles'],permissions:User['permissions']):User=>({id,mobile:id==='sp-admin'?'09990000301':'09990000302',name:'آزمایشی',roles,permissions,createdAt:new Date().toISOString()});
- const u=user('sp-admin',['admin'],['curriculum.manage']),s=user('sp-student',['student'],[]);
+ const u=user('sp-admin',['admin'],['curriculum.manage','system.settings.manage','course.update','course.delete']),s=user('sp-student',['student'],[]);
  db.users.push(u,s);admin='Bearer '+generateToken(u);student='Bearer '+generateToken(s);
 });
 afterEach(()=>{vi.restoreAllMocks();db.data=backup;});
@@ -79,6 +80,45 @@ describe('برنامهٔ پیشنهادی مستقل و اختیاری',()=>{
  });
  it('rejects ambiguous repeated track query parameters',async()=>{
   expect((await request(app).get(url+'?trackId=a&trackId=b').set('Authorization',admin)).status).toBe(400);
+ });
+
+ it('protects a stored common-course plan for a track without any exclusive assignment',async()=>{
+  db.data.curriculumCourses=db.curriculumCourses.filter(row=>row.id!=='sp-track');
+  expect((await put(payload(trackId,a))).status).toBe(200);
+  const response=await request(app).delete('/api/academic/tracks/'+trackId).set('Authorization',admin);
+  expect(response.status).toBe(409);
+  expect(db.tracks.some(t=>t.id===trackId)).toBe(true);
+  expect((await request(app).get(url).query({trackId}).set('Authorization',admin)).status).toBe(200);
+ });
+ it('rejects deactivating a planned course and moving a chart to another cohort',async()=>{
+  expect((await put(payload())).status).toBe(200);
+  const before=structuredClone(db.curricula.find(c=>c.id===chartId));
+  const alternate=db.entryYears.find(y=>y.active&&y.id!==before?.entryYearId);
+  if(!alternate)throw Error('Missing synthetic alternate cohort');
+  expect((await request(app).put('/api/academic/courses/'+a).set('Authorization',admin).send({active:false})).status).toBe(409);
+  expect(db.courses.find(c=>c.id===a)?.active).toBe(true);
+  expect((await request(app).put('/api/curriculum/'+chartId).set('Authorization',admin).send({entryYearId:alternate.id})).status).toBe(409);
+  expect(db.curricula.find(c=>c.id===chartId)).toEqual(before);
+  expect((await request(app).get(url).set('Authorization',admin)).status).toBe(200);
+ });
+ it('rejects repeated track parameters before deleting any assignment',async()=>{
+  const before=structuredClone(db.curriculumCourses);
+  expect((await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a+'?trackId=x&trackId=y').set('Authorization',admin)).status).toBe(400);
+  expect(db.curriculumCourses).toEqual(before);
+ });
+ it('rolls back failed chart, assignment creation and assignment deletion mutations',async()=>{
+  const before=structuredClone({curricula:db.curricula,curriculumCourses:db.curriculumCourses,academicRules:db.academicRules});
+  const fail=()=>vi.spyOn(db,'save').mockImplementationOnce(()=>{throw Error('synthetic-private-disk-path');});
+  const chart='/api/curriculum/'+chartId;
+  const operations=[
+    ()=>request(app).post(chart+'/courses').set('Authorization',admin).send({courseId:b,classification:'MAJOR_REQUIRED',suggestedSemester:2}),
+    ()=>request(app).delete(chart+'/courses/'+a).set('Authorization',admin),
+    ()=>request(app).delete(chart).set('Authorization',admin),
+  ];
+  for(const run of operations){
+    const spy=fail();try{const result=await run();expect(result.status).toBe(503);expect(JSON.stringify(result.body)).not.toContain('synthetic-private-disk-path');}finally{spy.mockRestore();}
+    expect({curricula:db.curricula,curriculumCourses:db.curriculumCourses,academicRules:db.academicRules}).toEqual(before);
+  }
  });
 
 });
