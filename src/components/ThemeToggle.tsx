@@ -14,7 +14,7 @@ export const ThemeToggle: React.FC = () => {
     <>
       {/* Compact 44px native picker: the previous 116px control pushed the
           login CTA out of 320px mobile headers. The entire icon is tappable. */}
-      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-teal-800 shadow-sm focus-within:ring-2 focus-within:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-teal-300 sm:hidden">
+      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-teal-800 shadow-sm focus-within:ring-2 focus-within:ring-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-teal-300 lg:hidden">
         <span className="pointer-events-none" aria-hidden="true">
           {theme === 'dark' ? <Moon className="h-5 w-5" /> : theme === 'light' ? <Sun className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
         </span>
@@ -30,7 +30,7 @@ export const ThemeToggle: React.FC = () => {
           <option value="dark">شب</option>
         </select>
       </div>
-      <div role="group" aria-label="انتخاب حالت نمایش" className="hidden items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 shadow-inner shadow-slate-950/5 dark:border-slate-700 dark:bg-slate-800 sm:inline-flex">
+      <div role="group" aria-label="انتخاب حالت نمایش" className="hidden items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-1 shadow-inner shadow-slate-950/5 dark:border-slate-700 dark:bg-slate-800 lg:inline-flex">
         {options.map(option => (
           <button
             key={option.mode}
@@ -45,7 +45,7 @@ export const ThemeToggle: React.FC = () => {
               : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
           >
             {option.icon}
-            <span className="hidden xl:inline">{option.label}</span>
+            <span className="hidden 2xl:inline">{option.label}</span>
           </button>
         ))}
       </div>
