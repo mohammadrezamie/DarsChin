@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const hero = readFileSync(resolve(process.cwd(), 'src/pages/landing-sections/HeroSection.tsx'), 'utf8');
-const managerSection = readFileSync(resolve(process.cwd(), 'src/pages/landing-sections/DashboardShowcaseSection.tsx'), 'utf8');
+const journeySection = readFileSync(resolve(process.cwd(), 'src/pages/landing-sections/DashboardShowcaseSection.tsx'), 'utf8');
 
 describe('پیام روشن صفحهٔ اول درس‌چین', () => {
   it('در چند ثانیه مسیر اصلی دانشجو را توضیح می‌دهد', () => {
@@ -15,12 +15,12 @@ describe('پیام روشن صفحهٔ اول درس‌چین', () => {
     expect(hero).toContain('دیدن نمونهٔ پنل دانشجو');
   });
 
-  it('مسیر مدیر گروه را جدا و واضح معرفی می‌کند', () => {
-    expect(hero).toContain('ویژهٔ مدیران گروه و مدیران آموزشی');
-    expect(hero).toContain('href="#manager-workspace"');
-    expect(managerSection).toContain('id="manager-workspace"');
-    expect(managerSection).toContain('to="/login"');
-    expect(managerSection).toContain('publicDemoEnabled && <Link to="/demo/admin"');
+  it('مسیر دانشجو را واضح و مدیریت را خصوصی نگه می‌دارد', () => {
+    expect(hero).toContain('href="#student-journey"');
+    expect(journeySection).toContain('id="student-journey"');
+    expect(journeySection).toContain('to="/help"');
+    expect(journeySection).not.toContain('to="/demo/admin"');
+    expect(hero).not.toContain('manager-workspace');
   });
 
   it('هیچ ادعای اتصال/ثبت خودکار یا نام درگاه منسوخ در لندینگ ندارد', () => {
