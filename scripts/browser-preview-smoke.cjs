@@ -82,6 +82,85 @@ async function runCase(origin,width,height) {
     await wait(confirm);await confirm.getByRole('button',{name:'انصراف'}).click();await confirm.waitFor({state:'hidden'});
     await page.goto(base+'#/demo/admin');await wait(page.getByLabel('ابزارهای دموی درس‌چین'));
     await checkLayout('admin demo');await screenshot('admin-demo');
+    // Interactive curriculum QA: same real UI, synthetic mock only, independent cohorts.
+    const adminChartUrl=base+'#/demo/admin?tab=curricula';
+    const editorName='ویرایش برنامهٔ پیشنهادی مستقل';
+    const chartSelector='چارت‌های فعال و پیش‌نویس:';
+    const saveLabel='ذخیرهٔ برنامهٔ پیشنهادی';
+    const createLabel='ایجاد برنامهٔ پیشنهادی';
+    const scope=async p=>{
+      await p.goto(adminChartUrl);
+      await wait(p.getByRole('heading',{name:'مدیریت ساختار چارت تحصیلی'}));
+      const selector=p.getByLabel(chartSelector,{exact:true});
+      await selector.selectOption('demo-curriculum');
+      const editor=p.getByRole('region',{name:editorName});
+      await wait(editor);
+      await wait(editor.getByRole('button',{name:'دریافت آخرین نسخه',exact:true}));
+      return {editor,selector};
+    };
+    const {editor,selector}=await scope(page);
+    await editor.getByRole('button',{name:createLabel,exact:true}).click();
+    await editor.getByLabel('عنوان دوره',{exact:true}).fill('دورهٔ آزمایشی اول');
+    await editor.getByRole('button',{name:'افزودن دوره',exact:true}).click();
+    await editor.getByLabel('عنوان دوره',{exact:true}).fill('تابستان آزمایشی');
+    await editor.getByLabel('نوع دوره',{exact:true}).selectOption('summer');
+    await editor.getByRole('button',{name:'افزودن دوره',exact:true}).click();
+    const course=editor.getByLabel('درس پیشنهادی',{exact:true});
+    await course.selectOption('math2');
+    assert.equal(await course.locator('option[value="em"]').count(),0,'Foreign track course visible in common scope');
+    await editor.getByRole('button',{name:'افزودن درس به برنامه',exact:true}).click();
+    const summer=editor.locator('article').filter({has:editor.getByLabel('عنوان دورهٔ 2',{exact:true})});
+    await wait(summer.getByRole('button',{name:'حذف از برنامه',exact:true}));
+    await summer.getByRole('button',{name:'حذف دوره',exact:true}).click();
+    await wait(editor.getByRole('alert').filter({hasText:'ابتدا درس‌های این دوره'}));
+    // Attempt chart switch, cancel, and verify the local draft was not lost.
+    let rejectedSwitch=false;
+    page.once('dialog',async dialog=>{rejectedSwitch=dialog.type()==='confirm';await dialog.dismiss();});
+    await selector.selectOption('demo-curriculum-1402');
+    assert(rejectedSwitch,'No confirmation for unsaved chart switch');
+    assert.equal(await selector.inputValue(),'demo-curriculum');
+    await wait(editor.getByRole('status').filter({hasText:'تغییرات ذخیره‌نشده'}));
+    await editor.getByRole('button',{name:saveLabel,exact:true}).click();
+    await wait(editor.getByRole('status').filter({hasText:'برنامهٔ پیشنهادی ذخیره شد'}));
+    await checkLayout('study plan editor dark');await screenshot('study-plan-dark');
+    // Reopening this chart must retain the saved plan; another cohort is absent.
+    await selector.selectOption('demo-curriculum-1402');
+    await wait(editor.getByRole('button',{name:createLabel,exact:true}));
+    await selector.selectOption('demo-curriculum');
+    await wait(editor.getByLabel('عنوان دورهٔ 2',{exact:true}));
+    assert.equal(await editor.getByLabel('عنوان دورهٔ 2',{exact:true}).inputValue(),'تابستان آزمایشی');
+    await editor.getByLabel('دامنهٔ برنامهٔ پیشنهادی',{exact:true}).selectOption('demo-power');
+    await wait(editor.getByRole('button',{name:createLabel,exact:true}));
+    await editor.getByLabel('دامنهٔ برنامهٔ پیشنهادی',{exact:true}).selectOption('');
+    await wait(editor.getByLabel('عنوان دورهٔ 2',{exact:true}));
+    // A sequential stale write from a second browser tab must not overwrite
+    // a newer save. This is demo localStorage behavior, not a database lock.
+    const second=await context.newPage();
+    second.on('pageerror',()=>errors.push('uncaught second-tab page error'));
+    try {
+      const {editor:other}=await scope(second);
+      await wait(other.getByLabel('عنوان دورهٔ 2',{exact:true}));
+      await other.getByLabel('عنوان دورهٔ 2',{exact:true}).fill('نسخهٔ تازهٔ مدیر دوم');
+      await other.getByRole('button',{name:saveLabel,exact:true}).click();
+      await wait(other.getByRole('status').filter({hasText:'برنامهٔ پیشنهادی ذخیره شد'}));
+      await editor.getByLabel('عنوان دورهٔ 2',{exact:true}).fill('تغییر قدیمی مدیر اول');
+      await editor.getByRole('button',{name:saveLabel,exact:true}).click();
+      await wait(editor.getByRole('alert').filter({hasText:'برنامه توسط مدیر دیگری تغییر کرده است'}));
+      assert.equal(await editor.getByLabel('عنوان دورهٔ 2',{exact:true}).inputValue(),'تغییر قدیمی مدیر اول');
+      page.once('dialog',dialog=>dialog.accept());
+      await editor.getByRole('button',{name:'دریافت آخرین نسخه',exact:true}).click();
+      await wait(editor.getByLabel('عنوان دورهٔ 2',{exact:true}));
+      assert.equal(await editor.getByLabel('عنوان دورهٔ 2',{exact:true}).inputValue(),'نسخهٔ تازهٔ مدیر دوم');
+    } finally {await second.close();}
+    // Save was verified; reload without local dirty edits and verify persistence.
+    await page.reload({waitUntil:'domcontentloaded'});
+    const current=await scope(page);
+    await wait(current.editor.getByLabel('عنوان دورهٔ 2',{exact:true}));
+    assert.equal(await current.editor.getByLabel('عنوان دورهٔ 2',{exact:true}).inputValue(),'نسخهٔ تازهٔ مدیر دوم');
+    page.once('dialog',dialog=>dialog.accept());
+    await current.editor.getByRole('button',{name:'حذف برنامهٔ ذخیره‌شده',exact:true}).click();
+    await wait(current.editor.getByRole('button',{name:createLabel,exact:true}));
+    await checkLayout('study plan removed');await screenshot('study-plan-removed');
     await page.goto(base+'#/login');await wait(page.getByRole('heading',{name:'ورود به حساب کاربری'}));
     await checkLayout('login');await screenshot('login');
     await page.locator('input[type=tel]').fill('۰۹۹۹۹۹۹۹۹۹۹');

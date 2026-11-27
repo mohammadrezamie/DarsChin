@@ -230,8 +230,8 @@ export const AdminCurriculumBuilder: React.FC = () => {
           <label htmlFor="chart-filter" className="mb-1 block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
           <input id="chart-filter" type="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
             className="darschin-field mb-3 min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
-          <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
-          <select 
+          <label htmlFor="curriculum-selection" className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
+          <select id="curriculum-selection" 
             className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
             value={selectedCurriculumId || ''}
             onChange={(e) => selectChart(e.target.value)}
