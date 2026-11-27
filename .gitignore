@@ -26,3 +26,10 @@ data/**/*.db
 *.p12
 *.pfx
 *.key
+
+# بکاپ رمزنگاری‌شده و فایل‌های محلی مخزن داده
+*.dcb
+*.jks
+*.keystore
+darschyn-db.json
+darschyn-db.json.*
