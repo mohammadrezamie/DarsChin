@@ -5,6 +5,7 @@ const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { scanZipArchive } = require('./scan-zip-archives.cjs');
+const { isPrivateStoragePath } = require('./private-storage-path.cjs');
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const TEXT_EXTENSIONS = /\.(?:cjs|mjs|js|jsx|ts|tsx|json|jsonl|md|txt|html|css|scss|yaml|yml|toml|xml|sql|sh|ps1|py|example|webmanifest|conf)$/i;
@@ -12,10 +13,8 @@ const TEXT_EXTENSIONS = /\.(?:cjs|mjs|js|jsx|ts|tsx|json|jsonl|md|txt|html|css|s
 function isSensitivePath(file) {
   const name = file.replace(/\\/g, '/');
   return /^scripts\/legacy\/.*\.(?:cjs|mjs|js|ts|tsx|py|sh)$/i.test(name) ||
-    /^data\/.*\.(?:json|jsonl|sqlite3?|db|csv|xlsx?|log|bak)$/i.test(name) ||
-    (/(^|\/)\.env(?:\.|$)/i.test(name) && !/\.example$/i.test(name)) ||
-    /\.(?:pem|p12|pfx|jks|keystore|dcb|key|backup|bak|dump)$/i.test(name) ||
-    /(^|\/)(?:id_rsa|id_ed25519|credentials\.json|service-account(?:-.*)?\.json|secrets\.json)$/i.test(name);
+    isPrivateStoragePath(name) ||
+    (/(^|\/)\.env(?:\.|$)/i.test(name) && !/\.example$/i.test(name));
 }
 
 const signatures = [

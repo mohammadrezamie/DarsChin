@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { extractSourceCourseIds } from '../../src/utils/academic';
 import { db } from '../db/database';
+import { studyPlanReferencesCourse } from '../db/study-plan';
 import { authenticate, requireAdmin, requirePermission } from '../middleware/auth';
 import { University, Province, Campus, DegreeLevel, Major, Track, EntryYear, AcademicTerm, Course } from '../../src/types';
 
@@ -301,12 +302,14 @@ academicRouter.post('/tracks', authenticate, requirePermission('system.settings.
 academicRouter.delete('/tracks/:id', authenticate, requirePermission('system.settings.manage'), (req, res) => {
   const idx = db.tracks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'گرایش یافت نشد.' });
-  if (db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
+  if ((db.data.studyPlanDrafts||[]).some(row=>row.trackId===req.params.id) ||
+      db.academicRules.some(rule=>rule.trackId===req.params.id) ||
+      db.demandSurveys.some(s => s.trackIds.includes(req.params.id)) ||
       db.curriculumCourses.some(cc => cc.trackId === req.params.id) ||
       db.studentProfiles.some(p => p.selectedTrackId === req.params.id ||
         p.desiredTrackIds?.includes(req.params.id))) {
     return res.status(409).json({
-      success: false, error: 'گرایش در چارت، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
+      success: false, error: 'گرایش در چارت، قانون، برنامهٔ پیشنهادی، پروندهٔ دانشجو یا نیازسنجی سابقه دارد و قابل حذف مستقیم نیست.',
     });
   }
   const saved = writeCatalog(['tracks'], () => db.tracks.splice(idx, 1));
@@ -403,6 +406,9 @@ academicRouter.put('/courses/:id', authenticate, requirePermission('course.updat
     return res.status(400).json({ success: false, error: 'مقادیر ویرایش درس معتبر نیست.' });
   }
   const existing = db.courses[idx];
+  if(active===false&&existing.active&&studyPlanReferencesCourse(db.data,existing.id)){
+    return res.status(409).json({success:false,error:'این درس در برنامهٔ پیشنهادی ذخیره شده است؛ ابتدا برنامهٔ مرتبط را بازبینی کنید.'});
+  }
   if (Number(practicalUnits ?? existing.practicalUnits ?? 0) > Number(units ?? existing.units)) {
     return res.status(400).json({ success: false, error: 'واحد عملی نمی‌تواند از کل واحدهای درس بیشتر باشد.' });
   }
@@ -428,7 +434,8 @@ academicRouter.put('/courses/:id', authenticate, requirePermission('course.updat
 academicRouter.delete('/courses/:id', authenticate, requirePermission('course.delete'), (req, res) => {
   const idx = db.courses.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'درس یافت نشد.' });
-  if (db.curriculumCourses.some(c => c.courseId === req.params.id) ||
+  if (studyPlanReferencesCourse(db.data,req.params.id) ||
+      db.curriculumCourses.some(c => c.courseId === req.params.id) ||
       db.demandSurveys.some(s => s.courseIds.includes(req.params.id)) ||
       db.studentPassedCourses.some(p => p.courseId === req.params.id) ||
       db.courseOfferings.some(o => o.courseId === req.params.id) ||

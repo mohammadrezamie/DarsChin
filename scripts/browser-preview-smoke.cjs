@@ -134,8 +134,15 @@ async function runCase(origin,width,height) {
     await wait(course);
     await course.selectOption('math2');
     assert.equal(await course.locator('option[value="em"]').count(),0,'Foreign track course visible in common scope');
+    const destination=editor.getByRole('combobox',{name:'دورهٔ مقصد',exact:true});
+    await destination.selectOption({label:'تابستان آزمایشی'});
     await editor.getByRole('button',{name:'افزودن درس به برنامه',exact:true}).click();
-    const summer=editor.locator('article').filter({has:editor.getByLabel('عنوان دورهٔ 2',{exact:true})});
+    // Playwright evaluates has relative to the candidate article, not the editor root.
+    step('verify course in summer and reject deleting populated period');
+    const summer=editor.locator('article').filter({has:page.getByRole('textbox',{name:'عنوان دورهٔ 2',exact:true})});
+    await wait(summer);
+    assert.equal(await summer.count(),1,'Expected one summer period card');
+    assert.equal(await summer.getByRole('textbox',{name:'عنوان دورهٔ 2',exact:true}).inputValue(),'تابستان آزمایشی');
     await wait(summer.getByRole('button',{name:'حذف از برنامه',exact:true}));
     await summer.getByRole('button',{name:'حذف دوره',exact:true}).click();
     await wait(editor.getByRole('alert').filter({hasText:'ابتدا درس‌های این دوره'}));
