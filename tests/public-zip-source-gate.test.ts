@@ -48,3 +48,17 @@ describe('public extension archive safety', () => {
     expect(issues).toEqual([]);
   });
 });
+
+
+describe('یکسانی سیاست فایل خصوصی در ZIP',()=>{
+  it.each(['backup.DCB','keys/private.jks','keys/private.keystore','export/old.dump','elsewhere/darschyn-db.json','elsewhere/darschyn-db.json.20261127','keys/id_ed25519','elsewhere/credentials.json','elsewhere/cache.sqlite3'])('رد عضو خصوصی %s بدون استخراج یا چاپ نام عضو',(name)=>{
+    expect(scan(makeZip(name,'synthetic marker'))).toEqual([{type:'embedded-sensitive-file'}]);
+  });
+  it.each(['nested/data/records.xlsx','nested/DATA/backup.sqlite3'])('رد فایل دادهٔ خصوصی %s',(name)=>{
+    expect(scan(makeZip(name,'synthetic marker'))).toEqual([{type:'embedded-runtime-data'}]);
+  });
+  it('اجازهٔ فایل مستند و مثال خالی',()=>{
+    expect(scan(makeZip('docs/backup.md','synthetic documentation'))).toEqual([]);
+    expect(scan(makeZip('deploy/.env.example','JWT_SECRET='))).toEqual([]);
+  });
+});
