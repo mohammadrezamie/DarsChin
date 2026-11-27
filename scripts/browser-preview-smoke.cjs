@@ -145,7 +145,7 @@ async function runCase(origin,width,height) {
     await course.selectOption('math2');
     assert.equal(await course.locator('option[value="em"]').count(),0,'Foreign track course visible in common scope');
     const destination=editor.getByRole('combobox',{name:'دورهٔ مقصد',exact:true});
-    await destination.selectOption({label:'تابستان آزمایشی'});
+    await destination.selectOption({label:'۲ · تابستان آزمایشی'});
     await editor.getByRole('button',{name:'افزودن درس به برنامه',exact:true}).click();
     // Playwright evaluates has relative to the candidate article, not the editor root.
     step('verify course in summer and reject deleting populated period');
@@ -159,8 +159,13 @@ async function runCase(origin,width,height) {
     // Attempt chart switch, cancel, and verify the local draft was not lost.
     step('verify layout with populated draft and long period label');
     const titleInput=summer.getByRole('textbox',{name:'عنوان دورهٔ 2',exact:true});
-    await titleInput.fill('عنوان آزمایشی بسیار طولانی '.repeat(5).trim());
-    await checkLayout('study plan long period label');
+    const longTitle='عنوان آزمایشی بسیار طولانی '.repeat(5).trim();
+    await titleInput.fill(longTitle);
+    assert.equal(await titleInput.inputValue(),longTitle,'Long period title must remain intact');
+    assert.equal(await destination.locator('option:checked').textContent(),'۲ · '+Array.from(longTitle).slice(0,18).join('')+'…');
+    await checkLayout('study plan long period label while editing');
+    await titleInput.blur();
+    await checkLayout('study plan long period label after blur');
     await titleInput.fill('تابستان آزمایشی');
     await checkLayout('study plan populated before save');
     step('reject dirty curriculum switch');
