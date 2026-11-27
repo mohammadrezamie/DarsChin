@@ -36,6 +36,7 @@ export const Login: React.FC = () => {
       return;
     }
 
+    if (!captchaToken) { setError('ابتدا کد امنیتی را تکمیل کنید.'); return; }
     setIsLoading(true);
     try {
       const result = await login(mobile, password, captchaToken);
@@ -113,6 +114,7 @@ export const Login: React.FC = () => {
                     onChange={(e) => setMobile(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                     placeholder="09123456789"
+                    autoComplete="username"
                     autoFocus
                   />
                 </div>
@@ -121,7 +123,7 @@ export const Login: React.FC = () => {
                 type="submit"
                 className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors"
               >
-                ادامه
+                ادامه به رمز عبور و کد امنیتی
               </button>
             </motion.form>
           ) : (
@@ -138,7 +140,7 @@ export const Login: React.FC = () => {
                   </label>
                   <button 
                     type="button" 
-                    onClick={() => setStep(1)}
+                    onClick={() => { setCaptchaToken(''); setCaptchaAttempt(n => n + 1); setPassword(''); setStep(1); }}
                     className="text-xs text-teal-700 hover:text-teal-600 font-medium"
                   >
                     تغییر شماره
@@ -150,6 +152,7 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   autoFocus
                 />
@@ -164,7 +167,7 @@ export const Login: React.FC = () => {
               <GuestHumanCheck key={captchaAttempt} action="login" token={captchaToken} onToken={setCaptchaToken} />
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
                 className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors disabled:opacity-70"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ورود'}
