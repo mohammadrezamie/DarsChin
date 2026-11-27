@@ -4,6 +4,7 @@
 // Read-only, fail-closed staging/production gate for DarsChin's Express API.
 // No deployment, service restart, database mutation, proxy modification or secrets access.
 const posix = require('node:path').posix;
+const { spawnSync } = require('node:child_process');
 const targets = require('../deploy/targets.json');
 const SHA = /^[0-9a-f]{40}$/i;
 const UNITS = /^[a-z0-9-]+\.service$/;
@@ -48,7 +49,7 @@ function validateTargets(settings = targets) {
 }
 
 function parseArgs(argv) {
-  let target = '', sha = '', samples = 3, check = false;
+  let target = '', sha = '', samples = 3, check = false, systemd = false;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--target' && i + 1 < argv.length) target = argv[++i];
     else if (argv[i] === '--sha' && i + 1 < argv.length) sha = argv[++i];
@@ -57,13 +58,14 @@ function parseArgs(argv) {
       if (!/^\d+$/.test(count)) throw new Error('Invalid samples');
       samples = Number(count);
     } else if (argv[i] === '--check') check = true;
-    else throw new Error('Usage: --target staging|production --sha <40-hex> [--check] [--samples 2..10]');
+    else if (argv[i] === '--systemd') systemd = true;
+    else throw new Error('Usage: --target staging|production --sha <40-hex> [--check [--systemd]] [--samples 2..10]');
   }
   if (!['staging', 'production'].includes(target) || !SHA.test(sha) ||
-      !Number.isInteger(samples) || samples < 2 || samples > 10) {
-    throw new Error('Usage: --target staging|production --sha <40-hex> [--check] [--samples 2..10]');
+      !Number.isInteger(samples) || samples < 2 || samples > 10 || (systemd && !check)) {
+    throw new Error('Usage: --target staging|production --sha <40-hex> [--check [--systemd]] [--samples 2..10]');
   }
-  return {target, sha: sha.toLowerCase(), samples, check};
+  return {target, sha: sha.toLowerCase(), samples, check, systemd};
 }
 
 function releasePlan(input, settings = targets) {
@@ -76,7 +78,7 @@ function releasePlan(input, settings = targets) {
     releaseRoot: t.releaseRoot, currentLink: t.currentLink,
     dataDir: t.dataDir, envFile: t.envFile,
     prerequisite: input.target === 'production' ? 'same-SHA staging readiness' : 'isolated qa:full and backups',
-    mode: input.check ? 'read-only HTTP verification' : 'dry-run; no deployment performed',
+    mode: input.check ? (input.systemd ? 'read-only systemd and HTTP verification' : 'read-only HTTP verification') : 'dry-run; no deployment performed',
   };
 }
 
@@ -110,13 +112,63 @@ async function getJson(fetchImpl, base, route, status, label, noStore = false) {
   return body;
 }
 
+// Only allow the two committed unit names and selected non-secret properties.
+// Never query Environment, command lines, journals or another product's units.
+const STATE_FIELDS = ['LoadState','ActiveState','SubState','Result','MainPID','NRestarts','InvocationID','ActiveEnterTimestampMonotonic'];
+
+function readUnitState(unit, run = spawnSync) {
+  if (!Object.values(targets).some(t => t.service === unit)) throw new Error('Unexpected systemd unit');
+  let result;
+  try {
+    result = run('/usr/bin/systemctl', ['show','--no-pager',...STATE_FIELDS.map(k=>'--property='+k),'--',unit], {
+      encoding:'utf8', timeout:3500, maxBuffer:16384, shell:false, stdio:['ignore','pipe','ignore'],
+    });
+  } catch { throw new Error('Unable to read service state'); }
+  if (!result || result.error || result.status !== 0 || typeof result.stdout !== 'string') {
+    throw new Error('Unable to read service state');
+  }
+  const state = Object.create(null);
+  for (const line of result.stdout.split(/\r?\n/).filter(Boolean)) {
+    const index = line.indexOf('=');
+    const key = line.slice(0,index);
+    if (index < 1 || !STATE_FIELDS.includes(key) || Object.hasOwn(state,key)) throw new Error('Invalid service state');
+    state[key] = line.slice(index+1);
+  }
+  return validateUnitState(state);
+}
+
+function validateUnitState(state) {
+  if (!state || state.LoadState !== 'loaded' || state.ActiveState !== 'active' ||
+      state.SubState !== 'running' || state.Result !== 'success' ||
+      !/^[1-9]\d*$/.test(state.MainPID || '') ||
+      !/^(?:0|[1-9]\d*)$/.test(state.NRestarts || '') ||
+      !/^[0-9a-f]{32}$/i.test(state.InvocationID || '') || /^0+$/.test(state.InvocationID) ||
+      !/^[1-9]\d*$/.test(state.ActiveEnterTimestampMonotonic || '')) {
+    throw new Error('Service not active/running or invalid service state');
+  }
+  return {
+    pid:state.MainPID, restarts:state.NRestarts, invocation:state.InvocationID,
+    activeSince:state.ActiveEnterTimestampMonotonic,
+  };
+}
+
+function assertStableUnit(before, after) {
+  if (['pid','restarts','invocation','activeSince'].some(key => before[key] !== after[key])) {
+    throw new Error('Service restarted or changed during readiness observation');
+  }
+}
+
 async function checkOne(name, sha, samples, {
   fetchImpl = globalThis.fetch,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   settings = targets,
+  systemd = false,
+  unitReader = readUnitState,
 } = {}) {
   const base = 'http://127.0.0.1:' + settings[name].port;
+  const baseline = systemd ? unitReader(settings[name].service) : null;
   for (let i = 0; i < samples; i++) {
+    if (baseline) assertStableUnit(baseline, unitReader(settings[name].service));
     const data = await getJson(fetchImpl, base, '/api/health', 200, name + ' health');
     if (data.status !== 'ok' || data.product !== 'درس‌چین' ||
         typeof data.releaseSha !== 'string' || data.releaseSha.toLowerCase() !== sha.toLowerCase()) {
@@ -130,9 +182,10 @@ async function checkOne(name, sha, samples, {
       throw new Error(name + ': invalid challenge configuration');
     }
     await getJson(fetchImpl, base, '/api/__darschin_release_probe_not_found__', 404, name + ' API fallback');
-    if (i + 1 < samples) await sleep(250);
+    if (baseline) assertStableUnit(baseline, unitReader(settings[name].service));
+    if (i + 1 < samples) await sleep(systemd ? 5000 : 250);
   }
-  return {target: name, port: settings[name].port, sha, samples, ok: true};
+  return {target: name, port: settings[name].port, sha, samples, ok: true, systemdVerified: systemd};
 }
 
 async function verifyDeployment(input, deps = {}) {
@@ -141,11 +194,13 @@ async function verifyDeployment(input, deps = {}) {
       !Number.isInteger(input.samples) || input.samples < 2 || input.samples > 10) {
     throw new Error('Invalid release verification request');
   }
+  if (input.systemd && input.check !== true) throw new Error('Systemd verification requires explicit check');
+  const probeDeps = {...deps, systemd: input.systemd === true};
   const result = [];
   if (input.target === 'production') {
     // Production is not announced healthy until the exact same SHA is running
     // and healthy in the isolated staging environment.
-    result.push(await checkOne('staging', input.sha, input.samples, deps));
+    result.push(await checkOne('staging', input.sha, input.samples, probeDeps));
   }
   result.push(await checkOne(input.target, input.sha, input.samples, deps));
   return result;
@@ -161,11 +216,11 @@ if (require.main === module) {
         return;
       }
       const result = await verifyDeployment(config);
-      console.log('PASS: ' + result.map(x => x.target + ' release=' + x.sha + ' port=' + x.port).join('; '));
+      console.log('PASS: ' + result.map(x => x.target + ' release=' + x.sha + ' port=' + x.port + (x.systemdVerified ? ' systemd=stable-during-observation' : ' HTTP-only')).join('; '));
     } catch (err) {
       console.error('FAIL: ' + (err instanceof Error ? err.message : 'release readiness check failed'));
       process.exitCode = 1;
     }
   })();
 }
-module.exports = {targets, isWithin, validateTargets, parseArgs, releasePlan, checkOne, verifyDeployment};
+module.exports = {targets, isWithin, validateTargets, parseArgs, releasePlan, readUnitState, validateUnitState, assertStableUnit, checkOne, verifyDeployment};

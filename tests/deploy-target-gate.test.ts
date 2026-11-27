@@ -208,4 +208,53 @@ describe('isolated staging and production deployment gate', () => {
     expect(unit).toContain('ReadWritePaths=/var/lib/darschyn-staging');
     expect(unit).not.toContain('/var/www/tna');
   });
+  it('requires explicit check for systemd observation',()=>{
+    expect(()=>gate.parseArgs(['--target','staging','--sha',SHA,'--systemd'])).toThrow(/Usage/);
+    expect(gate.parseArgs(['--target','staging','--sha',SHA,'--check','--systemd']).systemd).toBe(true);
+  });
+
+  it('reads only allowlisted unit state and rejects inactive, ambiguous or failed output',()=>{
+    const good={LoadState:'loaded',ActiveState:'active',SubState:'running',Result:'success',
+      MainPID:'42',NRestarts:'0',InvocationID:'a'.repeat(32),ActiveEnterTimestampMonotonic:'12345'};
+    const output=(state:Record<string,string>)=>Object.entries(state).map(([k,v])=>k+'='+v).join('\n');
+    const run=(command:string,args:string[],options:Record<string,unknown>)=>{
+      expect(command).toBe('/usr/bin/systemctl');
+      expect(args).toContain('darschyn-staging.service');
+      expect(args).not.toContain('--property=Environment');
+      expect(options.shell).toBe(false);
+      return {status:0,stdout:output(good)};
+    };
+    expect(gate.readUnitState('darschyn-staging.service',run)).toEqual({pid:'42',restarts:'0',invocation:'a'.repeat(32),activeSince:'12345'});
+    expect(()=>gate.readUnitState('nginx.service',run)).toThrow(/Unexpected/);
+    for(const state of [{...good,ActiveState:'activating'},{...good,SubState:'auto-restart'},
+      {...good,MainPID:'0'},{...good,InvocationID:''},{...good,NRestarts:'unknown'}]){
+      expect(()=>gate.readUnitState('darschyn-staging.service',()=>({status:0,stdout:output(state)}))).toThrow();
+    }
+    expect(()=>gate.readUnitState('darschyn-staging.service',()=>({status:0,stdout:output(good)+'\nMainPID=43'}))).toThrow();
+    expect(()=>gate.readUnitState('darschyn-staging.service',()=>({status:1,stdout:'private output'}))).toThrow('Unable to read service state');
+  });
+
+  it('rejects a restart even with successful HTTP and never probes production',async()=>{
+    const stable={pid:'42',restarts:'0',invocation:'a'.repeat(32),activeSince:'12345'};
+    const urls:string[]=[];let observations=0;
+    await expect(gate.verifyDeployment({target:'production',sha:SHA,samples:3,check:true,systemd:true},{
+      unitReader:()=>++observations>=3?{...stable,restarts:'1'}:stable,
+      fetchImpl:async(url:string)=>{urls.push(url);return url.endsWith('/health')?ok():url.endsWith('/challenge')?challenge():missing();},
+      sleep:async()=>{},
+    })).rejects.toThrow(/restarted/);
+    expect(urls.length).toBeGreaterThan(0);
+    expect(urls.every(u=>u.includes(':3002/'))).toBe(true);
+  });
+
+  it('observes stable service identity over five-second sample intervals',async()=>{
+    const delays:number[]=[];
+    const stable={pid:'42',restarts:'0',invocation:'a'.repeat(32),activeSince:'12345'};
+    const result=await gate.verifyDeployment({target:'staging',sha:SHA,samples:3,check:true,systemd:true},{
+      unitReader:()=>stable,sleep:async(ms:number)=>{delays.push(ms);},
+      fetchImpl:async(url:string)=>url.endsWith('/health')?ok():url.endsWith('/challenge')?challenge():missing(),
+    });
+    expect(delays).toEqual([5000,5000]);
+    expect(result[0].systemdVerified).toBe(true);
+  });
+
 });
