@@ -14,7 +14,7 @@ function isSensitivePath(file) {
   return /^scripts\/legacy\/.*\.(?:cjs|mjs|js|ts|tsx|py|sh)$/i.test(name) ||
     /^data\/.*\.(?:json|jsonl|sqlite3?|db|csv|xlsx?|log|bak)$/i.test(name) ||
     (/(^|\/)\.env(?:\.|$)/i.test(name) && !/\.example$/i.test(name)) ||
-    /\.(?:pem|p12|pfx|jks|keystore)$/i.test(name) ||
+    /\.(?:pem|p12|pfx|jks|keystore|dcb|key|backup|bak|dump)$/i.test(name) ||
     /(^|\/)(?:id_rsa|id_ed25519|credentials\.json|service-account(?:-.*)?\.json|secrets\.json)$/i.test(name);
 }
 

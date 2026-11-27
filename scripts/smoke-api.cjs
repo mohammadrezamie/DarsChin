@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const binary = path.join(root, 'dist', 'server.cjs');
@@ -195,7 +195,7 @@ async function main() {
   // حساب‌ها فقط در فایل موقت همین آزمون، وقتی سرویس خاموش است، ایجاد می‌شوند.
   // هیچ مسیر ثبت‌نام یا احراز هویت production برای تست تغییر نمی‌کند.
   await stopServer();
-  const fixturePath = path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json');
+  let fixturePath = path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json');
   if (path.dirname(fixturePath) !== path.join(temporary, 'data')) throw new Error('Unsafe smoke fixture path');
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const chart = fixture.curricula.find(c => c.status === 'active' &&
@@ -358,6 +358,56 @@ async function main() {
   expectStatus(await authenticated('/api/auth/me',studentToken),401,'Revocation survives restart');
   const newStudentToken=await fixtureLogin(accounts[0]);
   expectStatus(await authenticated('/api/auth/me',newStudentToken),200,'New session after logout');
+
+  // Full disaster recovery drill: stop synthetic origin, create encrypted
+  // snapshot, verify, restore to a separate directory and boot the real bundle.
+  await stopServer();
+  const drillStart=Date.now();
+  const originalPath=fixturePath;
+  const originalBytes=fs.readFileSync(originalPath);
+  const privateDir=name=>{
+    const directory=path.join(temporary,name);
+    fs.mkdirSync(directory,{mode:0o700});
+    return directory;
+  };
+  const keyFile=path.join(privateDir('backup-key'),'snapshot.key');
+  const archive=path.join(privateDir('encrypted-archive'),'snapshot.dcb');
+  const restoredDir=privateDir('restored-data');
+  const restoredFile=path.join(restoredDir,'darschyn-db.json');
+  fs.writeFileSync(keyFile,crypto.randomBytes(32),{mode:0o600,flag:'wx'});
+  const offline=(...args)=>{
+    const result=spawnSync('bun',['run','scripts/offline-backup.ts',...args],{
+      cwd:root,env:{...environment,DARSCHYN_OFFLINE_MAINTENANCE_CONFIRMED:'true'},
+      stdio:'ignore',timeout:15000,
+    });
+    if(result.error||result.status!==0)throw new Error('Offline disaster recovery step failed: '+args[0]);
+  };
+  offline('backup',originalPath,keyFile,archive);
+  offline('verify',archive,keyFile);
+  offline('restore-new',archive,keyFile,restoredFile);
+  if(!fs.readFileSync(restoredFile).equals(originalBytes))throw new Error('Snapshot restore differs from source bytes');
+  if(!fs.readFileSync(originalPath).equals(originalBytes))throw new Error('Snapshot source was modified');
+  environment.DARSCHYN_DATA_DIR=restoredDir;
+  environment.DARSCHYN_REQUIRE_EXISTING_DB='true';
+  fixturePath=restoredFile;
+  // Never reuse a pre-disaster signing secret when bringing an old snapshot
+  // back into service. This prevents resurrection of revoked JWT sessions.
+  environment.JWT_SECRET=crypto.randomBytes(32).toString('hex');
+  await startServer();
+  expectStatus(await authenticated('/api/auth/me',newStudentToken),401,'Pre-restore token rejected after key rotation');
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Previously revoked token rejected after recovery');
+  const restoredStudent=await fixtureLogin(accounts[0]);
+  const restoredManager=await fixtureLogin(accounts[2]);
+  const restoredOther=await fixtureLogin(accounts[1]);
+  const recovered=expectStatus(await authenticated(demandPath+'/response',restoredStudent),200,'Recovered student response').data;
+  if(recovered?.id!==first.data.id||recovered?.answers?.preference!=='عصر'||recovered?.courseIds?.length!==0)throw new Error('Recovered student data mismatch');
+  expectStatus(await authenticated(demandPath+'/response',restoredOther),404,'Recovered cohort isolation');
+  expectStatus(await authenticated(demandPath+'/answers.csv?format=json',restoredManager),403,'Recovered private export boundary');
+  const recoveredReport=expectStatus(await authenticated(demandPath+'/report',restoredManager),200,'Recovered aggregate').data;
+  if(recoveredReport.participantCount!==1||JSON.stringify(recoveredReport).includes(studentNumber))throw new Error('Recovered report mismatch or privacy failure');
+  expectStatus(await authenticated(demandPath+'/response',restoredStudent,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Recovered closed survey');
+  if(!fs.readFileSync(originalPath).equals(originalBytes))throw new Error('Recovery server modified original database');
+  console.log('PASS: isolated encrypted snapshot recovery, real server boot, fresh authentication, access boundaries and source preservation; synthetic drill milliseconds='+ (Date.now()-drillStart));
 
   // Reproduce a fatal startup after initialization without touching the VPS.
   // The previous entrypoint logged a failed bootstrap but exited with code 0,
