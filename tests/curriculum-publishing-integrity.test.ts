@@ -74,4 +74,14 @@ describe('انتشار معتبر چارت رشته / مقطع / ورودی',()=
     expect(db.curricula.find(c=>c.id===draftId)).toEqual(before);
     expect(JSON.stringify(response.body)).not.toContain('synthetic file error');
   });
+  it('blocks publication when a legacy rule refers to a course outside the chart',async()=>{
+    attach();
+    db.curricula.find(c=>c.id===sourceId)!.status='archived';
+    const link=db.curriculumCourses.find(c=>c.id===linkId)!;
+    db.academicRules.push({id:'synthetic-invalid-publish-rule',curriculumId:draftId,targetCourseId:link.courseId,relationshipType:'PREREQUISITE',expression:{type:'COURSE',courseId:'missing-course'}});
+    const response=await put({status:'active'});
+    expect(response.status).toBe(400);
+    expect(db.curricula.find(c=>c.id===draftId)?.status).toBe('draft');
+  });
+
 });

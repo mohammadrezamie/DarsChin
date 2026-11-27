@@ -7,8 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
-import { ruleScopeCourseIds } from '../../src/domain/curriculum-rule-scope';
-import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
+import { ruleScopeCourseIds, validateScopedCurriculumRules } from '../../src/domain/curriculum-rule-scope';
 import { validate } from '../middleware/validate';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
@@ -171,7 +170,7 @@ curriculumRouter.post('/:id/clone', authenticate, requirePermission('curriculum.
       extractSourceCourseIds(rule.expression).some(id=>!ids.includes(id)))) {
     return res.status(409).json({success:false,error:'قوانین مبدأ با چارت سازگار نیستند؛ پیش از کپی اصلاح کنید یا کپی قوانین را خاموش کنید.'});
   }
-  if(copyRules && !analyzeCurriculumDependencies(source.id,ids,rules).valid) {
+  if(copyRules && validateScopedCurriculumRules(source,sourceCourses,rules,db.tracks)) {
     return res.status(409).json({success:false,error:'چرخه یا خطای پیش‌نیاز در چارت مبدأ وجود دارد؛ کپی قوانین مجاز نیست.'});
   }
   const clone:Curriculum={
@@ -246,6 +245,8 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
     if(!assigned.length || assigned.some(link=>!db.courses.some(course=>course.id===link.courseId&&course.active))) {
       return res.status(400).json({success:false,error:'چارت بدون درس فعال یا دارای درس نامعتبر قابل انتشار نیست.'});
     }
+    const ruleError=validateScopedCurriculumRules({...existing,majorId:futureMajor,entryYearId:futureYear},assigned,db.academicRules,db.tracks);
+    if(ruleError)return res.status(400).json({success:false,error:ruleError});
     if(db.curricula.some(other=>other.id!==existing.id&&other.status==='active'&&
         other.universityId===existing.universityId&&other.campusId===existing.campusId&&
         other.degreeLevelId===existing.degreeLevelId&&other.majorId===futureMajor&&other.entryYearId===futureYear)) {
@@ -428,9 +429,6 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
       (trackId && !db.tracks.some(track => track.id === trackId && track.majorId === chart.majorId && track.active))) {
     return res.status(400).json({ success: false, error: 'حوزهٔ قانون با چارت انتخابی مطابقت ندارد.' });
   }
-  const assignedCourseIds = [...new Set(db.curriculumCourses
-    .filter(item => item.curriculumId === curriculumId && item.active !== false)
-    .map(item => item.courseId))];
   const allowedCourses = ruleScopeCourseIds(db.curriculumCourses, curriculumId, trackId);
   const sourceIds = extractSourceCourseIds(expression);
   if (!allowedCourses.has(targetCourseId) || !sourceIds.length ||
@@ -455,25 +453,14 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     return res.status(409).json({ success: false, error: 'این رابطه قبلاً در همین چارت ثبت شده است.' });
   }
 
-  // Validate the entire existing prerequisite graph plus the new edge.
-  // The old recursive guard accidentally rejected valid A→B→C chains,
-  // and traversed rules belonging to unrelated charts and corequisites.
-  // Corequisites may be reciprocal; only prerequisites form the DAG.
-  if (relationshipType === 'PREREQUISITE') {
-    const candidate = {
-      id: 'candidate', curriculumId, targetCourseId,
-      relationshipType, expression,
-    };
-    const analysis = analyzeCurriculumDependencies(
-      curriculumId, assignedCourseIds, [...db.academicRules, candidate]
-    );
-    if (!analysis.valid) {
-      return res.status(400).json({
-        success: false,
-        error: analysis.errors[0] || 'زنجیرهٔ پیش‌نیازها معتبر نیست.',
-      });
-    }
-  }
+  // Shared rules are validated together with each individual track, not
+  // against the union of mutually exclusive prerequisite graphs.
+  const candidate: AcademicRule = {
+    id:'candidate',curriculumId,targetCourseId,relationshipType,expression,
+    trackId:trackId||null,majorId:majorId||null,entryYearId:entryYearId||null,
+  };
+  const graphError=validateScopedCurriculumRules(chart,db.curriculumCourses,[...db.academicRules,candidate],db.tracks);
+  if(graphError)return res.status(400).json({success:false,error:graphError});
 
   const newRule = {
     id: `rule-${randomUUID()}`,

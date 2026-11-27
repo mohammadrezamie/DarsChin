@@ -152,4 +152,19 @@ describe('server-side long-chain prerequisite editing', () => {
     }
   });
 
+  it('accepts opposite prerequisites in mutually exclusive tracks but rejects a shared edge that creates a real cycle',async()=>{
+    const chart=db.curricula.find(c=>c.id===chartB)!;
+    const trackA=prefix+'-graph-a',trackB=prefix+'-graph-b';
+    const originalTracks=db.data.tracks,originalRules=db.data.academicRules;
+    db.data.tracks=[...originalTracks,{id:trackA,majorId:chart.majorId,name:'گرایش الف',active:true},{id:trackB,majorId:chart.majorId,name:'گرایش ب',active:true}] as typeof originalTracks;
+    db.data.academicRules=originalRules.filter(rule=>rule.curriculumId!==chartB);
+    try {
+      expect((await add(chartB,ids[0],ids[1],'PREREQUISITE',trackA)).status).toBe(200);
+      expect((await add(chartB,ids[1],ids[0],'PREREQUISITE',trackB)).status).toBe(200);
+      expect((await add(chartB,ids[1],ids[0],'PREREQUISITE',trackA)).status).toBe(400);
+      expect((await add(chartB,ids[0],ids[1])).status).toBe(400);
+      expect(db.academicRules.filter(r=>r.curriculumId===chartB)).toHaveLength(2);
+    }finally{db.data.tracks=originalTracks;db.data.academicRules=originalRules;db.save();}
+  });
+
 });
