@@ -6,7 +6,7 @@
 
 درس‌چین باید با یک سرویس Node.js مستقل پشت **Nginx موجود** و یک پورت محلی جدا از تکین کار کند. اجرای Caddy دوم کنار Nginx حاضر بدون بررسی تعارض ممنوع است. سرویس درس‌چین نباید به دیتابیس، رمزها، مسیر کد یا فایل‌های محیطی تکین دسترسی بگیرد.
 
-- نمونهٔ اولیهٔ برنامه روی پورت **۳۰۰۰** تعریف شده بود؛ **این عدد لزوماً پورت آزاد یا مورد تأیید VPS فعلی نیست**. با تنظیمات `PORT` و `HOST` مستقل و بررسی وضعیت واقعی تصمیم بگیرید.
+- قرارداد نمونهٔ جدید: **۳۰۰۱** برای production و **۳۰۰۲** برای staging روی loopback میزبان؛ **۳۰۰۰** فقط داخل کانتینر. آزادبودن پورت VPS فعلی تأیید نشده است.
 - در محیط Production، `HOST=127.0.0.1` باشد؛ Node نباید بی‌اجازه روی `0.0.0.0` در دسترس اینترنت قرار گیرد.
 - دیتابیس JSON برنامه فقط برای **یک پردازش نویسنده** مناسب است. مسیر پایدار داده را از Release و Git جدا کنید؛ چند Replica بدون دیتابیس تراکنشی ممنوع است.
 - گزینه‌های `ReadWritePaths` سرویس systemd نباید کورکورانه حذف شوند؛ فقط مسیرهای واقعاً لازم قابل نوشتن باشند.
@@ -19,7 +19,7 @@
 ```bash
 free -h
 df -h /
-sudo ss -ltnp | grep -E ':(80|443|3000)\b' || true
+sudo ss -ltnp | grep -E ':(80|443|3000|3001|3002)\b' || true
 systemctl --no-pager --type=service --state=running | grep -E 'nginx|mariadb|mysql|php.*fpm|darschyn' || true
 node --version
 npm --version
@@ -33,16 +33,12 @@ npm --version
 sudo adduser --system --group --home /opt/darschyn --no-create-home darschyn
 sudo install -d -o root -g root -m 0755 /opt/darschyn
 sudo install -d -o root -g root -m 0755 /opt/darschyn/releases
-sudo install -d -o darschyn -g darschyn -m 0750 /var/lib/darschyn
+sudo install -d -o darschyn -g darschyn -m 0700 /var/lib/darschyn
 sudo install -d -o root -g root -m 0750 /etc/darschyn
-sudo install -d -o root -g root -m 0750 /var/backups/darschyn
+sudo install -d -o root -g root -m 0700 /var/backups/darschyn
 ```
 
-برای هر Release از `/opt/darschyn/releases/<commit-sha>` استفاده و `/opt/darschyn/current` را فقط به نسخهٔ تأییدشده وصل کنید. لینک دادهٔ آن Release:
-
-```bash
-ln -s /var/lib/darschyn /opt/darschyn/releases/<commit-sha>/data
-```
+برای هر Release از `/opt/darschyn/releases/<commit-sha>` استفاده و `/opt/darschyn/current` را فقط به نسخهٔ تأییدشده وصل کنید. مسیر داده صریحاً با `DARSCHYN_DATA_DIR=/var/lib/darschyn` در واحد systemd تعیین می‌شود؛ برای نصب جدید نیازی به symlink داده داخل release نیست.
 
 این دستورها برای **نصب تازهٔ مستقل** هستند؛ اگر سرویس یا پوشهٔ فعلی با این مسیرها وجود دارد، قبل از هر تغییر وضعیت را با مالک هماهنگ کنید. دستور `demo:reset` یا جایگزینی دیتابیس واقعی با نمونه در Production ممنوع است.
 
@@ -91,8 +87,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now darschyn
 sudo systemctl --no-pager --full status darschyn
 sudo journalctl -u darschyn -n 100 --no-pager
-curl --fail --silent --show-error http://127.0.0.1:3000/api/health
-sudo ss -ltnp | grep ':3000 '
+curl --fail --silent --show-error http://127.0.0.1:3001/api/health
+sudo ss -ltnp | grep ':3001 '
 ```
 
 **این دستورات نباید روی VPS موجود اجرا شوند تا مالک برنامهٔ استقرار جداگانه را تأیید کند.** آدرس و پورت مثال را با مقدار مورد تأیید جایگزین کنید. اگر سرویس یا دیتابیس خطا دارد، به مرحلهٔ DNS عمومی نروید.
