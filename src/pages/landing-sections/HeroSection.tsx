@@ -54,7 +54,7 @@ export const HeroSection: React.FC = () => {
             </Link>
           </motion.div>
           <div className="mb-7 text-sm font-bold text-blue-700 dark:text-blue-300">
-            <a href="#manager-workspace" className="underline-offset-4 hover:underline">ویژهٔ مدیران گروه و مدیران آموزشی ←</a>
+            <a href="#student-journey" className="underline-offset-4 hover:underline">مسیر برنامه‌ریزی ترم را ببین <span aria-hidden="true">←</span></a>
           </div>
 
           <p className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold leading-6 text-slate-500 dark:text-slate-400">
