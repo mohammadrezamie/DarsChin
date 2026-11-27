@@ -94,4 +94,47 @@ describe('durable JSON persistence for a single-process student pilot', () => {
     writeDurableJson(file, { users: [] });
     expect(() => assertExistingDatabasePresent(file, true)).not.toThrow();
   });
+  it('rejects present malformed collections and settings without modifying the source bytes', () => {
+    const file = isolatedFile();
+    for (const invalid of [
+      { studentPlans: {} }, { demandResponses: null }, { auditLogs: [null] },
+      { syncJobs: 'broken' }, { importRecords: [123] }, { academicSettings: [] },
+      { smsSettings: 'broken' },
+    ]) {
+      const original = JSON.stringify({users:[], ...invalid});
+      fs.writeFileSync(file, original);
+      expect(() => readPersistedJson(file)).toThrow(/malformed/);
+      expect(fs.readFileSync(file,'utf8')).toBe(original);
+    }
+    fs.writeFileSync(file, JSON.stringify({users:[]}));
+    expect(readPersistedJson(file)).toEqual({users:[]});
+  });
+
+  it('refuses guarded writes when a previously mounted database disappears', () => {
+    const file = isolatedFile();
+    writeDurableJson(file, {users:[]});
+    fs.rmSync(path.dirname(file), {recursive:true});
+    expect(() => writeDurableJson(file, {users:[{id:'not-persisted'}]}, undefined, true)).toThrow(/required persisted database/);
+    expect(fs.existsSync(path.dirname(file))).toBe(false);
+  });
+
+  it('refuses to replace a non-regular guarded database path', () => {
+    const file = isolatedFile();
+    fs.mkdirSync(file);
+    expect(() => writeDurableJson(file, {users:[]}, undefined, true)).toThrow(/regular file/);
+    expect(fs.statSync(file).isDirectory()).toBe(true);
+  });
+
+  it('rechecks guarded database existence immediately before rename', () => {
+    const file = isolatedFile();
+    writeDurableJson(file, {users:[]});
+    const originalFsync = fs.fsyncSync;
+    vi.spyOn(fs,'fsyncSync').mockImplementationOnce(fd => {
+      originalFsync(fd);
+      fs.unlinkSync(file);
+    });
+    expect(() => writeDurableJson(file, {users:[{id:'new'}]}, undefined, true)).toThrow(/required persisted database/);
+    expect(fs.readdirSync(path.dirname(file))).toEqual([]);
+  });
+
 });

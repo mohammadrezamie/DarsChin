@@ -12,9 +12,10 @@ import { randomUUID } from 'node:crypto';
  * This is not a cross-process transaction system. More than one Node worker
  * requires a shared transactional database instead of this JSON store.
  */
-export function writeDurableJson(filePath: string, data: unknown, onReplaced?: () => void): void {
+export function writeDurableJson(filePath: string, data: unknown, onReplaced?: () => void, requireExisting = false): void {
   const directory = path.dirname(filePath);
-  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  if (requireExisting) assertExistingDatabasePresent(filePath, true);
+  else fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   // JSON.stringify may throw (e.g. cyclic data). Do this before touching disk.
   const serialized = JSON.stringify(data, null, 2);
   if (typeof serialized !== 'string') {
@@ -29,6 +30,7 @@ export function writeDurableJson(filePath: string, data: unknown, onReplaced?: (
     fs.fsyncSync(fd);
     fs.closeSync(fd);
     fd = undefined;
+    if (requireExisting) assertExistingDatabasePresent(filePath, true);
     fs.renameSync(temporary, filePath);
     // The new file is visible after rename. Notify an in-memory importer
     // *before* flushing the directory, so even a late fsync failure cannot
@@ -55,8 +57,10 @@ export function writeDurableJson(filePath: string, data: unknown, onReplaced?: (
 }
 
 export function assertExistingDatabasePresent(filePath: string, requireExisting: boolean): void {
-  if (requireExisting && !fs.existsSync(filePath)) {
-    throw new Error('The required persisted database is missing; refusing to initialize an empty replacement.');
+  if (!requireExisting) return;
+  const stat = fs.lstatSync(filePath, { throwIfNoEntry: false });
+  if (!stat || !stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error('The required persisted database is missing or is not a regular file; refusing to initialize an empty replacement.');
   }
 }
 
@@ -69,6 +73,26 @@ export function readPersistedJson(filePath: string): unknown {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
       !Array.isArray((parsed as { users?: unknown }).users)) {
     throw new Error('Persisted database has an invalid root/users collection');
+  }
+  // Missing legacy collections may still be migrated; present but malformed
+  // collections must never be silently reset by migration/bootstrap.
+  const record = parsed as Record<string, unknown>;
+  const arrays = ['universities','provinces','campuses','degreeLevels','majors','tracks',
+    'entryYears','academicTerms','curricula','courses','curriculumCourses','academicRules',
+    'courseOfferings','studentProfiles','studentPassedCourses','studentPlans','demandSurveys',
+    'demandResponses','importBatches','importRecords','supportTickets','supportMessages',
+    'bugReports','auditLogs','errorLogs','otpChallenges','captchaChallenges','smsHistory',
+    'syncJobs','syncSnapshots'];
+  for (const key of arrays) {
+    if (Object.hasOwn(record, key) && (!Array.isArray(record[key]) ||
+        (record[key] as unknown[]).some(row => !row || typeof row !== 'object' || Array.isArray(row)))) {
+      throw new Error('Persisted database has a malformed collection: ' + key);
+    }
+  }
+  for (const key of ['academicSettings','smsSettings']) {
+    if (Object.hasOwn(record,key) && (!record[key] || typeof record[key] !== 'object' || Array.isArray(record[key]))) {
+      throw new Error('Persisted database has malformed settings: ' + key);
+    }
   }
   // The previous loader silently deleted duplicate/invalid user identities.
   // That could discard a real student's plan when root/bootstrap saved again.
