@@ -5,6 +5,17 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
+// CI stages are opt-in; the original local full gate stays unchanged.
+const args = process.argv.slice(2);
+const stage = args[0]?.match(/^--ci-stage=(source|typecheck|tests|build)$/)?.[1];
+const shard = args[1]?.match(/^--shard=([1-9]\d*)\/([1-9]\d*)$/);
+if (args.length && (!stage || (stage === 'tests'
+  ? args.length !== 2 || !shard || Number(shard[1]) > Number(shard[2])
+  : args.length !== 1))) {
+  console.error('Usage: verify.cjs [--ci-stage=source|typecheck|build | --ci-stage=tests --shard=N/TOTAL]');
+  process.exit(2);
+}
+
 const root = path.resolve(__dirname, '..');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'darschin-verify-'));
 const environment = {
@@ -18,7 +29,7 @@ const environment = {
   ROOT_OWNER_RECOVERY_KEY: crypto.randomBytes(24).toString('hex'),
 };
 
-const steps = [
+const fullSteps = [
   ['Check official documentation language', ['run', 'docs:check']],
   ['Check tracked public-source safety', ['run', 'repo:public-check']],
   ['Install dependencies using the committed Bun lock', ['install', '--frozen-lockfile']],
@@ -26,6 +37,12 @@ const steps = [
   ['Unit and regression tests', ['run', 'test']],
   ['Production build and extension verification', ['run', 'build']],
 ];
+
+const steps = stage === 'source' ? fullSteps.slice(0, 2)
+  : stage === 'typecheck' ? fullSteps.slice(2, 4)
+  : stage === 'tests' ? [fullSteps[2], ['Unit and regression test shard', ['run', 'test', '--shard=' + shard[1] + '/' + shard[2]]]]
+  : stage === 'build' ? [fullSteps[2], fullSteps[5]]
+  : fullSteps;
 
 try {
   for (const [title, args] of steps) {
@@ -52,7 +69,7 @@ try {
   }
 
   if (!process.exitCode) {
-    console.log('\nPASS: frozen Bun installation, typecheck, tests and production build.');
+    console.log(stage ? '\nPASS: CI stage ' + stage : '\nPASS: frozen Bun installation, typecheck, tests and production build.');
     console.log('Note: this does not verify live Educationalyar, SMTP/SMS, or production deployment.');
   }
 } finally {
