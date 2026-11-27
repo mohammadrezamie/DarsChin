@@ -1,4 +1,5 @@
 import type { DatabaseSchema } from './database';
+import { validateStoredStudyPlan } from './study-plan';
 
 /**
  * Admin-uploaded backups are permitted to restore a *catalogue snapshot*.
@@ -116,6 +117,12 @@ export function prepareCatalogRestore(current: DatabaseSchema, incoming: unknown
   ensureReferences(current.demandSurveys.map(x => x.targetTermId), terms, 'ترم نیازسنجی');
   ensureReferences(current.demandSurveys.map(x => x.majorId), majors, 'رشتهٔ نیازسنجی');
   ensureReferences(current.demandSurveys.flatMap(x => x.courseIds), courses, 'نیازسنجی‌های فعال/ثبت‌شده');
+
+  // Never overwrite independent current drafts with an older catalogue upload.
+  // Reject a catalogue that would orphan an existing draft.
+  if ((current.studyPlanDrafts||[]).some(row=>!validateStoredStudyPlan(candidate,row))) {
+    throw new InvalidCatalogBackupError('بازیابی، برنامهٔ پیشنهادی موجود را نامعتبر می‌کند؛ ابتدا پیش‌نویس را بازبینی کنید.');
+  }
 
   // All non-catalogue collections (users and session versions, plans,
   // responses, SMS configuration, audit logs, OTP and captcha challenges,

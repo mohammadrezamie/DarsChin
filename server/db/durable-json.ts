@@ -82,7 +82,7 @@ export function parsePersistedJson(contents: string): unknown {
   // collections must never be silently reset by migration/bootstrap.
   const record = parsed as Record<string, unknown>;
   const arrays = ['universities','provinces','campuses','degreeLevels','majors','tracks',
-    'entryYears','academicTerms','curricula','courses','curriculumCourses','academicRules',
+    'entryYears','academicTerms','curricula','courses','curriculumCourses','academicRules','studyPlanDrafts',
     'courseOfferings','studentProfiles','studentPassedCourses','studentPlans','demandSurveys',
     'demandResponses','importBatches','importRecords','supportTickets','supportMessages',
     'bugReports','auditLogs','errorLogs','otpChallenges','captchaChallenges','smsHistory',

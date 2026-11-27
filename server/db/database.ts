@@ -10,6 +10,7 @@ import path from 'path';
 import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
 import { resolveBootstrapRoot } from './root-identity';
 import { prepareCatalogRestore } from './catalog-restore';
+import type { StoredStudyPlanDraft } from './study-plan';
 import {
   User,
   University,
@@ -66,6 +67,7 @@ export interface DatabaseSchema {
   courses: Course[];
   curriculumCourses: CurriculumCourse[];
   academicRules: AcademicRule[];
+  studyPlanDrafts?: StoredStudyPlanDraft[];
   
   courseOfferings: CourseOffering[];
   studentProfiles: StudentAcademicProfile[];
@@ -98,6 +100,7 @@ const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
  * retain valid arrays and never silently overwrite existing review decisions.
  */
 export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
+  if (!Array.isArray(data.studyPlanDrafts)) data.studyPlanDrafts = [];
   if (!Array.isArray(data.demandSurveys)) data.demandSurveys = [];
   if (!Array.isArray(data.smsHistory)) data.smsHistory = [];
   if (!Array.isArray(data.demandResponses)) data.demandResponses = [];
@@ -128,6 +131,7 @@ export class LocalDatabase {
     courses: [],
     curriculumCourses: [],
     academicRules: [],
+    studyPlanDrafts: [],
     
     courseOfferings: [],
     studentProfiles: [],
