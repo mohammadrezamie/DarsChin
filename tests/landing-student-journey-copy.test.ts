@@ -17,8 +17,10 @@ describe('پیام روشن صفحهٔ اول درس‌چین', () => {
 
   it('مسیر مدیر گروه را جدا و واضح معرفی می‌کند', () => {
     expect(hero).toContain('ویژهٔ مدیران گروه و مدیران آموزشی');
-    expect(hero).toContain('href="#workspaces"');
-    expect(managerSection).toContain('id="workspaces"');
+    expect(hero).toContain('href="#manager-workspace"');
+    expect(managerSection).toContain('id="manager-workspace"');
+    expect(managerSection).toContain('to="/login"');
+    expect(managerSection).toContain('publicDemoEnabled && <Link to="/demo/admin"');
   });
 
   it('هیچ ادعای اتصال/ثبت خودکار یا نام درگاه منسوخ در لندینگ ندارد', () => {
