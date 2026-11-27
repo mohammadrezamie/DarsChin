@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { publicDemoEnabled } from '../../config/demo-availability';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, GraduationCap, ListChecks, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 
 const features: { icon: LucideIcon; title: string; description: string }[] = [
@@ -42,7 +43,7 @@ export const DashboardShowcaseSection: React.FC = () => {
             </motion.article>
           ))}
         </div>
-        <div className="mt-7 flex flex-col items-start justify-between gap-5 rounded-3xl border border-teal-200 bg-gradient-to-l from-teal-50 to-white p-5 sm:flex-row sm:items-center sm:p-7 dark:border-teal-950 dark:from-teal-950/30 dark:to-slate-950">
+        {publicDemoEnabled && <div className="mt-7 flex flex-col items-start justify-between gap-5 rounded-3xl border border-teal-200 bg-white p-5 sm:flex-row sm:items-center sm:p-7 dark:border-teal-950 dark:bg-slate-900">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-sm font-extrabold text-teal-900 dark:text-teal-200">
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> از دمو شروع کن
@@ -54,11 +55,34 @@ export const DashboardShowcaseSection: React.FC = () => {
           <Link to="/demo/student" className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-800 px-5 text-sm font-extrabold text-white shadow-sm hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 sm:w-auto">
             ورود به دموی دانشجو <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
-        </div>
+        </div>}
         <p className="mt-5 flex items-start gap-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
           نتیجهٔ نهایی هر درس به اطلاعات واقعی و مقررات رسمی دانشگاه وابسته است.
         </p>
+        <section id="manager-workspace" aria-labelledby="manager-workspace-title" className="mt-10 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 sm:mt-14 sm:p-7 dark:border-slate-700 dark:bg-slate-900">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-blue-800 dark:text-blue-300">برای مدیران گروه و مدیران آموزشی</p>
+              <h2 id="manager-workspace-title" className="mt-2 text-xl font-black leading-relaxed text-slate-950 sm:text-2xl dark:text-white">میز کار مدیریت آموزشی</h2>
+              <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">چارت رشته و ورودی، نیازسنجی دروس و اطلاعات ارائه‌ها را در فضای مدیریت بررسی کنید. دسترسی واقعی به مجوز حساب وابسته است.</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {publicDemoEnabled && <Link to="/demo/admin" className="dc-primary-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold">مشاهدهٔ دموی مدیر <ArrowLeft className="h-4 w-4 shrink-0" /></Link>}
+                <Link to="/login" className="dc-secondary-action inline-flex min-h-12 items-center justify-center rounded-xl px-4 text-sm font-bold">ورود مدیر مجاز</Link>
+              </div>
+            </div>
+            <div className="grid min-w-0 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+              {[
+                {icon:BookOpen,title:'چارت و دروس',detail:'تفکیک رشته، مقطع و ورودی'},
+                {icon:ListChecks,title:'نیازسنجی',detail:'جمع‌آوری تقاضای دانشجویان'},
+                {icon:CalendarDays,title:'ارائه‌های نیمسال',detail:'بررسی گروه‌ها و زمان‌ها'},
+              ].map(({icon:Icon,title,detail})=><div key={title} className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                <Icon aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-blue-700 dark:text-blue-300"/>
+                <div className="min-w-0"><h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3><p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">{detail}</p></div>
+              </div>)}
+            </div>
+          </div>
+        </section>
       </div>
     </section>
   );
