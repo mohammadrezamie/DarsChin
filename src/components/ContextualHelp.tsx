@@ -11,7 +11,7 @@ export interface SectionHelpContent {
 /** Compact, keyboard-accessible in-context help; never blocks the workspace. */
 export const ContextualHelp: React.FC<{ content: SectionHelpContent; audience: 'student' | 'admin' }> = ({ content, audience }) => {
   return (
-    <details key={content.title} className="group min-w-0 rounded-2xl border border-blue-200/80 bg-blue-50/60 px-3 py-2 text-right shadow-sm open:bg-white sm:px-4 dark:border-blue-900/70 dark:bg-blue-950/20 dark:open:bg-slate-900">
+    <details key={content.title} className="dc-context-help group min-w-0 rounded-2xl border border-blue-200/80 bg-blue-50/60 px-3 py-2 text-right shadow-sm open:bg-white sm:px-4 dark:border-blue-900/70 dark:bg-blue-950/20 dark:open:bg-slate-900">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-1 text-sm font-bold text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-200">
         <span className="flex min-w-0 items-center gap-2"><BookOpenText aria-hidden="true" className="h-5 w-5 shrink-0" /> این بخش چه کاری می‌کند؟</span>
         <span aria-hidden="true" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xl font-normal leading-none text-blue-700 transition-transform group-open:rotate-45 dark:bg-blue-900/50 dark:text-blue-200">+</span>

@@ -611,8 +611,8 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
   };
 
   return (
-    <div className="darschin-page space-y-5" dir="rtl">
-      <div className="rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 to-white p-5 dark:border-teal-950 dark:from-teal-950/50 dark:to-slate-900">
+    <div className="dc-product-workspace dc-workspace-content darschin-page space-y-5" dir="rtl">
+      <div className="dc-workspace-summary rounded-2xl p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-black text-slate-950 dark:text-white"><ClipboardList className="h-6 w-6 text-teal-800 dark:text-teal-300"/> نیازسنجی دروس ترم آینده</h2>
@@ -848,7 +848,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       </section>
 
       {survey && role==='student' && (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <section className="darschin-surface space-y-4 p-4 sm:p-5">
           <h3 className="text-lg font-black">{survey.title}</h3>
           <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">{survey.description || 'این فرم صرفاً برای برآورد تقاضای ترم هدف است.'}</p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -894,7 +894,7 @@ const DemandWorkspaceSession: React.FC<{ role: 'student' | 'admin' }> = ({ role 
       )}
 
       {survey && role==='admin' && (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <section className="darschin-surface space-y-4 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><h3 className="text-lg font-black">{survey.title}</h3><p className="text-xs text-slate-500 dark:text-slate-400">وضعیت: {survey.status} · نیمسال: {terms.find(t=>t.id===survey.targetTermId)?.name || survey.targetTermId}</p></div>
             <div className="flex flex-wrap gap-2">

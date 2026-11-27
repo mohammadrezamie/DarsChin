@@ -34,11 +34,14 @@ describe('موقت‌بودن دمو و بازیابی تجربهٔ دانشجو
     expect(src('src/App.tsx')).toContain('{publicDemoEnabled && <>');
     expect(src('src/pages/Landing.tsx')).toContain('{publicDemoEnabled && <section');
   });
-  it('رنگ‌های قدیمی لندینگ جایگزین تغییرات ناخواسته شده‌اند', () => {
+  it('پالت تأییدشدهٔ جهت جدید مالک جایگزین رنگ‌بندی ردشده می‌شود', () => {
     const css = src('src/index.css');
     const hero = src('src/pages/landing-sections/HeroSection.tsx');
-    expect(css).toContain('--dc-canvas: #f4faf7');
+    expect(css).toContain('--dc-canvas: #f5f7fa');
+    expect(css).toContain('--dc-jade: #2455a6');
+    expect(css).not.toContain('--dc-canvas: #f4faf7');
     expect(css).not.toContain('--dc-canvas: #fff9fc');
-    expect(hero).toContain('from-teal-700 via-emerald-700 to-amber-700');
+    expect(hero).not.toContain('from-teal-700 via-emerald-700 to-amber-700');
+    expect(hero).toContain('dc-brand-text');
   });
 });

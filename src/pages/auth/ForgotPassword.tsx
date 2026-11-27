@@ -130,8 +130,9 @@ export const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div dir="rtl" className="dc-product-auth darschin-page min-h-screen flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
+      <div className="dc-auth-layout">
+      <div className="dc-auth-intro">
         <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
@@ -146,7 +147,7 @@ export const ForgotPassword: React.FC = () => {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="dc-auth-card">
         <div className="darschin-surface bg-white px-4 py-6 shadow-sm sm:px-8 sm:py-8 dark:bg-slate-900">
           
           {error && (
@@ -209,6 +210,7 @@ export const ForgotPassword: React.FC = () => {
           )}
 
         </div>
+      </div>
       </div>
     </div>
   );

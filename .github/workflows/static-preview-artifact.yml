@@ -1,0 +1,60 @@
+name: پیش‌نمایش مستقل رابط کاربری
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "assets/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "package.json"
+      - "bun.lock"
+      - "scripts/build-pages-preview.mjs"
+      - ".github/workflows/static-preview-artifact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build isolated static preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: bun run docs:check && bun run repo:public-check
+      - run: bun install --frozen-lockfile
+      - run: node scripts/build-pages-preview.mjs
+      - name: Prepare offline preview package
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test ! -e dist/server.cjs
+          test ! -e dist/data
+          if find dist -type f \( -name '.env*' -o -name '*.db' -o -name '*.sqlite*' -o -name '*.pem' \) -print -quit | grep -q .; then
+            echo "Unexpected private file type in static output"
+            exit 1
+          fi
+          mkdir -p preview/DarsChin
+          cp -a dist/. preview/DarsChin/
+          printf '%s\n' "$GITHUB_SHA" > preview/COMMIT.txt
+          printf '%s\n' 'Run python -m http.server 8000 --bind 127.0.0.1 in this directory.' 'Open http://127.0.0.1:8000/DarsChin/' 'Synthetic browser demo only; no live API or production data.' > preview/README.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: darschin-static-preview-${{ github.sha }}
+          path: preview/
+          if-no-files-found: error
+          retention-days: 7
+

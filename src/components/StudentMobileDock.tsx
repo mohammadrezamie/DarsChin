@@ -78,7 +78,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
 
   return (
     <>
-      <nav aria-label="دسترسی سریع میز کار دانشجو" className="dc-student-dock fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
+      <nav aria-label="دسترسی سریع میز کار دانشجو" className="dc-workspace-navigation dc-student-dock fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-12px_35px_-24px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden print:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-1.5" dir="rtl">
           {PRIMARY.map(item => {
@@ -110,7 +110,7 @@ export const StudentMobileDock: React.FC<Props> = ({ active, demandAvailable, on
             onClick={() => setExpanded(false)}
             className="absolute inset-0 h-full w-full bg-slate-950/55 backdrop-blur-[2px]" />
           <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="سایر بخش‌های میز کار دانشجو"
-            className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[min(85dvh,560px)] max-w-lg flex-col overflow-y-auto rounded-t-[1.65rem] border border-slate-200 bg-white px-4 pt-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            className="dc-workspace-sheet absolute inset-x-0 bottom-0 mx-auto flex max-h-[min(85dvh,560px)] max-w-lg flex-col overflow-y-auto rounded-t-[1.65rem] border border-slate-200 bg-white px-4 pt-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
             <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
             <div className="mb-4 flex items-center justify-between gap-3">

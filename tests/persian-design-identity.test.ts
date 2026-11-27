@@ -24,7 +24,7 @@ const contrast = (a: string, b: string) => {
   return (top + .05) / (bottom + .05);
 };
 
-describe('هویت بصری فیروزه‌ای/زعفرانی درس‌چین', () => {
+describe('هویت بصری آبی دانشگاهی درس‌چین', () => {
   it('متن اصلی و رنگ برند در روز و شب حداقل کنتراست AA را دارند', () => {
     const dayPaper = hex(tokensLight, '--darschin-surface');
     const nightPaper = hex(tokensDark, '--darschin-surface');
@@ -42,6 +42,9 @@ describe('هویت بصری فیروزه‌ای/زعفرانی درس‌چین',
   it('پالت در دو تم واقعاً متفاوت است و رنگ‌های هوشمندانهٔ مشترک دارد', () => {
     expect(hex(tokensLight, '--darschin-surface')).not.toBe(hex(tokensDark, '--darschin-surface'));
     expect(hex(tokensLight, '--darschin-brand')).not.toBe(hex(tokensDark, '--darschin-brand'));
+    expect(css).toContain('--color-teal-700: #2455a6;');
+    expect(hex(tokensLight, '--darschin-brand')).toBe('#2455a6');
+    expect(hex(tokensLight, '--darschin-surface')).toBe('#ffffff');
     expect(css).toContain('.dc-brand-text');
     expect(css).toContain('.dc-primary-action');
     expect(css).toContain('.dc-hero-preview');
@@ -58,9 +61,9 @@ describe('هویت بصری فیروزه‌ای/زعفرانی درس‌چین',
     expect(css).toContain('@media print');
     const theme = read('src/context/ThemeContext.tsx');
     const html = read('index.html');
-    expect(theme).toContain("isDark ? '#0a1b1d' : '#f4faf7'");
-    expect(html).toContain("dark ? '#0a1b1d' : '#f4faf7'");
-    expect(html).toContain('name="theme-color" content="#f4faf7"');
+    expect(theme).toContain("isDark ? '#101827' : '#f5f7fa'");
+    expect(html).toContain("dark ? '#101827' : '#f5f7fa'");
+    expect(html).toContain('name="theme-color" content="#f5f7fa"');
   });
 
   it('نقاط ورود کاربر واقعاً از استایل جدید استفاده می‌کنند', () => {
