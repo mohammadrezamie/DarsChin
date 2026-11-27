@@ -82,12 +82,28 @@ jobs:
       - run: node scripts/verify.cjs --ci-stage=build
       - run: bun run smoke:api
 
+  reference:
+    name: Full-suite reference audit
+    # Initial adoption and explicit manual runs only.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'ci/parallel-quality-gate-20261127' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Run unsharded reference suite with isolated credentials
+        run: node scripts/verify.cjs --ci-stage=tests --shard=1/1
+
   verify:
     # Preserve the existing required-check name; never pass on a skipped or failed dependency.
     name: Typecheck / Tests / Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [source, typecheck, tests, bundle]
+    needs: [source, typecheck, tests, bundle, reference]
     if: ${{ always() }}
     steps:
       - name: Require all parallel checks to succeed
@@ -96,6 +112,8 @@ jobs:
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           TESTS_RESULT: ${{ needs.tests.result }}
           BUNDLE_RESULT: ${{ needs.bundle.result }}
+          REFERENCE_RESULT: ${{ needs.reference.result }}
+          REFERENCE_REQUIRED: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'ci/parallel-quality-gate-20261127' }}
         run: |
           for result in "$SOURCE_RESULT" "$TYPECHECK_RESULT" "$TESTS_RESULT" "$BUNDLE_RESULT"; do
             if [ "$result" != success ]; then
@@ -103,4 +121,9 @@ jobs:
               exit 1
             fi
           done
+          if [ "$REFERENCE_REQUIRED" = true ]; then
+            test "$REFERENCE_RESULT" = success
+          elif [ "$REFERENCE_RESULT" != skipped ]; then
+            test "$REFERENCE_RESULT" = success
+          fi
           echo "Verified commit $GITHUB_SHA"

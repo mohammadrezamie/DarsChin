@@ -30,3 +30,7 @@
 ۵. در شکست یا لغو، فقط Jobهای لازم را دوباره اجرا کنید؛ شکست ناپایدار باید بررسی و مستند شود، نه اینکه با retry پنهان شود. در صورت مشکل ساختار جدید، Revert PR و اجرای کامل محلی راه بازگشت است.
 
 مراجع: [محدودیت‌های GitHub Actions](https://docs.github.com/en/actions/reference/limits)، [Runner استاندارد](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)، [تقسیم آزمون Vitest](https://vitest.dev/guide/improving-performance)، [راهنمای گیت محلی](QA_WITHOUT_ACTIONS_FA.md)، [منشور امنیت](PERMANENT_SECURITY_POLICY_FA.md).
+
+## شاهد اجرای نخست و ممیزی مرجع
+
+در [اجرای 45955821666](https://github.com/mohammadrezamie/DarsChin/actions/runs/45955821666) روی `03b523cb4a3bbbaad199714b0340ce004b78dc16`، همهٔ ۱۴ Job موفق شدند؛ ۱۳۳ فایل، ۷۰۶ تست و مدت ثبت‌شدهٔ کل اجرا ۳۱ ثانیه. [اجرای قبلی main](https://github.com/mohammadrezamie/DarsChin/actions/runs/45918618507) همان تعداد فایل و تست را روی SHA متفاوت و سورس آزمون یکسان گزارش کرد؛ این مقایسه جای اجرای کامل روی SHA دقیق را نمی‌گیرد. برای پذیرش اولیه و اجرای دستی `workflow_dispatch`، یک Job مرجع با `--shard=1/1` هم اجرا می‌شود؛ شکست آن گیت تجمیعی را مسدود می‌کند. در PRهای عادی این Job رد می‌شود تا مزیت موازی‌سازی باقی بماند. مقایسهٔ تعداد فایل/تست باید از لاگ هر اجرا ثبت شود. نتیجهٔ مرحلهٔ جدید هنوز در انتظار است.
