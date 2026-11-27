@@ -2,7 +2,7 @@
 // DARSCHYN (درس‌چین) - Authentication Context (Mobile Number + Password)
 // ============================================================================
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, UserRole } from '../types';
 import { apiRequest, getStoredToken, setStoredToken } from '../utils/api';
 
@@ -29,6 +29,7 @@ interface AuthContextType {
     newPassword: string
   ) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
+  logoutNotice?: string;
   switchDemoRole: (role: UserRole) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -77,10 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   });
   const [isLoading, setIsLoading] = useState(!getStoredToken());
+  const [logoutNotice, setLogoutNotice] = useState('');
+  const authEpoch = useRef(0);
 
   const fetchCurrentUser = async () => {
+    const epoch = authEpoch.current;
     setIsLoading(true);
     const res = await apiRequest<User & { token?: string }>('/api/auth/me');
+    if (epoch !== authEpoch.current) return;
     if (res.success && res.data) {
       if (res.data.token) {
         setStoredToken(res.data.token);
@@ -110,10 +115,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (mobile: string, password: string, captchaToken?: string) => {
+    const epoch = ++authEpoch.current;
+    setLogoutNotice('');
+    setIsLoading(false);
     const res = await apiRequest<{ token: string; user: User }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ mobile, password, captchaToken }),
     });
+    if (epoch !== authEpoch.current) return { success: false, error: 'درخواست ورود لغو شد.' };
     if (res.success && res.data) {
       setStoredToken(res.data.token);
       setUser(res.data.user);
@@ -123,10 +132,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (mobile: string, password: string, name: string, recoveryKey?: string, captchaToken?: string, otpChallengeId?: string, otpCode?: string) => {
+    const epoch = ++authEpoch.current;
+    setLogoutNotice('');
+    setIsLoading(false);
     const res = await apiRequest<{ token: string; user: User & { recoveryKey?: string } }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ mobile, password, name, recoveryKey, captchaToken, otpChallengeId, otpCode }),
     });
+    if (epoch !== authEpoch.current) return { success: false, error: 'درخواست ثبت‌نام لغو شد.' };
     if (res.success && res.data) {
       setStoredToken(res.data.token);
       setUser(res.data.user);
@@ -147,10 +160,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
+    const epoch = authEpoch.current;
     const res = await apiRequest<{ message: string; token: string }>('/api/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+    if (epoch !== authEpoch.current) return { success: false, error: 'نشست تغییر کرده است.' };
     if (res.success && typeof res.data?.token === 'string' && res.data.token) {
       // Keep this browser signed in; revoke the older token everywhere else.
       setStoredToken(res.data.token);
@@ -167,16 +182,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    const epoch = ++authEpoch.current;
+    // apiRequest attaches the existing bearer synchronously before its first await.
+    // Clear the browser immediately even if the server is offline.
+    const token = getStoredToken();
+    const pending = token ? apiRequest('/api/auth/logout', { method: 'POST' }) : null;
     setStoredToken(null);
     setUser(null);
+    setIsLoading(false);
+    setLogoutNotice(pending ? 'در حال بررسی ابطال نشست‌های قبلی…' : '');
+    if (pending) void pending.then(result => {
+      if (authEpoch.current !== epoch) return;
+      setLogoutNotice(result.success ? '' :
+        'از این مرورگر خارج شدید، اما ابطال نشست‌های قبلی در سرور تأیید نشد. پس از برقراری ارتباط، دوباره وارد شوید و خروج امن انجام دهید.');
+    }).catch(() => {
+      if (authEpoch.current === epoch) setLogoutNotice('از این مرورگر خارج شدید، اما ابطال نشست‌های قبلی در سرور تأیید نشد.');
+    });
   };
 
   const switchDemoRole = async (role: UserRole) => {
+    const epoch = ++authEpoch.current;
     setIsLoading(true);
     const res = await apiRequest<{ token: string; user: User }>('/api/auth/demo-switch', {
       method: 'POST',
       body: JSON.stringify({ role }),
     });
+    if (epoch !== authEpoch.current) return;
     if (res.success && res.data) {
       setStoredToken(res.data.token);
       setUser(res.data.user);
@@ -194,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recoverPassword,
         changePassword,
         logout,
+        logoutNotice,
         switchDemoRole,
         refreshUser: fetchCurrentUser,
       }}

@@ -350,6 +350,15 @@ async function main() {
     throw new Error('Sync job state did not survive a process restart');
   }
 
+  // Verify actual production-mode logout persists across restart, without logging tokens.
+  expectStatus(await authenticated('/api/auth/logout',studentToken,'POST'),200,'Logout student');
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Revoked session');
+  await stopServer();
+  await startServer();
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Revocation survives restart');
+  const newStudentToken=await fixtureLogin(accounts[0]);
+  expectStatus(await authenticated('/api/auth/me',newStudentToken),200,'New session after logout');
+
   // Reproduce a fatal startup after initialization without touching the VPS.
   // The previous entrypoint logged a failed bootstrap but exited with code 0,
   // preventing systemd and deploy gates from recognizing the error.
@@ -443,7 +452,7 @@ async function main() {
     throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, scoped demand lifecycle and restart persistence, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, scoped demand lifecycle and restart persistence, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal, logout revocation and restart persistence.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 
