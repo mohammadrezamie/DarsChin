@@ -84,8 +84,16 @@ async function runCase(origin,width,height) {
     await checkLayout('admin demo');await screenshot('admin-demo');
     await page.goto(base+'#/login');await wait(page.getByRole('heading',{name:'ورود به حساب کاربری'}));
     await checkLayout('login');await screenshot('login');
+    await page.locator('input[type=tel]').fill('۰۹۹۹۹۹۹۹۹۹۹');
+    await page.getByRole('button',{name:'ادامه به رمز عبور و کد امنیتی'}).click();
+    await wait(page.getByRole('alert').filter({hasText:'سرویس صدور کد امنیتی در دسترس نیست'}));
+    assert(await page.getByRole('button',{name:'ورود',exact:true}).isDisabled(),'Login accepted without challenge');
+    await checkLayout('login offline challenge');await screenshot('login-offline');
     for(const route of ['register','forgot-password']){
       await page.goto(base+'#/'+route);await wait(page.getByRole('heading',{level:2}).first());
+      await wait(page.getByRole('alert').filter({hasText:'سرویس صدور کد امنیتی در دسترس نیست'}));
+      const submit=page.getByRole('button',{name:route==='register'?'ثبت‌نام':'دریافت کد تایید',exact:true});
+      assert(await submit.isDisabled(),'Offline guest form accepts missing challenge');
       await checkLayout(route);await screenshot(route);
     }
     assert.equal(errors.length,0,'Uncaught page error during synthetic navigation');

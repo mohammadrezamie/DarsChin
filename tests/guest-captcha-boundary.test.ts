@@ -22,7 +22,7 @@ async function issue(action: string) {
 
 describe('guest CAPTCHA rendering security', () => {
   it('keeps server-generated SVG outside executable DOM markup in guest and recovery forms', () => {
-    for (const filename of ['src/components/GuestHumanCheck.tsx','src/pages/auth/ForgotPassword.tsx']) {
+    for (const filename of ['src/components/GuestHumanCheck.tsx']) {
       const source = readFileSync(resolve(process.cwd(), filename), 'utf8');
       expect(source).not.toContain('dangerouslySetInnerHTML');
       expect(source).toContain('data:image/svg+xml;charset=utf-8');

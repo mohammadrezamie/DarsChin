@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { GuestHumanCheck } from '../../components/GuestHumanCheck';
+import { normalizeIranianMobileInput, isValidIranianMobileInput } from '../../utils/iranian-mobile';
 
 export const ForgotPassword: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [mobile, setMobile] = useState('');
-  const [captchaId, setCaptchaId] = useState('');
-  const [captchaSvg, setCaptchaSvg] = useState('');
-  const [captchaValue, setCaptchaValue] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaAttempt, setCaptchaAttempt] = useState(0);
-  const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [challengeId, setChallengeId] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,59 +19,31 @@ export const ForgotPassword: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const loadCaptcha = async () => {
-    // A failed refresh must never leave an old challenge looking active.
-    setCaptchaId('');
-    setCaptchaSvg('');
-    setCaptchaValue('');
-    try {
-      const res = await apiRequest('/api/auth/otp/captcha/generate?action=otp');
-      if (res.success && res.data) {
-        setCaptchaId(res.data.id);
-        setCaptchaSvg(res.data.svg);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    let mounted=true;
-    void apiRequest<{enabled:boolean}>('/api/security/challenge').then(result=>{
-      if(!mounted)return;
-      if(result.success && result.data?.enabled) setTurnstileEnabled(true);
-      else void loadCaptcha();
-    });
-    return ()=>{mounted=false;};
-  }, []);
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (!/^09\d{9}$/.test(mobile)) return setError('شماره موبایل نامعتبر است.');
-    if (!turnstileEnabled && !captchaValue) return setError('لطفاً کد امنیتی را وارد کنید.');
+    if (!isValidIranianMobileInput(mobile)) return setError('شماره موبایل نامعتبر است.');
+    if (!captchaToken) return setError('لطفاً کد امنیتی را وارد کنید.');
 
     setIsLoading(true);
     try {
       const res = await apiRequest('/api/auth/otp/send', {
         method: 'POST',
-        body: JSON.stringify({ mobile, purpose: 'password_recovery', captchaId, captchaValue, captchaToken }),
+        body: JSON.stringify({ mobile, purpose: 'password_recovery', captchaToken }),
       });
 
-      if (res.success) {
+      if (res.success && typeof res.data?.challengeId === 'string' && res.data.challengeId) {
         setChallengeId(res.data.challengeId);
         setStep(2);
       } else {
         setError(res.error || 'خطایی رخ داد.');
-        if (!turnstileEnabled) loadCaptcha();
-        setCaptchaToken('');
-        setCaptchaAttempt(n => n + 1);
-        setCaptchaValue('');
       }
-    } catch (err: any) {
-      setError(err.message || 'خطا در ارتباط با سرور.');
+    } catch {
+      setError('خطا در ارتباط با سرور.');
     } finally {
+      setCaptchaToken('');
+      setCaptchaAttempt(n => n + 1);
       setIsLoading(false);
     }
   };
@@ -83,7 +52,7 @@ export const ForgotPassword: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (otpCode.length !== 6) return setError('کد تایید باید ۶ رقم باشد.');
+    if (!/^\d{6}$/.test(otpCode)) return setError('کد تایید باید ۶ رقم باشد.');
 
     setIsLoading(true);
     try {
@@ -97,8 +66,8 @@ export const ForgotPassword: React.FC = () => {
       } else {
         setError(res.error || 'کد تایید اشتباه است.');
       }
-    } catch (err: any) {
-      setError(err.message || 'خطا در ارتباط با سرور.');
+    } catch {
+      setError('خطا در ارتباط با سرور.');
     } finally {
       setIsLoading(false);
     }
@@ -122,8 +91,8 @@ export const ForgotPassword: React.FC = () => {
       } else {
         setError(res.error || 'خطایی رخ داد.');
       }
-    } catch (err: any) {
-      setError(err.message || 'خطا در ارتباط با سرور.');
+    } catch {
+      setError('خطا در ارتباط با سرور.');
     } finally {
       setIsLoading(false);
     }
@@ -160,26 +129,12 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleSendOtp} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">شماره موبایل</label>
-                <input type="tel" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="09123456789" />
+                <input type="tel" dir="ltr" value={mobile} autoComplete="tel" inputMode="tel" disabled={isLoading} onChange={(e) => setMobile(normalizeIranianMobileInput(e.target.value))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="09123456789" />
               </div>
               
-              {turnstileEnabled && <GuestHumanCheck key={captchaAttempt} action="otp" token={captchaToken} onToken={setCaptchaToken} />}
-              {!turnstileEnabled && captchaSvg && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد امنیتی</label>
-                  <div className="flex gap-4 items-center">
-                    <div className="bg-white rounded-xl border border-slate-200 p-2">
-                      <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(captchaSvg)}`}
-                        alt="تصویر کد امنیتی بازیابی حساب" draggable={false}
-                        className="h-[60px] max-w-full object-contain" />
-                    </div>
-                    <button type="button" onClick={loadCaptcha} className="text-sm text-teal-700 font-medium whitespace-nowrap">تغییر کد</button>
-                  </div>
-                  <input type="text" dir="ltr" value={captchaValue} onChange={(e) => setCaptchaValue(e.target.value)} className="mt-3 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="کد بالا را وارد کنید" />
-                </div>
-              )}
+              <GuestHumanCheck key={captchaAttempt} action="otp" token={captchaToken} onToken={setCaptchaToken} />
 
-              <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
+              <button type="submit" disabled={isLoading || !captchaToken} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'دریافت کد تایید'}
               </button>
             </motion.form>
@@ -189,7 +144,7 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleVerifyOtp} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">کد پیامک شده به {mobile}</label>
-                <input type="text" dir="ltr" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} className="w-full px-4 py-3 text-center tracking-widest text-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="------" maxLength={6} autoFocus />
+                <input type="text" dir="ltr" value={otpCode} inputMode="numeric" autoComplete="one-time-code" onChange={(e) => setOtpCode(e.target.value.replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-0x06F0)).replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-0x0660)).replace(/[^0-9]/g,'').slice(0,6))} className="w-full px-4 py-3 text-center tracking-widest text-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="------" maxLength={6} autoFocus />
               </div>
               <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'تایید کد'}
@@ -201,7 +156,7 @@ export const ForgotPassword: React.FC = () => {
             <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleResetPassword} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">رمز عبور جدید</label>
-                <input type="password" dir="ltr" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="••••••••" autoFocus />
+                <input type="password" autoComplete="new-password" dir="ltr" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 dark:text-white" placeholder="••••••••" autoFocus />
               </div>
               <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl text-white bg-teal-700 hover:bg-teal-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-70">
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'بروزرسانی رمز عبور'}

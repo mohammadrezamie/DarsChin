@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { GuestHumanCheck } from '../../components/GuestHumanCheck';
+import { normalizeIranianMobileInput, isValidIranianMobileInput } from '../../utils/iranian-mobile';
 import { apiRequest } from '../../utils/api';
 
 export const Login: React.FC = () => {
@@ -20,7 +21,7 @@ export const Login: React.FC = () => {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^09\d{9}$/.test(mobile)) {
+    if (!isValidIranianMobileInput(mobile)) {
       setError('شماره موبایل نامعتبر است. (مثال: 09123456789)');
       return;
     }
@@ -103,7 +104,7 @@ export const Login: React.FC = () => {
                     type="tel"
                     dir="ltr"
                     value={mobile}
-                    onChange={(e) => setMobile(e.target.value)}
+                    onChange={(e) => setMobile(normalizeIranianMobileInput(e.target.value))}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                     placeholder="09123456789"
                     autoComplete="username"

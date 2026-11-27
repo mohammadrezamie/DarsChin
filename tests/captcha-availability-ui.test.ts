@@ -28,3 +28,24 @@ describe('حفاظت و شفافیت کپچا در رابط ورود',()=>{
     expect(check).not.toContain('dangerouslySetInnerHTML');
   });
 });
+
+const recovery=readFileSync('src/pages/auth/ForgotPassword.tsx','utf8');
+const register=readFileSync('src/pages/auth/Register.tsx','utf8');
+describe('هماهنگی امنیت فرم‌های مهمان',()=>{
+  it('بازیابی از چالش مشترک با token و بدون fallback جدا استفاده می‌کند',()=>{
+    expect(recovery).toContain('action="otp" token={captchaToken}');
+    expect(recovery).toContain('if (!captchaToken)');
+    expect(recovery).not.toContain('loadCaptcha');
+    expect(recovery).not.toContain('captchaValue');
+    expect(recovery).toContain('disabled={isLoading || !captchaToken}');
+  });
+  it('ثبت‌نام در نبود چالش معتبر یا تنظیمات امنیتی قابل ارسال نیست',()=>{
+    expect(register).toContain('if (!captchaToken)');
+    expect(register).toContain('otpRequired === null || (otpRequired && !otpChallengeId ? !otpCaptchaToken : !captchaToken)');
+    expect(register).toContain('تلاش مجدد دریافت تنظیمات');
+  });
+  it('ورود و بازیابی ارقام فارسی و شماره بین‌المللی را همانند ثبت نام عادی می‌کنند',()=>{
+    expect(login).toContain('normalizeIranianMobileInput(e.target.value)');
+    expect(recovery).toContain('normalizeIranianMobileInput(e.target.value)');
+  });
+});
