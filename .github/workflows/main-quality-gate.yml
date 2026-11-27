@@ -84,7 +84,8 @@ jobs:
 
   browser:
     name: Browser preview / ${{ matrix.engine }}
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 requires a supported Ubuntu release.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
