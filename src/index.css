@@ -764,3 +764,28 @@ body,.dark body { background:var(--dc-canvas); }
 .dc-landing :where(a,button):focus-visible { outline:2px solid var(--darschin-focus); outline-offset:3px; }
 .dc-landing .dc-final-cta :where(a,button):focus-visible { outline-color:#fff; }
 @media (max-width:379px) { .dc-hero-feature { padding:.5rem; } .dc-hero-feature svg { flex-shrink:0; } }
+
+/* سازندهٔ چارت: متن فارسی نباید از اندازهٔ واقعی کنترل یا کارت عبور کند.
+   text-wrap:pretty روی متن RTL و کنترل‌های درون label در WebKit رفتار متفاوتی دارد.
+   در این بخش از wrap معمولی و جداسازی جهت متن استفاده می‌شود، نه clip محتوا. */
+.dc-curriculum-builder :where(h2,h3,h4,p,label,legend) {
+  text-wrap: wrap;
+  unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.dc-curriculum-builder :where(input,textarea,select) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.dc-curriculum-builder :where(button) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .dc-curriculum-builder [data-layout-region="curriculum-desktop-table"] { display:none; }
+  .dc-curriculum-builder [data-layout-region="curriculum-mobile-cards"] > article { min-inline-size:0; }
+}

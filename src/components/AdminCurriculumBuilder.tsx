@@ -214,7 +214,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   if (loading && !curricula.length) return <div className="p-8 text-center">در حال بارگذاری...</div>;
 
   return (
-    <div dir="rtl" className="darschin-page space-y-4">
+    <div dir="rtl" className="darschin-page dc-curriculum-builder min-w-0 w-full space-y-4">
       <NewCurriculumForm onCreated={(chart) => {
         setCurricula(prev => [...prev, chart]);
         selectChart(chart.id);
@@ -255,7 +255,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
         {selectedChart&&<section aria-label="تکثیر چارت برای ورودی جدید"
           className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/25">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-sm font-black text-indigo-950 dark:text-indigo-200">
                 ساخت سریع چارت مستقل برای ورودی دیگر
@@ -330,7 +330,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
           {selectedChart&&<CurriculumSemesterPreview key={selectedChart.id} chart={selectedChart}
             assignments={assignments} courses={courses} tracks={relevantTracks}/>}
           {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks} leaveGuard={studyPlanGuard}/>}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div data-layout-region="curriculum-assignments" className="grid min-w-0 w-full grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="min-w-0 lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <h3 className="font-bold text-sm mb-4">افزودن درس به چارت</h3>
@@ -366,7 +366,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     <input type="number" aria-label="نیمسال پیشنهادی درس" min={1} max={16} step={1}
                       value={addCourseForm.suggestedSemester}
                       onChange={e=>setAddCourseForm(prev=>({...prev,suggestedSemester:Number(e.target.value)}))}
-                      className="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
+                      className="min-h-10 min-w-0 w-full max-w-full rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
                   </label>
                   <button type="button" disabled={!addCourseForm.courseId}
                     onClick={()=>void handleAddCourse()}
@@ -377,7 +377,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
+              <div data-layout-region="curriculum-desktop-table" className="hidden min-w-0 max-w-full overflow-x-auto md:block">
                 <table className="w-full text-sm text-right">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
@@ -419,7 +419,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="grid gap-2 md:hidden" aria-label="دروس چارت در موبایل">
+              <div data-layout-region="curriculum-mobile-cards" className="grid min-w-0 grid-cols-1 gap-2 md:hidden" aria-label="دروس چارت در موبایل">
                 {curriculumFull.courses.map((cc:any)=><article key={cc.id}
                   className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                   <strong className="text-sm text-slate-950 dark:text-white">{cc.course?.name||'درس نامشخص'}</strong>
@@ -427,12 +427,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     کد {cc.course?.code||'نامشخص'} · نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')} ·
                     {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex min-w-0 flex-wrap gap-2">
                     <button type="button" onClick={()=>{
                       setActiveCourseId(cc.courseId);
                       setAddRuleForm(prev=>({...prev,sourceCourseId:'',trackId:cc.trackId||''}));
                       setOperationError('');
-                    }} className="min-h-11 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
+                    }} className="min-h-11 min-w-0 max-w-full whitespace-normal break-words rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
                       تنظیم پیش‌نیاز و هم‌نیاز
                     </button>
                     <button type="button" aria-label={'حذف درس '+(cc.course?.name||'نامشخص')+' از چارت'}

@@ -28,7 +28,7 @@ export const DemoWorkspace: React.FC<{ role: 'student' | 'admin' }> = ({ role })
                 </details>
               </div>
             </div>
-            <div aria-label="ابزارهای دموی درس‌چین" className="darschin-scroll-x flex flex-nowrap items-center gap-2 py-1 md:flex-wrap">
+            <div aria-label="ابزارهای دموی درس‌چین" className="flex min-w-0 max-w-full flex-wrap items-center gap-2 py-1">
               <ThemeToggle />
               <Link to="/demo/student" aria-current={role==='student'?'page':undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-teal-600 ${role==='student'?'bg-teal-800 text-white':'bg-white text-teal-900 dark:bg-slate-900 dark:text-teal-200'}`}>
                 <GraduationCap aria-hidden="true" className="h-4 w-4" /> دانشجو

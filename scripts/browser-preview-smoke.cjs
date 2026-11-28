@@ -53,10 +53,13 @@ async function runCase(origin,width,height) {
       // Report dimensions only; never include element text, values, URLs or user data.
       const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>{
         const r=el.getBoundingClientRect();
-        return {tag:el.tagName,left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),
+        return {tag:el.tagName,region:el.closest('[data-layout-region]')?.getAttribute('data-layout-region')||null,
+          classes:typeof el.className==='string'?el.className.split(/\s+/).slice(0,12).join(' '):'',
+          parentTag:el.parentElement?.tagName,depth:(()=>{let n=0,p=el.parentElement;while(p){n++;p=p.parentElement;}return n;})(),
+          left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),
           client:el.clientWidth,scroll:el.scrollWidth,display:getComputedStyle(el).display};
       }).filter(r=>r.width>0&&(r.left < -2||r.right>document.documentElement.clientWidth+2||r.scroll>r.client+2))
-        .sort((a,b)=>Math.max(b.width,b.scroll)-Math.max(a.width,a.scroll)).slice(0,15));
+        .sort((a,b)=>b.depth-a.depth||Math.max(b.width,b.scroll)-Math.max(a.width,a.scroll)).slice(0,30));
       console.log('Overflow geometry (no content): '+JSON.stringify(offenders));
     }
     assert(layout.scroll<=layout.viewport+2,name+' horizontal overflow: '+layout.scroll+' > '+layout.viewport);
@@ -128,6 +131,7 @@ async function runCase(origin,width,height) {
     };
     step('open curriculum and load draft');
     const {editor,selector}=await scope(page);
+    await checkLayout('curriculum loaded before advisory edits');
     step('create regular period');
     await editor.getByRole('button',{name:createLabel,exact:true}).click();
     await editor.getByLabel('عنوان دوره',{exact:true}).fill('دورهٔ آزمایشی اول');
@@ -157,6 +161,7 @@ async function runCase(origin,width,height) {
     await summer.getByRole('button',{name:'حذف دوره',exact:true}).click();
     await wait(editor.getByRole('alert').filter({hasText:'ابتدا درس‌های این دوره'}));
     // Attempt chart switch, cancel, and verify the local draft was not lost.
+    await checkLayout('study plan populated before long title');
     step('verify layout with populated draft and long period label');
     const titleInput=summer.getByRole('textbox',{name:'عنوان دورهٔ 2',exact:true});
     const longTitle='عنوان آزمایشی بسیار طولانی '.repeat(5).trim();
