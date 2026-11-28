@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
-import { ruleScopeCourseIds, validateScopedCurriculumRules } from '../../src/domain/curriculum-rule-scope';
+import { ruleScopeCourseIds, validateScopedCurriculumRules, rulesBlockingAssignmentRemoval } from '../../src/domain/curriculum-rule-scope';
 import { validate } from '../middleware/validate';
 import { studyPlanScope, validateStoredStudyPlan } from '../db/study-plan';
 import { studyPlanMutation, studyPlanRevision } from '../../src/domain/study-plan-payload';
@@ -405,15 +405,16 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
   if (!matches.length) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
   const rawTrack=req.query.trackId;
   if(rawTrack!==undefined&&typeof rawTrack!=='string')return res.status(400).json({success:false,error:'پارامتر گرایش مبهم است.'});
-  const selectedTrack = typeof rawTrack === 'string' ? rawTrack : null;
-  if (!selectedTrack && matches.length > 1) {
+  // نبود پارامتر فقط برای انتساب یکتا سازگار با مشتری قدیمی است؛ رشتهٔ خالی یعنی مشترک.
+  const selectedTrack = typeof rawTrack === 'string' ? rawTrack : undefined;
+  if (selectedTrack === undefined && matches.length > 1) {
     return res.status(409).json({
       success: false, error: 'این درس برای بیش از یک گرایش ثبت شده؛ گرایش را با trackId مشخص کنید تا درس اشتباه حذف نشود.',
     });
   }
-  const assignment = selectedTrack
-    ? matches.find(cc => cc.trackId === selectedTrack)
-    : matches[0];
+  const scopedMatches=selectedTrack===undefined?matches:matches.filter(cc=>(cc.trackId||'')===selectedTrack);
+  if(scopedMatches.length>1)return res.status(409).json({success:false,error:'انتساب تکراری در همین دامنه نیازمند بازبینی است.'});
+  const assignment=scopedMatches[0];
   if (!assignment) return res.status(404).json({ success: false, error: 'این درس برای گرایش انتخاب‌شده ثبت نشده است.' });
 
   if (db.demandSurveys.some(s => s.curriculumId === req.params.id && s.courseIds.includes(req.params.courseId))) {
@@ -427,19 +428,11 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
     !validateStoredStudyPlan({...db.data,curriculumCourses:remainingAssignments},row))){
     return res.status(409).json({success:false,error:'ابتدا برنامهٔ پیشنهادی مرتبط را بازبینی کنید.'});
   }
+  if(rulesBlockingAssignmentRemoval(remainingAssignments,db.academicRules,req.params.id,req.params.courseId).length){
+    return res.status(409).json({success:false,error:'حذف این انتساب یکی از پیش‌نیازها یا هم‌نیازهای همان دامنه را نامعتبر می‌کند؛ ابتدا قوانین را بازبینی کنید.'});
+  }
   const before={curriculumCourses:db.data.curriculumCourses,academicRules:db.data.academicRules};
   db.data.curriculumCourses=remainingAssignments;
-  // Keep shared prerequisite rules if the same course remains in another track.
-  const stillAssigned = db.curriculumCourses.some(cc =>
-    cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
-  );
-  if (!stillAssigned) {
-    db.data.academicRules = db.data.academicRules.filter(
-      rule => !(rule.curriculumId === req.params.id &&
-        (rule.targetCourseId === req.params.courseId ||
-         extractSourceCourseIds(rule.expression).includes(req.params.courseId)))
-    );
-  }
   try{db.save();}catch{
     Object.assign(db.data,before);
     return res.status(503).json({success:false,error:'حذف انتساب ذخیره نشد؛ دوباره تلاش کنید.'});

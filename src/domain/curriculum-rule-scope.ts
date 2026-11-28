@@ -43,3 +43,17 @@ export function validateScopedCurriculumRules(
   }
   return null;
 }
+
+/** حذف انتساب نباید رابطهٔ آموزشی را بی‌اعتبار یا بی‌صدا حذف کند. */
+export function rulesBlockingAssignmentRemoval(
+  remaining: readonly CurriculumCourse[], rules: readonly AcademicRule[],
+  curriculumId: string, courseId: string,
+): string[] {
+  return rules.filter(rule=>{
+    if(rule.curriculumId!==curriculumId)return false;
+    const sources=extractSourceCourseIds(rule.expression);
+    if(rule.targetCourseId!==courseId&&!sources.includes(courseId))return false;
+    const allowed=ruleScopeCourseIds(remaining,curriculumId,rule.trackId);
+    return !allowed.has(rule.targetCourseId)||!sources.length||sources.some(id=>!allowed.has(id));
+  }).map(rule=>rule.id);
+}

@@ -121,4 +121,32 @@ describe('برنامهٔ پیشنهادی مستقل و اختیاری',()=>{
   }
  });
 
+ it('rejects removal of a shared course required by a shared rule even if a track copy remains',async()=>{
+  db.curriculumCourses.push({id:'sp-copy-a',curriculumId:chartId,courseId:a,trackId,classification:'TRACK_REQUIRED',suggestedSemester:2,active:true},
+   {id:'sp-common-b',curriculumId:chartId,courseId:b,classification:'MAJOR_REQUIRED',suggestedSemester:2,active:true});
+  db.academicRules.push({id:'sp-shared-rule',curriculumId:chartId,targetCourseId:b,relationshipType:'PREREQUISITE',expression:{type:'COURSE',courseId:a}});
+  const before=structuredClone({links:db.curriculumCourses,rules:db.academicRules});
+  const response=await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a+'?trackId=').set('Authorization',admin);
+  expect(response.status).toBe(409);
+  expect({links:db.curriculumCourses,rules:db.academicRules}).toEqual(before);
+ });
+ it('removes only the explicitly selected shared assignment when its track copy still satisfies a scoped rule',async()=>{
+  db.curriculumCourses.push({id:'sp-copy-a',curriculumId:chartId,courseId:a,trackId,classification:'TRACK_REQUIRED',suggestedSemester:2,active:true});
+  db.academicRules.push({id:'sp-track-rule',curriculumId:chartId,trackId,targetCourseId:b,relationshipType:'PREREQUISITE',expression:{type:'COURSE',courseId:a}});
+  const rules=structuredClone(db.academicRules);
+  const response=await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a+'?trackId=').set('Authorization',admin);
+  expect(response.status).toBe(200);
+  expect(db.curriculumCourses.some(row=>row.id==='sp-common')).toBe(false);
+  expect(db.curriculumCourses.some(row=>row.id==='sp-copy-a')).toBe(true);
+  expect(db.academicRules).toEqual(rules);
+  expect((await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a+'?trackId='+trackId).set('Authorization',admin)).status).toBe(409);
+ });
+ it('does not cascade-delete the last assignment of a course with a prerequisite',async()=>{
+  db.academicRules.push({id:'sp-last-rule',curriculumId:chartId,trackId,targetCourseId:b,relationshipType:'COREQUISITE',expression:{type:'COURSE',courseId:a}});
+  const before=structuredClone(db.academicRules);
+  expect((await request(app).delete('/api/curriculum/'+chartId+'/courses/'+a).set('Authorization',admin)).status).toBe(409);
+  expect(db.academicRules).toEqual(before);
+  expect(db.curriculumCourses.some(row=>row.id==='sp-common')).toBe(true);
+ });
+
 });

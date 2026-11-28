@@ -173,7 +173,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   const handleRemoveCourse = async (courseId: string, trackId?: string | null) => {
     if (!confirm('انتساب این درس از چارت حذف شود؟ سوابق نیازسنجی حذف نخواهند شد.')) return;
-    const query=trackId ? `?trackId=${encodeURIComponent(trackId)}`:'';
+    const query=`?trackId=${encodeURIComponent(trackId||'')}`;
     const result=await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}${query}`,{method:'DELETE'});
     if (!result.success) { alert(result.error||'حذف درس مجاز نیست.');return; }
     void loadCurriculumDetails(selectedCurriculumId!);
