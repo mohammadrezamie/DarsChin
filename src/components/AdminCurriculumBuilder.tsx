@@ -226,31 +226,32 @@ export const AdminCurriculumBuilder: React.FC = () => {
           مدیریت ساختار چارت تحصیلی
         </h2>
         
-        <div className="mb-6">
-          <label htmlFor="chart-filter" className="mb-1 block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
-          <input id="chart-filter" type="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
-            className="darschin-field mb-3 min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
-          <label htmlFor="curriculum-selection" className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
-          <select id="curriculum-selection" 
-            className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
-            value={selectedCurriculumId || ''}
-            onChange={(e) => selectChart(e.target.value)}
-          >
-            <option value="">-- یک چارت انتخاب کنید --</option>
-            {matchingCharts.map(c => (
-              <option key={c.id} value={c.id}>{c.name} ·
-                {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} ·
-                ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
-                {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
-            ))}
+        <div data-layout-region="curriculum-picker" className="mb-6 min-w-0 space-y-3">
+          <label htmlFor="chart-filter" className="block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
+          <input id="chart-filter" type="text" inputMode="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
+            className="darschin-field min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
+          <section aria-label="چارت‌های فعال و پیش‌نویس:" className="min-w-0 space-y-2">
+            <h3 className="text-sm font-bold">چارت‌های فعال و پیش‌نویس</h3>
+            <p className="text-xs text-slate-500">چارت موردنظر را از فهرست انتخاب کنید؛ اطلاعات کامل رشته، ورودی و نسخه برای هر گزینه نمایش داده می‌شود.</p>
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+              {matchingCharts.map(c=>(
+                <button key={c.id} type="button" data-chart-id={c.id} aria-pressed={selectedCurriculumId===c.id}
+                  onClick={()=>selectChart(c.id)}
+                  className={`min-h-11 min-w-0 max-w-full rounded-xl border p-3 text-right whitespace-normal [overflow-wrap:anywhere] focus-visible:ring-2 focus-visible:ring-teal-600 ${selectedCurriculumId===c.id?'border-teal-600 bg-teal-50 dark:bg-teal-950/40':'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+                  <span className="block text-sm font-bold [overflow-wrap:anywhere]">{c.name}</span>
+                  <span className="mt-1 block text-xs leading-6 text-slate-600 dark:text-slate-300 [overflow-wrap:anywhere]">
+                    {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} · ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
+                    {c.status==='active'?'فعال':c.status==='draft'?'پیش‌نویس':'آرشیو'} · نسخه {c.version}
+                  </span>
+                  {selectedCurriculumId===c.id&&<span className="mt-1 block text-xs font-bold text-teal-700 dark:text-teal-300">چارت انتخاب‌شده</span>}
+                </button>
+              ))}
+            </div>
             {selectedCurriculumId&&!matchingCharts.some(chart=>chart.id===selectedCurriculumId)&&
-              <option value={selectedCurriculumId}>
-                {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'} (انتخاب فعلی)
-              </option>}
-          </select>
-          {!matchingCharts.length&&<p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-            نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.
-          </p>}
+              <p role="status" className="text-xs [overflow-wrap:anywhere]">انتخاب فعلی: {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'}؛ خارج از نتایج جست‌وجو.</p>}
+            {!matchingCharts.length&&<p className="text-xs text-amber-800 dark:text-amber-200">نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.</p>}
+            {selectedCurriculumId&&<button type="button" onClick={()=>selectChart('')} className="min-h-11 rounded-lg border border-slate-300 px-3 text-xs font-bold dark:border-slate-700">پاک‌کردن انتخاب چارت</button>}
+          </section>
         </div>
 
         {selectedChart&&<section aria-label="تکثیر چارت برای ورودی جدید"
