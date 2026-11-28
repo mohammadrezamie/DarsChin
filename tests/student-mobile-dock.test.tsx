@@ -76,6 +76,7 @@ describe('real student mobile workspace dock', () => {
     expect(student).toContain('جزئیات پیشرفت تحصیلی');
     expect(demo).toContain('داده‌ها آزمایشی‌اند · توضیحات');
     expect(demo).toContain('md:pb-6');
-    expect(demo).toContain('darschin-scroll-x flex flex-nowrap');
+    expect(demo).toContain('aria-label="ابزارهای دموی درس‌چین" className="flex min-w-0 max-w-full flex-wrap');
+    expect(demo).not.toContain('darschin-scroll-x flex flex-nowrap');
   });
 });

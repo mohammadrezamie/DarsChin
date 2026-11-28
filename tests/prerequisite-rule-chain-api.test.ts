@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { db } from '../server/db/database';
@@ -37,7 +37,7 @@ beforeAll(async () => {
     for (const courseId of ids) {
       db.curriculumCourses.push({
         ...sampleAssignment, id: prefix + '-link-' + id + '-' + courseId,
-        curriculumId: id, courseId, active: true,
+        curriculumId: id, courseId, active: true, trackId: null,
       } as CurriculumCourse);
     }
   }
@@ -60,11 +60,11 @@ afterAll(() => {
 });
 
 const add = (chart: string, source: string, target: string,
-  relationshipType: 'PREREQUISITE' | 'COREQUISITE' = 'PREREQUISITE') =>
+  relationshipType: 'PREREQUISITE' | 'COREQUISITE' = 'PREREQUISITE', trackId: string | null = null) =>
   request(app).post('/api/curriculum/rules')
     .set('Authorization', authorization)
     .send({
-      curriculumId: chart, targetCourseId: target, relationshipType,
+      curriculumId: chart, targetCourseId: target, relationshipType, trackId,
       expression: { type: 'COURSE', courseId: source },
     });
 
@@ -125,4 +125,46 @@ describe('server-side long-chain prerequisite editing', () => {
     });
     expect(response.status).toBe(401);
   });
+  it('restricts rules to shared or the explicitly selected track and rolls back failed writes',async()=>{
+    const chart=db.curricula.find(c=>c.id===chartB)!;
+    const trackA=prefix+'-track-a',trackB=prefix+'-track-b';
+    const originalTracks=db.data.tracks;
+    const originalLinks=db.data.curriculumCourses;
+    const originalRules=db.data.academicRules;
+    db.data.tracks=[...originalTracks,{id:trackA,majorId:chart.majorId,name:'گرایش مصنوعی الف',active:true},{id:trackB,majorId:chart.majorId,name:'گرایش مصنوعی ب',active:true}] as typeof originalTracks;
+    db.data.curriculumCourses=originalLinks.map(row=>row.curriculumId===chartB&&row.courseId===ids[2]?{...row,trackId:trackA}:row.curriculumId===chartB&&row.courseId===ids[3]?{...row,trackId:trackB}:row);
+    db.data.academicRules=originalRules.filter(rule=>rule.curriculumId!==chartB);
+    try {
+      expect((await add(chartB,ids[2],ids[0])).status).toBe(400);
+      expect((await add(chartB,ids[3],ids[0],'COREQUISITE',trackA)).status).toBe(400);
+      expect((await add(chartB,ids[0],ids[3],'COREQUISITE',trackA)).status).toBe(400);
+      const good=await add(chartB,ids[2],ids[0],'PREREQUISITE',trackA);
+      expect(good.status).toBe(200);expect(good.body.data.trackId).toBe(trackA);
+      const before=structuredClone(db.academicRules);
+      const fail=vi.spyOn(db,'save').mockImplementationOnce(()=>{throw Error('synthetic private disk error');});
+      try{expect((await add(chartB,ids[3],ids[0],'COREQUISITE',trackB)).status).toBe(503);}finally{fail.mockRestore();}
+      expect(db.academicRules).toEqual(before);
+      const failDelete=vi.spyOn(db,'save').mockImplementationOnce(()=>{throw Error('synthetic private disk error');});
+      try{expect((await request(app).delete('/api/curriculum/rules/'+good.body.data.id).set('Authorization',authorization)).status).toBe(503);}finally{failDelete.mockRestore();}
+      expect(db.academicRules).toEqual(before);
+    }finally{
+      db.data.tracks=originalTracks;db.data.curriculumCourses=originalLinks;db.data.academicRules=originalRules;db.save();
+    }
+  });
+
+  it('accepts opposite prerequisites in mutually exclusive tracks but rejects a shared edge that creates a real cycle',async()=>{
+    const chart=db.curricula.find(c=>c.id===chartB)!;
+    const trackA=prefix+'-graph-a',trackB=prefix+'-graph-b';
+    const originalTracks=db.data.tracks,originalRules=db.data.academicRules;
+    db.data.tracks=[...originalTracks,{id:trackA,majorId:chart.majorId,name:'گرایش الف',active:true},{id:trackB,majorId:chart.majorId,name:'گرایش ب',active:true}] as typeof originalTracks;
+    db.data.academicRules=originalRules.filter(rule=>rule.curriculumId!==chartB);
+    try {
+      expect((await add(chartB,ids[0],ids[1],'PREREQUISITE',trackA)).status).toBe(200);
+      expect((await add(chartB,ids[1],ids[0],'PREREQUISITE',trackB)).status).toBe(200);
+      expect((await add(chartB,ids[1],ids[0],'PREREQUISITE',trackA)).status).toBe(400);
+      expect((await add(chartB,ids[0],ids[1])).status).toBe(400);
+      expect(db.academicRules.filter(r=>r.curriculumId===chartB)).toHaveLength(2);
+    }finally{db.data.tracks=originalTracks;db.data.academicRules=originalRules;db.save();}
+  });
+
 });

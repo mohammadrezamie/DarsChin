@@ -5,28 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    paths:
-      - "server/**"
-      - "src/**"
-      - "tests/**"
-      - "scripts/**"
-      - ".env.example"
-      - "deploy/**"
-      - "compose*.yaml"
-      - ".gitignore"
-      - ".dockerignore"
-      - "Dockerfile"
-      - "package.json"
-      - "bun.lock"
-      - ".github/workflows/main-quality-gate.yml"
-      - "AGENTS.md"
-      - "CONTRIBUTING.md"
-      - "SECURITY.md"
-      - "docs/PERMANENT_SECURITY_POLICY_FA.md"
-      - "docs/SECURITY_INCIDENT_RUNBOOK_20261101_FA.md"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/CODEOWNERS"
-      - ".github/dependabot.yml"
   workflow_dispatch:
 
 permissions:
@@ -37,12 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Typecheck / Tests / Build
+  source:
+    name: Documentation / Public-source safety
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Checkout main commit
+      - name: Checkout tested commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -50,10 +28,141 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.4"
-      - name: Verify isolated synthetic test database and production bundle
-        run: bun run verify
-      - name: Exercise bundled API lifecycle in isolated production mode
-        run: bun run smoke:api
-      - name: Report verified commit
-        if: success()
-        run: echo "Verified commit $GITHUB_SHA"
+      - run: node scripts/verify.cjs --ci-stage=source
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: node scripts/verify.cjs --ci-stage=typecheck
+
+  tests:
+    name: Vitest shard ${{ matrix.shard }}/10
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Run isolated test shard
+        run: node scripts/verify.cjs --ci-stage=tests --shard=${{ matrix.shard }}/10
+
+  bundle:
+    name: Production build / API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: node scripts/verify.cjs --ci-stage=build
+      - run: bun run smoke:api
+
+  browser:
+    name: Browser preview / ${{ matrix.engine }}
+    # Playwright 1.56.1 requires a supported Ubuntu release.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        engine: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: bun install --frozen-lockfile
+      - name: Build synthetic static frontend
+        run: node scripts/build-pages-preview.mjs
+      - name: Install isolated pinned browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/darschin-browser" --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          node "$RUNNER_TEMP/darschin-browser/node_modules/playwright/cli.js" install --with-deps "${{ matrix.engine }}"
+      - name: Exercise real browser on loopback only
+        env:
+          DARSCHIN_BROWSER_MODULE: ${{ runner.temp }}/darschin-browser/node_modules/playwright
+          DARSCHIN_BROWSER_ENGINE: ${{ matrix.engine }}
+        run: node scripts/browser-preview-smoke.cjs
+      - name: Save synthetic browser screenshots and report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-preview-${{ matrix.engine }}-${{ github.sha }}
+          path: browser-qa-output/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  reference:
+    name: Full-suite reference audit
+    # Initial adoption and explicit manual runs only.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.head_ref == 'ci/parallel-quality-gate-20261127' || github.head_ref == 'release/v1-integration-20261127') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Run unsharded reference suite with isolated credentials
+        run: node scripts/verify.cjs --ci-stage=tests --shard=1/1
+
+  verify:
+    # Preserve the existing required-check name; never pass on a skipped or failed dependency.
+    name: Typecheck / Tests / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [source, typecheck, tests, bundle, browser, reference]
+    if: ${{ always() }}
+    steps:
+      - name: Require all parallel checks to succeed
+        env:
+          SOURCE_RESULT: ${{ needs.source.result }}
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          BUNDLE_RESULT: ${{ needs.bundle.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          REFERENCE_RESULT: ${{ needs.reference.result }}
+          REFERENCE_REQUIRED: ${{ github.event_name == 'workflow_dispatch' || (github.head_ref == 'ci/parallel-quality-gate-20261127' || github.head_ref == 'release/v1-integration-20261127') }}
+        run: |
+          for result in "$SOURCE_RESULT" "$TYPECHECK_RESULT" "$TESTS_RESULT" "$BUNDLE_RESULT" "$BROWSER_RESULT"; do
+            if [ "$result" != success ]; then
+              echo "Quality gate failed: $result"
+              exit 1
+            fi
+          done
+          if [ "$REFERENCE_REQUIRED" = true ]; then
+            test "$REFERENCE_RESULT" = success
+          elif [ "$REFERENCE_RESULT" != skipped ]; then
+            test "$REFERENCE_RESULT" = success
+          fi
+          echo "Verified commit $GITHUB_SHA"

@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
 
   return (
     <>
-      <header className="darschin-global-nav sticky top-0 z-40 bg-liquid-glass !rounded-none !border-x-0 !border-t-0 border-b transition-colors print:hidden">
+      <header className="dc-workspace-global-nav darschin-global-nav sticky top-0 z-40 bg-liquid-glass !rounded-none !border-x-0 !border-t-0 border-b transition-colors print:hidden">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-2">
             {/* RTL: the first flex item appears at the RIGHT edge. */}
@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                       className={`rounded-lg px-3 py-2 text-xs font-bold ${activeTab === 'admin' ? 'bg-white text-teal-800 shadow-sm dark:bg-slate-800 dark:text-teal-300' : 'text-slate-700 dark:text-slate-200'}`}>پنل مدیریت</Link>
                   )}
                   <Link to="/help" className="flex min-h-10 items-center rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">راهنما</Link>
-                  <button type="button" onClick={() => setExtModalOpen(true)} className="min-h-10 rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">افزونه کروم</button>
+                  <button type="button" onClick={() => setExtModalOpen(true)} className="min-h-10 rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-800">راهنمای معیار</button>
                 </nav>
               )}
             </div>
@@ -143,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPasswordChange }) => {
                 className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">پنل مدیریت</Link>}
               <Link to="/help" onClick={closeMenu} className="flex min-h-12 items-center rounded-xl px-4 text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">راهنمای استفاده</Link>
               <button type="button" onClick={() => { closeMenu(); setExtModalOpen(true); }}
-                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">افزونه کروم</button>
+                className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">راهنمای معیار</button>
               {onOpenPasswordChange && <button type="button" onClick={() => { closeMenu(); onOpenPasswordChange(); }}
                 className="flex min-h-12 w-full items-center rounded-xl px-4 text-right text-slate-800 hover:bg-teal-50 dark:text-white dark:hover:bg-slate-800">تغییر رمز عبور</button>}
               <button type="button" onClick={() => { closeMenu(); logout(); }}

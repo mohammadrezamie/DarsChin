@@ -44,7 +44,8 @@ describe('RTL mobile navigation and accessible theme modes', () => {
     expect(toggle).toContain("mode: 'system', label: 'خودکار'");
     expect(toggle).toContain("mode: 'dark', label: 'شب'");
     expect(toggle).toContain('aria-label="انتخاب حالت نمایش"');
-    expect(toggle).toContain('sm:hidden');
+    expect(toggle).toContain('lg:hidden');
+    expect(toggle).toContain('lg:inline-flex');
     expect(toggle).toContain('aria-pressed={theme === option.mode}');
     expect(toggle).toContain('min-h-11');
   });

@@ -44,6 +44,29 @@ afterEach(() => {
 });
 
 describe('P0 JWT invalidation after sensitive credential changes', () => {
+  it('revokes all prior tokens on logout and rejects replay', async () => {
+    const token = generateToken(db.users[0]);
+    const second = generateToken(db.users[0]);
+    expect((await request(app).post('/api/auth/logout').set(bearer(token))).status).toBe(200);
+    expect(db.users[0].sessionVersion).toBe(1);
+    expect((await request(app).get('/api/private').set(bearer(second))).status).toBe(401);
+    expect((await request(app).post('/api/auth/logout').set(bearer(token))).status).toBe(401);
+    expect(db.auditLogs.filter(log=>log.action==='USER_LOGOUT_ALL_SESSIONS')).toHaveLength(1);
+  });
+
+  it('does not claim logout revocation if the database write fails', async () => {
+    const token = generateToken(db.users[0]);
+    const fail = vi.spyOn(db, 'save').mockImplementationOnce(()=>{throw new Error('SYNTHETIC_PRIVATE_PATH');});
+    let result;
+    try { result=await request(app).post('/api/auth/logout').set(bearer(token)); }
+    finally { fail.mockRestore(); }
+    expect(result.status).toBe(503);
+    expect(JSON.stringify(result.body)).not.toContain('SYNTHETIC_PRIVATE_PATH');
+    expect(db.users[0].sessionVersion).toBeUndefined();
+    expect(db.auditLogs).toHaveLength(0);
+    expect((await request(app).get('/api/private').set(bearer(token))).status).toBe(200);
+  });
+
   it('accepts the old token before change, revokes it afterward and returns a new live token', async () => {
     const before = generateToken(db.users[0]);
     expect((await request(app).get('/api/private').set(bearer(before))).status).toBe(200);

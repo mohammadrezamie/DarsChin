@@ -2,6 +2,7 @@
 // Bounded archive inspection for the public source gate; pure Node built-ins.
 // Never extracts files to disk, executes archive contents or prints secret bytes.
 const zlib = require('node:zlib');
+const { isPrivateStoragePath } = require('./private-storage-path.cjs');
 const TEXT = /\.(?:cjs|mjs|js|jsx|ts|tsx|json|jsonl|md|txt|html|css|scss|yaml|yml|toml|xml|sql|sh|ps1|py|example|webmanifest|conf)$/i;
 const MAX_ARCHIVE = 8 * 1024 * 1024;
 const MAX_TOTAL = 16 * 1024 * 1024;
@@ -58,7 +59,7 @@ function scanZipArchive(blob, findSecretKinds, findPopulatedEnvTemplateFields) {
       const dataStart = local + 30 + blob.readUInt16LE(local + 26) + blob.readUInt16LE(local + 28);
       if (dataStart + compressedSize > blob.length) throw Error('entry-data');
       // A release ZIP must not smuggle persisted local account data.
-      if (name.split('/').includes('data') && /\.(?:json|jsonl|csv|log|sqlite|db)$/i.test(name)) {
+      if (/(^|\/)data\/.*\.(?:json|jsonl|csv|xlsx?|log|sqlite3?|db|bak)$/i.test(name)) {
         findings.push({ type: 'embedded-runtime-data' });
         continue;
       }
@@ -66,7 +67,7 @@ function scanZipArchive(blob, findSecretKinds, findPopulatedEnvTemplateFields) {
         findings.push({ type: 'embedded-private-env' });
         continue;
       }
-      if (/\.(?:pem|pfx|p12|key|sqlite|db|bak|backup|zip)$/i.test(name)) {
+      if (isPrivateStoragePath(name) || /\.zip$/i.test(name)) {
         findings.push({ type: 'embedded-sensitive-file' });
         continue;
       }

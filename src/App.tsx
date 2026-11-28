@@ -59,7 +59,7 @@ const DashboardLayout: React.FC = () => {
   const [isExtModalOpen, setExtModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-transparent font-sans text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="dc-product-shell min-h-screen font-sans transition-colors">
       <Navbar
         activeTab={window.location.pathname.includes('/admin') ? 'admin' : 'student'}
         setActiveTab={() => {}}
@@ -67,7 +67,7 @@ const DashboardLayout: React.FC = () => {
         onOpenProfile={() => {}}
         onOpenPasswordChange={() => setPasswordChangeOpen(true)}
       />
-      <main className="max-w-7xl mx-auto px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
+      <main className="max-w-[1440px] mx-auto min-w-0 px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
         <Outlet />
       </main>
 

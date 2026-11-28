@@ -1,10 +1,11 @@
 // Production-mode, disposable API smoke test. No real accounts, network dependencies or mutable project data.
 const crypto = require('node:crypto');
+const { isDeepStrictEqual } = require('node:util');
 const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const binary = path.join(root, 'dist', 'server.cjs');
@@ -195,7 +196,7 @@ async function main() {
   // حساب‌ها فقط در فایل موقت همین آزمون، وقتی سرویس خاموش است، ایجاد می‌شوند.
   // هیچ مسیر ثبت‌نام یا احراز هویت production برای تست تغییر نمی‌کند.
   await stopServer();
-  const fixturePath = path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json');
+  let fixturePath = path.join(environment.DARSCHYN_DATA_DIR, 'darschyn-db.json');
   if (path.dirname(fixturePath) !== path.join(temporary, 'data')) throw new Error('Unsafe smoke fixture path');
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const chart = fixture.curricula.find(c => c.status === 'active' &&
@@ -252,6 +253,40 @@ async function main() {
     if (result.status !== status) throw new Error(label+' expected HTTP '+status+', got '+result.status);
     return result.body;
   };
+  // Real production-mode API acceptance for optional curriculum advisory drafts.
+  // Uses only the disposable, seeded fixture and the synthetic root identity.
+  const studyPlanPath='/api/curriculum/'+encodeURIComponent(chart.id)+'/study-plan-draft';
+  expectStatus(await authenticated(studyPlanPath,studentToken),403,'Student cannot read advisory draft');
+  expectStatus(await authenticated(studyPlanPath,managerToken),403,'Demand-only manager cannot read curriculum draft');
+  const emptyStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Initial advisory draft');
+  if(emptyStudyPlan.data?.plan!==null||emptyStudyPlan.data?.revision!==null)throw new Error('New advisory draft must be explicitly absent');
+  const studyPlan={
+    curriculumId:chart.id,
+    periods:[{id:'smoke-period',label:'دورهٔ مصنوعی پس از بوت',kind:'summer'}],
+    items:[{id:'smoke-item',kind:'course',courseId,periodId:'smoke-period'}],
+  };
+  const createStudyPlan=expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:studyPlan,expectedRevision:null,
+  }),200,'Create production advisory draft');
+  const studyPlanRevision=createStudyPlan.data?.revision;
+  if(typeof studyPlanRevision!=='string'||!studyPlanRevision)throw new Error('Advisory draft revision missing');
+  const staleUpdate=await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:studyPlan,expectedRevision:null,
+  });
+  expectStatus(staleUpdate,409,'Stale advisory draft update');
+  const revisedPlan={...studyPlan,periods:[{...studyPlan.periods[0],label:'نسخهٔ دوم مصنوعی'}]};
+  const updateStudyPlan=expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:revisedPlan,expectedRevision:studyPlanRevision,
+  }),200,'Update production advisory draft');
+  if(updateStudyPlan.data?.revision===studyPlanRevision)throw new Error('Advisory revision did not advance');
+  expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:null,expectedRevision:studyPlanRevision,
+  }),409,'Stale advisory draft deletion');
+  // Schema parsing normalizes object-key order; compare JSON values, not serialization.
+  if(!isDeepStrictEqual(updateStudyPlan.data?.plan,revisedPlan))throw new Error('Advisory update returned different plan data');
+  const diskPlan=JSON.parse(fs.readFileSync(fixturePath,'utf8')).studyPlanDrafts?.find(row=>row.curriculumId===chart.id&&row.trackId===null);
+  if(!isDeepStrictEqual(diskPlan?.plan,revisedPlan)||diskPlan?.revision!==updateStudyPlan.data.revision)
+    throw new Error('Advisory update was not persisted before restart');
   const profile = {...academicScope,currentTermId:termId,isTrackSelected:false,desiredTrackIds:[]};
   expectStatus(await authenticated('/api/student/profile',studentToken,'PUT',profile),200,'Student profile');
   expectStatus(await authenticated('/api/student/profile',otherToken,'PUT',{...profile,entryYearId:alternateYear}),200,'Other cohort profile');
@@ -337,6 +372,17 @@ async function main() {
   await stopServer();
   await startServer();
 
+  const persistedStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Advisory draft after restart');
+  if(!isDeepStrictEqual(persistedStudyPlan.data?.plan,revisedPlan))throw new Error('Advisory draft content did not survive restart');
+  if(persistedStudyPlan.data?.revision!==updateStudyPlan.data?.revision)throw new Error('Advisory revision did not survive restart');
+  expectStatus(await authenticated(studyPlanPath,token,'PUT',{
+    trackId:null,plan:null,expectedRevision:persistedStudyPlan.data.revision,
+  }),200,'Delete advisory draft after restart');
+  const removedStudyPlan=expectStatus(await authenticated(studyPlanPath,token),200,'Read deleted advisory draft');
+  if(removedStudyPlan.data?.plan!==null||removedStudyPlan.data?.revision!==null) {
+    throw new Error('Advisory draft deletion was not persisted');
+  }
+  console.log('PASS: advisory draft content and revision persisted across restart; stale changes and unauthorized reads denied');
   await verifyDemandPersistence();
   expectStatus(await authenticated(demandPath+'/response',studentToken,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Closed survey remains closed after restart');
   const afterRestart = await requestJson('/api/sync/state', {
@@ -349,6 +395,65 @@ async function main() {
   ) {
     throw new Error('Sync job state did not survive a process restart');
   }
+
+  // Verify actual production-mode logout persists across restart, without logging tokens.
+  expectStatus(await authenticated('/api/auth/logout',studentToken,'POST'),200,'Logout student');
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Revoked session');
+  await stopServer();
+  await startServer();
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Revocation survives restart');
+  const newStudentToken=await fixtureLogin(accounts[0]);
+  expectStatus(await authenticated('/api/auth/me',newStudentToken),200,'New session after logout');
+
+  // Full disaster recovery drill: stop synthetic origin, create encrypted
+  // snapshot, verify, restore to a separate directory and boot the real bundle.
+  await stopServer();
+  const drillStart=Date.now();
+  const originalPath=fixturePath;
+  const originalBytes=fs.readFileSync(originalPath);
+  const privateDir=name=>{
+    const directory=path.join(temporary,name);
+    fs.mkdirSync(directory,{mode:0o700});
+    return directory;
+  };
+  const keyFile=path.join(privateDir('backup-key'),'snapshot.key');
+  const archive=path.join(privateDir('encrypted-archive'),'snapshot.dcb');
+  const restoredDir=privateDir('restored-data');
+  const restoredFile=path.join(restoredDir,'darschyn-db.json');
+  fs.writeFileSync(keyFile,crypto.randomBytes(32),{mode:0o600,flag:'wx'});
+  const offline=(...args)=>{
+    const result=spawnSync('bun',['run','scripts/offline-backup.ts',...args],{
+      cwd:root,env:{...environment,DARSCHYN_OFFLINE_MAINTENANCE_CONFIRMED:'true'},
+      stdio:'ignore',timeout:15000,
+    });
+    if(result.error||result.status!==0)throw new Error('Offline disaster recovery step failed: '+args[0]);
+  };
+  offline('backup',originalPath,keyFile,archive);
+  offline('verify',archive,keyFile);
+  offline('restore-new',archive,keyFile,restoredFile);
+  if(!fs.readFileSync(restoredFile).equals(originalBytes))throw new Error('Snapshot restore differs from source bytes');
+  if(!fs.readFileSync(originalPath).equals(originalBytes))throw new Error('Snapshot source was modified');
+  environment.DARSCHYN_DATA_DIR=restoredDir;
+  environment.DARSCHYN_REQUIRE_EXISTING_DB='true';
+  fixturePath=restoredFile;
+  // Never reuse a pre-disaster signing secret when bringing an old snapshot
+  // back into service. This prevents resurrection of revoked JWT sessions.
+  environment.JWT_SECRET=crypto.randomBytes(32).toString('hex');
+  await startServer();
+  expectStatus(await authenticated('/api/auth/me',newStudentToken),401,'Pre-restore token rejected after key rotation');
+  expectStatus(await authenticated('/api/auth/me',studentToken),401,'Previously revoked token rejected after recovery');
+  const restoredStudent=await fixtureLogin(accounts[0]);
+  const restoredManager=await fixtureLogin(accounts[2]);
+  const restoredOther=await fixtureLogin(accounts[1]);
+  const recovered=expectStatus(await authenticated(demandPath+'/response',restoredStudent),200,'Recovered student response').data;
+  if(recovered?.id!==first.data.id||recovered?.answers?.preference!=='عصر'||recovered?.courseIds?.length!==0)throw new Error('Recovered student data mismatch');
+  expectStatus(await authenticated(demandPath+'/response',restoredOther),404,'Recovered cohort isolation');
+  expectStatus(await authenticated(demandPath+'/answers.csv?format=json',restoredManager),403,'Recovered private export boundary');
+  const recoveredReport=expectStatus(await authenticated(demandPath+'/report',restoredManager),200,'Recovered aggregate').data;
+  if(recoveredReport.participantCount!==1||JSON.stringify(recoveredReport).includes(studentNumber))throw new Error('Recovered report mismatch or privacy failure');
+  expectStatus(await authenticated(demandPath+'/response',restoredStudent,'PUT',{...baseAnswer,answers:{preference:'عصر'}}),409,'Recovered closed survey');
+  if(!fs.readFileSync(originalPath).equals(originalBytes))throw new Error('Recovery server modified original database');
+  console.log('PASS: isolated encrypted snapshot recovery, real server boot, fresh authentication, access boundaries and source preservation; synthetic drill milliseconds='+ (Date.now()-drillStart));
 
   // Reproduce a fatal startup after initialization without touching the VPS.
   // The previous entrypoint logged a failed bootstrap but exited with code 0,
@@ -443,7 +548,7 @@ async function main() {
     throw new Error('SECURITY: failed root bootstrap unexpectedly modified stored accounts');
   }
 
-  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, scoped demand lifecycle and restart persistence, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal.');
+  console.log('PASS: health, JSON 404, single-use CAPTCHA login, private API, scoped demand lifecycle and restart persistence, safe catalogue restore, protected reset, demo pages, restart persistence, invalid startup, missing-volume fail-closed, corrupted-database preservation and root identity conflict refusal, logout revocation and restart persistence.');
   console.log('All state was written only to a temporary isolated directory.');
 }
 

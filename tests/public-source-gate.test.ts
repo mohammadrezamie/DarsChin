@@ -53,3 +53,16 @@ describe('removed unsafe legacy scripts', () => {
     expect(gate.isSensitivePath('scripts/legacy/README.md')).toBe(false);
   });
 });
+
+
+describe('حفاظت فایل‌های خصوصی خارج از data',()=>{
+  it.each(['snapshot.DCB','archives/root.key','archives/local.backup','archives/old.dump','elsewhere/cache.sqlite3','elsewhere/darschyn-db.json','elsewhere/darschyn-db.json.20261127','keys/id_ed25519','runtime/credentials.json','elsewhere/keys.jks','data/subdir/records.xlsx'])('رد مسیر خصوصی %s قبل از خواندن فایل',(file)=>{
+    expect(gate.isSensitivePath(file)).toBe(true);
+    expect(gate.scanTrackedFiles(os.tmpdir(),[file])).toEqual([{path:file,type:'sensitive-file-path'}]);
+  });
+  it('مستند و فایل نمونهٔ مجاز را رد نمی‌کند',()=>{
+    expect(gate.isSensitivePath('docs/backup.md')).toBe(false);
+    expect(gate.isSensitivePath('fixtures/example.json')).toBe(false);
+    expect(gate.isSensitivePath('deploy/.env.staging.example')).toBe(false);
+  });
+});

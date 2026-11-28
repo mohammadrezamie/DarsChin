@@ -31,11 +31,12 @@ describe('UI-first student conversion: real features on small RTL screens',()=>{
     const hero=renderToStaticMarkup(<MemoryRouter><HeroSection /></MemoryRouter>);
     expect(hero).toContain('href="/demo/student"');
     expect(hero).toContain('href="/register"');
-    expect(hero).toContain('داده‌ها نمونه‌اند');
-    expect(hero).toContain('هیچ ثبت خودکاری');
+    expect(hero).toContain('داده‌های آزمایشی');
+    expect(hero).toContain('درس‌چین جایگزین درگاه رسمی دانشگاه نیست');
+    expect(hero).toContain('ثبت نهایی در همان درگاه انجام می‌شود');
     expect(hero).toContain('grid-cols-3');
     expect(hero).toContain('مزیت‌های اصلی');
-    expect(hero).toContain('داده نمونه');
+    expect(hero).toContain('دادهٔ آزمایشی');
     expect(hero).toContain('aria-pressed="true"');
     expect(hero).not.toContain('سقف واحد رسمی دانشگاه');
   });

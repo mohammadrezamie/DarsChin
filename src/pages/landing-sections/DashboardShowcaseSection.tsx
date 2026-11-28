@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { publicDemoEnabled } from '../../config/demo-availability';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, GraduationCap, ListChecks, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 
 const features: { icon: LucideIcon; title: string; description: string }[] = [
@@ -42,7 +43,7 @@ export const DashboardShowcaseSection: React.FC = () => {
             </motion.article>
           ))}
         </div>
-        <div className="mt-7 flex flex-col items-start justify-between gap-5 rounded-3xl border border-teal-200 bg-gradient-to-l from-teal-50 to-white p-5 sm:flex-row sm:items-center sm:p-7 dark:border-teal-950 dark:from-teal-950/30 dark:to-slate-950">
+        {publicDemoEnabled && <div className="mt-7 flex flex-col items-start justify-between gap-5 rounded-3xl border border-teal-200 bg-white p-5 sm:flex-row sm:items-center sm:p-7 dark:border-teal-950 dark:bg-slate-900">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-sm font-extrabold text-teal-900 dark:text-teal-200">
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> از دمو شروع کن
@@ -54,11 +55,28 @@ export const DashboardShowcaseSection: React.FC = () => {
           <Link to="/demo/student" className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-800 px-5 text-sm font-extrabold text-white shadow-sm hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 sm:w-auto">
             ورود به دموی دانشجو <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
-        </div>
+        </div>}
         <p className="mt-5 flex items-start gap-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
           نتیجهٔ نهایی هر درس به اطلاعات واقعی و مقررات رسمی دانشگاه وابسته است.
         </p>
+        <section id="student-journey" aria-labelledby="student-journey-title" className="mt-10 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 sm:mt-14 sm:p-7 dark:border-slate-700 dark:bg-slate-900">
+          <h2 id="student-journey-title" className="text-xl font-black leading-relaxed text-slate-950 sm:text-2xl dark:text-white">برای ترم جدید از کجا شروع کنم؟</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">چهار قدم ساده برای آماده‌شدن پیش از انتخاب واحد رسمی.</p>
+          <ol className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {title:'پروندهٔ تحصیلی',detail:'رشته، مقطع و ورودی خودت را مشخص کن.'},
+              {title:'چارت و سوابق',detail:'درس‌های گذرانده و شرایط درس‌های باقی‌مانده را بررسی کن.'},
+              {title:'تقاضا و انتخاب درس',detail:'در صورت فعال‌بودن نیازسنجی، تقاضای ترم را ثبت کن.'},
+              {title:'برنامهٔ هفتگی',detail:'گروه‌های موجود و تداخل‌ها را بررسی کن؛ ثبت نهایی در درگاه رسمی دانشگاه است.'},
+            ].map(({title,detail},index)=><li key={title} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+              <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-bold text-blue-900 dark:bg-blue-950 dark:text-blue-200">{(index+1).toLocaleString('fa-IR')}</span>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{detail}</p>
+            </li>)}
+          </ol>
+          <Link to="/help" className="dc-secondary-action mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold">راهنمای گام‌به‌گام دانشجو <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true"/></Link>
+        </section>
       </div>
     </section>
   );

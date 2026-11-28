@@ -191,7 +191,7 @@ export const RegistrationLaunchpad: React.FC<Props> = ({
     </div>
     <p className="flex items-start gap-2 px-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
       <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-      این فهرست ثبت خودکار در آموزشیار نیست؛ فقط بعد از ثبت واقعی همان گروه، تیکش را بزن. با تغییر گروه یا کد ارائه، تیک قبلی معتبر نیست. کدهای ساختگی دمو هم معتبر نیستند.
+      این فهرست ثبت خودکار در معیار یا سامانهٔ رسمی دانشگاه نیست؛ فقط بعد از ثبت واقعی همان گروه، تیکش را بزن. با تغییر گروه یا کد ارائه، تیک قبلی معتبر نیست. کدهای ساختگی دمو هم معتبر نیستند.
     </p>
     {loading&&<p role="status" className="text-xs text-slate-600 dark:text-slate-300"><RefreshCw aria-hidden="true" className="ml-1 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>در حال تطبیق قوانین… کپی سریع پس از بررسی فعال می‌شود.</p>}
     {!loading&&(error||rules.length===0)&&<p role="status" className="rounded-lg bg-amber-50 p-2 text-xs leading-6 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">

@@ -1,0 +1,181 @@
+/* هویت خنثی و آبی دانشگاهی؛ فقط در پنل‌ها و مسیرهای احراز هویت. */
+.dc-product-shell, .dc-product-workspace, .dc-product-auth {
+  --ws-paper: #ffffff;
+  --ws-canvas: #f5f7fa;
+  --ws-soft: #edf2f8;
+  --ws-border: #dce3ed;
+  --ws-ink: #17253c;
+  --ws-muted: #526177;
+  --ws-brand: #2455a6;
+  --ws-on-brand: #ffffff;
+  --ws-accent: #2455a6;
+  --ws-shadow: 0 10px 30px -20px rgb(23 37 60 / 16%);
+  color: var(--ws-ink);
+}
+.dark :is(.dc-product-shell,.dc-product-workspace,.dc-product-auth) {
+  --ws-paper: #162235;
+  --ws-canvas: #101827;
+  --ws-soft: #202f45;
+  --ws-border: #35465e;
+  --ws-ink: #edf2f9;
+  --ws-muted: #bfccde;
+  --ws-brand: #91b9ff;
+  --ws-on-brand: #13233e;
+  --ws-accent: #91b9ff;
+  --ws-shadow: 0 10px 30px -20px rgb(0 0 0 / 65%);
+}
+.dc-product-shell,.dc-product-auth {
+  background:var(--ws-canvas);
+}
+.dc-product-workspace :is(.darschin-surface,.bg-glass-primary,.bg-glass-elevated,.bg-liquid-glass,.darschin-admin-panel) {
+  background: var(--ws-paper);
+  border-color: var(--ws-border);
+  box-shadow: var(--ws-shadow);
+}
+.dc-workspace-masthead {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:var(--ws-paper);
+  border:1px solid var(--ws-border);
+  border-radius: 1rem;
+  color:var(--ws-ink);
+  box-shadow:var(--ws-shadow);
+}
+.dc-workspace-masthead::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset-block: -5rem;
+  inset-inline-end: -5rem;
+  inline-size: 22rem;
+  background: none;
+}
+.dc-workspace-kicker { color:var(--ws-muted); font-size:.75rem; font-weight:700; }
+.dc-workspace-heading { font-size:clamp(1.25rem,2.5vw,1.85rem); line-height:1.6; font-weight:800; }
+.dc-workspace-caption { color:var(--ws-muted); font-size:.875rem; line-height:1.9; }
+.dc-workspace-section-heading {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;
+  padding:1rem 1.25rem;
+  background:var(--ws-paper); border:1px solid var(--ws-border); border-radius:1rem;
+  border-inline-start:2px solid var(--ws-brand);
+  box-shadow:var(--ws-shadow);
+}
+.dc-workspace-section-heading h2 { color:var(--ws-ink); font-size:1.125rem; font-weight:800; line-height:1.7; }
+.dc-workspace-eyebrow { color:var(--ws-muted); font-size:.75rem; font-weight:650; }
+.dc-workspace-navigation {
+  background:var(--ws-paper); border-color:var(--ws-border); box-shadow:var(--ws-shadow);
+}
+.dc-workspace-navigation :is(button,a)[aria-current="page"] {
+  color:var(--ws-on-brand);
+  background:var(--ws-brand);
+  border-color:var(--ws-brand);
+  box-shadow:0 3px 9px -5px rgb(23 37 60 / 22%);
+}
+.dc-workspace-navigation :is(button,a):focus-visible,
+.dc-product-auth :is(button,a,input,select,textarea):focus-visible {
+  outline:3px solid var(--ws-brand); outline-offset:2px;
+}
+.dc-product-workspace .dc-context-help {
+  background:var(--ws-paper); border:1px solid var(--ws-border); box-shadow:none;
+}
+.dc-product-workspace .dc-context-help summary { color:var(--ws-brand); }
+.dc-product-workspace .dc-context-help summary > span:last-child { background:var(--ws-soft); color:var(--ws-brand); }
+.dc-product-workspace .dc-context-help > div { border-color:var(--ws-border); }
+.dc-product-workspace .dc-workspace-table-head { background:var(--ws-soft); border-color:var(--ws-border); }
+.dc-product-workspace .dc-workspace-content { min-width:0; }
+.dc-product-workspace .dc-workspace-content :where(h3,h4) { line-height:1.65; }
+.dc-product-workspace .dc-workspace-content :where(.darschin-field) {
+  background:var(--ws-paper); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-product-workspace .dc-workspace-content :where(.darschin-field:focus-visible) {
+  border-color:var(--ws-brand); outline:2px solid var(--ws-brand); outline-offset:2px;
+}
+.dc-product-workspace .dc-workspace-summary {
+  background:var(--ws-soft); border:1px solid var(--ws-border); color:var(--ws-ink);
+}
+.dc-auth-intro {
+  background:var(--ws-paper);
+  border:1px solid var(--ws-border);
+  color:var(--ws-ink);
+  border-radius:1rem;
+  padding:clamp(1.25rem,4vw,3rem);
+  position:relative;
+  overflow:hidden;
+}
+.dc-auth-intro h2 { color:var(--ws-ink); }
+.dc-auth-intro p { color:var(--ws-muted); }
+.dc-auth-intro p a { color:var(--ws-brand); text-decoration:underline; text-underline-offset:4px; }
+.dc-auth-intro > a:first-child { background:var(--ws-soft); border-color:var(--ws-border); color:var(--ws-brand); }
+.dc-auth-card > .darschin-surface { background:var(--ws-paper); border-color:var(--ws-border); box-shadow:var(--ws-shadow); }
+.dc-auth-demo > div { background:var(--ws-soft); border-color:var(--ws-border); }
+.dc-auth-layout { display:grid; gap:1rem; width:min(100%,70rem); margin-inline:auto; align-items:start; }
+.dc-auth-layout > * { width:100%; max-width:none; margin:0; min-width:0; }
+@media (min-width:900px) {
+  .dc-auth-layout { grid-template-columns:minmax(0,.9fr) minmax(0,1fr); gap:1.25rem 2rem; }
+  .dc-auth-intro { grid-column:1; grid-row:1; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+  .dc-auth-layout:has(.dc-auth-demo) .dc-auth-intro { grid-row:1 / span 2; }
+  .dc-auth-intro > a:first-child { align-self:flex-start; }
+  .dc-auth-card,.dc-auth-demo { grid-column:2; }
+  .dc-auth-card { grid-row:1; }
+  .dc-auth-demo { grid-row:2; }
+}
+@media (max-width:639px) {
+  .dc-workspace-masthead { border-radius:1.125rem; }
+  .dc-workspace-masthead::before { inline-size:12rem; opacity:.6; }
+  .dc-workspace-section-heading { padding:.75rem 1rem; }
+  .dc-auth-intro { border-radius:1.125rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .dc-product-workspace *, .dc-product-auth * { scroll-behavior:auto; }
+}
+@media (forced-colors:active) {
+  .dc-workspace-masthead,.dc-auth-intro,.dc-workspace-section-heading { border:1px solid CanvasText; }
+  .dc-workspace-navigation :is(button,a)[aria-current="page"] { border:2px solid Highlight; }
+}
+@media print {
+  .dc-product-shell,.dc-product-workspace { background:white; color:black; }
+  .dc-workspace-masthead,.dc-workspace-navigation,.dc-workspace-section-heading { display:none!important; }
+}
+
+/* عناصر واقعی ناوبری و برگهٔ موبایل، با حفظ موقعیت ثابت و Safe Area قبلی. */
+.dc-product-shell .dc-workspace-global-nav {
+  background:var(--ws-paper);
+  border-color:var(--ws-border);
+  box-shadow:var(--ws-shadow);
+}
+.dc-product-workspace .dc-workspace-sheet {
+  background:var(--ws-paper); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-product-workspace .dc-student-dock {
+  background:var(--ws-paper); border-color:var(--ws-border);
+  box-shadow:0 -8px 24px -16px rgb(23 37 60 / 20%);
+}
+.dc-product-auth .dc-auth-intro a:focus-visible,
+.dc-workspace-masthead :is(button,a,summary):focus-visible {
+  outline:3px solid var(--ws-brand); outline-offset:3px;
+}
+.dc-auth-card :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  background:var(--ws-canvas); border-color:var(--ws-border); color:var(--ws-ink);
+}
+.dc-auth-card button[type="submit"]:not(:disabled) {
+  background:var(--ws-brand); color:var(--ws-on-brand);
+}
+.dc-product-workspace .dc-workspace-summary :where(h2,h3) { color:var(--ws-ink); }
+
+/* اجزای سربرگ: بدون گرادیان، رنگ انباشته یا متن سفید روی سطح روشن. */
+.dc-workspace-masthead::before { display:none; }
+.dc-workspace-masthead .dc-masthead-decoration { display:none; }
+.dc-workspace-masthead .dc-masthead-label {
+  color:var(--ws-brand); background:var(--ws-soft); border:1px solid var(--ws-border);
+}
+.dc-workspace-masthead .dc-masthead-action {
+  color:var(--ws-brand); background:var(--ws-paper); border:1px solid var(--ws-border);
+}
+.dc-workspace-masthead .dc-masthead-action:hover { background:var(--ws-soft); }
+.dc-workspace-masthead .dc-masthead-details { background:var(--ws-soft); color:var(--ws-ink); border-color:var(--ws-border); }
+.dc-workspace-masthead .dc-masthead-details :is(summary,span) { color:var(--ws-ink); }
+.dc-workspace-masthead .dc-masthead-details > div { border-color:var(--ws-border); }
+.dc-workspace-masthead .dc-workspace-heading { color:var(--ws-ink); }
+.dc-workspace-masthead .dc-workspace-caption { color:var(--ws-muted); }

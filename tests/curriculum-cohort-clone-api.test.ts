@@ -107,4 +107,17 @@ describe('کپی عملیاتی چارت مستقل برای ورودی تازه
     expect(db.auditLogs).toHaveLength(count.audit);
     expect(JSON.stringify(answer.body)).not.toContain('synthetic-disk-failure');
   });
+  it('copies mutually exclusive track graphs without inventing a cross-track cycle',async()=>{
+    const chart=db.curricula.find(c=>c.id===sourceId)!;
+    const a='test-clone-track-a',b='test-clone-track-b';
+    db.tracks.push(...([{id:a,majorId:chart.majorId,name:'الف',active:true},{id:b,majorId:chart.majorId,name:'ب',active:true}] as typeof db.data.tracks));
+    const first=db.academicRules.find(r=>r.id==='fixture-clone-prereq')!;
+    first.trackId=a;
+    db.academicRules.push({...first,id:'test-clone-reverse',trackId:b,targetCourseId:c1,expression:{type:'COURSE',courseId:c2}});
+    const response=await clone(valid());
+    expect(response.status).toBe(201);
+    expect(response.body.data.copiedRules).toBe(2);
+    expect(db.academicRules.filter(r=>r.curriculumId===response.body.data.curriculum.id).map(r=>r.trackId)).toEqual([a,b]);
+  });
+
 });

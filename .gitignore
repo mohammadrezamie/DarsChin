@@ -26,3 +26,12 @@ data/**/*.db
 *.p12
 *.pfx
 *.key
+
+# Encrypted full database snapshots are private even when encrypted.
+*.dcb
+browser-qa-output/
+
+*.jks
+*.keystore
+darschyn-db.json
+darschyn-db.json.*

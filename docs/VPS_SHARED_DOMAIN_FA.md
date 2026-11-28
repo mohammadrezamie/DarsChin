@@ -29,7 +29,7 @@
 روی سرور (تنها در checkout مربوط به درس‌چین و بعد از آماده‌کردن فایل خصوصی `deploy/.env.vps`):
 
 ```bash
-sudo ss -lntp | grep -E ':(80|443|3000|3001)\\b' || true
+sudo ss -lntp | grep -E ':(80|443|3000|3001|3002)\\b' || true
 # در deploy/.env.vps مقدار DARSCHYN_LOCAL_PORT=3001 و اسرار اختصاصی را قرار بده
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps config -q
 docker compose -f compose.yaml -f compose.pilot-ssh.yaml --env-file deploy/.env.vps up -d --build darschin
@@ -48,7 +48,7 @@ ssh -L 3001:127.0.0.1:3001 USER@VPS_IP
 
 1. دامنه جدا بخر (پسوند به انتخاب خودت؛ مثلاً .ir یا .com). آزادبودن یا قیمت نام مشخص قبل از خرید باید از ثبت‌کننده بررسی شود.
 2. DNS آن را به همان VPS اشاره بده؛ گواه و فعال‌شدن DNS چند دقیقه تا چند ساعت بسته به TTL طول می‌کشد؛ زمان دقیق تضمین نمی‌شود.
-3. نمونهٔ virtual host موجود را **در فایل جدید** مخصوص درس‌چین کپی کن و آدرس upstream را از 3000 به `3001` و `server_name` را به دامنهٔ خریداری‌شده تغییر بده.
+3. نمونهٔ virtual host موجود را **در فایل جدید** مخصوص درس‌چین کپی کن و آدرس upstream نمونهٔ جدید را با قرارداد `3001` و پورت واقعی تطبیق بده و `server_name` را به دامنهٔ خریداری‌شده تغییر بده.
 4. قبل از فعال‌کردن یا بارگذاری مجدد، `sudo nginx -t` اجرا کن و از تنظیم فعلی پشتیبان بگیر. اگر خطا دارد reload نکن.
 5. گواه HTTPS جدید را با روش رایج همین Nginx ایجاد کن؛ سپس `curl -I https://YOUR_DARSCHYN_DOMAIN/` و `curl -I https://TAKIN_EXISTING_DOMAIN/` هر دو باید سالم باشند.
 6. نام دامنهٔ جدید را در `TURNSTILE_ALLOWED_HOSTNAMES` هم قرار بده و کلید کپچا را فقط برای همان hostname بساز.

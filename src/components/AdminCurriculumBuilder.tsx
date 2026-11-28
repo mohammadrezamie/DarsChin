@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../utils/api';
 import { NewCurriculumForm } from './NewCurriculumForm';
+import { CurriculumSemesterPreview } from './CurriculumSemesterPreview';
+import { StudyPlanEditor, type StudyPlanLeaveGuard } from './StudyPlanEditor';
 import { extractSourceCourseIds } from '../utils/academic';
+import { ruleScopeCourseIds } from '../domain/curriculum-rule-scope';
 import { Plus, Search, Layers, ChevronDown, ChevronRight, Edit2, Trash2, Check, X, ShieldAlert, BookOpen, GitFork } from 'lucide-react';
 import { Curriculum, CurriculumCourse, Course, AcademicRule, Track, Major, EntryYear, CourseClassification } from '../types';
 
@@ -26,6 +29,13 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const [cloneFeedback,setCloneFeedback]=useState('');
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   const detailsRequestRef = useRef(0);
+  const studyPlanGuard=useRef<StudyPlanLeaveGuard>({dirty:false,saving:false});
+  const selectChart=(id:string)=>{
+    if(id===selectedCurriculumId)return;
+    if(studyPlanGuard.current.saving){setOperationError('ابتدا نتیجهٔ ذخیرهٔ برنامهٔ پیشنهادی را دریافت کنید.');return;}
+    if(studyPlanGuard.current.dirty&&!window.confirm('تغییرات ذخیره‌نشدهٔ برنامهٔ پیشنهادی کنار گذاشته شود؟'))return;
+    setSelectedCurriculumId(id);
+  };
   
   const [curriculumFull, setCurriculumFull] = useState<any>(null); // Details
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -34,7 +44,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     courseId: '', trackId: '', suggestedSemester: 1, classification: 'MAJOR_REQUIRED'
   });
   const [addRuleForm, setAddRuleForm] = useState({
-    sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: ''
+    sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '', trackId: ''
   });
 
   const matchingCharts=curricula.filter(c=>{
@@ -45,8 +55,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
   });
   const selectedChart=curriculumFull?.curriculum as Curriculum|undefined;
   const relevantTracks=tracks.filter(t=>t.active&&t.majorId===selectedChart?.majorId);
-  const chartCourseIds=new Set<string>((curriculumFull?.courses||[]).map((item:CurriculumCourse)=>item.courseId));
-  const relevantRuleCourses=courses.filter(c=>c.active&&chartCourseIds.has(c.id)&&c.id!==activeCourseId);
+  const assignments: CurriculumCourse[]=curriculumFull?.courses||[];
+  const ruleTrackOptions=relevantTracks.filter(track=>ruleScopeCourseIds(assignments,selectedChart?.id||'',track.id).has(activeCourseId||''));
+  const commonRuleAllowed=ruleScopeCourseIds(assignments,selectedChart?.id||'',null).has(activeCourseId||'');
+  const scopedRuleIds=ruleScopeCourseIds(assignments,selectedChart?.id||'',addRuleForm.trackId);
+  const validRuleScope=(addRuleForm.trackId?ruleTrackOptions.some(t=>t.id===addRuleForm.trackId):commonRuleAllowed)&&scopedRuleIds.has(activeCourseId||'');
+  const relevantRuleCourses=courses.filter(c=>validRuleScope&&c.active&&scopedRuleIds.has(c.id)&&c.id!==activeCourseId);
 
   const fetchData = async () => {
     setLoading(true);
@@ -87,7 +101,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
     setCloneName('');
     setCloneFeedback('');
     setAddCourseForm({courseId:'',trackId:'',suggestedSemester:1,classification:'MAJOR_REQUIRED'});
-    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:''});
+    setAddRuleForm({sourceCourseId:'',relationshipType:'PREREQUISITE',conditionType:'AND',ruleGroup:'',trackId:''});
     setActiveCourseId(null);
     if (selectedCurriculumId) void loadCurriculumDetails(selectedCurriculumId);
   }, [selectedCurriculumId]);
@@ -126,7 +140,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
       }
       const draft=result.data.curriculum;
       setCurricula(old=>[...old,draft]);
-      setSelectedCurriculumId(draft.id);
+      selectChart(draft.id);
       setCloneOpen(false);
       setCloneFeedback('');
       await fetchData();
@@ -159,7 +173,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
   const handleRemoveCourse = async (courseId: string, trackId?: string | null) => {
     if (!confirm('انتساب این درس از چارت حذف شود؟ سوابق نیازسنجی حذف نخواهند شد.')) return;
-    const query=trackId ? `?trackId=${encodeURIComponent(trackId)}`:'';
+    const query=`?trackId=${encodeURIComponent(trackId||'')}`;
     const result=await apiRequest(`/api/curriculum/${selectedCurriculumId}/courses/${courseId}${query}`,{method:'DELETE'});
     if (!result.success) { alert(result.error||'حذف درس مجاز نیست.');return; }
     void loadCurriculumDetails(selectedCurriculumId!);
@@ -169,6 +183,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
   const handleAddRule = async () => {
     setOperationError('');
     if(!selectedCurriculumId||!activeCourseId)return;
+    if(!validRuleScope){setOperationError('ابتدا دامنهٔ معتبر قانون را انتخاب کنید.');return;}
     if(!relevantRuleCourses.some(c=>c.id===addRuleForm.sourceCourseId)){
       setOperationError('مبدأ پیش‌نیاز یا هم‌نیاز باید درس دیگری از همین چارت باشد.');return;
     }
@@ -177,30 +192,32 @@ export const AdminCurriculumBuilder: React.FC = () => {
       body: JSON.stringify({
         curriculumId: selectedCurriculumId,
         targetCourseId: activeCourseId,
+        trackId: addRuleForm.trackId || null,
         relationshipType: addRuleForm.relationshipType,
         expression: { type: 'COURSE', courseId: addRuleForm.sourceCourseId }
       })
     });
     if (res.success) {
       loadCurriculumDetails(selectedCurriculumId!);
-      setAddRuleForm({ sourceCourseId: '', relationshipType: 'PREREQUISITE', conditionType: 'AND', ruleGroup: '' });
+      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
     } else {
       setOperationError(res.error || 'ثبت قانون انجام نشد.');
     }
   };
   
   const handleRemoveRule = async (ruleId: string) => {
-    await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
+    const result=await apiRequest(`/api/curriculum/rules/${ruleId}`, { method: 'DELETE' });
+    if(!result.success){setOperationError(result.error||'حذف قانون انجام نشد.');return;}
     loadCurriculumDetails(selectedCurriculumId!);
   };
 
   if (loading && !curricula.length) return <div className="p-8 text-center">در حال بارگذاری...</div>;
 
   return (
-    <div dir="rtl" className="darschin-page space-y-4">
+    <div dir="rtl" className="darschin-page dc-curriculum-builder min-w-0 w-full space-y-4">
       <NewCurriculumForm onCreated={(chart) => {
         setCurricula(prev => [...prev, chart]);
-        setSelectedCurriculumId(chart.id);
+        selectChart(chart.id);
         void fetchData();
       }} />
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800">
@@ -209,36 +226,37 @@ export const AdminCurriculumBuilder: React.FC = () => {
           مدیریت ساختار چارت تحصیلی
         </h2>
         
-        <div className="mb-6">
-          <label htmlFor="chart-filter" className="mb-1 block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
-          <input id="chart-filter" type="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
-            className="darschin-field mb-3 min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
-          <label className="block text-sm font-medium mb-2">چارت‌های فعال و پیش‌نویس:</label>
-          <select 
-            className="w-full p-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-600"
-            value={selectedCurriculumId || ''}
-            onChange={(e) => setSelectedCurriculumId(e.target.value)}
-          >
-            <option value="">-- یک چارت انتخاب کنید --</option>
-            {matchingCharts.map(c => (
-              <option key={c.id} value={c.id}>{c.name} ·
-                {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} ·
-                ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
-                {c.status === 'active' ? 'فعال' : c.status === 'draft' ? 'پیش‌نویس' : 'آرشیو'} ({c.version})</option>
-            ))}
+        <div data-layout-region="curriculum-picker" className="mb-6 min-w-0 space-y-3">
+          <label htmlFor="chart-filter" className="block text-sm font-medium">جستجوی چارت بر اساس رشته، ورودی یا عنوان</label>
+          <input id="chart-filter" type="text" inputMode="search" value={chartSearch} onChange={e=>setChartSearch(e.target.value)}
+            className="darschin-field min-h-11" placeholder="مثلاً برق ۱۴۰۳"/>
+          <section aria-label="چارت‌های فعال و پیش‌نویس:" className="min-w-0 space-y-2">
+            <h3 className="text-sm font-bold">چارت‌های فعال و پیش‌نویس</h3>
+            <p className="text-xs text-slate-500">چارت موردنظر را از فهرست انتخاب کنید؛ اطلاعات کامل رشته، ورودی و نسخه برای هر گزینه نمایش داده می‌شود.</p>
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+              {matchingCharts.map(c=>(
+                <button key={c.id} type="button" data-chart-id={c.id} aria-pressed={selectedCurriculumId===c.id}
+                  onClick={()=>selectChart(c.id)}
+                  className={`min-h-11 min-w-0 max-w-full rounded-xl border p-3 text-right whitespace-normal [overflow-wrap:anywhere] focus-visible:ring-2 focus-visible:ring-teal-600 ${selectedCurriculumId===c.id?'border-teal-600 bg-teal-50 dark:bg-teal-950/40':'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+                  <span className="block text-sm font-bold [overflow-wrap:anywhere]">{c.name}</span>
+                  <span className="mt-1 block text-xs leading-6 text-slate-600 dark:text-slate-300 [overflow-wrap:anywhere]">
+                    {majors.find(m=>m.id===c.majorId)?.name||'رشته نامشخص'} · ورودی {entryYears.find(y=>y.id===c.entryYearId)?.year||'نامشخص'} ·
+                    {c.status==='active'?'فعال':c.status==='draft'?'پیش‌نویس':'آرشیو'} · نسخه {c.version}
+                  </span>
+                  {selectedCurriculumId===c.id&&<span className="mt-1 block text-xs font-bold text-teal-700 dark:text-teal-300">چارت انتخاب‌شده</span>}
+                </button>
+              ))}
+            </div>
             {selectedCurriculumId&&!matchingCharts.some(chart=>chart.id===selectedCurriculumId)&&
-              <option value={selectedCurriculumId}>
-                {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'} (انتخاب فعلی)
-              </option>}
-          </select>
-          {!matchingCharts.length&&<p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-            نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.
-          </p>}
+              <p role="status" className="text-xs [overflow-wrap:anywhere]">انتخاب فعلی: {curricula.find(chart=>chart.id===selectedCurriculumId)?.name||'چارت انتخابی'}؛ خارج از نتایج جست‌وجو.</p>}
+            {!matchingCharts.length&&<p className="text-xs text-amber-800 dark:text-amber-200">نتیجه‌ای برای جستجوی فعلی نبود؛ عبارت را تغییر بده.</p>}
+            {selectedCurriculumId&&<button type="button" onClick={()=>selectChart('')} className="min-h-11 rounded-lg border border-slate-300 px-3 text-xs font-bold dark:border-slate-700">پاک‌کردن انتخاب چارت</button>}
+          </section>
         </div>
 
         {selectedChart&&<section aria-label="تکثیر چارت برای ورودی جدید"
           className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/25">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-sm font-black text-indigo-950 dark:text-indigo-200">
                 ساخت سریع چارت مستقل برای ورودی دیگر
@@ -310,13 +328,16 @@ export const AdminCurriculumBuilder: React.FC = () => {
               <p className="mt-2 text-xs text-amber-900 dark:text-amber-200">پیش از فعال‌سازی، درس‌ها را به چارت اضافه کن.</p>}
             {publishNotice&&<p role="status" className="mt-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">{publishNotice}</p>}
           </section>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
+          {selectedChart&&<CurriculumSemesterPreview key={selectedChart.id} chart={selectedChart}
+            assignments={assignments} courses={courses} tracks={relevantTracks}/>}
+          {selectedChart&&<StudyPlanEditor key={selectedChart.id} chart={selectedChart} assignments={assignments} courses={courses} tracks={relevantTracks} leaveGuard={studyPlanGuard}/>}
+          <div data-layout-region="curriculum-assignments" className="grid min-w-0 w-full grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="min-w-0 lg:col-span-2 space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <h3 className="font-bold text-sm mb-4">افزودن درس به چارت</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.courseId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, courseId: e.target.value})}
                   >
@@ -324,7 +345,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     {courses.filter(c=>c.active).map(c => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
                   </select>
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.classification}
                     onChange={(e) => setAddCourseForm({...addCourseForm, classification: e.target.value as CourseClassification})}
                   >
@@ -334,7 +355,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     <option value="TRACK_ELECTIVE">گرایشی اختیاری</option>
                   </select>
                   <select 
-                    className="p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
+                    className="min-w-0 w-full max-w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                     value={addCourseForm.trackId}
                     onChange={(e) => setAddCourseForm({...addCourseForm, trackId: e.target.value})}
                   >
@@ -346,7 +367,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     <input type="number" aria-label="نیمسال پیشنهادی درس" min={1} max={16} step={1}
                       value={addCourseForm.suggestedSemester}
                       onChange={e=>setAddCourseForm(prev=>({...prev,suggestedSemester:Number(e.target.value)}))}
-                      className="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
+                      className="min-h-10 min-w-0 w-full max-w-full rounded-lg border border-slate-300 bg-white px-2 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/>
                   </label>
                   <button type="button" disabled={!addCourseForm.courseId}
                     onClick={()=>void handleAddCourse()}
@@ -357,7 +378,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
+              <div data-layout-region="curriculum-desktop-table" className="hidden min-w-0 max-w-full overflow-x-auto md:block">
                 <table className="w-full text-sm text-right">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-800">
@@ -375,7 +396,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                         className={`border-b dark:border-slate-700/50 cursor-pointer transition-colors ${activeCourseId === cc.courseId ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
                         onClick={()=>{
                           setActiveCourseId(cc.courseId);
-                          setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                          setAddRuleForm(prev=>({...prev,sourceCourseId:'',trackId:cc.trackId||''}));
                           setOperationError('');
                         }}
                       >
@@ -399,7 +420,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="grid gap-2 md:hidden" aria-label="دروس چارت در موبایل">
+              <div data-layout-region="curriculum-mobile-cards" className="grid min-w-0 grid-cols-1 gap-2 md:hidden" aria-label="دروس چارت در موبایل">
                 {curriculumFull.courses.map((cc:any)=><article key={cc.id}
                   className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                   <strong className="text-sm text-slate-950 dark:text-white">{cc.course?.name||'درس نامشخص'}</strong>
@@ -407,12 +428,12 @@ export const AdminCurriculumBuilder: React.FC = () => {
                     کد {cc.course?.code||'نامشخص'} · نیمسال {Number(cc.suggestedSemester).toLocaleString('fa-IR')} ·
                     {cc.trackId ? relevantTracks.find(t=>t.id===cc.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex min-w-0 flex-wrap gap-2">
                     <button type="button" onClick={()=>{
                       setActiveCourseId(cc.courseId);
-                      setAddRuleForm(prev=>({...prev,sourceCourseId:''}));
+                      setAddRuleForm(prev=>({...prev,sourceCourseId:'',trackId:cc.trackId||''}));
                       setOperationError('');
-                    }} className="min-h-11 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
+                    }} className="min-h-11 min-w-0 max-w-full whitespace-normal break-words rounded-lg bg-teal-700 px-3 text-xs font-bold text-white">
                       تنظیم پیش‌نیاز و هم‌نیاز
                     </button>
                     <button type="button" aria-label={'حذف درس '+(cc.course?.name||'نامشخص')+' از چارت'}
@@ -426,7 +447,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
             </div>
 
             {/* Rule Builder Sidebar */}
-            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+            <div className="min-w-0 lg:col-span-1 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
               {!activeCourseId ? (
                 <div className="text-center text-slate-500 text-sm py-8">
                   یک درس را از جدول انتخاب کنید تا قوانین آن را مدیریت کنید.
@@ -443,6 +464,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span className="rounded bg-teal-50 px-1 dark:bg-teal-950">{r.trackId ? relevantTracks.find(t=>t.id===r.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
@@ -456,6 +478,7 @@ export const AdminCurriculumBuilder: React.FC = () => {
                       <div key={r.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded">{'درس مرتبط'}</span>
+                          <span className="rounded bg-teal-50 px-1 dark:bg-teal-950">{r.trackId ? relevantTracks.find(t=>t.id===r.trackId)?.name||'گرایش نامعتبر' : 'مشترک'}</span>
                           <span>{extractSourceCourseIds(r.expression).map(id=>courses.find(c=>c.id===id)?.name||id).join('، ')}</span>
                         </div>
                         <button onClick={() => handleRemoveRule(r.id)} className="text-red-500"><X className="w-3.5 h-3.5" /></button>
@@ -465,6 +488,14 @@ export const AdminCurriculumBuilder: React.FC = () => {
 
                   <div className="mt-6 border-t pt-4 dark:border-slate-700 space-y-3">
                     <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">افزودن قانون جدید</h4>
+                    <label className="block text-xs font-bold">دامنهٔ قانون
+                      <select className="mt-1 w-full min-h-11 rounded-lg border p-2 dark:bg-slate-900 dark:border-slate-700"
+                        value={addRuleForm.trackId} onChange={e=>setAddRuleForm(prev=>({...prev,trackId:e.target.value,sourceCourseId:''}))}>
+                        <option value="" disabled={!commonRuleAllowed}>{commonRuleAllowed?'مشترک بین گرایش‌ها':'ابتدا گرایش را انتخاب کنید'}</option>
+                        {ruleTrackOptions.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+                      </select>
+                    </label>
+                    <p className="text-xs leading-6 text-slate-500">برای قانون اختصاصی، فقط درس‌های مشترک و همان گرایش قابل انتخاب‌اند.</p>
                     <select 
                       className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 dark:border-slate-700"
                       value={addRuleForm.sourceCourseId}

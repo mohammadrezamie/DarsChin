@@ -10,6 +10,7 @@ import path from 'path';
 import { assertExistingDatabasePresent, readPersistedJson, writeDurableJson } from './durable-json';
 import { resolveBootstrapRoot } from './root-identity';
 import { prepareCatalogRestore } from './catalog-restore';
+import type { StoredStudyPlanDraft } from './study-plan';
 import {
   User,
   University,
@@ -66,6 +67,7 @@ export interface DatabaseSchema {
   courses: Course[];
   curriculumCourses: CurriculumCourse[];
   academicRules: AcademicRule[];
+  studyPlanDrafts?: StoredStudyPlanDraft[];
   
   courseOfferings: CourseOffering[];
   studentProfiles: StudentAcademicProfile[];
@@ -98,6 +100,7 @@ const DB_FILE = path.join(DATA_DIR, 'darschyn-db.json');
  * retain valid arrays and never silently overwrite existing review decisions.
  */
 export function ensureReviewCollections(data: Partial<DatabaseSchema>): void {
+  if (!Array.isArray(data.studyPlanDrafts)) data.studyPlanDrafts = [];
   if (!Array.isArray(data.demandSurveys)) data.demandSurveys = [];
   if (!Array.isArray(data.smsHistory)) data.smsHistory = [];
   if (!Array.isArray(data.demandResponses)) data.demandResponses = [];
@@ -128,6 +131,7 @@ export class LocalDatabase {
     courses: [],
     curriculumCourses: [],
     academicRules: [],
+    studyPlanDrafts: [],
     
     courseOfferings: [],
     studentProfiles: [],
@@ -305,8 +309,8 @@ this.isInitialized = true;
   }
 
   public save() {
-    this.ensureDataDir();
-    writeDurableJson(DB_FILE, this.data);
+    const guarded = process.env.DARSCHYN_REQUIRE_EXISTING_DB === 'true';
+    writeDurableJson(DB_FILE, this.data, undefined, guarded);
   }
 
   public resetToSeed() {
@@ -340,7 +344,7 @@ this.isInitialized = true;
     // recovery. Never let a stale backup overwrite active students, passwords,
     // JWT session versions, demand responses, OTP or SMS provider settings.
     const candidate = prepareCatalogRestore(this.data, importedData);
-    this.ensureDataDir();
+    const guarded = process.env.DARSCHYN_REQUIRE_EXISTING_DB === 'true';
     // The previous implementation mutated this.data BEFORE writing the file:
     // a disk/rename error left the live process serving unsaved, divergent data.
     // Publish the candidate only after atomic rename. A later directory-fsync
@@ -348,7 +352,7 @@ this.isInitialized = true;
     // matches the new file visible on disk.
     writeDurableJson(DB_FILE, candidate, () => {
       this.data = candidate;
-    });
+    }, guarded);
     return this.data;
   }
 

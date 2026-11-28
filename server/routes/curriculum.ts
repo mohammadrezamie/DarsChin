@@ -7,8 +7,11 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/database';
 import { authenticate, isRootOwner, requireAdmin, requirePermission, type AuthenticatedRequest } from '../middleware/auth';
 import { extractSourceCourseIds } from '../../src/utils/academic';
-import { analyzeCurriculumDependencies } from '../../src/domain/course-dependency-insights';
+import { ruleScopeCourseIds, validateScopedCurriculumRules, rulesBlockingAssignmentRemoval } from '../../src/domain/curriculum-rule-scope';
 import { validate } from '../middleware/validate';
+import { studyPlanScope, validateStoredStudyPlan } from '../db/study-plan';
+import { studyPlanMutation, studyPlanRevision } from '../../src/domain/study-plan-payload';
+import { validateStudyPlanDraft } from '../../src/domain/study-plan-draft';
 import { createAcademicRuleSchema } from '../schemas/academic-rule';
 import {
   Curriculum,
@@ -65,6 +68,43 @@ curriculumRouter.get('/:id/full', optionalIdentity, (req: AuthenticatedRequest, 
       corequisites: coreqs,
     },
   });
+});
+
+// Independent, optional advisory drafts. Never feed these into eligibility.
+curriculumRouter.get('/:id/study-plan-draft', authenticate, requirePermission('curriculum.manage'), (req,res)=>{
+  const rawTrack=req.query.trackId;
+  if(rawTrack!==undefined&&typeof rawTrack!=='string')return res.status(400).json({success:false,error:'گرایش نامعتبر است.'});
+  const trackId:string|null=typeof rawTrack==='string'&&rawTrack!==''?rawTrack:null;
+  const scope=studyPlanScope(db.data,req.params.id,trackId);
+  if(!scope)return res.status(404).json({success:false,error:'چارت یا گرایش یافت نشد.'});
+  const row=(db.data.studyPlanDrafts||[]).find(r=>r.curriculumId===req.params.id&&r.trackId===trackId);
+  if(row&&!validateStoredStudyPlan(db.data,row))return res.status(409).json({success:false,error:'پیش‌نویس موجود نیازمند بازبینی است.'});
+  const plan=row?.plan||null;
+  return res.json({success:true,data:{plan,revision:studyPlanRevision(row),validation:validateStudyPlanDraft(scope,plan)}});
+});
+
+curriculumRouter.put('/:id/study-plan-draft', authenticate, requirePermission('curriculum.manage'), (req,res)=>{
+  const parsed=studyPlanMutation.safeParse(req.body);
+  if(!parsed.success)return res.status(400).json({success:false,error:'ساختار برنامهٔ پیشنهادی معتبر نیست.'});
+  const {trackId,plan,expectedRevision}=parsed.data;
+  const chart=db.curricula.find(c=>c.id===req.params.id);
+  const scope=studyPlanScope(db.data,req.params.id,trackId);
+  if(!chart||!scope)return res.status(404).json({success:false,error:'چارت یا گرایش یافت نشد.'});
+  if(chart.status==='archived')return res.status(409).json({success:false,error:'چارت بایگانی‌شده قابل ویرایش نیست.'});
+  const validation=validateStudyPlanDraft(scope,plan);
+  if(validation.status==='invalid')return res.status(400).json({success:false,error:validation.issues[0]});
+  const before=db.data.studyPlanDrafts;
+  const existing=(before||[]).find(row=>row.curriculumId===chart.id&&row.trackId===trackId);
+  if(studyPlanRevision(existing)!==expectedRevision)return res.status(409).json({success:false,error:'برنامه توسط مدیر دیگری تغییر کرده است؛ آخرین نسخه را دریافت کنید.'});
+  const revision=plan?randomUUID():null;
+  const next=(before||[]).filter(row=>row.curriculumId!==chart.id||row.trackId!==trackId);
+  if(plan&&revision)next.push({curriculumId:chart.id,trackId,plan,revision});
+  db.data.studyPlanDrafts=next;
+  try{db.save();}catch{
+    db.data.studyPlanDrafts=before;
+    return res.status(503).json({success:false,error:'ذخیرهٔ برنامهٔ پیشنهادی انجام نشد.'});
+  }
+  return res.json({success:true,data:{plan,revision,validation}});
 });
 
 // Admin: Create Curriculum
@@ -170,7 +210,7 @@ curriculumRouter.post('/:id/clone', authenticate, requirePermission('curriculum.
       extractSourceCourseIds(rule.expression).some(id=>!ids.includes(id)))) {
     return res.status(409).json({success:false,error:'قوانین مبدأ با چارت سازگار نیستند؛ پیش از کپی اصلاح کنید یا کپی قوانین را خاموش کنید.'});
   }
-  if(copyRules && !analyzeCurriculumDependencies(source.id,ids,rules).valid) {
+  if(copyRules && validateScopedCurriculumRules(source,sourceCourses,rules,db.tracks)) {
     return res.status(409).json({success:false,error:'چرخه یا خطای پیش‌نیاز در چارت مبدأ وجود دارد؛ کپی قوانین مجاز نیست.'});
   }
   const clone:Curriculum={
@@ -228,6 +268,10 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
        survey.curriculumId===existing.id&&(survey.status==='OPEN'||survey.status==='DRAFT'))))) {
     return res.status(409).json({success:false,error:'این چارت سابقهٔ نیازسنجی دارد؛ تغییر حوزه یا آرشیو تا بستن نیازسنجی‌ها مجاز نیست.'});
   }
+  if ((db.data.studyPlanDrafts||[]).some(row=>row.curriculumId===existing.id)&&
+      ((majorId&&majorId!==existing.majorId)||(entryYearId&&entryYearId!==existing.entryYearId))) {
+    return res.status(409).json({success:false,error:'چارت دارای برنامهٔ پیشنهادی مستقل است؛ برای تغییر رشته یا ورودی، نسخهٔ جدید بسازید یا ابتدا برنامه را تعیین تکلیف کنید.'});
+  }
   const futureMajor=majorId||existing.majorId;
   const futureYear=entryYearId||existing.entryYearId;
   if ((majorId && !db.majors.some(m=>m.id===majorId&&m.degreeLevelId===existing.degreeLevelId&&m.active)) ||
@@ -245,6 +289,8 @@ curriculumRouter.put('/:id', authenticate, requirePermission('curriculum.manage'
     if(!assigned.length || assigned.some(link=>!db.courses.some(course=>course.id===link.courseId&&course.active))) {
       return res.status(400).json({success:false,error:'چارت بدون درس فعال یا دارای درس نامعتبر قابل انتشار نیست.'});
     }
+    const ruleError=validateScopedCurriculumRules({...existing,majorId:futureMajor,entryYearId:futureYear},assigned,db.academicRules,db.tracks);
+    if(ruleError)return res.status(400).json({success:false,error:ruleError});
     if(db.curricula.some(other=>other.id!==existing.id&&other.status==='active'&&
         other.universityId===existing.universityId&&other.campusId===existing.campusId&&
         other.degreeLevelId===existing.degreeLevelId&&other.majorId===futureMajor&&other.entryYearId===futureYear)) {
@@ -286,14 +332,18 @@ curriculumRouter.delete('/:id', authenticate, requirePermission('curriculum.mana
       error: 'چارت دارای نیازسنجی و سابقهٔ تقاضاست. به‌جای حذف، بعد از بستن نیازسنجی آن را آرشیو کنید.',
     });
   }
-  // Only unused charts can be removed; never cascade through survey history.
-  db.curricula.splice(idx, 1);
-  
-  // Cascade delete curriculum courses and rules
-  db.data.curriculumCourses = db.curriculumCourses.filter(c => c.curriculumId !== req.params.id);
-  db.data.academicRules = db.data.academicRules.filter(c => c.curriculumId !== req.params.id);
-  
-  db.save();
+  if((db.data.studyPlanDrafts||[]).some(row=>row.curriculumId===req.params.id)){
+    return res.status(409).json({success:false,error:'ابتدا پیش‌نویس‌های برنامهٔ پیشنهادی این چارت را تعیین تکلیف کنید.'});
+  }
+  // Replace all affected collections together; retain originals for failed writes.
+  const before={curricula:db.data.curricula,curriculumCourses:db.data.curriculumCourses,academicRules:db.data.academicRules};
+  db.data.curricula=before.curricula.filter(c=>c.id!==req.params.id);
+  db.data.curriculumCourses=before.curriculumCourses.filter(c=>c.curriculumId!==req.params.id);
+  db.data.academicRules=before.academicRules.filter(c=>c.curriculumId!==req.params.id);
+  try{db.save();}catch{
+    Object.assign(db.data,before);
+    return res.status(503).json({success:false,error:'حذف چارت ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'چارت با موفقیت حذف شد.' });
 });
 
@@ -338,8 +388,12 @@ curriculumRouter.post('/:id/courses', authenticate, requirePermission('curriculu
     active: true,
   };
 
-  db.curriculumCourses.push(newEntry);
-  db.save();
+  const previousAssignments=db.data.curriculumCourses;
+  db.data.curriculumCourses=[...previousAssignments,newEntry];
+  try{db.save();}catch{
+    db.data.curriculumCourses=previousAssignments;
+    return res.status(503).json({success:false,error:'انتساب درس ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, data: newEntry });
 });
 
@@ -349,15 +403,18 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
     cc => cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
   );
   if (!matches.length) return res.status(404).json({ success: false, error: 'درس در این چارت یافت نشد.' });
-  const selectedTrack = typeof req.query.trackId === 'string' ? req.query.trackId : null;
-  if (!selectedTrack && matches.length > 1) {
+  const rawTrack=req.query.trackId;
+  if(rawTrack!==undefined&&typeof rawTrack!=='string')return res.status(400).json({success:false,error:'پارامتر گرایش مبهم است.'});
+  // نبود پارامتر فقط برای انتساب یکتا سازگار با مشتری قدیمی است؛ رشتهٔ خالی یعنی مشترک.
+  const selectedTrack = typeof rawTrack === 'string' ? rawTrack : undefined;
+  if (selectedTrack === undefined && matches.length > 1) {
     return res.status(409).json({
       success: false, error: 'این درس برای بیش از یک گرایش ثبت شده؛ گرایش را با trackId مشخص کنید تا درس اشتباه حذف نشود.',
     });
   }
-  const assignment = selectedTrack
-    ? matches.find(cc => cc.trackId === selectedTrack)
-    : matches[0];
+  const scopedMatches=selectedTrack===undefined?matches:matches.filter(cc=>(cc.trackId||'')===selectedTrack);
+  if(scopedMatches.length>1)return res.status(409).json({success:false,error:'انتساب تکراری در همین دامنه نیازمند بازبینی است.'});
+  const assignment=scopedMatches[0];
   if (!assignment) return res.status(404).json({ success: false, error: 'این درس برای گرایش انتخاب‌شده ثبت نشده است.' });
 
   if (db.demandSurveys.some(s => s.curriculumId === req.params.id && s.courseIds.includes(req.params.courseId))) {
@@ -366,19 +423,20 @@ curriculumRouter.delete('/:id/courses/:courseId', authenticate, requirePermissio
       error: 'این درس در نیازسنجی ثبت شده است و حذف آن می‌تواند گزارش تاریخی مدیر گروه را تخریب کند.',
     });
   }
-  db.data.curriculumCourses = db.curriculumCourses.filter(cc => cc.id !== assignment.id);
-  // Keep shared prerequisite rules if the same course remains in another track.
-  const stillAssigned = db.curriculumCourses.some(cc =>
-    cc.curriculumId === req.params.id && cc.courseId === req.params.courseId
-  );
-  if (!stillAssigned) {
-    db.data.academicRules = db.data.academicRules.filter(
-      rule => !(rule.curriculumId === req.params.id &&
-        (rule.targetCourseId === req.params.courseId ||
-         extractSourceCourseIds(rule.expression).includes(req.params.courseId)))
-    );
+  const remainingAssignments=db.curriculumCourses.filter(cc=>cc.id!==assignment.id);
+  if((db.data.studyPlanDrafts||[]).filter(row=>row.curriculumId===req.params.id).some(row=>
+    !validateStoredStudyPlan({...db.data,curriculumCourses:remainingAssignments},row))){
+    return res.status(409).json({success:false,error:'ابتدا برنامهٔ پیشنهادی مرتبط را بازبینی کنید.'});
   }
-  db.save();
+  if(rulesBlockingAssignmentRemoval(remainingAssignments,db.academicRules,req.params.id,req.params.courseId).length){
+    return res.status(409).json({success:false,error:'حذف این انتساب یکی از پیش‌نیازها یا هم‌نیازهای همان دامنه را نامعتبر می‌کند؛ ابتدا قوانین را بازبینی کنید.'});
+  }
+  const before={curriculumCourses:db.data.curriculumCourses,academicRules:db.data.academicRules};
+  db.data.curriculumCourses=remainingAssignments;
+  try{db.save();}catch{
+    Object.assign(db.data,before);
+    return res.status(503).json({success:false,error:'حذف انتساب ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'انتساب درس به چارت/گرایش حذف شد.' });
 });
 
@@ -427,16 +485,13 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
       (trackId && !db.tracks.some(track => track.id === trackId && track.majorId === chart.majorId && track.active))) {
     return res.status(400).json({ success: false, error: 'حوزهٔ قانون با چارت انتخابی مطابقت ندارد.' });
   }
-  const assignedCourseIds = [...new Set(db.curriculumCourses
-    .filter(item => item.curriculumId === curriculumId && item.active !== false)
-    .map(item => item.courseId))];
-  const allowedCourses = new Set(assignedCourseIds);
+  const allowedCourses = ruleScopeCourseIds(db.curriculumCourses, curriculumId, trackId);
   const sourceIds = extractSourceCourseIds(expression);
   if (!allowedCourses.has(targetCourseId) || !sourceIds.length ||
       sourceIds.some(id => !allowedCourses.has(id))) {
     return res.status(400).json({
       success: false,
-      error: 'درس هدف و همهٔ درس‌های مرتبط باید در چارت انتخابی حضور داشته باشند.',
+      error: 'درس هدف و همهٔ درس‌های مرتبط باید در دامنهٔ مشترک یا گرایش انتخابی همین چارت حضور داشته باشند.',
     });
   }
 
@@ -454,25 +509,14 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
     return res.status(409).json({ success: false, error: 'این رابطه قبلاً در همین چارت ثبت شده است.' });
   }
 
-  // Validate the entire existing prerequisite graph plus the new edge.
-  // The old recursive guard accidentally rejected valid A→B→C chains,
-  // and traversed rules belonging to unrelated charts and corequisites.
-  // Corequisites may be reciprocal; only prerequisites form the DAG.
-  if (relationshipType === 'PREREQUISITE') {
-    const candidate = {
-      id: 'candidate', curriculumId, targetCourseId,
-      relationshipType, expression,
-    };
-    const analysis = analyzeCurriculumDependencies(
-      curriculumId, assignedCourseIds, [...db.academicRules, candidate]
-    );
-    if (!analysis.valid) {
-      return res.status(400).json({
-        success: false,
-        error: analysis.errors[0] || 'زنجیرهٔ پیش‌نیازها معتبر نیست.',
-      });
-    }
-  }
+  // Shared rules are validated together with each individual track, not
+  // against the union of mutually exclusive prerequisite graphs.
+  const candidate: AcademicRule = {
+    id:'candidate',curriculumId,targetCourseId,relationshipType,expression,
+    trackId:trackId||null,majorId:majorId||null,entryYearId:entryYearId||null,
+  };
+  const graphError=validateScopedCurriculumRules(chart,db.curriculumCourses,[...db.academicRules,candidate],db.tracks);
+  if(graphError)return res.status(400).json({success:false,error:graphError});
 
   const newRule = {
     id: `rule-${randomUUID()}`,
@@ -487,7 +531,10 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
   };
 
   db.data.academicRules.push(newRule as any);
-  db.save();
+  try { db.save(); } catch {
+    db.data.academicRules = db.academicRules.filter(rule=>rule.id!==newRule.id);
+    return res.status(503).json({success:false,error:'ذخیرهٔ قانون انجام نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, data: newRule });
 });
 
@@ -495,7 +542,10 @@ curriculumRouter.post('/rules', authenticate, requirePermission('prerequisite.ma
 curriculumRouter.delete('/rules/:ruleId', authenticate, requirePermission('prerequisite.manage'), (req, res) => {
   const idx = db.data.academicRules.findIndex((r) => r.id === req.params.ruleId);
   if (idx === -1) return res.status(404).json({ success: false, error: 'قانون یافت نشد.' });
-  db.data.academicRules.splice(idx, 1);
-  db.save();
+  const [removed] = db.data.academicRules.splice(idx, 1);
+  try { db.save(); } catch {
+    db.data.academicRules.splice(idx, 0, removed);
+    return res.status(503).json({success:false,error:'حذف قانون ذخیره نشد؛ دوباره تلاش کنید.'});
+  }
   res.json({ success: true, message: 'قانون حذف شد.' });
 });

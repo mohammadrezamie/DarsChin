@@ -1,6 +1,10 @@
+import { studyPlanMutation, studyPlanRevision } from '../domain/study-plan-payload';
+import { validateStudyPlanDraft, type StudyPlanDraft } from '../domain/study-plan-draft';
 import { DEMO_COURSES } from './course-planner';
 import { processImportPayload } from '../domain/import-validator';
 import { summarizeCourseTeachers, validRatingScores, type TeacherRating } from '../domain/teacher-ratings';
+import { rulesBlockingAssignmentRemoval } from '../domain/curriculum-rule-scope';
+import type { CurriculumCourse } from '../types';
 import { extractSourceCourseIds } from '../utils/academic';
 import { createsPrerequisiteCycle } from '../domain/prerequisite-graph';
 import { summarizeDemand, surveyAppliesToProfile, exportDemandCsv, exportDemandSummaryCsv, exportDemandQuestionSummaryCsv, exportDemandAnswersCsv } from '../domain/course-demand';
@@ -24,6 +28,7 @@ type Row = Record<string, any>;
 interface DemoStore {
   /** Browser-only scenario migration; does not touch user/server data. */
   registrationDemoVersion?: number;
+  studyPlanDrafts?: {curriculumId:string;trackId:string|null;plan:StudyPlanDraft;revision?:string}[];
   collections: Record<string, Row[]>;
   profile: StudentAcademicProfile;
   plan: { selectedOfferingIds: string[]; coursePriorities: string[]; offeringPriorities: Record<string, string[]>; wishlistCourseIds?: string[]; journeyStep?: number };
@@ -571,6 +576,35 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       return good({csv}) as ApiResponse<T>;
     }
   }
+  const studyPlanMatch=path.match(/^\/api\/curriculum\/([^/]+)\/study-plan-draft$/);
+  if(studyPlanMatch){
+    const chart=s.collections['/api/curriculum'].find(row=>row.id===studyPlanMatch[1]);
+    if(!chart)return fail('چارت نمونه یافت نشد.');
+    const parsed=method==='PUT'?studyPlanMutation.safeParse(data):null;
+    if(method==='PUT'&&!parsed?.success)return fail('ساختار برنامهٔ پیشنهادی نامعتبر است.');
+    const trackId=parsed?.success?parsed.data.trackId:new URL(endpoint,'https://demo.invalid').searchParams.get('trackId')||null;
+    if(trackId&&!s.collections['/api/academic/tracks'].some(t=>t.id===trackId&&t.majorId===chart.majorId&&t.active))return fail('گرایش نمونه نامعتبر است.');
+    const allowed=new Set(s.collections['/api/curriculum-courses'].filter(r=>r.curriculumId===chart.id&&r.active!==false&&(!r.trackId||r.trackId===trackId)).map(r=>r.courseId));
+    const context={curriculumId:chart.id,courseIds:currentCourses(s).filter(c=>c.active&&allowed.has(c.id)).map(c=>c.id),choicePoolIds:[]};
+    const rows=s.studyPlanDrafts||[];
+    const existing=rows.find(r=>r.curriculumId===chart.id&&r.trackId===trackId);
+    if(method==='GET'){
+      const plan=existing?.plan||null;
+      const validation=validateStudyPlanDraft(context,plan);
+      return validation.status==='invalid'?fail('برنامهٔ نمونه نیازمند بازبینی است.'):good({plan,revision:studyPlanRevision(existing),validation}) as ApiResponse<T>;
+    }
+    if(method==='PUT'&&parsed?.success){
+      if(chart.status==='archived')return fail('چارت بایگانی قابل ویرایش نیست.');
+      const plan=parsed.data.plan,validation=validateStudyPlanDraft(context,plan);
+      if(validation.status==='invalid')return fail(validation.issues[0]);
+      if(studyPlanRevision(existing)!==parsed.data.expectedRevision)return fail('برنامه توسط مدیر دیگری تغییر کرده است؛ آخرین نسخه را دریافت کنید.');
+      const revision=plan?id():null;
+      s.studyPlanDrafts=rows.filter(r=>r.curriculumId!==chart.id||r.trackId!==trackId);
+      if(plan&&revision)s.studyPlanDrafts.push({curriculumId:chart.id,trackId,plan,revision});
+      saveStore(s);return good({plan,revision,validation}) as ApiResponse<T>;
+    }
+    return fail('عملیات برنامهٔ پیشنهادی دمو پشتیبانی نمی‌شود.');
+  }
   const demoCurriculumMatch = path.match(/^\/api\/curriculum\/([^/]+)\/full$/);
   if (demoCurriculumMatch && method === 'GET') {
     const selectedChart=s.collections['/api/curriculum'].find(row=>row.id===demoCurriculumMatch[1]);
@@ -935,19 +969,23 @@ export async function browserDemoRequest<T>(endpoint: string, options: RequestIn
       const courseId = chartCourseMatch[2];
       const matches=rows.filter(row=>row.curriculumId===chart.id && row.courseId===courseId);
       if(!matches.length)return fail('درس در چارت پیدا نشد.');
-      const trackId=new URL(endpoint,'https://demo.invalid').searchParams.get('trackId');
-      if(!trackId && matches.length>1)return fail('درس در چند گرایش تعریف شده؛ trackId را مشخص کن.');
-      const selected=trackId ? matches.find(row=>row.trackId===trackId) : matches[0];
+      const params=new URL(endpoint,'https://demo.invalid').searchParams;
+      if(params.getAll('trackId').length>1)return fail('پارامتر گرایش مبهم است.');
+      const trackId=params.get('trackId');
+      if(trackId===null && matches.length>1)return fail('درس در چند گرایش تعریف شده؛ trackId را مشخص کن.');
+      const scoped=trackId===null?matches:matches.filter(row=>(row.trackId||'')===trackId);
+      if(scoped.length>1)return fail('انتساب تکراری نیازمند بازبینی است.');
+      const selected=scoped[0];
       if(!selected)return fail('انتساب درس به گرایش انتخابی پیدا نشد.');
       if(s.demandSurveys.some(survey=>survey.curriculumId===chart.id && survey.courseIds.includes(courseId)))
         return fail('درس در نیازسنجی استفاده شده است؛ گزارش‌های تاریخی باید حفظ شوند.');
-      s.collections['/api/curriculum-courses']=rows.filter(row=>row.id!==selected.id);
-      const remains=s.collections['/api/curriculum-courses'].some(row=>row.curriculumId===chart.id&&row.courseId===courseId);
-      if(!remains){
-        s.collections['/api/curriculum/rules']=(s.collections['/api/curriculum/rules']||[])
-          .filter(rule=>!(rule.curriculumId===chart.id && (rule.targetCourseId===courseId ||
-            extractSourceCourseIds(rule.expression).includes(courseId))));
-      }
+      const remaining=rows.filter(row=>row.id!==selected.id);
+      if(rulesBlockingAssignmentRemoval(remaining as CurriculumCourse[],(s.collections['/api/curriculum/rules']||[]) as AcademicRule[],chart.id,courseId).length)
+        return fail('ابتدا پیش‌نیاز یا هم‌نیاز وابسته را بازبینی کنید.');
+      if((s.studyPlanDrafts||[]).filter(row=>row.curriculumId===chart.id).some(row=>
+        row.plan.items.some(item=>item.kind==='course'&&!remaining.some(link=>link.curriculumId===chart.id&&link.courseId===item.courseId&&link.active!==false&&(!link.trackId||link.trackId===row.trackId)))))
+        return fail('ابتدا برنامهٔ پیشنهادی مرتبط را بازبینی کنید.');
+      s.collections['/api/curriculum-courses']=remaining;
       saveStore(s);
       return good({}) as ApiResponse<T>;
     }

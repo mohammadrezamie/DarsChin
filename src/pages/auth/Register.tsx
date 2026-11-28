@@ -16,6 +16,8 @@ export const Register: React.FC = () => {
   const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [otpRequired, setOtpRequired] = useState<boolean | null>(null);
+  const [configRetry, setConfigRetry] = useState(0);
+  const [configFailed, setConfigFailed] = useState(false);
   const [otpChallengeId, setOtpChallengeId] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [verifiedMobile, setVerifiedMobile] = useState('');
@@ -26,18 +28,21 @@ export const Register: React.FC = () => {
 
   useEffect(() => {
     let active = true;
+    setConfigFailed(false);
+    setOtpRequired(null);
     void apiRequest<{ registrationOtpRequired: boolean }>('/api/security/challenge').then(result => {
       if (!active) return;
       if (!result.success || typeof result.data?.registrationOtpRequired !== 'boolean') {
+        setConfigFailed(true);
         setError('تنظیمات تأیید شماره از سرور دریافت نشد. اتصال را بررسی و صفحه را تازه‌سازی کنید.');
         return;
       }
       setOtpRequired(result.data.registrationOtpRequired);
     }).catch(() => {
-      if (active) setError('دریافت تنظیمات امنیتی ناموفق بود؛ دوباره تلاش کنید.');
+      if (active) { setConfigFailed(true); setError('دریافت تنظیمات امنیتی ناموفق بود؛ دوباره تلاش کنید.'); }
     });
     return () => { active = false; };
-  }, []);
+  }, [configRetry]);
 
   const handleMobileChange = (value: string) => {
     const normalized = normalizeIranianMobileInput(value);
@@ -85,6 +90,7 @@ export const Register: React.FC = () => {
     if (otpRequired && (!otpChallengeId || verifiedMobile !== mobile || !/^\d{6}$/.test(otpCode))) {
       return setError('ابتدا کد پیامکی تأیید شماره موبایل را دریافت و وارد کنید.');
     }
+    if (!captchaToken) return setError('کد امنیتی را وارد کنید.');
     if (!name.trim()) return setError('نام و نام خانوادگی الزامی است.');
     if (!isValidIranianMobileInput(mobile)) return setError('شماره موبایل نامعتبر است.');
     if (password.length < 6) return setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
@@ -112,8 +118,9 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div dir="rtl" className="dc-product-auth darschin-page min-h-screen flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
+      <div className="dc-auth-layout">
+      <div className="dc-auth-intro">
         <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
@@ -128,7 +135,7 @@ export const Register: React.FC = () => {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="dc-auth-card">
         <div className="darschin-surface bg-white px-4 py-6 shadow-sm sm:px-8 sm:py-8 dark:bg-slate-900">
           
           {error && (
@@ -164,6 +171,7 @@ export const Register: React.FC = () => {
                 type="tel"
                 dir="ltr"
                 value={mobile}
+                disabled={isLoading}
                 onChange={(e) => handleMobileChange(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                 placeholder="09123456789"
@@ -203,19 +211,21 @@ export const Register: React.FC = () => {
                 </button>
               </div>
             )}
+            {configFailed && <button type="button" onClick={() => { setError(''); setConfigRetry(n => n + 1); }} className="min-h-11 text-sm font-bold text-teal-700 dark:text-teal-300">تلاش مجدد دریافت تنظیمات</button>}
             {otpRequired && !otpChallengeId
               ? <GuestHumanCheck key={otpCaptchaAttempt} action="otp" token={otpCaptchaToken} onToken={setOtpCaptchaToken} />
               : <GuestHumanCheck key={captchaAttempt} action="register" token={captchaToken} onToken={setCaptchaToken} />
             }
             <button
               type="submit"
-              disabled={isLoading || otpRequired === null}
+              disabled={isLoading || otpRequired === null || (otpRequired && !otpChallengeId ? !otpCaptchaToken : !captchaToken)}
               className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors disabled:opacity-70"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : otpRequired && !otpChallengeId ? 'دریافت کد تأیید شماره' : 'ثبت‌نام'}
             </button>
           </motion.form>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { GuestHumanCheck } from '../../components/GuestHumanCheck';
+import { normalizeIranianMobileInput, isValidIranianMobileInput } from '../../utils/iranian-mobile';
 import { apiRequest } from '../../utils/api';
 
 export const Login: React.FC = () => {
@@ -14,13 +15,13 @@ export const Login: React.FC = () => {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, logoutNotice } = useAuth();
   const navigate = useNavigate();
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^09\d{9}$/.test(mobile)) {
+    if (!isValidIranianMobileInput(mobile)) {
       setError('شماره موبایل نامعتبر است. (مثال: 09123456789)');
       return;
     }
@@ -36,6 +37,7 @@ export const Login: React.FC = () => {
       return;
     }
 
+    if (!captchaToken) { setError('ابتدا کد امنیتی را تکمیل کنید.'); return; }
     setIsLoading(true);
     try {
       const result = await login(mobile, password, captchaToken);
@@ -59,8 +61,9 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="darschin-page min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div dir="rtl" className="dc-product-auth darschin-page min-h-screen flex flex-col justify-center py-8 px-4 sm:px-6 sm:py-12 lg:px-8">
+      <div className="dc-auth-layout">
+      <div className="dc-auth-intro">
         <Link to="/" className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-300">
           <ShieldCheck className="w-12 h-12" />
         </Link>
@@ -75,19 +78,10 @@ export const Login: React.FC = () => {
         </p>
       </div>
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 shadow-sm dark:border-teal-950 dark:bg-teal-950/40">
-          <h3 className="text-base font-black text-teal-950 dark:text-teal-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
-          <p className="mt-1 text-xs leading-6 text-teal-900 dark:text-teal-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-teal-800 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
-            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-teal-300 bg-white px-2 text-center text-sm font-bold text-teal-950 dark:bg-slate-900 dark:text-teal-100">ورود دمو مدیر</Link>
-          </div>
-        </div>
-      </div>
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="dc-auth-card">
         <div className="darschin-surface bg-white px-4 py-6 shadow-sm sm:px-8 sm:py-8 dark:bg-slate-900">
           
+          {logoutNotice && <p role="status" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm leading-7 text-amber-900 dark:bg-amber-950 dark:text-amber-100">{logoutNotice}</p>}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
               {error}
@@ -110,9 +104,10 @@ export const Login: React.FC = () => {
                     type="tel"
                     dir="ltr"
                     value={mobile}
-                    onChange={(e) => setMobile(e.target.value)}
+                    onChange={(e) => setMobile(normalizeIranianMobileInput(e.target.value))}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
                     placeholder="09123456789"
+                    autoComplete="username"
                     autoFocus
                   />
                 </div>
@@ -121,7 +116,7 @@ export const Login: React.FC = () => {
                 type="submit"
                 className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors"
               >
-                ادامه
+                ادامه به رمز عبور و کد امنیتی
               </button>
             </motion.form>
           ) : (
@@ -138,7 +133,7 @@ export const Login: React.FC = () => {
                   </label>
                   <button 
                     type="button" 
-                    onClick={() => setStep(1)}
+                    onClick={() => { setCaptchaToken(''); setCaptchaAttempt(n => n + 1); setPassword(''); setStep(1); }}
                     className="text-xs text-teal-700 hover:text-teal-600 font-medium"
                   >
                     تغییر شماره
@@ -150,6 +145,7 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:border-teal-600 dark:text-white transition-colors"
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   autoFocus
                 />
@@ -164,7 +160,7 @@ export const Login: React.FC = () => {
               <GuestHumanCheck key={captchaAttempt} action="login" token={captchaToken} onToken={setCaptchaToken} />
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
                 className="w-full flex min-h-12 items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 transition-colors disabled:opacity-70"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ورود'}
@@ -173,6 +169,17 @@ export const Login: React.FC = () => {
           )}
 
         </div>
+      </div>
+      <div className="dc-auth-demo">
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 shadow-sm dark:border-teal-950 dark:bg-teal-950/40">
+          <h3 className="text-base font-black text-teal-950 dark:text-teal-100">فقط می‌خواهی سایت را امتحان کنی؟</h3>
+          <p className="mt-1 text-xs leading-6 text-teal-900 dark:text-teal-200">بدون شماره موبایل یا رمز وارد محیط آزمایشی شو. این حساب واقعی نیست و به سرور اطلاعات ارسال نمی‌کند.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link to="/demo/student" className="flex min-h-12 items-center justify-center rounded-xl bg-teal-800 px-2 text-center text-sm font-bold text-white">ورود دمو دانشجو</Link>
+            <Link to="/demo/admin" className="flex min-h-12 items-center justify-center rounded-xl border border-teal-300 bg-white px-2 text-center text-sm font-bold text-teal-950 dark:bg-slate-900 dark:text-teal-100">ورود دمو مدیر</Link>
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   );

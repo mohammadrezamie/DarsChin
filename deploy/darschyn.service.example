@@ -2,6 +2,8 @@
 Description=DARSCHYN (DarsChin) web application
 After=network.target
 Wants=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=4
 
 [Service]
 Type=simple
@@ -11,13 +13,16 @@ WorkingDirectory=/opt/darschyn/current
 EnvironmentFile=/etc/darschyn/darschyn.env
 Environment=NODE_ENV=production
 Environment=HOST=127.0.0.1
-Environment=PORT=3000
+Environment=PORT=3001
+Environment=DARSCHYN_DATA_DIR=/var/lib/darschyn
+ExecStartPre=/usr/bin/test -r /opt/darschyn/current/dist/server.cjs
+ExecStartPre=/usr/bin/test -d /var/lib/darschyn
 ExecStart=/usr/bin/node /opt/darschyn/current/dist/server.cjs
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
 KillSignal=SIGTERM
-UMask=0027
+UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
